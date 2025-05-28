@@ -1,7 +1,17 @@
+/* Navbar container */
 .navbar {
     padding: 1rem 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    background-color: #ffffff;
+    z-index: 1000;
 }
 
+/* Inner navbar layout */
 .navbar-inside {
     display: flex;
     justify-content: space-between;
@@ -13,6 +23,7 @@
     gap: 1rem;
 }
 
+/* Left section */
 .navbar-left {
     display: flex;
     flex-direction: column;
@@ -24,6 +35,8 @@
     width: 80px;
     height: 80px;
 }
+
+/* Navigation links */
 
 .nav-links {
     list-style: none;
@@ -39,11 +52,12 @@
     list-style: none;
     display: flex;
     gap: 1.5rem;
-    left: 10px;
-    /* padding: 0; */
-    /* margin: 0; */
+    padding: 0;
+    margin: 0;
+    flex: 1;
     justify-content: center;
 }
+
 
 .nav-links li a {
     color: rgb(131, 128, 128);
@@ -57,6 +71,7 @@
     color: #f0a500;
 }
 
+/* Right section */
 .navbar-right {
     text-align: right;
     flex-shrink: 0;
@@ -68,7 +83,8 @@
     gap: 0.3rem;
 }
 
-.phone, .email {
+.phone,
+.email {
     font-size: 1rem;
     color: #79ace0;
 }
@@ -94,4 +110,9 @@
         width: 100%;
         margin-top: 1rem;
     }
+}
+
+/* Prevent overlap from fixed navbar */
+body {
+    padding-top: 120px; /* Adjust based on actual navbar height */
 }

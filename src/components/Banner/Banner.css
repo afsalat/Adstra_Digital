@@ -49,18 +49,6 @@
     border-radius: 20px;
 }
 
-.enquiry-button {
-    background: linear-gradient(rgb(252, 218, 154), orange);
-    box-shadow: 5px 5px 10px rgb(140, 93, 6);
-    color: white;
-    border: none;
-    padding: 0.7rem 3rem;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 20px;
-}
-
 .enquiry-button:hover {
     transition: 1s;
     background: linear-gradient(rgb(212, 172, 92), orange);

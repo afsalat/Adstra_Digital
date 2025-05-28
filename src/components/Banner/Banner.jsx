@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AOS from "aos";
-import "aos/dist/aos.css"; // AOS styles
+import "aos/dist/aos.css";
 import "./Banner.css";
 
 // Row 1 Images
@@ -58,7 +58,7 @@ At Adstra Digital, we don't just advertise brands—we create memorable experien
 Our team is made up of creative thinkers and strategists who are dedicated to helping businesses succeed in the busy online world.
 
 By mixing the latest tech with data insights and creativity, we turn ideas into smart marketing plans that actually work.`,
-    },
+    },            
     {
       title: "VIDEO PRODUCTION ; PHOTOSHOOTS",
       description: `Your brand deserves attention and to be unforgettable.

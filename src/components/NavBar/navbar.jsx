@@ -16,10 +16,10 @@ function NavBar() {
                     <li><a href="#gallery">Gallery</a></li>
                     <li><a href="#about">About</a></li>
                     <li><a href="#enquiry">Enquiry</a></li>
-                <ul className="nav-link">
-                    <li><a href="#contact">Contact us</a></li>
-                    <li><a href="#blog">Blog</a></li>
-                </ul>
+                    <ul className="nav-link">
+                        <li><a href="#contact">Contact us</a></li>
+                        <li><a href="#blog">Blog</a></li>
+                    </ul>
                 </ul>
 
 

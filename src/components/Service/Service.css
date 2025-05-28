@@ -1,0 +1,135 @@
+.service {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.service-title {
+  font-size: 2.5rem;
+  margin-bottom: 30px;
+  color: #232222;
+  text-align: center;
+  font-weight: bold;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+
+.service {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.service-title {
+  font-size: 2.5rem;
+  margin-bottom: 30px;
+  color: #232222;
+  text-align: center;
+  font-weight: bold;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Info panel placed on top of each box */
+.box-on-face {
+  background: rgba(255, 255, 255, 0.85);
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  width: 180px;
+  user-select: none;
+}
+
+.learn-more-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  border: none;
+  background-color: #a7c9ee;
+  color: rgb(79, 74, 74);
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.learn-more-btn:hover {
+  background-color: #0056b3;
+}
+
+.box-on-face h3 {
+  margin: 4px 0 2px;
+  font-size: 0.9rem;
+  color: #ffdd57;
+}
+
+.box-on-face p {
+  margin: 0;
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+.box-face-image {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+
+
+canvas {
+  width: 100%;
+  height: 650px;
+  border-radius: 16px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  background: #bacae1;
+  transition: transform 0.3s ease;
+}
+
+canvas:hover {
+  transform: scale(1.02);
+}
+
+/* Info panel placed on top of each box */
+.box-on-face {
+  background: rgba(0, 0, 0, 0.75);
+  padding: 6px;
+  border-radius: 6px;
+  text-align: center;
+  color: #fff;
+  width: 130px;
+  font-size: 0.7rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.box-on-face h3 {
+  margin: 4px 0 2px;
+  font-size: 0.9rem;
+  color: #ffdd57;
+}
+
+.box-on-face p {
+  margin: 0;
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+.box-face-image {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
