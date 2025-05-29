@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./Banner.css";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../Context/firebaseConfig";
 import img1 from "../../assets/banner-images/branding-innovation-creative-inspire-concept.jpg";
 import img2 from "../../assets/banner-images/business-concept-with-graphic-holography_23-2149160929.webp";
 import img3 from "../../assets/banner-images/business-data-presentation.jpg";
@@ -26,26 +28,12 @@ import img21 from "../../assets/banner-images/business-data-presentation.jpg";
 import img22 from "../../assets/banner-images/data-analytics-tablet.jpg";
 import img23 from "../../assets/banner-images/question-mark-icon-solving-problem-solution-concept_53876-13887.webp";
 
-
-
 function Banner() {
+  const [messages, setMessages] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [charIndex, setCharIndex] = useState(0);
-
-  const messages = [
-    "Elevate Your Brand with Next-Level Digital Marketing!",
-    "Strategy. Creativity. Growth. We Turn Clicks into Conversions!",
-    "SEO | PPC | Social Media | Content | Analytics | Branding.",
-    "Let's Build Your Digital Success Together!",
-    "Transform Your Digital Presence. Dominate the Market!",
-    "Innovative Strategies | Global Reach | Guaranteed Results",
-    "Unleash the Power of Digital. Stand Out. Win More",
-    "Digital Excellence Starts Here—Grow, Engage, Dominate!",
-    "Data-Driven Strategies | High-Impact Marketing | Measurable Success",
-    "Elevate Your Brand. Expand Your Reach. Maximize Your ROI",
-    "Your Digital Future Starts Now—Let's Create Something Extraordinary!",
-  ];
 
   const imageData = {
     row1: [img1, img2, img3],
@@ -60,24 +48,49 @@ function Banner() {
   }, []);
 
   useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const docRef = doc(db, "banner", "p8jjjOYuVjsDuT2SyCTY");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const loadedMessages = Array.isArray(data.header)
+            ? data.header
+            : [data.header];
+          setMessages(loadedMessages);
+        } else {
+          console.log("No banner document found.");
+        }
+      } catch (error) {
+        console.error("Error fetching banner header:", error);
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    fetchMessages();
+  }, []);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+
     const currentMessage = messages[currentMessageIndex];
 
     if (charIndex < currentMessage.length) {
       const timeout = setTimeout(() => {
         setDisplayedText(currentMessage.slice(0, charIndex + 1));
-        setCharIndex(charIndex + 1);
-      }, 50); // character typing speed
+        setCharIndex((prev) => prev + 1);
+      }, 50);
       return () => clearTimeout(timeout);
     } else {
-      // Wait before moving to the next message
       const timeout = setTimeout(() => {
         setCharIndex(0);
         setDisplayedText("");
         setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
-      }, 2500); // how long the full message stays before next
+      }, 2500);
       return () => clearTimeout(timeout);
     }
-  }, [charIndex, currentMessageIndex]);
+  }, [charIndex, currentMessageIndex, messages]);
 
   return (
     <div className="banner">
@@ -85,8 +98,14 @@ function Banner() {
         {/* Left Side - Typing Message */}
         <div className="banner-left" data-aos="fade-up">
           <div className="banner-text-wrapper">
-            <p className="banner-title typing">{displayedText}</p>
-            <a href="#enquiry"><button className="enquiry-button1">Enquiry</button></a>
+            {loadingMessages ? (
+              <p className="banner-title typing">Loading...</p>
+            ) : (
+              <p className="banner-title typing">{displayedText}</p>
+            )}
+            <a href="#enquiry">
+              <button className="enquiry-button1">Enquiry</button>
+            </a>
           </div>
         </div>
 
@@ -96,9 +115,8 @@ function Banner() {
             {Object.keys(imageData).map((rowKey, rowIndex) => (
               <div
                 key={rowIndex}
-                className={`image-row ${
-                  rowKey === "row3" || rowKey === "row5" ? "row-small" : "row-large"
-                }`}
+                className={`image-row ${rowKey === "row3" || rowKey === "row5" ? "row-small" : "row-large"
+                  }`}
                 data-aos={rowIndex % 2 === 0 ? "fade-left" : "fade-right"}
               >
                 {imageData[rowKey].map((src, idx) => (
