@@ -1,0 +1,100 @@
+.service-details {
+  max-width: 80%;
+  margin: 40px auto;
+  padding: 30px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Title & Subtitle Enhancements */
+.service-details h2 {
+  text-align: center;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+/* Each individual service block */
+.service {
+  margin-bottom: 40px;
+}
+
+/* List item styling inside services */
+.service ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.service ul li {
+  background: #f9f9f9;
+  margin-bottom: 10px;
+  padding: 12px 15px;
+  border-left: 5px solid #007bff;
+  border-radius: 6px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.service ul li:hover {
+  background-color: #e6f0ff;
+  border-left-color: #0056b3;
+}
+
+.service ul li::before {
+  content: "✔";
+  color: #28a745;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+/* Impact statement */
+.impact {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #17a2b8;
+  background: #e9f7fa;
+  padding: 12px 15px;
+  border-left: 5px solid #17a2b8;
+  border-radius: 6px;
+  margin-top: 20px;
+}
+
+/* Why Choose Us section */
+.why-choose-us ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.why-choose-us li {
+  margin-bottom: 10px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.why-choose-us li::before {
+  content: "★";
+  position: absolute;
+  left: 0;
+  color: #007bff;
+  font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .service-details {
+    padding: 20px;
+  }
+
+  .service-details h2 {
+    font-size: 1.6rem;
+  }
+
+  .impact {
+    font-size: 1rem;
+  }
+}

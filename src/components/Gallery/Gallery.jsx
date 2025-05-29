@@ -1,10 +1,12 @@
 import React from "react";
 import "./Gallery.css";
 import Logo from "../../assets/logo/Logo-01.jpg"
+import team_l_1 from "../../assets/team/team-l-1.jpeg"
+import team_r_1 from "../../assets/team/team-r-1.jpeg"
 
 const images = [
   {
-    src: "/images/gallery1.jpg",
+    src: team_l_1,
     title: "Concept Art",
     desc: "Visual storytelling through illustration.",
   },
@@ -24,7 +26,7 @@ const images = [
     desc: "Unique and stylized character concepts.",
   },
   {
-    src: "/images/gallery5.jpg",
+    src: team_r_1,
     title: "Environment Art",
     desc: "Immersive 3D spaces and worlds.",
   },
@@ -47,7 +49,7 @@ const images = [
 
 function Gallery() {
   return (
-    <div className="gallery">
+    <div id="gallery" className="gallery">
       <h2 className="gallery-title">Gallery</h2>
       <div className="gallery-grid">
         {images.map((item, index) => (

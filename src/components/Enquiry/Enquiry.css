@@ -23,8 +23,8 @@
   padding: 45px 40px;
   border-radius: 16px;
   box-shadow:
-    0 12px 20px rgba(37, 117, 252, 0.25),
-    0 8px 40px rgba(106, 17, 203, 0.25);
+    0 12px 20px rgba(252, 155, 37, 0.25),
+    0 8px 40px rgba(11, 86, 183, 0.25);
   animation: slideInUp 0.7s ease forwards;
 }
 
@@ -112,7 +112,7 @@
 }
 
 .enquiry-form button {
-  background: linear-gradient(135deg, #2575fc, #6a11cb);
+  background: linear-gradient(135deg, #eeb655, #d8aa20);
   color: white;
   padding: 16px 0;
   border: none;
@@ -127,9 +127,9 @@
 }
 
 .enquiry-form button:hover {
-  background: linear-gradient(135deg, #6a11cb, #2575fc);
+  background: linear-gradient(35deg, #eeb655, #d8aa20);
   box-shadow:
-    0 6px 20px rgba(106, 17, 203, 0.7);
+    0 6px 20px rgba(203, 132, 17, 0.7);
   transform: scale(1.05);
 }
 

@@ -4,14 +4,16 @@ import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import AOS from "aos";
+import { useNavigate } from "react-router-dom";
 
 function SpinningBox({ position, images, label, description }) {
+  const navigate = useNavigate();
   const meshRef = useRef();
 
-    useEffect(() => {
-        AOS.init({ duration: 1000, once: true });
-    })
-  
+  useEffect(() => {
+    AOS.init({ duration: 1000, once: true });
+  })
+
 
   const [
     frontTexture,
@@ -41,7 +43,7 @@ function SpinningBox({ position, images, label, description }) {
 
   // Button click handler
   const handleClick = () => {
-    alert(`Learn more about ${label}`);
+    navigate(`/service/${label}`);
   };
 
   return (
@@ -62,12 +64,13 @@ function SpinningBox({ position, images, label, description }) {
 }
 
 function Service() {
-  // Images for each face: front, back, top, bottom, left, right
+
+
   const boxData = [
     {
       position: [-6, 2, 0],
-      label: "Modeling",
-      description: "3D models for all uses.",
+      label: "VIDEO PRODUCTION",
+      description: "Your brand deserves attention and to be unforgettable.",
       images: [
         "https://dummyimage.com/256x256/007bff/ffffff.png&text=Modeling+Front",
         "https://dummyimage.com/256x256/0056b3/ffffff.png&text=Modeling+Back",
@@ -79,8 +82,8 @@ function Service() {
     },
     {
       position: [-3, 2, 0],
-      label: "Animation",
-      description: "Smooth 3D animations.",
+      label: "DATA-DRIVEN CAMPAIGNS",
+      description: "Every click, view, and interaction is adjusted for maximum results.",
       images: [
         "https://dummyimage.com/256x256/ff6347/ffffff.png&text=Animation+Front",
         "https://dummyimage.com/256x256/cc4a33/ffffff.png&text=Animation+Back",
@@ -92,8 +95,8 @@ function Service() {
     },
     {
       position: [0, 2, 0],
-      label: "AR/VR",
-      description: "Immersive 3D experiences.",
+      label: "BRANDING",
+      description: "First impressions matter. We make sure yours stands out.",
       images: [
         "https://dummyimage.com/256x256/32cd32/ffffff.png&text=ARVR+Front",
         "https://dummyimage.com/256x256/28a428/ffffff.png&text=ARVR+Back",
@@ -105,8 +108,8 @@ function Service() {
     },
     {
       position: [3, 2, 0],
-      label: "Rendering",
-      description: "High-quality renders.",
+      label: "CONTENT CREATION",
+      description: "Your brand voice should be clear and engaging.",
       images: [
         "https://dummyimage.com/256x256/ffa500/ffffff.png&text=Rendering+Front",
         "https://dummyimage.com/256x256/cc8400/ffffff.png&text=Rendering+Back",
@@ -117,9 +120,9 @@ function Service() {
       ],
     },
     {
-      position: [6, 2, 0],
-      label: "WebGL",
-      description: "3D for the web.",
+      position: [0, -1, 0],
+      label: "ADVANCED ANALYTICS",
+      description: "Your business should rely on data, not guesswork.",
       images: [
         "https://dummyimage.com/256x256/800080/ffffff.png&text=WebGL+Front",
         "https://dummyimage.com/256x256/660066/ffffff.png&text=WebGL+Back",
@@ -131,8 +134,8 @@ function Service() {
     },
     {
       position: [-3, -1, 0],
-      label: "Product Viz",
-      description: "Product 3D showcases.",
+      label: "WHY CHOOSE ADSTRA DIGITAL",
+      description: "Honesty and Trust: We deliver what we promise.",
       images: [
         "https://dummyimage.com/256x256/ff1493/ffffff.png&text=Product+Front",
         "https://dummyimage.com/256x256/cc117a/ffffff.png&text=Product+Back",
@@ -141,37 +144,11 @@ function Service() {
         "https://dummyimage.com/256x256/5f0837/ffffff.png&text=Product+Left",
         "https://dummyimage.com/256x256/450525/ffffff.png&text=Product+Right",
       ],
-    },
-    {
-      position: [0, -1, 0],
-      label: "Simulations",
-      description: "Physics & more.",
-      images: [
-        "https://dummyimage.com/256x256/008080/ffffff.png&text=Simulation+Front",
-        "https://dummyimage.com/256x256/006666/ffffff.png&text=Simulation+Back",
-        "https://dummyimage.com/256x256/004c4c/ffffff.png&text=Simulation+Top",
-        "https://dummyimage.com/256x256/003333/ffffff.png&text=Simulation+Bottom",
-        "https://dummyimage.com/256x256/001919/ffffff.png&text=Simulation+Left",
-        "https://dummyimage.com/256x256/000d0d/ffffff.png&text=Simulation+Right",
-      ],
-    },
-    {
-      position: [3, -1, 0],
-      label: "Custom",
-      description: "Tailored 3D solutions.",
-      images: [
-        "https://dummyimage.com/256x256/808080/ffffff.png&text=Custom+Front",
-        "https://dummyimage.com/256x256/666666/ffffff.png&text=Custom+Back",
-        "https://dummyimage.com/256x256/4d4d4d/ffffff.png&text=Custom+Top",
-        "https://dummyimage.com/256x256/333333/ffffff.png&text=Custom+Bottom",
-        "https://dummyimage.com/256x256/191919/ffffff.png&text=Custom+Left",
-        "https://dummyimage.com/256x256/0d0d0d/ffffff.png&text=Custom+Right",
-      ],
-    },
-  ];
+    }
+  ]
 
   return (
-    <div className="service" style={{ width: "100vw", height: "100vh" }}>
+    <div className="service" style={{ width: "100%", height: "100vh" }}>
       <h2
         className="service-title"
         style={{ textAlign: "center", margin: "20px" }}

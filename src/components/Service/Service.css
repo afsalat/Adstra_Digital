@@ -102,7 +102,6 @@ canvas:hover {
   transform: scale(1.02);
 }
 
-/* Info panel placed on top of each box */
 .box-on-face {
   background: rgba(0, 0, 0, 0.75);
   padding: 6px;

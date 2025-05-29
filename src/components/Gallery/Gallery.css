@@ -95,3 +95,8 @@
   object-fit: contain;
   margin-bottom: 10px;
 }
+
+
+.gallery-item img {
+  object-fit: cover;
+}

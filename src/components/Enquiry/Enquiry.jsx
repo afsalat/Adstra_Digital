@@ -22,7 +22,6 @@ function Enquiry() {
       return;
     }
 
-    // EmailJS parameters
     const serviceID = "YOUR_SERVICE_ID";
     const templateID = "YOUR_TEMPLATE_ID";
     const publicKey = "YOUR_PUBLIC_KEY";
@@ -44,7 +43,7 @@ function Enquiry() {
   };
 
   return (
-    <section className="enquiry-section">
+    <section id="enquiry" className="enquiry-section">
       <div className="enquiry-container">
         <div className="enquiry-header">
           <h2>Let's Collaborate</h2>

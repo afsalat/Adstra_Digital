@@ -7,6 +7,7 @@ import Gallery from "../components/Gallery/Gallery";
 import Enquiry from "../components/Enquiry/Enquiry";
 import Footer from "../components/Footer/Footer";
 import Blog from "../components/Blog/Blog";
+import ContactUs from "../components/Contact/Contact";
 
 
 function HomePage() {
@@ -19,6 +20,7 @@ function HomePage() {
             <Gallery />
             <Enquiry /> 
             <Blog />
+            <ContactUs />
             <Footer />
         </div>
     )

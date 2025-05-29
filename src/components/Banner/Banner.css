@@ -23,9 +23,10 @@
 
 
 .banner-title {
-    font-size: 1.7rem;
-    max-width: 75%;
+    font-size: 3rem;
+    max-width: 85%;
     margin-bottom: 1rem;
+    font-weight: bold;
     color: #181818;
 }
 
@@ -96,3 +97,16 @@
     margin-top: 20px;
     margin-bottom: 10px;
 }
+
+.typing::after {
+  content: "|";
+  animation: blink 0.7s infinite;
+  color: #f02828;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
