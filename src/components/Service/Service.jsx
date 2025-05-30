@@ -1,3 +1,4 @@
+// Service.jsx
 import React, { useEffect, useRef } from "react";
 import "./Service.css";
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
@@ -6,14 +7,13 @@ import * as THREE from "three";
 import AOS from "aos";
 import { useNavigate } from "react-router-dom";
 
-function SpinningBox({ position, images, label, description }) {
+function SpinningBox({ position, images, label, slug, description }) {
   const navigate = useNavigate();
   const meshRef = useRef();
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
-  })
-
+  }, []);
 
   const [
     frontTexture,
@@ -33,7 +33,6 @@ function SpinningBox({ position, images, label, description }) {
     new THREE.MeshStandardMaterial({ map: rightTexture }),
   ];
 
-  // Animate rotation
   useFrame(() => {
     if (meshRef.current) {
       meshRef.current.rotation.y += 0.01;
@@ -41,15 +40,13 @@ function SpinningBox({ position, images, label, description }) {
     }
   });
 
-  // Button click handler
   const handleClick = () => {
-    navigate(`/service/${label}`);
+    navigate(`/service/${encodeURIComponent(slug)}`);
   };
 
   return (
     <mesh ref={meshRef} position={position} material={materials}>
       <boxGeometry args={[1.5, 1.5, 1.5]} />
-      {/* Label & description & button on top using Html */}
       <Html position={[0, 1.1, 0]} center>
         <div className="box-on-face">
           <h3>{label}</h3>
@@ -64,12 +61,11 @@ function SpinningBox({ position, images, label, description }) {
 }
 
 function Service() {
-
-
   const boxData = [
     {
       position: [-6, 2, 0],
       label: "VIDEO PRODUCTION",
+      slug: "video-production",
       description: "Your brand deserves attention and to be unforgettable.",
       images: [
         "https://dummyimage.com/256x256/007bff/ffffff.png&text=Modeling+Front",
@@ -83,6 +79,7 @@ function Service() {
     {
       position: [-3, 2, 0],
       label: "DATA-DRIVEN CAMPAIGNS",
+      slug: "lead-generation",
       description: "Every click, view, and interaction is adjusted for maximum results.",
       images: [
         "https://dummyimage.com/256x256/ff6347/ffffff.png&text=Animation+Front",
@@ -96,6 +93,7 @@ function Service() {
     {
       position: [0, 2, 0],
       label: "BRANDING",
+      slug: "branding",
       description: "First impressions matter. We make sure yours stands out.",
       images: [
         "https://dummyimage.com/256x256/32cd32/ffffff.png&text=ARVR+Front",
@@ -109,6 +107,7 @@ function Service() {
     {
       position: [3, 2, 0],
       label: "CONTENT CREATION",
+      slug: "content-marketing",
       description: "Your brand voice should be clear and engaging.",
       images: [
         "https://dummyimage.com/256x256/ffa500/ffffff.png&text=Rendering+Front",
@@ -122,6 +121,7 @@ function Service() {
     {
       position: [0, -1, 0],
       label: "ADVANCED ANALYTICS",
+      slug: "analytics-reporting",
       description: "Your business should rely on data, not guesswork.",
       images: [
         "https://dummyimage.com/256x256/800080/ffffff.png&text=WebGL+Front",
@@ -133,26 +133,80 @@ function Service() {
       ],
     },
     {
-      position: [-3, -1, 0],
-      label: "WHY CHOOSE ADSTRA DIGITAL",
-      description: "Honesty and Trust: We deliver what we promise.",
+      position: [0, -1, 0],
+      label: "ADVANCED ANALYTICS",
+      slug: "analytics-reporting",
+      description: "Your business should rely on data, not guesswork.",
       images: [
-        "https://dummyimage.com/256x256/ff1493/ffffff.png&text=Product+Front",
-        "https://dummyimage.com/256x256/cc117a/ffffff.png&text=Product+Back",
-        "https://dummyimage.com/256x256/a30f60/ffffff.png&text=Product+Top",
-        "https://dummyimage.com/256x256/7f0b4a/ffffff.png&text=Product+Bottom",
-        "https://dummyimage.com/256x256/5f0837/ffffff.png&text=Product+Left",
-        "https://dummyimage.com/256x256/450525/ffffff.png&text=Product+Right",
+        "https://dummyimage.com/256x256/800080/ffffff.png&text=WebGL+Front",
+        "https://dummyimage.com/256x256/660066/ffffff.png&text=WebGL+Back",
+        "https://dummyimage.com/256x256/4d004d/ffffff.png&text=WebGL+Top",
+        "https://dummyimage.com/256x256/330033/ffffff.png&text=WebGL+Bottom",
+        "https://dummyimage.com/256x256/1a001a/ffffff.png&text=WebGL+Left",
+        "https://dummyimage.com/256x256/0d000d/ffffff.png&text=WebGL+Right",
       ],
-    }
-  ]
+    },
+    {
+      position: [0, -1, 0],
+      label: "ADVANCED ANALYTICS",
+      slug: "analytics-reporting",
+      description: "Your business should rely on data, not guesswork.",
+      images: [
+        "https://dummyimage.com/256x256/800080/ffffff.png&text=WebGL+Front",
+        "https://dummyimage.com/256x256/660066/ffffff.png&text=WebGL+Back",
+        "https://dummyimage.com/256x256/4d004d/ffffff.png&text=WebGL+Top",
+        "https://dummyimage.com/256x256/330033/ffffff.png&text=WebGL+Bottom",
+        "https://dummyimage.com/256x256/1a001a/ffffff.png&text=WebGL+Left",
+        "https://dummyimage.com/256x256/0d000d/ffffff.png&text=WebGL+Right",
+      ],
+    },
+    {
+      position: [0, -1, 0],
+      label: "ADVANCED ANALYTICS",
+      slug: "analytics-reporting",
+      description: "Your business should rely on data, not guesswork.",
+      images: [
+        "https://dummyimage.com/256x256/800080/ffffff.png&text=WebGL+Front",
+        "https://dummyimage.com/256x256/660066/ffffff.png&text=WebGL+Back",
+        "https://dummyimage.com/256x256/4d004d/ffffff.png&text=WebGL+Top",
+        "https://dummyimage.com/256x256/330033/ffffff.png&text=WebGL+Bottom",
+        "https://dummyimage.com/256x256/1a001a/ffffff.png&text=WebGL+Left",
+        "https://dummyimage.com/256x256/0d000d/ffffff.png&text=WebGL+Right",
+      ],
+    },
+    {
+      position: [0, -1, 0],
+      label: "ADVANCED ANALYTICS",
+      slug: "analytics-reporting",
+      description: "Your business should rely on data, not guesswork.",
+      images: [
+        "https://dummyimage.com/256x256/800080/ffffff.png&text=WebGL+Front",
+        "https://dummyimage.com/256x256/660066/ffffff.png&text=WebGL+Back",
+        "https://dummyimage.com/256x256/4d004d/ffffff.png&text=WebGL+Top",
+        "https://dummyimage.com/256x256/330033/ffffff.png&text=WebGL+Bottom",
+        "https://dummyimage.com/256x256/1a001a/ffffff.png&text=WebGL+Left",
+        "https://dummyimage.com/256x256/0d000d/ffffff.png&text=WebGL+Right",
+      ],
+    },
+    {
+      position: [0, -1, 0],
+      label: "ADVANCED ANALYTICS",
+      slug: "analytics-reporting",
+      description: "Your business should rely on data, not guesswork.",
+      images: [
+        "https://dummyimage.com/256x256/800080/ffffff.png&text=WebGL+Front",
+        "https://dummyimage.com/256x256/660066/ffffff.png&text=WebGL+Back",
+        "https://dummyimage.com/256x256/4d004d/ffffff.png&text=WebGL+Top",
+        "https://dummyimage.com/256x256/330033/ffffff.png&text=WebGL+Bottom",
+        "https://dummyimage.com/256x256/1a001a/ffffff.png&text=WebGL+Left",
+        "https://dummyimage.com/256x256/0d000d/ffffff.png&text=WebGL+Right",
+      ],
+    },
+  ];
 
   return (
     <div className="service" style={{ width: "100%", height: "100vh" }}>
-      <h2
-        className="service-title"
-        style={{ textAlign: "center", margin: "20px" }}
-      >
+      <h2 className="service-title" style={{ textAlign: "center", margin: "20px" }}>
         Our Services
       </h2>
       <Canvas camera={{ position: [0, 0, 15], fov: 50 }}>
@@ -164,8 +218,8 @@ function Service() {
             position={box.position}
             images={box.images}
             label={box.label}
+            slug={box.slug}
             description={box.description}
-            data-aos="fade-up"
           />
         ))}
         <OrbitControls enableZoom={true} />

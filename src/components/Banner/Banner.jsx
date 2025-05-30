@@ -99,7 +99,7 @@ function Banner() {
         <div className="banner-left" data-aos="fade-up">
           <div className="banner-text-wrapper">
             {loadingMessages ? (
-              <p className="banner-title typing">Loading...</p>
+              <p className="banner-description typing">Loading...</p>
             ) : (
               <p className="banner-title typing">{displayedText}</p>
             )}

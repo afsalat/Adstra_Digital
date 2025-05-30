@@ -1,100 +1,56 @@
-.service-details {
-  max-width: 80%;
-  margin: 40px auto;
-  padding: 30px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
+.full-services {
+  max-width: 1100px;
+  margin: auto;
+  padding: 40px 20px;
+  font-family: "Segoe UI", sans-serif;
   color: #333;
+  line-height: 1.6;
 }
 
-/* Title & Subtitle Enhancements */
-.service-details h2 {
+.full-services h1 {
   text-align: center;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 10px;
+  font-size: 2.5rem;
+  color: #1a1a1a;
+  margin-bottom: 50px;
 }
 
-/* Each individual service block */
-.service {
+.service-block {
+  background: #d1d1d1;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   margin-bottom: 40px;
+  transition: transform 0.3s ease;
 }
 
-/* List item styling inside services */
-.service ul {
-  list-style: none;
-  padding-left: 0;
+.service-block:hover {
+  transform: translateY(-5px);
+  box-shadow: 2px 20px 50px black;
 }
 
-.service ul li {
-  background: #f9f9f9;
+.service-block h2 {
+  color: #e91e63;
   margin-bottom: 10px;
-  padding: 12px 15px;
-  border-left: 5px solid #007bff;
-  border-radius: 6px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  transition: all 0.3s ease;
 }
 
-.service ul li:hover {
-  background-color: #e6f0ff;
-  border-left-color: #0056b3;
-}
-
-.service ul li::before {
-  content: "✔";
-  color: #28a745;
-  font-weight: bold;
-  margin-right: 10px;
-}
-
-/* Impact statement */
-.impact {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #17a2b8;
-  background: #e9f7fa;
-  padding: 12px 15px;
-  border-left: 5px solid #17a2b8;
-  border-radius: 6px;
-  margin-top: 20px;
-}
-
-/* Why Choose Us section */
-.why-choose-us ul {
-  padding-left: 0;
-  list-style: none;
-}
-
-.why-choose-us li {
-  margin-bottom: 10px;
+.service-block ul {
   padding-left: 20px;
-  position: relative;
+  margin-top: 10px;
 }
 
-.why-choose-us li::before {
-  content: "★";
-  position: absolute;
-  left: 0;
-  color: #007bff;
+.service-block ul li {
+  list-style: disc;
+  margin-bottom: 8px;
   font-weight: bold;
+  font-size: 1.3rem;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .service-details {
-    padding: 20px;
-  }
+.service-block p {
+  /* font-weight: bold; */
+  font-size: 1rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-  .service-details h2 {
-    font-size: 1.6rem;
-  }
-
-  .impact {
-    font-size: 1rem;
-  }
+.why li {
+  list-style: none;     
 }

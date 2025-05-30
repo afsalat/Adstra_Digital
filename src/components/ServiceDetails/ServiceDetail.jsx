@@ -1,138 +1,197 @@
-import React from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect } from "react";
+import Tilt from "react-parallax-tilt";
+import AOS from "aos";
+import "aos/dist/aos.css";
 import "./ServiceDetail.css";
+import { useParams } from "react-router-dom";
 
-
-
-const services = [
+const serviceSections = [
   {
-    label: "video-production",
-    title: "VIDEO PRODUCTION ; PHOTOSHOOTS",
-    description: `Your brand deserves attention and to be unforgettable.
-Visual storytelling is key in today’s marketing. We provide:`,
-    features: [
-      "High-quality commercials and corporate videos",
-      "Creative photos that capture your brand’s essence",
-      "Product photography with a stylish twist",
-      "Engaging social media reels and ads",
+    title: "In-House Professional Photography & Video Production",
+    slug: "video-production",
+    description:
+      "High-quality visuals make a lasting impression. At Adstra Digital, we provide in-house photography and video production, ensuring professional, compelling content that enhances your brand’s identity. Whether it’s corporate branding shoots, product photography, promotional videos, or storytelling content, we make sure your visuals stand out.",
+    points: [
+      "Professional photoshoots for businesses, brands, and e-commerce.",
+      "Product photography with the perfect lighting, angles, and effects.",
+      "Corporate video production for marketing and branding.",
+      "Event coverage to capture milestone moments.",
+      "Creative video editing, motion graphics, and visual enhancements.",
     ],
-    impact: "Videos can boost customer conversion rates by 80% compared to static content!",
   },
   {
-    label: "data-driven-campaigns",
-    title: "DATA-DRIVEN CAMPAIGNS ; PERFORMANCE MARKETING",
-    description: `Every click, view, and interaction is adjusted for maximum results.
-Our campaign experts create effective marketing plans that deliver measurable outcomes.`,
-    features: [
-      "SEO and PPC to improve ranking and speed up conversions",
-      "Social media marketing for engagement and brand visibility",
-      "Smart ad targeting to reach more people",
-      "Collaborations with influencers for viral growth",
+    title: "Social Media Marketing & Campaigns",
+    slug: "social-media-marketing",
+    description:
+      "We design data-driven marketing campaigns that boost engagement, build brand awareness, and drive conversions across platforms like Facebook, Instagram, LinkedIn, and Twitter.",
+    points: [
+      "Customized social media strategies to target the right audience.",
+      "Daily post scheduling and content creation for consistency.",
+      "Influencer collaborations to amplify brand reach.",
+      "Hashtag research and audience insights for higher visibility.",
+      "Paid advertising campaigns for maximum engagement and conversions.",
     ],
-    impact: "Well-targeted campaigns can increase sales by up to 60%!",
   },
   {
-    label: "branding",
-    title: "BRANDING; DESIGN – CREATIVITY WITH A PURPOSE",
-    description: `First impressions matter. We make sure yours stands out.`,
-    features: [
-      "Custom brand identity and logo designs",
-      "Eye-catching graphics for social media",
-      "Web and app designs that attract and convert",
-      "Motion graphics and beautiful animations",
+    title: "Lead Generation & Performance Marketing",
+    slug: "lead-generation",
+    description:
+      "We specialize in targeted digital marketing strategies that turn prospects into paying customers using precise advertising techniques and data-driven insights.",
+    points: [
+      "Google Ads, Facebook Ads, and LinkedIn Ads to reach ideal customers.",
+      "Retargeting strategies to reconnect with interested users.",
+      "Landing page optimization to improve conversion rates.",
+      "A/B testing and audience segmentation for highly effective campaigns.",
+      "Monthly performance reports tracking leads and sales conversion.",
     ],
-    impact: "94% of first impressions by consumers are based on design!",
   },
   {
-    label: "content-creation",
-    title: "CONTENT CREATION ; COPYWRITING – WORDS THAT WORK",
-    description: `Your brand voice should be clear and engaging.`,
-    features: [
-      "SEO-friendly blogs and website content to drive traffic",
-      "Engaging social media posts and storytelling",
-      "Persuasive ad copy that boosts conversions",
-      "Email marketing campaigns that keep customers coming back",
+    title: "Branding & Identity Design",
+    slug: "branding",
+    description:
+      "A brand is more than just a logo—it’s the story, message, and identity behind it. We help businesses craft a strong, recognizable brand through thoughtful design, messaging, and strategy.",
+    points: [
+      "Logo design and brand color selection for a unique identity.",
+      "Typography and graphics that align with brand values.",
+      "Brand guidelines to ensure consistency in marketing efforts.",
+      "Packaging and promotional materials for physical and digital branding.",
+      "Rebranding solutions for businesses looking for a fresh start.",
     ],
-    impact: "Quality content can increase audience retention by 72%!",
   },
   {
-    label: "advanced-analytics",
-    title: "ADVANCED ANALYTICS ; GROWTH STRATEGIES",
-    description: `Your business should rely on data, not guesswork.`,
-    features: [
-      "Real-time tracking for optimization",
-      "Strategies for improving conversion rates",
-      "Insights into audience behavior for smarter marketing",
-      "Automation tools to streamline the customer journey",
+    title: "SEO & Website Optimization",
+    slug: "seo-website-optimization",
+    description:
+      "We make sure your website ranks higher on Google with smart SEO strategies that enhance its content, speed, and usability.",
+    points: [
+      "Keyword research and content optimization to boost rankings.",
+      "Technical SEO improvements to fix errors and increase speed.",
+      "On-page and off-page SEO tactics to enhance visibility.",
+      "Local SEO strategies for businesses targeting specific locations.",
+      "Link-building and blog content to strengthen domain authority.",
     ],
-    impact: "Companies using analytics can see a 5X higher return!",
+  },
+  {
+    title: "Analytics & Reporting",
+    slug: "analytics-reporting",
+    description:
+      "We provide detailed insights that help businesses adjust strategies for better engagement, more conversions, and stronger ROI.",
+    points: [
+      "Website traffic analysis to understand visitor behavior.",
+      "Social media performance tracking to measure engagement levels.",
+      "Paid campaign effectiveness tracking conversion rates.",
+      "Competitor benchmarking to stay ahead of the competition.",
+      "Custom reports and strategic recommendations for improvements.",
+    ],
+  },
+  {
+    title: "Content Marketing & Storytelling",
+    slug: "content-marketing",
+    description:
+      "Our team creates high-quality blog articles, videos, and infographics tailored to your brand’s message, ensuring content that connects and converts.",
+    points: [
+      "Blog writing and industry-specific articles to establish expertise.",
+      "Video storytelling for brand messaging and customer engagement.",
+      "Infographics and visual content for impactful marketing.",
+      "Email marketing campaigns with compelling copy and design.",
+      "Strategic content planning for long-term success.",
+    ],
+  },
+  {
+    title: "Paid Advertising (PPC & Display Ads)",
+    slug: "paid-advertising",
+    description:
+      "We craft high-impact ad campaigns that ensure effective audience targeting and cost-efficient spending.",
+    points: [
+      "Google Ads (Search, Display, Shopping, and Video Ads).",
+      "Facebook & Instagram Ads for high engagement and conversions.",
+      "LinkedIn Ads for corporate and professional targeting.",
+      "YouTube Ads for video marketing at scale.",
+      "Advanced audience targeting for better ad performance.",
+    ],
+  }, {
+    title: "Google Ads – Targeted Advertising for Maximum Reach",
+    slug: "google-ads",
+    description:
+      "Google Ads is one of the most effective ways to drive traffic, generate leads, and increase conversions. At Adstra Digital, we create highly optimized ad campaigns that ensure businesses reach the right audience at the right time.",
+    points: [
+      "Search Ads – Appear at the top of Google search results when users look for relevant keywords.",
+      "Display Ads – Visually engaging ads placed across websites, apps, and YouTube.",
+      "Shopping Ads – Ideal for e-commerce businesses to showcase products directly in search results.",
+      "Video Ads – YouTube advertising to capture audience attention through engaging video content.",
+      "Remarketing Ads – Reconnect with users who have previously visited your website.",
+    ],
   },
 ];
 
-const whyChooseUs = [
-  "Proven Experience: Years of helping businesses succeed online",
-  "Creative Team: Talented designers and strategists at your service",
-  "Smart Tools: Marketing tools designed for efficiency",
-  "Customized Plans: Strategies built for your specific goals",
-  "Honesty and Trust: We deliver what we promise.",
-];
+function FullServices() {
+    const { label } = useParams();
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
 
+    const normalizedLabel = label?.toLowerCase();
 
-function ServiceDetails() {
-  const { label } = useParams();
-
-  if (!label) return <p style={{ textAlign: "center" }}>Invalid route</p>;
-
-  const isAll = label?.toLowerCase() === "all";
-
-const selectedServices = isAll
-  ? services
-  : services.filter((s) => s.label === decodeURIComponent(label.toLowerCase()));
-
-
-  if (selectedServices.length === 0) {
-    return <p style={{ textAlign: "center" }}>Service not found</p>;
-  }
+  const filteredServices =
+    normalizedLabel === "all"
+      ? serviceSections
+      : serviceSections.filter(
+          (service) => service.slug === normalizedLabel
+        );
 
   return (
-    <div className="service-details">
-      <header>
-        <h1>
-          {isAll
-            ? "ADSTRA DIGITAL – GROWING BUSINESSES IN THE DIGITAL AGE"
-            : selectedServices[0].title}
-        </h1>
-        {isAll && (
-          <>
-            <p>A Complete Suite of Digital Marketing Solutions to Help You Grow</p>
-            <p>
-              At Adstra Digital, we don't just advertise brands—we create memorable experiences and help you achieve real results.
-            </p>
-            <p>
-              By mixing the latest tech with data insights and creativity, we turn ideas into smart marketing plans that actually work.
-            </p>
-          </>
-        )}
-      </header>
-
-      <section className="services">
-        {selectedServices.map(({ title, description, features, impact }, idx) => (
-          <article key={idx} className="service">
-            <h3>{title}</h3>
-            <p>{description}</p>
+    <div className="full-services">
+      <h1 data-aos="fade-down">
+        {normalizedLabel === "all" || !normalizedLabel
+          ? "Our Services"
+          : `Service: ${normalizedLabel.replace(/-/g, " ")}`}
+      </h1>
+      {filteredServices.map((service, index) => (
+        <Tilt
+          glareEnable={true}
+          glareMaxOpacity={0.3}
+          scale={1.03}
+          transitionSpeed={1500}
+          key={index}
+        >
+          <div
+            className="service-block"
+            data-aos="fade-up"
+            data-aos-delay={index * 100}
+          >
+            <h2>{service.title}</h2>
+            <p>{service.description}</p>
             <ul>
-              {features.map((f, i) => (
-                <li key={i}>{f}</li>
+              {service.points.map((point, idx) => (
+                <li key={idx}>✅ {point}</li>
               ))}
             </ul>
-            <p className="impact">
-              <strong>Impact:</strong> {impact}
-            </p>
-          </article>
-        ))}
-      </section>
+          </div>
+        </Tilt>
+      ))}
+
+      {(normalizedLabel === "all" || !normalizedLabel) && (
+        <div className="why-choose" data-aos="fade-up">
+          <h2>Why Choose Adstra Digital?</h2>
+          <ul className="why">
+            <li>Certified Google Ads Experts</li>
+            <li>Social Media Marketing & Lead Generation</li>
+            <li>Branding & Identity Design</li>
+            <li>SEO & Website Optimization</li>
+            <li>Creative Content Production</li>
+            <li>Paid Advertising (PPC & Display Ads)</li>
+            <li>Google Business Profile Management</li>
+          </ul>
+          <p className="conclusion">
+            At Adstra Digital, we help brands elevate their presence, deliver
+            elegant experiences, and excel in the digital world. Whether you're
+            looking to boost sales, increase brand recognition, or connect with
+            the right audience, we have the expertise to make it happen.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-export default ServiceDetails;
+export default FullServices;
