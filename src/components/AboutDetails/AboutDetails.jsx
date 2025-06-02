@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import "./AboutDetails.css";
 import AOS from "aos";
 import "aos/dist/aos.css";
+// import teamImage from "../assets/team.jpg";
 
 function AboutDetails() {
   useEffect(() => {
@@ -48,7 +49,7 @@ function AboutDetails() {
         </ul>
       </div>
 
-      <div className="about-section" data-aos="fade-up">
+      <div className="about-section team-section" data-aos="fade-up">
         <h2>Meet the Team</h2>
         <img src="" alt="Adstra Digital Team" className="team-image" />
         <p>

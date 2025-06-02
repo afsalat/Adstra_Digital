@@ -4,8 +4,11 @@ import "./Enquiry.css";
 
 function Enquiry() {
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
+    company: "",
     email: "",
+    phone: "",
+    website: "",
     subject: "",
     message: "",
   });
@@ -17,8 +20,10 @@ function Enquiry() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      alert("Please fill in required fields.");
+    const { fullName, email, phone, message } = formData;
+
+    if (!fullName || !email || !phone || !message) {
+      alert("Please fill in all required fields.");
       return;
     }
 
@@ -32,7 +37,15 @@ function Enquiry() {
         (response) => {
           console.log("Email sent successfully!", response.status, response.text);
           setSubmitted(true);
-          setFormData({ name: "", email: "", subject: "", message: "" });
+          setFormData({
+            fullName: "",
+            company: "",
+            email: "",
+            phone: "",
+            website: "",
+            subject: "",
+            message: "",
+          });
           setTimeout(() => setSubmitted(false), 4000);
         },
         (error) => {
@@ -53,21 +66,45 @@ function Enquiry() {
           <div className="form-row">
             <input
               type="text"
-              name="name"
-              placeholder="Your Name *"
-              value={formData.name}
+              name="fullName"
+              placeholder="Full Name *"
+              value={formData.fullName}
               onChange={handleChange}
               required
             />
             <input
+              type="text"
+              name="company"
+              placeholder="Company Name (if applicable)"
+              value={formData.company}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-row">
+            <input
               type="email"
               name="email"
-              placeholder="Your Email *"
+              placeholder="Email Address *"
               value={formData.email}
               onChange={handleChange}
               required
             />
+            <input
+              type="text"
+              name="phone"
+              placeholder="Phone Number *"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+            />
           </div>
+          <input
+            type="text"
+            name="website"
+            placeholder="Website (if available)"
+            value={formData.website}
+            onChange={handleChange}
+          />
           <input
             type="text"
             name="subject"
@@ -84,7 +121,11 @@ function Enquiry() {
             required
           />
           <button type="submit">Send Enquiry</button>
-          {submitted && <div className="success-message">Thank you! We’ll be in touch shortly.</div>}
+          {submitted && (
+            <div className="success-message">
+              Thank you! We’ll be in touch shortly.
+            </div>
+          )}
         </form>
       </div>
     </section>
