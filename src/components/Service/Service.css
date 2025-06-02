@@ -19,28 +19,6 @@
   text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-
-.service {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.service-title {
-  font-size: 2.5rem;
-  margin-bottom: 30px;
-  color: #232222;
-  text-align: center;
-  font-weight: bold;
-  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
-}
-
 /* Info panel placed on top of each box */
 .box-on-face {
   background: rgba(255, 255, 255, 0.85);
@@ -94,7 +72,7 @@ canvas {
   height: 650px;
   border-radius: 16px;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-  background: #bacae1;
+  background: radial-gradient(rgb(170, 195, 203), rgb(8, 107, 140));
   transition: transform 0.3s ease;
 }
 

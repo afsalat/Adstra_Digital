@@ -1,6 +1,6 @@
 import React from "react";
 import "./navbar.css";
-import logo from '../../assets/logo/Logo-01.jpg'
+import logo from '../../assets/logo/logo_new-01.jpg'
 
 function NavBar() {
     return (
@@ -18,7 +18,7 @@ function NavBar() {
                     <li><a href="/#enquiry">Enquiry</a></li>
                     <ul className="nav-link">
                         <li><a href="/#contact">Contact us</a></li>
-                        <li><a href="#blog">Blog</a></li>
+                        <li><a href="/blogs/all">Blog</a></li>
                     </ul>
                 </ul>
 

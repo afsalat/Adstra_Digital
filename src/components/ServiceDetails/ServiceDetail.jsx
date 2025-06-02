@@ -121,37 +121,53 @@ const serviceSections = [
       "Video Ads – YouTube advertising to capture audience attention through engaging video content.",
       "Remarketing Ads – Reconnect with users who have previously visited your website.",
     ],
+  }, {
+    title: "Web Development & Design",
+    slug: "web-development",
+    description:
+      "We build responsive, user-friendly websites tailored to your brand and business goals, ensuring optimal performance and seamless user experience.",
+    points: [
+      "Custom website design aligned with your brand identity.",
+      "Responsive development for mobile, tablet, and desktop.",
+      "E-commerce solutions with secure payment integrations.",
+      "CMS implementation for easy content management.",
+      "Website maintenance and performance optimization.",
+    ],
   },
 ];
 
 function FullServices() {
-    const { label } = useParams();
+  const { label } = useParams();
   useEffect(() => {
     AOS.init({ duration: 1000 });
   }, []);
 
-    const normalizedLabel = label?.toLowerCase();
+  const normalizedLabel = label?.toLowerCase();
 
   const filteredServices =
     normalizedLabel === "all"
       ? serviceSections
       : serviceSections.filter(
-          (service) => service.slug === normalizedLabel
-        );
+        (service) => service.slug === normalizedLabel
+      );
 
   return (
     <div className="full-services">
-      <h1 data-aos="fade-down">
+      <h2 data-aos="fade-down">
         {normalizedLabel === "all" || !normalizedLabel
           ? "Our Services"
           : `Service: ${normalizedLabel.replace(/-/g, " ")}`}
-      </h1>
+      </h2>
       {filteredServices.map((service, index) => (
         <Tilt
           glareEnable={true}
-          glareMaxOpacity={0.3}
-          scale={1.03}
-          transitionSpeed={1500}
+          glareMaxOpacity={0.2}        
+          scale={1.05}                 
+          transitionSpeed={1000}       
+          tiltMaxAngleX={10}           
+          tiltMaxAngleY={10}           
+          perspective={2000}           
+          gyroscope={true}             
           key={index}
         >
           <div
@@ -159,7 +175,7 @@ function FullServices() {
             data-aos="fade-up"
             data-aos-delay={index * 100}
           >
-            <h2>{service.title}</h2>
+            <h3>{service.title}</h3>
             <p>{service.description}</p>
             <ul>
               {service.points.map((point, idx) => (

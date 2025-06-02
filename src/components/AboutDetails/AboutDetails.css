@@ -122,3 +122,22 @@
   background-color: #0056b3;
   color: #fff;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .about-section {
+    padding: 30px 20px;
+  }
+
+  .about-section h2 {
+    font-size: 24px;
+  }
+
+  .contact-cta h2 {
+    font-size: 28px;
+  }
+
+  .contact-cta p {
+    font-size: 16px;
+  }
+}

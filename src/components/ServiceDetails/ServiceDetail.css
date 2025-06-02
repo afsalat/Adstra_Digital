@@ -3,22 +3,23 @@
   margin: auto;
   padding: 40px 20px;
   font-family: "Segoe UI", sans-serif;
-  color: #333;
+  color: #f3f1f1;
   line-height: 1.6;
 }
 
-.full-services h1 {
+.full-services h2 {
   text-align: center;
   font-size: 2.5rem;
   color: #1a1a1a;
   margin-bottom: 50px;
+  text-decoration: underline 1.5px;
 }
 
 .service-block {
-  background: #d1d1d1;
+  background: #0656aca2;
   padding: 30px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 8px rgba(190, 188, 188, 0.06);
   margin-bottom: 40px;
   transition: transform 0.3s ease;
 }
@@ -28,8 +29,9 @@
   box-shadow: 2px 20px 50px black;
 }
 
-.service-block h2 {
-  color: #e91e63;
+.service-block h3 {
+  font-size: 2.5rem;
+  color: #0d0755;
   margin-bottom: 10px;
 }
 
@@ -46,7 +48,7 @@
 }
 
 .service-block p {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 

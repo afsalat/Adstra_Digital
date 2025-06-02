@@ -6,21 +6,23 @@ import "aos/dist/aos.css";
 
 function AboutDetails() {
   useEffect(() => {
-    AOS.init({ duration: 1000, once: true });
+    setTimeout(() => {
+      AOS.init({ duration: 1000, once: true });
+    }, 100);
   }, []);
 
   return (
     <div className="about-details">
-      <div className="about-section" data-aos="fade-up">
+      <div className="about-section" data-aos="fade-up" data-aos-delay="0">
         <h2>Who We Are</h2>
         <p>
-          Adstra Digital is a performance-driven digital marketing agency committed to helping businesses grow,
-          thrive, and lead in the digital landscape. Our diverse team of creatives, strategists, analysts, and tech experts work
-          together to craft campaigns that make a real impact.
+          Adstra Digital is a performance-driven digital marketing agency
+          committed to helping businesses grow, thrive, and lead in the digital
+          landscape.
         </p>
       </div>
 
-      <div className="about-section" data-aos="fade-up">
+      <div className="about-section" data-aos="fade-up" data-aos-delay="100">
         <h2>What We Do</h2>
         <ul>
           <li><strong>Digital Strategy:</strong> We build data-backed roadmaps tailored to your goals.</li>
@@ -32,14 +34,14 @@ function AboutDetails() {
         </ul>
       </div>
 
-      <div className="about-section" data-aos="fade-up">
+      <div className="about-section" data-aos="fade-up" data-aos-delay="200">
         <h2>Our Mission</h2>
         <p>
           To empower businesses with innovative, result-driven marketing strategies that combine creativity and technology.
         </p>
       </div>
 
-      <div className="about-section" data-aos="fade-up">
+      <div className="about-section" data-aos="fade-up" data-aos-delay="300">
         <h2>Why Adstra Digital?</h2>
         <ul>
           <li>✅ Proven Track Record with Local & Global Clients</li>
@@ -49,22 +51,22 @@ function AboutDetails() {
         </ul>
       </div>
 
-      <div className="about-section team-section" data-aos="fade-up">
+      <div className="about-section team-section" data-aos="fade-up" data-aos-delay="400">
         <h2>Meet the Team</h2>
         <img src="" alt="Adstra Digital Team" className="team-image" />
         <p>
-          Behind every great campaign is a passionate team. At Adstra Digital, we believe collaboration is the key to creativity. 
+          Behind every great campaign is a passionate team. At Adstra Digital, we believe collaboration is the key to creativity.
           We’re a mix of marketers, designers, developers, and storytellers who care about your success.
         </p>
       </div>
 
-      <div className="about-section contact-cta" data-aos="fade-up">
+      <div className="about-section contact-cta" data-aos="fade-up" data-aos-delay="500">
         <h2>Ready to Grow?</h2>
         <p>
           Let’s talk! We’d love to understand your business and show you how we can help.
         </p>
         <a href="#contact">
-          <button className="learn-btn">Contact Us</button>
+          <button className="learn-btn" aria-label="Contact Adstra Digital">Contact Us</button>
         </a>
       </div>
     </div>
