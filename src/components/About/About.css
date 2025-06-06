@@ -17,6 +17,7 @@
     flex: 1 1 45%;
     width: 300px;
     padding-left: 5%;
+    padding-right: 5%;
     text-align: left;
     display: flex;
     flex-direction: column;
@@ -36,7 +37,7 @@
     line-height: 1.6;
 }
 
-.learn-btn {
+.learn-btn-box {
     background: rgb(240, 41, 41);
     color: white;
     border: none;
@@ -47,7 +48,7 @@
     border-radius: 20px;
 }
 
-.learn-btn:hover {
+.learn-btn-box:hover {
     background-color: #0056b3;
 }
 
@@ -62,4 +63,14 @@
     height: auto;
     border-radius: 8px;
     padding-left: 50px;
+}
+
+
+.about-left ul li {
+  margin-bottom: 10px;
+  font-size: 1.05rem;
+  color: #444;
+  position: relative;
+  font-weight: bold;
+  list-style: none;
 }

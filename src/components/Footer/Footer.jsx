@@ -35,9 +35,9 @@ function Footer() {
         </div>
 
         <nav className="footer__nav" aria-label="Footer Navigation">
-          <a href="#!" className="footer__nav-link">Privacy Policy</a>
+          <a href="/policy" className="footer__nav-link">Privacy Policy</a>
           <a href="#!" className="footer__nav-link">Terms of Service</a>
-          <a href="mailto:contact@yourcompany.com" className="footer__nav-link">Contact Us</a>
+          <a href="/#enquiry" className="footer__nav-link">Contact Us</a>
         </nav>
 
         <div className="footer__socials" aria-label="Social Media Links">

@@ -8,6 +8,7 @@ import Enquiry from "../components/Enquiry/Enquiry";
 import Footer from "../components/Footer/Footer";
 import Blog from "../components/Blog/Blog";
 import ContactUs from "../components/Contact/Contact";
+import WhatsAppFloatingButton from "../components/WhatsappIcon/WhatsappIcon";
 
 
 function HomePage() {
@@ -22,6 +23,7 @@ function HomePage() {
             <Blog />
             <ContactUs />
             <Footer />
+            <WhatsAppFloatingButton />
         </div>
     )
 }

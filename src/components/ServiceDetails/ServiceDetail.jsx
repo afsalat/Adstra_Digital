@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import Tilt from "react-parallax-tilt";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import img from "../../assets/banner-images/business-concept-with-graphic-holography_23-2149160929.webp"
 import "./ServiceDetail.css";
 import { useParams } from "react-router-dom";
 
@@ -9,6 +10,7 @@ const serviceSections = [
   {
     title: "In-House Professional Photography & Video Production",
     slug: "video-production",
+    image: img,
     description:
       "High-quality visuals make a lasting impression. At Adstra Digital, we provide in-house photography and video production, ensuring professional, compelling content that enhances your brand’s identity. Whether it’s corporate branding shoots, product photography, promotional videos, or storytelling content, we make sure your visuals stand out.",
     points: [
@@ -155,33 +157,34 @@ function FullServices() {
     <div className="full-services">
       <h2 data-aos="fade-down">
         {normalizedLabel === "all" || !normalizedLabel
-          ? "Our Services"
-          : `Service: ${normalizedLabel.replace(/-/g, " ")}`}
+          ? "Our Specialized Services"
+          : `Specialized Service: ${normalizedLabel.replace(/-/g, " ")}`}
       </h2>
       {filteredServices.map((service, index) => (
         <Tilt
           glareEnable={true}
-          glareMaxOpacity={0.2}        
-          scale={1.05}                 
-          transitionSpeed={1000}       
-          tiltMaxAngleX={10}           
-          tiltMaxAngleY={10}           
-          perspective={2000}           
-          gyroscope={true}             
+          glareMaxOpacity={0.2}
+          scale={1.05}
+          transitionSpeed={100}
+          tiltMaxAngleX={10}
+          tiltMaxAngleY={10}
+          perspective={2000}
+          gyroscope={true}
           key={index}
         >
-          <div
-            className="service-block"
-            data-aos="fade-up"
-            data-aos-delay={index * 100}
-          >
-            <h3>{service.title}</h3>
-            <p>{service.description}</p>
-            <ul>
-              {service.points.map((point, idx) => (
-                <li key={idx}>✅ {point}</li>
-              ))}
-            </ul>
+          <div className="service-block" data-aos="fade-up" data-aos-delay={100}>
+            <div className="service-content">
+              <img src={service.image} alt={service.title} className="service-image" />
+              <div className="service-text">
+                <h3>{service.title}</h3>
+                <p>{service.description}</p>
+                <ul>
+                  {service.points.map((point, idx) => (
+                    <li key={idx}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         </Tilt>
       ))}

@@ -1,0 +1,89 @@
+
+.privacy-policy {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.7;
+  color: #333;
+  background-color: #fff;
+}
+
+.privacy-policy h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #111;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.privacy-policy h2 {
+  font-size: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: #222;
+}
+
+.privacy-policy h3 {
+  font-size: 1.2rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.privacy-policy p {
+  margin-bottom: 1rem;
+}
+
+.privacy-policy ul {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  list-style-type: disc;
+}
+
+.privacy-policy li {
+  margin-bottom: 0.5rem;
+}
+
+.privacy-policy a {
+  color: #007BFF;
+  text-decoration: none;
+}
+
+.privacy-policy a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .privacy-policy {
+    padding: 1rem;
+  }
+
+  .privacy-policy h1 {
+    font-size: 1.5rem;
+  }
+
+  .privacy-policy h2 {
+    font-size: 1.25rem;
+  }
+
+  .privacy-policy h3 {
+    font-size: 1.1rem;
+  }
+}
+
+
+.back-button {
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 2rem;
+}
+
+.back-button:hover {
+  background-color: #0056b3;
+}

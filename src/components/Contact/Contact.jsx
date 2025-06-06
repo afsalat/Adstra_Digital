@@ -45,8 +45,6 @@ function ContactUs() {
 
         <div className="contact-details">
           <div className="contact-inf">
-            <h3>Our Office</h3>
-            <p>{info.address}</p>
 
             <h3>Email</h3>
             <p><a href={`mailto:${info.email}`}>{info.email}</a></p>
@@ -56,6 +54,11 @@ function ContactUs() {
 
             <h3>Business Hours</h3>
             <p>{info.working_hours}</p>
+
+            <h3>Our Presence</h3>
+            <p>{info.address_1}</p>
+            <p>{info.address_2}</p>
+            <p>{info.address_3}</p>
 
             <div className="social-links">
               <h3>Follow Us</h3>

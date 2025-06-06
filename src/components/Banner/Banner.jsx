@@ -4,6 +4,8 @@ import "aos/dist/aos.css";
 import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
+
+// Image imports
 import img1 from "../../assets/banner-images/branding-innovation-creative-inspire-concept.jpg";
 import img2 from "../../assets/banner-images/business-concept-with-graphic-holography_23-2149160929.webp";
 import img3 from "../../assets/banner-images/business-data-presentation.jpg";
@@ -32,8 +34,6 @@ function Banner() {
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [displayedText, setDisplayedText] = useState("");
-  const [charIndex, setCharIndex] = useState(0);
 
   const imageData = {
     row1: [img1, img2, img3],
@@ -73,35 +73,23 @@ function Banner() {
 
   useEffect(() => {
     if (messages.length === 0) return;
-
-    const currentMessage = messages[currentMessageIndex];
-
-    if (charIndex < currentMessage.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText(currentMessage.slice(0, charIndex + 1));
-        setCharIndex((prev) => prev + 1);
-      }, 50);
-      return () => clearTimeout(timeout);
-    } else {
-      const timeout = setTimeout(() => {
-        setCharIndex(0);
-        setDisplayedText("");
-        setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
-      }, 2500);
-      return () => clearTimeout(timeout);
-    }
-  }, [charIndex, currentMessageIndex, messages]);
+    const interval = setInterval(() => {
+      setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [messages]);
 
   return (
     <div className="banner">
       <div className="banner-inside">
-        {/* Left Side - Typing Message */}
-        <div className="banner-left" data-aos="fade-up">
-          <div className="banner-text-wrapper">
+        <div className="banner-left">
+          <div className="banner-text-container">
             {loadingMessages ? (
-              <p className="banner-description typing">Loading...</p>
+              <p className="banner-description">Loading...</p>
             ) : (
-              <p className="banner-title typing">{displayedText}</p>
+              <p className="banner-title zoom-animation">
+                {messages[currentMessageIndex]}
+              </p>
             )}
             <a href="#enquiry">
               <button className="enquiry-button1">Enquiry</button>
@@ -109,14 +97,16 @@ function Banner() {
           </div>
         </div>
 
-        {/* Right Side - Image Grid */}
         <div className="banner-right">
           <div className="image-grid">
             {Object.keys(imageData).map((rowKey, rowIndex) => (
               <div
                 key={rowIndex}
-                className={`image-row ${rowKey === "row3" || rowKey === "row5" ? "row-small" : "row-large"
-                  }`}
+                className={`image-row ${
+                  rowKey === "row3" || rowKey === "row5"
+                    ? "row-small"
+                    : "row-large"
+                }`}
                 data-aos={rowIndex % 2 === 0 ? "fade-left" : "fade-right"}
               >
                 {imageData[rowKey].map((src, idx) => (

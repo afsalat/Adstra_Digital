@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import emailjs from "@emailjs/browser";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../../Context/firebaseConfig";
 import "./Enquiry.css";
 
 function Enquiry() {
@@ -12,56 +14,90 @@ function Enquiry() {
     subject: "",
     message: "",
   });
+
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const validateForm = () => {
     const { fullName, email, phone, message } = formData;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[0-9+\-\s()]+$/;
 
-    if (!fullName || !email || !phone || !message) {
-      alert("Please fill in all required fields.");
+    if (!fullName || !email || !phone || !message) return false;
+    if (!emailRegex.test(email)) return false;
+    if (!phoneRegex.test(phone)) return false;
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      alert("Please fill all required fields with valid information.");
       return;
     }
 
-    const serviceID = "YOUR_SERVICE_ID";
-    const templateID = "YOUR_TEMPLATE_ID";
-    const publicKey = "YOUR_PUBLIC_KEY";
+    setLoading(true);
 
-    emailjs
-      .send(serviceID, templateID, formData, publicKey)
-      .then(
-        (response) => {
-          console.log("Email sent successfully!", response.status, response.text);
-          setSubmitted(true);
-          setFormData({
-            fullName: "",
-            company: "",
-            email: "",
-            phone: "",
-            website: "",
-            subject: "",
-            message: "",
-          });
-          setTimeout(() => setSubmitted(false), 4000);
-        },
-        (error) => {
-          console.error("Failed to send email:", error);
-          alert("Oops! Something went wrong. Please try again later.");
-        }
-      );
+    const serviceID = process.env.REACT_APP_EMAILJS_SERVICE_ID;
+    const templateID = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
+
+    const emailData = {
+      fullName: formData.fullName,
+      company: formData.company || "Not provided",
+      email: formData.email,
+      phone: formData.phone,
+      website: formData.website || "Not provided",
+      subject: formData.subject || "No subject provided",
+      message: formData.message,
+    };
+
+    console.log("📤 Sending EmailJS data:", emailData);
+
+    try {
+      await emailjs.send(serviceID, templateID, emailData, publicKey);
+      console.log("✅ EmailJS: Email sent successfully");
+
+      await addDoc(collection(db, "enquiries"), formData);
+      console.log("✅ Firebase: Enquiry saved");
+
+      setSubmitted(true);
+      setFormData({
+        fullName: "",
+        company: "",
+        email: "",
+        phone: "",
+        website: "",
+        subject: "",
+        message: "",
+      });
+
+      setTimeout(() => setSubmitted(false), 4000);
+    } catch (error) {
+      console.error("❌ EmailJS or Firebase error:", error);
+      alert("Submission failed. Please double-check your input and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <section id="enquiry" className="enquiry-section">
       <div className="enquiry-container">
         <div className="enquiry-header">
-          <h2>Let's Collaborate</h2>
+          <h2>Enquire Now!!!</h2>
           <p>Fill out the form and let's bring your ideas to life.</p>
         </div>
+
         <form className="enquiry-form" onSubmit={handleSubmit}>
           <div className="form-row">
             <input
@@ -80,6 +116,7 @@ function Enquiry() {
               onChange={handleChange}
             />
           </div>
+
           <div className="form-row">
             <input
               type="email"
@@ -98,6 +135,7 @@ function Enquiry() {
               required
             />
           </div>
+
           <input
             type="text"
             name="website"
@@ -105,6 +143,7 @@ function Enquiry() {
             value={formData.website}
             onChange={handleChange}
           />
+
           <input
             type="text"
             name="subject"
@@ -112,6 +151,7 @@ function Enquiry() {
             value={formData.subject}
             onChange={handleChange}
           />
+
           <textarea
             name="message"
             placeholder="Your Message *"
@@ -120,7 +160,11 @@ function Enquiry() {
             rows="5"
             required
           />
-          <button type="submit">Send Enquiry</button>
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Sending..." : "Send Enquiry"}
+          </button>
+
           {submitted && (
             <div className="success-message">
               Thank you! We’ll be in touch shortly.

@@ -12,6 +12,7 @@ import { collection, getDocs } from "firebase/firestore";
 function SpinningBox({ position, images, label, slug, description }) {
   const navigate = useNavigate();
   const meshRef = useRef();
+  const [clicked, setClicked] = useState(false);
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
@@ -23,24 +24,28 @@ function SpinningBox({ position, images, label, slug, description }) {
   );
 
   useFrame(() => {
-    if (meshRef.current) {
+    if (meshRef.current && !clicked) {
       meshRef.current.rotation.y += 0.01;
       meshRef.current.rotation.x += 0.005;
     }
   });
 
   const handleClick = () => {
-    navigate(`/service/${encodeURIComponent(slug)}`);
+    setClicked(true);
+    setTimeout(() => {
+      navigate(`/service/${encodeURIComponent(slug)}`);
+    }, 1000);
   };
+
 
   return (
     <mesh ref={meshRef} position={position} material={materials}>
       <boxGeometry args={[1.5, 1.5, 1.5]} />
       <Html position={[0, 1.1, 0]} center>
-        <div className="box-on-face" data-aos="fade-up">
+        <div className={`box-on-face ${clicked ? "fade-out" : ""}`} data-aos="fade-up">
           <h3>{label}</h3>
           <p>{description}</p>
-          <button className="learn-more-btn" onClick={handleClick}>
+          <button className="learn-more-btn" onClick={handleClick} disabled={clicked}>
             Learn More
           </button>
         </div>
@@ -70,17 +75,15 @@ function Service() {
   return (
     <div className="service" style={{ width: "100%", height: "100vh" }}>
       <h2 className="service-title" style={{ textAlign: "center", margin: "20px" }}>
-        Our Services
+        Our Specialized Services
       </h2>
       <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
         <ambientLight intensity={0.5} />
         <directionalLight position={[5, 5, 5]} />
         {boxData.map((box, idx) => {
-          const position = [
-            Math.random() * 12 - 6,
-            Math.random() * 4 - 2,
-            Math.random() * 2 - 1
-          ];
+          const x = (idx % 5) * 3 - 5.5;
+          const y = -Math.floor(idx / 5) * 3 + 2;
+          const position = [x, y, 0];
           return (
             <SpinningBox
               key={idx}
