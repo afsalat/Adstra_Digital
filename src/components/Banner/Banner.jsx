@@ -4,8 +4,6 @@ import "aos/dist/aos.css";
 import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
-
-// Image imports
 import img1 from "../../assets/banner-images/branding-innovation-creative-inspire-concept.jpg";
 import img2 from "../../assets/banner-images/business-concept-with-graphic-holography_23-2149160929.webp";
 import img3 from "../../assets/banner-images/business-data-presentation.jpg";

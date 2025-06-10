@@ -1,0 +1,167 @@
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth.hashers import make_password
+from rest_framework.decorators import api_view
+from .models import CustomUser
+from django.contrib.auth.hashers import check_password
+from apis.attendance.models import Attendance
+from django.utils import timezone
+from .serializers import UserSerializer
+from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
+from utils.jwt_helper import generate_jwt
+import traceback
+
+
+
+
+# POST /adduser/ - create user
+@api_view(["POST"])
+def adduser(request):
+    try:
+        data = request.data.copy()
+        data['password'] = make_password(data['password'])
+
+        serializer = UserSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "User created successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print(traceback.format_exc( ))
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+# GET /listusers/ - list users
+@api_view(["GET"])
+def listusers(request):
+    try:
+        users = CustomUser.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response({"users": serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+# PUT /updateuser/<id>/ - update user
+@api_view(["PUT"])
+def updateuser(request, id):
+    try:
+        user = CustomUser.objects.get(id=id)
+        data = request.data.copy()
+        if 'password' in data:
+            data['password'] = make_password(data['password'])
+
+        serializer = UserSerializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "User updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
+        else:
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+# POST /login/ - user login & check-in
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_view(request):
+    try:
+        username = request.data.get('username')
+        password = request.data.get('password')
+        location = request.data.get('location', '')
+
+        user = CustomUser.objects.filter(username=username).first()
+        if not user:
+            return Response({"error": "User not found"}, status=404)
+
+        if check_password(password, user.password):
+            token = generate_jwt(user.id)
+
+            today = timezone.now().date()
+            attendance, created = Attendance.objects.get_or_create(user=user, date=today)
+
+            if created:
+                attendance.checkin = timezone.now()
+                attendance.location = location
+                attendance.save()
+                checkin_status = "Check-in recorded"
+            else:
+                checkin_status = "Already checked in today"
+
+            return Response({
+                "message": f"Login successful, {checkin_status}",
+                "token": token
+            }, status=200)
+
+        return Response({"error": "Invalid password"}, status=400)
+
+    except Exception as e:
+        print("error:", traceback.format_exc())
+        return Response({"error": str(e)}, status=500)
+
+
+
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def logout_view(request, user_id):
+    try:
+        user = user_id
+        today = timezone.now().date()
+        print(user) 
+
+        attendance = Attendance.objects.filter(user=user_id, date=today).first()
+        if not attendance:
+            return Response({"error": "No check-in record found"}, status=404)
+
+        # Prevent multiple checkouts
+        if attendance.checkout:
+            return Response({"error": "Checkout already recorded for today"}, status=400)
+
+        # Require work report before allowing checkout
+        if not attendance.work_report or attendance.work_report.strip() == "":
+            return Response({"error": "Work report not submitted"}, status=400)
+
+        attendance.checkout = timezone.now()
+        attendance.save()
+
+        return Response({"message": "Logout successful, checkout recorded"}, status=200)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_work_report(request):
+    try:
+        user = request.user
+        work_report = request.data.get("work_report", "").strip()
+
+        if not work_report:
+            return Response({"error": "Work report is required"}, status=400)
+
+        today = timezone.now().date()
+        attendance, created = Attendance.objects.get_or_create(user=user, date=today)
+
+        attendance.work_report = work_report
+        attendance.save()
+
+        return Response({"message": "Work report submitted successfully"}, status=200)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
