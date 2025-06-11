@@ -38,6 +38,7 @@ def adduser(request):
 
 # GET /listusers/ - list users
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def listusers(request):
     try:
         users = CustomUser.objects.all()
@@ -51,9 +52,10 @@ def listusers(request):
 
 # PUT /updateuser/<id>/ - update user
 @api_view(["PUT"])
-def updateuser(request, id):
+@permission_classes([AllowAny])
+def updateuser(request, user_id):
     try:
-        user = CustomUser.objects.get(id=id)
+        user = CustomUser.objects.get(id=user_id)
         data = request.data.copy()
         if 'password' in data:
             data['password'] = make_password(data['password'])
@@ -64,6 +66,38 @@ def updateuser(request, id):
             return Response({"message": "User updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
         else:
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# PUT /updateuser/<id>/ - update user (activate/deactivate or other fields)
+@api_view(["PUT"])
+@permission_classes([AllowAny])
+def activeNinactive(request, user_id):
+    try:
+        user = CustomUser.objects.get(id=user_id)
+        data = request.data.copy()
+
+
+        # Handle is_active: convert to boolean properly
+        if 'is_active' in data:
+            is_active_value = str(data['is_active']).lower()
+            data['is_active'] = is_active_value in ['true', '1']
+
+        # Apply the update using serializer
+        serializer = UserSerializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "User Status changed successfully",
+                "user": serializer.data
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
     except CustomUser.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -145,17 +179,16 @@ def logout_view(request, user_id):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def update_work_report(request):
+@permission_classes([AllowAny])
+def update_work_report(request, user_id):
     try:
-        user = request.user
         work_report = request.data.get("work_report", "").strip()
 
         if not work_report:
             return Response({"error": "Work report is required"}, status=400)
 
         today = timezone.now().date()
-        attendance, created = Attendance.objects.get_or_create(user=user, date=today)
+        attendance, created = Attendance.objects.get_or_create(user=user_id, date=today)
 
         attendance.work_report = work_report
         attendance.save()

@@ -5,7 +5,10 @@ import ServieceDetailsPage from './pages/ServiceDetail';
 import AboutDetailsPage from './pages/AboutDetailsPage';
 import BlogDetail from './pages/BlogDetailsPage';
 import PrivacyPolicy from './components/Policy/Policy';
-
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminDashboard from './components/admin_side/AdminDashboard/AdminDashboard';
+import AttendanceList from './components/admin_side/Attendance/Attendance';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -13,12 +16,30 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path='/about' element={<AboutDetailsPage />} />
+          <Route path="/about" element={<AboutDetailsPage />} />
           <Route path="/service/:label" element={<ServieceDetailsPage />} />
           <Route path="/service" element={<Navigate to="/service/all" />} />
-          <Route path="blogs/:slug" element={<BlogDetail />} />
+          <Route path="/blogs/:slug" element={<BlogDetail />} />
           <Route path="/blogs" element={<Navigate to="/blog/all" />} />
           <Route path="/policy" element={<PrivacyPolicy />} />
+
+          <Route path="/adminLogin" element={<AdminLoginPage />} />
+          <Route
+            path="/admindashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/attendance"
+            element={
+              <ProtectedRoute>
+                <AttendanceList />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </div>
     </Router>

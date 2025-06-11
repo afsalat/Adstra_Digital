@@ -9,16 +9,7 @@ class Attendance(models.Model):
     checkout = models.DateTimeField(blank=True, null=True)
     work_report = models.TextField(blank=True, null=True)
     validation = models.BooleanField(default=False)
-    status = models.CharField(
-        max_length=20,
-        choices=[
-            ('Present', 'Present'),
-            ('Absent', 'Absent'),
-            ('Leave', 'Leave'),
-            ('Half Day', 'Half Day'),
-        ],
-        default='Present'
-    )
+    status = models.CharField(max_length=20, default='Present', null=True, blank=True)
     location = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):

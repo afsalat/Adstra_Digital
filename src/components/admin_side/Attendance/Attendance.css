@@ -1,0 +1,251 @@
+.attendance-container {
+  padding: 40px;
+  background: #dcdddf;
+  border-radius: 12px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  max-width: 90%;
+  max-height: 90%;
+  margin: auto;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  overflow-y: scroll;
+}
+
+.back-btn {
+  background-color: #82b8a6;
+  color: white;
+  font-size: 20px;
+  margin-bottom: 20px;
+  border: none;
+}
+
+.attendance-container h2 {
+  margin-bottom: 14px;
+  font-size: 2.5rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Table wrapper */
+.attendance-table-wrapper {
+  overflow-x: auto;
+}
+
+/* Table base */
+.attendance-table {
+  min-width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* Table head */
+.attendance-table thead {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+.attendance-table th,
+.attendance-table td {
+  padding: 14px 18px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0. ;
+  vertical-align: middle;
+}
+
+/* Row hover effect */
+.attendance-table tbody tr:hover {
+  background-color: #f3f4f6;
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* Status badge */
+.badge {
+  padding: 6px 12px;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge.present {
+  background-color: #22c55e;
+}
+
+.badge.absent {
+  background-color: #ef4444;
+}
+
+.badge.leave {
+  background-color: #f59e0b;
+}
+
+.badge.half-day {
+  background-color: #3b82f6;
+}
+
+/* Work report input */
+.work-report-cell input, select {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.header-box {
+  position: sticky;
+}
+
+.work-report-cell button {
+  margin-top: 8px;
+  padding: 8px 14px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.work-report-cell button:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.work-report-cell button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Validation button */
+.validation-cell button {
+  padding: 6px 12px;
+  background-color: #e5e7eb;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.validation-cell button.active {
+  background-color: #10b981;
+  color: white;
+}
+
+.validation-cell button:hover:not(.active) {
+  background-color: #d1d5db;
+}
+
+/* Loader */
+.loader {
+  text-align: center;
+  font-size: 1.2rem;
+  padding: 40px 0;
+  color: #6b7280;
+}
+
+/* Create button */
+.create-btn {
+  margin: 20px 0;
+  padding: 10px 20px;
+  background-color: #5ed58a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.create-btn:hover {
+  background-color: #239966;
+}
+
+/* Create form */
+.create-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.create-form label {
+  flex-direction: column;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
+  flex: 1 1 50px;
+  font-weight: bold;
+}
+
+.dashboard-grid a {
+    text-decoration: none;
+}
+
+.create-form input {
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  flex: 1 1 200px;
+  background-color: #ffffff;
+}
+
+.create-form button {
+  background-color: #10b981;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.create-form button:hover {
+  background-color: #059669;
+}
+
+/* Top work report editor */
+.user-report-editor-inline {
+  margin: 24px 0;
+  justify-content: center;
+  display: flex;
+  gap: 10px;
+}
+
+.user-report-editor-inline textarea {
+  padding: 10px;
+  border: 1px solid #5e6164;
+  border-radius: 6px;
+  width: 23.4rem;
+  font-size: 0.95rem;
+  font-family:sans-serif;
+  background-color: #ffffff;
+}
+
+.user-report-editor-inline button {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 9px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-report-editor-inline button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.user-report-editor-inline button:hover:not(:disabled) {
+  background-color: #059669;
+}

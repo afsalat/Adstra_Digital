@@ -2,5 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('adduser/', views.adduser, name="create_user"),
+    path('add-user/', views.adduser, name="create_user"),
+    path('update-user/<int:user_id>', views.updateuser, name="update_user"),
+    path('user-list/', views.listusers, name="list_user"),
+    path('active-inactive/<int:user_id>', views.activeNinactive, name="active_inactive")
+
 ]

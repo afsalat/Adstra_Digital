@@ -83,7 +83,7 @@ function Banner() {
         <div className="banner-left">
           <div className="banner-text-container">
             {loadingMessages ? (
-              <p className="banner-description">Loading...</p>
+              <p className="banner-title">Transform Your Digital Presence. Dominate the Market!</p>
             ) : (
               <p className="banner-title zoom-animation">
                 {messages[currentMessageIndex]}
