@@ -122,11 +122,11 @@
   animation: zoomInOut 8s ease-in-out infinite;
 }
 
-/* Responsive Layout */
 @media screen and (max-width: 768px) {
   .banner-inside {
     flex-direction: column;
     align-items: center;
+    margin-top: 100px;
   }
 
   .banner-left,
@@ -134,9 +134,14 @@
     width: 100%;
     padding: 1rem;
   }
+  
+  .banner-left {
+    width: 80%;
+  }
 
   .banner-title {
     text-align: center;
+    font-size: 2.6rem;
   }
 
   .enquiry-button1 {

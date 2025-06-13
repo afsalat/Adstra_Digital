@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "./WhatsappIcon.css";
 import icon from "../../assets/logo/whtap1.png";
 
-function WhatsAppFloatingButton({ phone = "919895226861", message }) {
+function WhatsAppFloatingButton({ phone = "9744779574", message }) {
   const [showPopup, setShowPopup] = useState(false);
 
   const handleClick = () => {
