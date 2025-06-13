@@ -141,7 +141,7 @@
   animation: zoomInOut 8s ease-in-out infinite;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 430px) {
   .banner-inside {
     flex-direction: column;
     align-items: center;

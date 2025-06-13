@@ -4,9 +4,16 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import "./Blog.css";
 import img from "../../assets/banner-images/data-analytics-tablet.jpg";
+import img1 from "../../assets/blog_images/shoting-photo-blog.jpeg"
 import { Link } from "react-router-dom";
 
 const blogPosts = [
+  {
+    title: "The Art of In-House Video & Photography",
+    slug: "in-house-video-photography",
+    excerpt: "Why top brands are building creative powerhouses in-house and how it’s transforming brand storytelling.",
+    imageUrl: img1
+  },
   {
     title: "Mastering UI/UX Basics",
     slug: "ui-ux-basics",
@@ -19,12 +26,6 @@ const blogPosts = [
     excerpt: "Speed up your apps using these little-known performance tricks.",
     imageUrl: img
   },
-  {
-    title: "Modern CSS Magic",
-    slug: "modern-css",
-    excerpt: "Learn how to use Flexbox, Grid, and new CSS features like a pro.",
-    imageUrl: img
-  }
 ];
 
 const Blog = () => {
