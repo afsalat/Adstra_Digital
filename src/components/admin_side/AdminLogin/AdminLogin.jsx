@@ -4,6 +4,9 @@ import './AdminLogin.css';
 import { useAuth } from '../../../Context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+const BASE_URL = "https://adstradigital.com/api";
+
+
 const AdminLogin = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -42,7 +45,7 @@ const AdminLogin = () => {
     e.preventDefault();
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/attendance/login/', {
+      const response = await axios.post(`${BASE_URL}/attendance/login/`, {
         ...formData,
         location,
       });

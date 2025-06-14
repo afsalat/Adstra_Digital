@@ -3,6 +3,8 @@ import axios from "axios";
 import "./Attendance.css";
 
 const currentUser = "afsal";
+const BASE_URL = "https://adstradigital.com/api";
+
 
 const AttendanceTable = () => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -22,7 +24,7 @@ const AttendanceTable = () => {
 
   useEffect(() => {
     axios
-      .get("http://127.0.0.1:8000/attendance/list-attendance/", {
+      .get(`${BASE_URL}/attendance/list-attendance/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
@@ -39,7 +41,7 @@ const AttendanceTable = () => {
 
   const handleAddEntry = () => {
     axios
-      .post("http://127.0.0.1:8000/attendance/add-attendance/", newEntry, {
+      .post(`${BASE_URL}/attendance/add-attendance/`, newEntry, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
@@ -70,7 +72,7 @@ const AttendanceTable = () => {
 
     axios
       .post(
-        `http://127.0.0.1:8000/attendance/work_report/${user}/`,
+        `${BASE_URL}/attendance/work_report/${user}/`,
         { work_report: userWorkReport },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -91,7 +93,7 @@ const AttendanceTable = () => {
   const handleValidationChange = (id, validation) => {
     axios
       .put(
-        `http://127.0.0.1:8000/attendance/validate/${id}`,
+        `${BASE_URL}/attendance/validate/${id}`,
         { validation },
         {
           headers: { Authorization: `Bearer ${token}` },
