@@ -150,7 +150,7 @@ def login_view(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def logout_view(request, user_id):
     try:
         today = timezone.now().date()
