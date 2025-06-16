@@ -185,6 +185,7 @@ def logout_view(request, user_id):
             attendance.status = "Check-in missing"
             salary_cut = 0
 
+        attendance.salary_cut = salary_cut
         attendance.save()
 
         return Response({
