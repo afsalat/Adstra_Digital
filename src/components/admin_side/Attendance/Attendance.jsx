@@ -54,6 +54,10 @@ const AttendanceTable = () => {
   };
 
   useEffect(() => {
+    if (!token || !userId) return;
+
+    const today = new Date().toISOString().split("T")[0];
+
     axios
       .get(`${BASE_URL}/attendance/list-attendance/`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -67,7 +71,9 @@ const AttendanceTable = () => {
         );
         setAttendanceData(updated);
 
-        const userEntry = updated.find((entry) => entry.user === userId);
+        const userEntry = updated.find(
+          (entry) => entry.user === userId && entry.date === today
+        );
         if (userEntry) setUserWorkReport(userEntry.work_report || "");
       })
       .catch((err) => console.error("Error fetching attendance:", err));
@@ -133,6 +139,7 @@ const AttendanceTable = () => {
               : entry
           )
         );
+        setUserWorkReport("");
       })
       .catch((err) => console.error("Update report error:", err));
   };

@@ -1,3 +1,4 @@
+from utils.pagination import StandardResultsSetPagination
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -8,21 +9,33 @@ from .serializers import AttendanceSerializer
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 import traceback
+from django.utils.timezone import localdate
 
 
 
-
-
-# GET /listusers/ - list attendance
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def listAttendance(request):
     try:
-        users = Attendance.objects.all()
-        serializer = AttendanceSerializer(users, many=True)
-        return Response({"users": serializer.data}, status=status.HTTP_200_OK)
+        today = localdate()
+        page = request.query_params.get("page", "1")
+
+        if page == "1":
+            # Page 1: only today's attendance
+            queryset = Attendance.objects.filter(date=today).order_by("-id")
+        else:
+            # From page 2 onwards: exclude today
+            queryset = Attendance.objects.exclude(date=today).order_by("-date", "-id")
+
+        paginator = StandardResultsSetPagination()
+        result_page = paginator.paginate_queryset(queryset, request)
+        serializer = AttendanceSerializer(result_page, many=True)
+
+        return paginator.get_paginated_response({"users": serializer.data})
+
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
