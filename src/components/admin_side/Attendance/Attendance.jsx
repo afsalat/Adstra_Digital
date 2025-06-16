@@ -2,17 +2,18 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { jwtDecode } from "jwt-decode";
 import "./Attendance.css";
 
-const currentUser = "afsal";
 const BASE_URL = "https://adstradigital.com/api";
 
 const AttendanceTable = () => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [userWorkReport, setUserWorkReport] = useState("");
+  const [userId, setUserId] = useState(null);
   const [newEntry, setNewEntry] = useState({
-    user: currentUser,
+    user: "",
     date: "",
     checkin: "",
     checkout: "",
@@ -20,11 +21,23 @@ const AttendanceTable = () => {
     status: "Present",
     location: "",
   });
+
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
   const token = localStorage.getItem("authToken");
 
-  // Convert stringified location to real place
+  useEffect(() => {
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserId(decoded.user_id);
+        setNewEntry((prev) => ({ ...prev, user: decoded.user_id }));
+      } catch (e) {
+        console.error("Invalid token:", e);
+      }
+    }
+  }, [token]);
+
   const getPlaceName = async (locationStr) => {
     if (!locationStr.includes("latitude")) return locationStr;
     try {
@@ -54,11 +67,11 @@ const AttendanceTable = () => {
         );
         setAttendanceData(updated);
 
-        const userEntry = updated.find((entry) => entry.user === currentUser);
+        const userEntry = updated.find((entry) => entry.user === userId);
         if (userEntry) setUserWorkReport(userEntry.work_report || "");
       })
       .catch((err) => console.error("Error fetching attendance:", err));
-  }, []);
+  }, [token, userId]);
 
   const handleAddEntry = () => {
     navigator.geolocation.getCurrentPosition(async (position) => {
@@ -74,7 +87,7 @@ const AttendanceTable = () => {
         const readableLocation = await getPlaceName(location);
         setAttendanceData((prev) => [...prev, { ...res.datax, location: readableLocation }]);
         setNewEntry({
-          user: currentUser,
+          user: userId,
           date: "",
           checkin: "",
           checkout: "",
@@ -95,17 +108,17 @@ const AttendanceTable = () => {
   };
 
   const handleWorkReportSubmit = () => {
-    const user = 1;
+    if (!userId) return;
     axios
       .post(
-        `${BASE_URL}/attendance/work_report/${user}/`,
+        `${BASE_URL}/attendance/work_report/${userId}/`,
         { work_report: userWorkReport },
         { headers: { Authorization: `Bearer ${token}` } }
       )
       .then(() => {
         setAttendanceData((prev) =>
           prev.map((entry) =>
-            entry.id === user.id ? { ...entry, work_report: userWorkReport } : entry
+            entry.user === userId ? { ...entry, work_report: userWorkReport } : entry
           )
         );
       })
