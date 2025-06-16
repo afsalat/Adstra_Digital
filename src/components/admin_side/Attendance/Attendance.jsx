@@ -81,11 +81,18 @@ const AttendanceTable = () => {
       });
       try {
         const entry = { ...newEntry, location };
-        const res = await axios.post(`${BASE_URL}/attendance/add-attendance/`, entry, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.post(
+          `${BASE_URL}/attendance/add-attendance/`,
+          entry,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         const readableLocation = await getPlaceName(location);
-        setAttendanceData((prev) => [...prev, { ...res.datax, location: readableLocation }]);
+        setAttendanceData((prev) => [
+          ...prev,
+          { ...res.datax, location: readableLocation },
+        ]);
         setNewEntry({
           user: userId,
           date: "",
@@ -109,6 +116,9 @@ const AttendanceTable = () => {
 
   const handleWorkReportSubmit = () => {
     if (!userId) return;
+
+    const today = new Date().toISOString().split("T")[0];
+
     axios
       .post(
         `${BASE_URL}/attendance/work_report/${userId}/`,
@@ -118,7 +128,9 @@ const AttendanceTable = () => {
       .then(() => {
         setAttendanceData((prev) =>
           prev.map((entry) =>
-            entry.user === userId ? { ...entry, work_report: userWorkReport } : entry
+            entry.user === userId && entry.date === today
+              ? { ...entry, work_report: userWorkReport }
+              : entry
           )
         );
       })
@@ -134,7 +146,9 @@ const AttendanceTable = () => {
       )
       .then(() => {
         setAttendanceData((prev) =>
-          prev.map((entry) => (entry.id === id ? { ...entry, validation } : entry))
+          prev.map((entry) =>
+            entry.id === id ? { ...entry, validation } : entry
+          )
         );
       })
       .catch((err) => console.error("Validation error:", err));
@@ -143,7 +157,11 @@ const AttendanceTable = () => {
   const formatTime = (datetime) => {
     if (!datetime) return "-";
     const date = new Date(datetime);
-    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "numeric", hour12: true });
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
   };
 
   const exportToExcel = () => {
@@ -161,8 +179,13 @@ const AttendanceTable = () => {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const fileData = new Blob([excelBuffer], { type: "application/octet-stream" });
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const fileData = new Blob([excelBuffer], {
+      type: "application/octet-stream",
+    });
     saveAs(fileData, "attendance.xlsx");
   };
 
@@ -173,7 +196,9 @@ const AttendanceTable = () => {
 
   return (
     <div className="attendance-container">
-      <button onClick={() => window.history.back()} className="btn back-btn">← Back</button>
+      <button onClick={() => window.history.back()} className="btn back-btn">
+        ← Back
+      </button>
       <h2>Attendance List</h2>
 
       <div className="header-box">
@@ -183,7 +208,9 @@ const AttendanceTable = () => {
             onChange={(e) => setUserWorkReport(e.target.value)}
             placeholder="Update your work report"
           />
-          <button className="create-btn" onClick={handleWorkReportSubmit}>Submit</button>
+          <button className="create-btn" onClick={handleWorkReportSubmit}>
+            Submit
+          </button>
         </div>
 
         <button onClick={() => setShowForm(!showForm)} className="create-btn">
@@ -196,7 +223,12 @@ const AttendanceTable = () => {
 
         {showForm && (
           <div className="create-form">
-            {[{ name: "date", type: "date" }, { name: "checkin", type: "datetime-local" }, { name: "checkout", type: "datetime-local" }, { name: "work_report", type: "text" }].map((field) => (
+            {[
+              { name: "date", type: "date" },
+              { name: "checkin", type: "datetime-local" },
+              { name: "checkout", type: "datetime-local" },
+              { name: "work_report", type: "text" },
+            ].map((field) => (
               <label key={field.name}>
                 {field.name.replace("_", " ").toUpperCase()}
                 <br />
@@ -211,7 +243,11 @@ const AttendanceTable = () => {
             <label>
               STATUS
               <br />
-              <select name="status" value={newEntry.status} onChange={handleInputChange}>
+              <select
+                name="status"
+                value={newEntry.status}
+                onChange={handleInputChange}
+              >
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Leave">Leave</option>
