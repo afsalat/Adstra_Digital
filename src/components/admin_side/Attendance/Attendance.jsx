@@ -1,4 +1,3 @@
-// AttendanceTable.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
@@ -25,14 +24,37 @@ const AttendanceTable = () => {
   const recordsPerPage = 10;
   const token = localStorage.getItem("authToken");
 
+  // Convert stringified location to real place
+  const getPlaceName = async (locationStr) => {
+    if (!locationStr.includes("latitude")) return locationStr;
+    try {
+      const locObj = JSON.parse(locationStr.replace(/'/g, '"'));
+      const { latitude, longitude } = locObj;
+      const res = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+      );
+      return res.data.display_name || `${latitude}, ${longitude}`;
+    } catch (err) {
+      console.error("Location conversion failed:", err);
+      return locationStr;
+    }
+  };
+
   useEffect(() => {
     axios
       .get(`${BASE_URL}/attendance/list-attendance/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => {
-        setAttendanceData(res.data.users);
-        const userEntry = res.data.users.find((entry) => entry.user === currentUser);
+      .then(async (res) => {
+        const updated = await Promise.all(
+          res.data.users.map(async (entry) => ({
+            ...entry,
+            location: await getPlaceName(entry.location),
+          }))
+        );
+        setAttendanceData(updated);
+
+        const userEntry = updated.find((entry) => entry.user === currentUser);
         if (userEntry) setUserWorkReport(userEntry.work_report || "");
       })
       .catch((err) => console.error("Error fetching attendance:", err));
@@ -49,7 +71,8 @@ const AttendanceTable = () => {
         const res = await axios.post(`${BASE_URL}/attendance/add-attendance/`, entry, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setAttendanceData((prev) => [...prev, res.datax]);
+        const readableLocation = await getPlaceName(location);
+        setAttendanceData((prev) => [...prev, { ...res.datax, location: readableLocation }]);
         setNewEntry({
           user: currentUser,
           date: "",
@@ -160,12 +183,7 @@ const AttendanceTable = () => {
 
         {showForm && (
           <div className="create-form">
-            {[
-              { name: "date", type: "date" },
-              { name: "checkin", type: "datetime-local" },
-              { name: "checkout", type: "datetime-local" },
-              { name: "work_report", type: "text" },
-            ].map((field) => (
+            {[{ name: "date", type: "date" }, { name: "checkin", type: "datetime-local" }, { name: "checkout", type: "datetime-local" }, { name: "work_report", type: "text" }].map((field) => (
               <label key={field.name}>
                 {field.name.replace("_", " ").toUpperCase()}
                 <br />
