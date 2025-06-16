@@ -10,7 +10,9 @@ from .serializers import UserSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
+from datetime import time
 from utils.jwt_helper import generate_jwt
+from datetime import timedelta
 import traceback
 
 
@@ -147,34 +149,53 @@ def login_view(request):
 
 
 
-
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def logout_view(request, user_id):
     try:
-        user = user_id
         today = timezone.now().date()
-        print(user) 
-
         attendance = Attendance.objects.filter(user=user_id, date=today).first()
+
         if not attendance:
             return Response({"error": "No check-in record found"}, status=404)
-
-        # Prevent multiple checkouts
         if attendance.checkout:
             return Response({"error": "Checkout already recorded for today"}, status=400)
-
-        # Require work report before allowing checkout
         if not attendance.work_report or attendance.work_report.strip() == "":
             return Response({"error": "Work report not submitted"}, status=400)
 
         attendance.checkout = timezone.now()
+
+        # Define rules
+        checkin_time = attendance.checkin.time() if attendance.checkin else None
+        if checkin_time:
+            if checkin_time <= time(9, 30):
+                attendance.status = "Present"
+                salary_cut = 0
+            elif time(9, 30) < checkin_time < time(10, 30):
+                attendance.status = "Present"
+                late_minutes = ((checkin_time.hour * 60 + checkin_time.minute) - (9 * 60 + 30))
+                salary_cut = late_minutes  # 1 INR per minute
+            elif time(10, 30) <= checkin_time < time(13, 0):
+                attendance.status = "Half Day"
+                salary_cut = 0
+            else:
+                attendance.status = "Absent"
+                salary_cut = 0
+        else:
+            attendance.status = "Check-in missing"
+            salary_cut = 0
+
         attendance.save()
 
-        return Response({"message": "Logout successful, checkout recorded"}, status=200)
+        return Response({
+            "message": "Logout successful, checkout recorded",
+            "status": attendance.status,
+            "salary_cut": salary_cut
+        }, status=200)
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
 
 
 
