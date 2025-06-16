@@ -64,7 +64,7 @@ const AttendanceTable = () => {
       })
       .then(async (res) => {
         const updated = await Promise.all(
-          res.data.users.map(async (entry) => ({
+          res.data.results.users.map(async (entry) => ({
             ...entry,
             location: await getPlaceName(entry.location),
           }))
