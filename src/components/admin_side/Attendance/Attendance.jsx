@@ -1,3 +1,4 @@
+// AttendanceTable.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
@@ -20,10 +21,8 @@ const AttendanceTable = () => {
     status: "Present",
     location: "",
   });
-
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
-
   const token = localStorage.getItem("authToken");
 
   useEffect(() => {
@@ -33,27 +32,23 @@ const AttendanceTable = () => {
       })
       .then((res) => {
         setAttendanceData(res.data.users);
-        const userEntry = res.data.users.find(
-          (entry) => entry.user === currentUser
-        );
-        if (userEntry) {
-          setUserWorkReport(userEntry.work_report || "");
-        }
+        const userEntry = res.data.users.find((entry) => entry.user === currentUser);
+        if (userEntry) setUserWorkReport(userEntry.work_report || "");
       })
       .catch((err) => console.error("Error fetching attendance:", err));
   }, []);
 
   const handleAddEntry = () => {
     navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
+      const location = JSON.stringify({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
       try {
-        const location = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
         const entry = { ...newEntry, location };
-
         const res = await axios.post(`${BASE_URL}/attendance/add-attendance/`, entry, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         setAttendanceData((prev) => [...prev, res.datax]);
         setNewEntry({
           user: currentUser,
@@ -77,21 +72,17 @@ const AttendanceTable = () => {
   };
 
   const handleWorkReportSubmit = () => {
-    const user = 1; // Replace with correct user ID if needed
+    const user = 1;
     axios
       .post(
         `${BASE_URL}/attendance/work_report/${user}/`,
         { work_report: userWorkReport },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       .then(() => {
         setAttendanceData((prev) =>
           prev.map((entry) =>
-            entry.id === user.id
-              ? { ...entry, work_report: userWorkReport }
-              : entry
+            entry.id === user.id ? { ...entry, work_report: userWorkReport } : entry
           )
         );
       })
@@ -103,15 +94,11 @@ const AttendanceTable = () => {
       .put(
         `${BASE_URL}/attendance/validate/${id}`,
         { validation },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       .then(() => {
         setAttendanceData((prev) =>
-          prev.map((entry) =>
-            entry.id === id ? { ...entry, validation } : entry
-          )
+          prev.map((entry) => (entry.id === id ? { ...entry, validation } : entry))
         );
       })
       .catch((err) => console.error("Validation error:", err));
@@ -120,11 +107,22 @@ const AttendanceTable = () => {
   const formatTime = (datetime) => {
     if (!datetime) return "-";
     const date = new Date(datetime);
-    return date.toLocaleTimeString("en-GB");
+    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "numeric", hour12: true });
   };
 
   const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(attendanceData);
+    const data = attendanceData.map((row) => ({
+      User: row.user,
+      Date: row.date,
+      "Check-In": formatTime(row.checkin),
+      "Check-Out": formatTime(row.checkout),
+      Status: row.status,
+      Location: row.location,
+      "Work Report": row.work_report,
+      Validated: row.validation ? "Yes" : "No",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
     const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
@@ -162,20 +160,19 @@ const AttendanceTable = () => {
 
         {showForm && (
           <div className="create-form">
-            {["date", "checkin", "checkout", "location", "work_report"].map((field) => (
-              <label key={field}>
-                {field.replace("_", " ").toUpperCase()}
+            {[
+              { name: "date", type: "date" },
+              { name: "checkin", type: "datetime-local" },
+              { name: "checkout", type: "datetime-local" },
+              { name: "work_report", type: "text" },
+            ].map((field) => (
+              <label key={field.name}>
+                {field.name.replace("_", " ").toUpperCase()}
                 <br />
                 <input
-                  type={
-                    field === "date"
-                      ? "date"
-                      : field === "checkin" || field === "checkout"
-                      ? "datetime-local"
-                      : "text"
-                  }
-                  name={field}
-                  value={newEntry[field]}
+                  type={field.type}
+                  name={field.name}
+                  value={newEntry[field.name]}
                   onChange={handleInputChange}
                 />
               </label>
@@ -195,7 +192,6 @@ const AttendanceTable = () => {
         )}
       </div>
 
-      {/* Attendance Table */}
       <div className="attendance-table-wrapper">
         <table className="attendance-table">
           <thead>
@@ -205,7 +201,7 @@ const AttendanceTable = () => {
               <th>Check-In</th>
               <th>Check-Out</th>
               <th>Status</th>
-              <th>Place</th>
+              <th>Location</th>
               <th>Work Report</th>
               <th>Validated</th>
             </tr>
@@ -218,8 +214,8 @@ const AttendanceTable = () => {
                 <td>{formatTime(entry.checkin)}</td>
                 <td>{formatTime(entry.checkout)}</td>
                 <td>{entry.status}</td>
-                <td>{entry.location}</td>
-                <td style={{ width: "15%" }}>{entry.work_report}</td>
+                <td style={{ width: "15%" }}>{entry.location}</td>
+                <td style={{ width: "35%" }}>{entry.work_report}</td>
                 <td className="validation-cell">
                   <button
                     className={entry.validation ? "active" : ""}
@@ -234,7 +230,6 @@ const AttendanceTable = () => {
         </table>
       </div>
 
-      {/* Pagination Controls */}
       <div className="pagination">
         {Array.from({ length: totalPages }, (_, i) => (
           <button
