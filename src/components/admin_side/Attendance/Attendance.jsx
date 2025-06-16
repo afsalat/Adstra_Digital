@@ -59,12 +59,13 @@ const AttendanceTable = () => {
     const today = new Date().toISOString().split("T")[0];
 
     axios
-      .get(`${BASE_URL}/attendance/list-attendance/`, {
+      .get(`${BASE_URL}/attendance/list-attendance/?page=${currentPage}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then(async (res) => {
+        const userEntries = res.data?.results?.users || [];
         const updated = await Promise.all(
-          res.data.users.map(async (entry) => ({
+          userEntries.map(async (entry) => ({
             ...entry,
             location: await getPlaceName(entry.location),
           }))
@@ -77,7 +78,7 @@ const AttendanceTable = () => {
         if (userEntry) setUserWorkReport(userEntry.work_report || "");
       })
       .catch((err) => console.error("Error fetching attendance:", err));
-  }, [token, userId]);
+  }, [token, userId, currentPage]);
 
   const handleAddEntry = () => {
     navigator.geolocation.getCurrentPosition(async (position) => {
@@ -122,7 +123,6 @@ const AttendanceTable = () => {
 
   const handleWorkReportSubmit = () => {
     if (!userId) return;
-
     const today = new Date().toISOString().split("T")[0];
 
     axios
@@ -196,11 +196,6 @@ const AttendanceTable = () => {
     saveAs(fileData, "attendance.xlsx");
   };
 
-  const indexOfLast = currentPage * recordsPerPage;
-  const indexOfFirst = indexOfLast - recordsPerPage;
-  const currentRecords = attendanceData.slice(indexOfFirst, indexOfLast);
-  const totalPages = Math.ceil(attendanceData.length / recordsPerPage);
-
   return (
     <div className="attendance-container">
       <button onClick={() => window.history.back()} className="btn back-btn">
@@ -230,19 +225,20 @@ const AttendanceTable = () => {
 
         {showForm && (
           <div className="create-form">
-            {[
-              { name: "date", type: "date" },
-              { name: "checkin", type: "datetime-local" },
-              { name: "checkout", type: "datetime-local" },
-              { name: "work_report", type: "text" },
-            ].map((field) => (
-              <label key={field.name}>
-                {field.name.replace("_", " ").toUpperCase()}
+            {["date", "checkin", "checkout", "work_report"].map((name) => (
+              <label key={name}>
+                {name.replace("_", " ").toUpperCase()}
                 <br />
                 <input
-                  type={field.type}
-                  name={field.name}
-                  value={newEntry[field.name]}
+                  type={
+                    name === "date"
+                      ? "date"
+                      : name.includes("check")
+                      ? "datetime-local"
+                      : "text"
+                  }
+                  name={name}
+                  value={newEntry[name]}
                   onChange={handleInputChange}
                 />
               </label>
@@ -281,7 +277,7 @@ const AttendanceTable = () => {
             </tr>
           </thead>
           <tbody>
-            {currentRecords.map((entry) => (
+            {attendanceData.map((entry) => (
               <tr key={entry.id}>
                 <td>{entry.user}</td>
                 <td>{entry.date}</td>
@@ -305,7 +301,7 @@ const AttendanceTable = () => {
       </div>
 
       <div className="pagination">
-        {Array.from({ length: totalPages }, (_, i) => (
+        {Array.from({ length: 5 }, (_, i) => (
           <button
             key={i}
             className={i + 1 === currentPage ? "active" : ""}
