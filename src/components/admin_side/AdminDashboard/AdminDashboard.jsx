@@ -14,32 +14,83 @@ const AdminDashboard = () => {
     email: "hashir@example.com",
     role: "Administrator",
   };
-
   const handleLogout = async () => {
     const confirmLogout = window.confirm(
       "Are you sure you want to log out / check out?"
     );
-    if (confirmLogout) {
-      const token = localStorage.getItem("authToken");
-      console.log(token);
-      try {
-        await fetch(`https://adstradigital.com/api/attendance/logout/`, {
+    if (!confirmLogout) return;
+
+    let token = localStorage.getItem("authToken");
+
+    if (!token) {
+      alert("No token found. Please login again.");
+      logout();
+      navigate("/adminlogin");
+      return;
+    }
+
+    // ✅ Clean quotes if present
+    if (token.startsWith('"') && token.endsWith('"')) {
+      token = token.slice(1, -1);
+    }
+
+    // ✅ Check if it's a valid JWT (3 parts)
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      console.error("Invalid token format:", token);
+      alert("Invalid session. Please login again.");
+      logout();
+      navigate("/adminlogin");
+      return;
+    }
+
+    // ✅ Decode payload safely
+    let userId = null;
+    try {
+      const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64.padEnd(
+        base64.length + ((4 - (base64.length % 4)) % 4),
+        "="
+      );
+      const jsonPayload = atob(padded);
+      const decoded = JSON.parse(jsonPayload);
+      userId = decoded.user_id;
+      if (!userId) throw new Error("user_id not found");
+    } catch (error) {
+      console.error("Token decode error:", error);
+      alert("Session error. Please login again.");
+      logout();
+      navigate("/adminlogin");
+      return;
+    }
+
+    // ✅ Logout API call
+    try {
+      const response = await fetch(
+        `https://adstradigital.com/api/attendance/logout/${userId}/`,
+        {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        });
+        }
+      );
 
-        logout();
-        navigate("/adminlogin");
-      } catch (err) {
-        console.error("Logout failed:", err);
-        alert("Logout failed, but local session cleared.");
-        logout();
-        navigate("/adminlogin");
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message || "Logout successful");
+      } else {
+        alert(data.error || "Logout failed");
       }
+    } catch (err) {
+      console.error("Logout API error:", err);
+      alert("Logout failed, but local session cleared.");
     }
+
+    logout();
+    navigate("/adminlogin");
   };
 
   const menuItems = [

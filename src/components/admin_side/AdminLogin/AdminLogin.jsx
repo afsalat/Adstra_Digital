@@ -42,31 +42,39 @@ const AdminLogin = () => {
     setError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      const response = await axios.post(`${BASE_URL}/attendance/login/`, {
-        ...formData,
-        location,
-      });
-      
-      if (response.data) {
-        login();
-        navigate('/admindashboard');
+  try {
+    const response = await axios.post(`${BASE_URL}/attendance/login/`, {
+      ...formData,
+      location,
+    });
 
-      } else {
-        setError('Login failed: ' + (response.data.message || 'Unknown error'));
-      }
-    } catch (err) {
-      if (err.response && err.response.data && err.response.data.error) {
-        setError(err.response.data.error);
-      } else {
-        setError('An error occurred during login');
-      }
-      console.error(err);
+    if (response.data && response.data.token) {
+      console.log(response.data);
+
+      // ✅ Save only the token
+      localStorage.setItem("authToken", response.data.token);
+
+      // Optional: store other useful info
+      // localStorage.setItem("userName", response.data.username || "");
+      // localStorage.setItem("loginMessage", response.data.message || "");
+
+      login(); // From AuthContext
+      navigate('/admindashboard');
+    } else {
+      setError('Login failed: Invalid response');
     }
-  };
+  } catch (err) {
+    if (err.response?.data?.error) {
+      setError(err.response.data.error);
+    } else {
+      setError('An error occurred during login');
+    }
+    console.error(err);
+  }
+};
 
   return (
     <div className="admin-login-container">
