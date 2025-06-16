@@ -63,7 +63,7 @@ const AttendanceTable = () => {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then(async (res) => {
-        const userEntries = res.data?.results?.users || [];
+        const userEntries = res.data?.users || res.data?.results?.users || [];
         const updated = await Promise.all(
           userEntries.map(async (entry) => ({
             ...entry,
