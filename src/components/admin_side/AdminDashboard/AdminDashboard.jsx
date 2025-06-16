@@ -15,11 +15,30 @@ const AdminDashboard = () => {
     role: "Administrator",
   };
 
-  const handleLogout = () => {
-    const confirmLogout = window.confirm("Are you sure you want to log out / check out?");
+  const handleLogout = async () => {
+    const confirmLogout = window.confirm(
+      "Are you sure you want to log out / check out?"
+    );
     if (confirmLogout) {
-      logout();
-      navigate('/adminlogin')
+      const token = localStorage.getItem("authToken");
+      console.log(token);
+      try {
+        await fetch(`https://adstradigital.com/api/attendance/logout/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        logout();
+        navigate("/adminlogin");
+      } catch (err) {
+        console.error("Logout failed:", err);
+        alert("Logout failed, but local session cleared.");
+        logout();
+        navigate("/adminlogin");
+      }
     }
   };
 
