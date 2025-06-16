@@ -11,11 +11,8 @@
 }
 
 .back-btn {
-  background-color: #82b8a6;
+  background-color: #6c757d;
   color: white;
-  font-size: 20px;
-  margin-bottom: 20px;
-  border: none;
 }
 
 .attendance-container h2 {
@@ -25,22 +22,19 @@
   font-weight: 600;
 }
 
-/* Table wrapper */
 .attendance-table-wrapper {
   overflow-x: auto;
 }
 
-/* Table base */
 .attendance-table {
   min-width: 100%;
   border-collapse: collapse;
-  background: #ffffff;
+  background: #fff;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
-/* Table head */
 .attendance-table thead {
   background-color: #111827;
   color: #f9fafb;
@@ -54,51 +48,48 @@
   vertical-align: middle;
 }
 
-/* Row hover effect */
 .attendance-table tbody tr:hover {
   background-color: #f3f4f6;
   transition: background-color 0.2s ease-in-out;
 }
 
-/* Status badge */
 .badge {
   padding: 6px 12px;
   border-radius: 50px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #ffffff;
+  color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.badge.present {
-  background-color: #22c55e;
-}
+.badge.present { background-color: #22c55e; }
+.badge.absent { background-color: #ef4444; }
+.badge.leave { background-color: #f59e0b; }
+.badge.half-day { background-color: #3b82f6; }
 
-.badge.absent {
-  background-color: #ef4444;
-}
-
-.badge.leave {
-  background-color: #f59e0b;
-}
-
-.badge.half-day {
-  background-color: #3b82f6;
-}
-
-/* Work report input */
-.work-report-cell input, select {
-  padding: 8px 12px;
+input, select, textarea, button {
+  font-family: inherit;
   font-size: 0.9rem;
+}
+
+button {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.work-report-cell input,
+.work-report-cell select {
+  padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   width: 100%;
   max-width: 280px;
-}
-
-.header-box {
-  position: sticky;
 }
 
 .work-report-cell button {
@@ -108,27 +99,17 @@
   color: white;
   border: none;
   border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
 }
 
 .work-report-cell button:hover:not(:disabled) {
   background-color: #2563eb;
 }
 
-.work-report-cell button:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-}
-
-/* Validation button */
 .validation-cell button {
   padding: 6px 12px;
   background-color: #e5e7eb;
   border: none;
   border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
 }
 
 .validation-cell button.active {
@@ -140,7 +121,6 @@
   background-color: #d1d5db;
 }
 
-/* Loader */
 .loader {
   text-align: center;
   font-size: 1.2rem;
@@ -148,169 +128,158 @@
   color: #6b7280;
 }
 
-/* Create button */
-.create-btn {
-  margin: 20px 0;
-  padding: 10px 20px;
-  background-color: #5ed58a;
-  color: white;
+/* Button Variants */
+.create-btn,
+.export-btn,
+.checkout-btn,
+.header-box button {
+  padding: 8px 14px;
+  font-size: 14px;
   border: none;
   border-radius: 6px;
+  color: white;
   font-weight: 500;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
+}
+
+.create-btn {
+  background-color: #5ed58a;
 }
 
 .create-btn:hover {
   background-color: #239966;
 }
 
-/* Create form */
-.create-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.create-form label {
-  flex-direction: column;
-  font-weight: 500;
-  color: #374151;
-  font-size: 0.9rem;
-  flex: 1 1 50px;
-  font-weight: bold;
-}
-
-.dashboard-grid a {
-    text-decoration: none;
-}
-
-.create-form input {
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  flex: 1 1 200px;
-  background-color: #ffffff;
-}
-
-.create-form button {
-  background-color: #10b981;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.create-form button:hover {
-  background-color: #059669;
-}
-
-/* Top work report editor */
-.user-report-editor-inline {
-  margin: 24px 0;
-  justify-content: center;
-  display: flex;
-  gap: 10px;
-}
-
-.user-report-editor-inline textarea {
-  padding: 10px;
-  border: 1px solid #5e6164;
-  border-radius: 6px;
-  width: 23.4rem;
-  font-size: 0.95rem;
-  font-family:sans-serif;
-  background-color: #ffffff;
-}
-
-.user-report-editor-inline button {
-  background-color: #10b981;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 9px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.user-report-editor-inline button:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.user-report-editor-inline button:hover:not(:disabled) {
-  background-color: #059669;
-}
-
-
-.pagination-controls {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-}
-
-.pagination-controls button {
-  background-color: #10b981;
-  color: white;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.pagination-controls button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.pagination-controls span {
-  font-weight: bold;
-}
-
 .export-btn {
   background-color: #3b82f6;
-  color: white;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
   margin-left: 10px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
 }
 
 .export-btn:hover {
   background-color: #2563eb;
 }
 
+.checkout-btn {
+  background-color: #ed3c2f;
+  margin-left: 10px;
+}
+
+.checkout-btn:hover {
+  background-color: #ef8377;
+}
+
+.header-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  position: sticky;
+}
+
+.header-box button:hover {
+  opacity: 0.9;
+}
+
+/* Create Form */
+.create-form {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 10px;
+  border-top: 1px solid #ccc;
+  padding-top: 12px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.create-form label {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  font-weight: bold;
+  color: #374151;
+}
+
+.create-form input,
+.create-form select {
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+/* Work Report Inline */
+.user-report-editor-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 250px;
+  margin: 24px 0;
+}
+
+.user-report-editor-inline textarea {
+  width: 80%;
+  height: 60px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  font-family: serif;
+  border-radius: 10px;
+  resize: vertical;
+  font-family: sans-serif;
+}
+
+.user-report-editor-inline button {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  width: 100px;
+  padding: 10px 20px;
+  border-radius: 9px;
+  margin-top: 10px;
+}
+
+.user-report-editor-inline button:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+/* Pagination */
+.pagination-controls,
 .pagination {
   display: flex;
   justify-content: center;
+  align-items: center;
   margin-top: 20px;
+  gap: 12px;
+}
+
+.pagination-controls button,
+.pagination button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background-color: #10b981;
+  color: white;
 }
 
 .pagination button {
   background: #f3f4f6;
   border: 1px solid #d1d5db;
-  padding: 6px 12px;
-  margin: 0 4px;
-  border-radius: 4px;
-  cursor: pointer;
+  color: black;
 }
 
 .pagination button.active {
   background-color: #10b981;
   color: white;
   font-weight: bold;
+}
+
+.pagination-controls span {
+  font-weight: bold;
+}
+
+/* Misc */
+.dashboard-grid a {
+  text-decoration: none;
 }

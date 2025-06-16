@@ -1,96 +1,36 @@
 import React, { useState } from "react";
 import { useAuth } from "../../../Context/AuthContext";
-
 import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
+
+const BASE_URL = process.env.REACT_APP_BACKEND_API_URL_DEV;
 
 const AdminDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
   const { logout } = useAuth();
   const navigate = useNavigate();
 
-  const user = {
-    fullName: "Afsal",
-    email: "hashir@example.com",
-    role: "Administrator",
-  };
-  const handleLogout = async () => {
+  const user = localStorage.getItem("user");
+  let parsed = {};
+  try {
+    parsed = JSON.parse(user);
+  } catch (e) {
+    console.error("Error parsing user data:", e);
+  }
+
+  const handleLogout = () => {
     const confirmLogout = window.confirm(
-      "Are you sure you want to log out / check out?"
+      `⚠️ Before logging out Warnings:
+      \n\n- Make sure you have submitted your **Work Report**.
+      \n- Don’t forget to press the **Checkout** button.
+      \n\nAre you sure you want to continue with logout?`
     );
+
     if (!confirmLogout) return;
 
-    let token = localStorage.getItem("authToken");
-
-    if (!token) {
-      alert("No token found. Please login again.");
-      logout();
-      navigate("/adminlogin");
-      return;
-    }
-
-    // ✅ Clean quotes if present
-    if (token.startsWith('"') && token.endsWith('"')) {
-      token = token.slice(1, -1);
-    }
-
-    // ✅ Check if it's a valid JWT (3 parts)
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      console.error("Invalid token format:", token);
-      alert("Invalid session. Please login again.");
-      logout();
-      navigate("/adminlogin");
-      return;
-    }
-
-    // ✅ Decode payload safely
-    let userId = null;
-    try {
-      const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const padded = base64.padEnd(
-        base64.length + ((4 - (base64.length % 4)) % 4),
-        "="
-      );
-      const jsonPayload = atob(padded);
-      const decoded = JSON.parse(jsonPayload);
-      userId = decoded.user_id;
-      if (!userId) throw new Error("user_id not found");
-    } catch (error) {
-      console.error("Token decode error:", error);
-      alert("Session error. Please login again.");
-      logout();
-      navigate("/adminlogin");
-      return;
-    }
-
-    // ✅ Logout API call
-    try {
-      const response = await fetch(
-        `https://adstradigital.com/api/attendance/logout/${userId}/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert(data.message || "Logout successful");
-      } else {
-        alert(data.error || "Logout failed");
-      }
-    } catch (err) {
-      console.error("Logout API error:", err);
-      alert("Logout failed, but local session cleared.");
-    }
-
+    localStorage.removeItem("authToken");
     logout();
-    navigate("/adminlogin");
+    navigate("/userLogin");
   };
 
   const menuItems = [
@@ -106,17 +46,15 @@ const AdminDashboard = () => {
       {/* Top Bar */}
       <header className="top-bar" role="banner">
         <div className="user-info">
-          <h3>{user.fullName}</h3>
-          <p>
-            {user.email} — <span>{user.role}</span>
-          </p>
+          <h3>{parsed.fullname || "Admin"}</h3>
+          <p>{parsed.email || "No email available"}</p>
         </div>
         <button
           className="logout-btn"
           onClick={handleLogout}
           aria-label="Logout"
         >
-          Logout / Checkout
+          Logout
         </button>
       </header>
 

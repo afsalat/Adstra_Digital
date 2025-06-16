@@ -13,6 +13,9 @@ class Attendance(models.Model):
     location = models.CharField(max_length=255, blank=True, null=True)
     salary_cut = models.PositiveIntegerField(default=0, help_text="Amount deducted for late check-in in INR")
 
+    class Meta:
+        unique_together = ('user', 'date')
+
 
     def __str__(self):
         return f"{self.user.username} - {self.date} - {self.status}"

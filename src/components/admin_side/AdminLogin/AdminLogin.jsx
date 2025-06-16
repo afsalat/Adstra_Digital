@@ -1,23 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import './AdminLogin.css';
-import { useAuth } from '../../../Context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "./AdminLogin.css";
+import { useAuth } from "../../../Context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
-const BASE_URL = "https://adstradigital.com/api";
-// const BASE_URL = "http://127.0.0.1:8000";
-
+const BASE_URL = process.env.REACT_APP_BACKEND_API_URL_DEV;
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
+    username: "",
+    password: "",
   });
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const [location, setLocation] = useState({ latitude: null, longitude: null });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -29,56 +27,58 @@ const AdminLogin = () => {
           });
         },
         () => {
-          setError('Location access denied or unavailable');
+          setError("Location access denied or unavailable");
         }
       );
     } else {
-      setError('Geolocation is not supported by this browser.');
+      setError("Geolocation is not supported by this browser.");
     }
   }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    setError("");
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  try {
-    const response = await axios.post(`${BASE_URL}/attendance/login/`, {
-      ...formData,
-      location,
-    });
+    try {
+      const response = await axios.post(`${BASE_URL}/attendance/login/`, {
+        ...formData,
+        location,
+      });
 
-    if (response.data && response.data.token) {
-      console.log(response.data);
+      if (response.data && response.data.token) {
+        console.log(response.data);
 
-      // ✅ Save only the token
-      localStorage.setItem("authToken", response.data.token);
+        // ✅ Save only the token
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        console.log(response.data.user);
+        localStorage.setItem("authToken", response.data.token);
 
-      // Optional: store other useful info
-      // localStorage.setItem("userName", response.data.username || "");
-      // localStorage.setItem("loginMessage", response.data.message || "");
+        // Optional: store other useful info
+        // localStorage.setItem("userName", response.data.username || "");
+        // localStorage.setItem("loginMessage", response.data.message || "");
 
-      login(); // From AuthContext
-      navigate('/admindashboard');
-    } else {
-      setError('Login failed: Invalid response');
+        login(); // From AuthContext
+        navigate("/admindashboard");
+      } else {
+        setError("Login failed: Invalid response");
+      }
+    } catch (err) {
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("An error occurred during login");
+      }
+      console.error(err);
     }
-  } catch (err) {
-    if (err.response?.data?.error) {
-      setError(err.response.data.error);
-    } else {
-      setError('An error occurred during login');
-    }
-    console.error(err);
-  }
-};
+  };
 
   return (
     <div className="admin-login-container">
-      <h2>Admin Login</h2>
+      <h2>User Login</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Username</label>

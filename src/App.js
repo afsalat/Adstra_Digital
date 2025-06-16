@@ -23,7 +23,7 @@ function App() {
           <Route path="/blogs" element={<Navigate to="/blog/all" />} />
           <Route path="/policy" element={<PrivacyPolicy />} />
 
-          <Route path="/adminLogin" element={<AdminLoginPage />} />
+          <Route path="/userLogin" element={<AdminLoginPage />} />
           <Route
             path="/admindashboard"
             element={

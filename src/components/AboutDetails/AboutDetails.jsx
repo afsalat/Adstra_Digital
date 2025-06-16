@@ -18,7 +18,7 @@ function AboutDetails() {
     const fetchContent = async () => {
       const docRef = doc(db, "aboutdetails", "uRdguVMJCFd0lQwY6FH2");
       const docSnap = await getDoc(docRef);
-
+      
       if (docSnap.exists()) {
         setContent(docSnap.data());
       } else {

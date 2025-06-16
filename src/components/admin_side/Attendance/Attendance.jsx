@@ -5,13 +5,14 @@ import { saveAs } from "file-saver";
 import { jwtDecode } from "jwt-decode";
 import "./Attendance.css";
 
-const BASE_URL = "https://adstradigital.com/api";
+const BASE_URL = process.env.REACT_APP_BACKEND_API_URL_DEV;
 
 const AttendanceTable = () => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [userWorkReport, setUserWorkReport] = useState("");
   const [userId, setUserId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [newEntry, setNewEntry] = useState({
     user: "",
     date: "",
@@ -26,12 +27,39 @@ const AttendanceTable = () => {
   const recordsPerPage = 10;
   const token = localStorage.getItem("authToken");
 
+  const handleLogout = () => {
+    const today = new Date().toISOString().split("T")[0];
+    const checkoutTime = new Date().toISOString();
+
+    axios
+      .post(`${BASE_URL}/attendance/logout/${userId}/`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(() => {
+        setAttendanceData((prev) =>
+          prev.map((entry) =>
+            entry.user === userId && entry.date === today
+              ? { ...entry, checkout: checkoutTime }
+              : entry
+          )
+        );
+      })
+      .catch((error) => {
+        const msg =
+          error?.response?.data?.error ||
+          "Something went wrong during checkout. Please try again.";
+        alert(`❌ Logout failed: ${msg}`);
+        console.error("Logout error:", error);
+      });
+  };
+
   useEffect(() => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
         setUserId(decoded.user_id);
         setNewEntry((prev) => ({ ...prev, user: decoded.user_id }));
+        setIsAdmin(decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 1);
       } catch (e) {
         console.error("Invalid token:", e);
       }
@@ -198,7 +226,7 @@ const AttendanceTable = () => {
 
   return (
     <div className="attendance-container">
-      <button onClick={() => window.history.back()} className="btn back-btn">
+      <button onClick={() => window.history.back()} className="export-btn">
         ← Back
       </button>
       <h2>Attendance List</h2>
@@ -215,52 +243,65 @@ const AttendanceTable = () => {
           </button>
         </div>
 
-        <button onClick={() => setShowForm(!showForm)} className="create-btn">
-          {showForm ? "Cancel" : "Create New Entry"}
+        <button onClick={handleLogout} className="checkout-btn">
+          Checkout
         </button>
 
-        <button onClick={exportToExcel} className="export-btn">
-          Export to Excel
-        </button>
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="create-btn"
+            >
+              {showForm ? "Cancel" : "Create New Entry"}
+            </button>
 
-        {showForm && (
-          <div className="create-form">
-            {["date", "checkin", "checkout", "work_report"].map((name) => (
-              <label key={name}>
-                {name.replace("_", " ").toUpperCase()}
-                <br />
-                <input
-                  type={
-                    name === "date"
-                      ? "date"
-                      : name.includes("check")
-                      ? "datetime-local"
-                      : "text"
-                  }
-                  name={name}
-                  value={newEntry[name]}
-                  onChange={handleInputChange}
-                />
-              </label>
-            ))}
-            <label>
-              STATUS
-              <br />
-              <select
-                name="status"
-                value={newEntry.status}
-                onChange={handleInputChange}
-              >
-                <option value="Present">Present</option>
-                <option value="Absent">Absent</option>
-                <option value="Leave">Leave</option>
-                <option value="Half Day">Half Day</option>
-              </select>
-            </label>
-            <button onClick={handleAddEntry}>Submit</button>
-          </div>
+            <button onClick={exportToExcel} className="export-btn">
+              Export to Excel
+            </button>
+          </>
         )}
       </div>
+
+      {showForm && isAdmin && (
+        <div className="create-form">
+          {["date", "checkin", "checkout", "work_report"].map((name) => (
+            <label key={name}>
+              {name.replace("_", " ").toUpperCase()}
+              <br />
+              <input
+                type={
+                  name === "date"
+                    ? "date"
+                    : name.includes("check")
+                    ? "datetime-local"
+                    : "text"
+                }
+                name={name}
+                value={newEntry[name]}
+                onChange={handleInputChange}
+              />
+            </label>
+          ))}
+          <label>
+            STATUS
+            <br />
+            <select
+              name="status"
+              value={newEntry.status}
+              onChange={handleInputChange}
+            >
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+              <option value="Leave">Leave</option>
+              <option value="Half Day">Half Day</option>
+            </select>
+          </label>
+          <button className="create-btn" onClick={handleAddEntry}>
+            Submit
+          </button>
+        </div>
+      )}
 
       <div className="attendance-table-wrapper">
         <table className="attendance-table">
@@ -287,12 +328,14 @@ const AttendanceTable = () => {
                 <td style={{ width: "15%" }}>{entry.location}</td>
                 <td style={{ width: "35%" }}>{entry.work_report}</td>
                 <td className="validation-cell">
-                  <button
-                    className={entry.validation ? "active" : ""}
-                    onClick={() => handleValidationChange(entry.id, true)}
-                  >
-                    Yes
-                  </button>
+                  {isAdmin ? (
+                    <button
+                      className={entry.validation ? "active" : ""}
+                      onClick={() => handleValidationChange(entry.id, true)}
+                    >
+                      Yes
+                    </button>
+                  ) : entry.validation ? "Yes" : "No"}
                 </td>
               </tr>
             ))}

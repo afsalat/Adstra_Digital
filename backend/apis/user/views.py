@@ -120,6 +120,7 @@ def login_view(request):
         user = CustomUser.objects.filter(username=username).first()
         if not user:
             return Response({"error": "User not found"}, status=404)
+        serial_user = UserSerializer(user)
 
         if check_password(password, user.password):
             token = generate_jwt(user.id)
@@ -137,7 +138,8 @@ def login_view(request):
 
             return Response({
                 "message": f"Login successful, {checkin_status}",
-                "token": token
+                "token": token,
+                "user": serial_user.data
             }, status=200)
 
         return Response({"error": "Invalid password"}, status=400)
