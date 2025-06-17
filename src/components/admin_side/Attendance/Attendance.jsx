@@ -5,7 +5,7 @@ import { saveAs } from "file-saver";
 import { jwtDecode } from "jwt-decode";
 import "./Attendance.css";
 
-const BASE_URL = process.env.REACT_APP_BACKEND_API_URL_DEV;
+const BASE_URL = process.env.REACT_APP_BACKEND_API_URL;
 
 const AttendanceTable = () => {
   const [attendanceData, setAttendanceData] = useState([]);

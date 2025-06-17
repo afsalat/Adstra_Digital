@@ -4,7 +4,7 @@ import "./AdminLogin.css";
 import { useAuth } from "../../../Context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = process.env.REACT_APP_BACKEND_API_URL_DEV;
+const BASE_URL = process.env.REACT_APP_BACKEND_API_URL;
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({

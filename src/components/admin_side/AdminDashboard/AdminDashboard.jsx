@@ -3,7 +3,7 @@ import { useAuth } from "../../../Context/AuthContext";
 import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = process.env.REACT_APP_BACKEND_API_URL_DEV;
+const BASE_URL = process.env.REACT_APP_BACKEND_API_URL;
 
 const AdminDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
