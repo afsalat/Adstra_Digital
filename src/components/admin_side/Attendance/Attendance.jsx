@@ -59,7 +59,7 @@ const AttendanceTable = () => {
         const decoded = jwtDecode(token);
         setUserId(decoded.user_id);
         setNewEntry((prev) => ({ ...prev, user: decoded.user_id }));
-        setIsAdmin(decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 1);
+        setIsAdmin(decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9);
       } catch (e) {
         console.error("Invalid token:", e);
       }
