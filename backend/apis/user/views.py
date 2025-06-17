@@ -20,6 +20,7 @@ import traceback
 
 # POST /adduser/ - create user
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def adduser(request):
     try:
         data = request.data.copy()
@@ -30,6 +31,7 @@ def adduser(request):
             serializer.save()
             return Response({"message": "User created successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
         else:
+            print(serializer.errors)
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         print(traceback.format_exc( ))
