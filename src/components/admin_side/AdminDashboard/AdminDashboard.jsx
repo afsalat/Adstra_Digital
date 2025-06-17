@@ -33,6 +33,22 @@ const AdminDashboard = () => {
     navigate("/userLogin");
   };
 
+  useEffect(() => {
+
+    const token = localStorage.getItem("authToken");
+
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserId(decoded.user_id);
+        setNewEntry((prev) => ({ ...prev, user: decoded.user_id }));
+        setIsAdmin(decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9);
+      } catch (e) {
+        console.error("Invalid token:", e);
+      }
+    }
+  }, [token]);
+
   const menuItems = [
     "Home",
     "Profile",
@@ -92,13 +108,14 @@ const AdminDashboard = () => {
         </div>
 
         <a href="/usermanagement">
-        <div className="dashboard-box cyan" aria-label="User Management">
-          <h4>👥 User Management</h4>
-          <p>Active users: 18</p>
-          <p>Pending invites: 4</p>
-        </div>
+          <div className="dashboard-box cyan" aria-label="User Management">
+            <h4>👥 User Management</h4>
+            <p>Active users: 18</p>
+            <p>Pending invites: 4</p>
+          </div>
         </a>
 
+        {isAdmin ? 
         <a href="/attendance">
           <div className="dashboard-box gray" aria-label="Attendance Sheet">
             <h4>📅 Attendance Sheet</h4>
@@ -106,6 +123,13 @@ const AdminDashboard = () => {
             <p>Download logs available</p>
           </div>
         </a>
+        :  
+        <div className="dashboard-box gray" aria-label="Attendance Sheet">
+            <h4>📅 Attendance Sheet</h4>
+            <p>Present today: 96%</p>
+            <p>Download logs available</p>
+          </div>
+          }
 
         <div className="dashboard-box navy" aria-label="Online Meetings">
           <h4>📞 Online Meetings</h4>
@@ -116,7 +140,7 @@ const AdminDashboard = () => {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Join Zoom meeting"
-              >
+            >
               Join Zoom
             </a>
           </p>
