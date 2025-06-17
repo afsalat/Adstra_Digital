@@ -1,3 +1,5 @@
+import secrets
+import string
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.hashers import make_password
@@ -18,25 +20,41 @@ import traceback
 
 
 
-# POST /adduser/ - create user
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def adduser(request):
     try:
         data = request.data.copy()
-        data['password'] = make_password(data['password'])
+
+        characters = string.ascii_letters + string.digits + string.punctuation
+        generated_password = ''.join(secrets.choice(characters) for _ in range(10))
+        data['password'] = make_password(generated_password)
 
         serializer = UserSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "User created successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
+            return Response({
+                "message": "User created successfully",
+                "generated_password": generated_password,
+                "user": serializer.data
+            }, status=status.HTTP_201_CREATED)
         else:
             print(serializer.errors)
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        print(traceback.format_exc( ))
+        print(traceback.format_exc())
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def delete_user(request, user_id):
+    try:
+        user = CustomUser.objects.get(pk=user_id)
+        user.delete()
+        return Response({"message": "User deleted successfully."}, status=204)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found."}, status=404)
 
 
 

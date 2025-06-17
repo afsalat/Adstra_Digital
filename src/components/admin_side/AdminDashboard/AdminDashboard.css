@@ -147,3 +147,21 @@
   }
 }
 
+.brand-section {
+  flex-grow: 1;
+}
+
+.brand-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #81b2e9;
+  margin: 0;
+}
+
+.brand-tagline {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+  font-style: italic;
+  letter-spacing: 0.5px;
+}

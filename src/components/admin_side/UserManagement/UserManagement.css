@@ -1,0 +1,180 @@
+.user-list-container {
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-width: 90%;
+  margin: auto;
+}
+
+.user-list-container h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background-color: #fafafa;
+}
+
+.user-table th,
+.user-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.user-table th {
+  background-color: #f2f2f2;
+  font-weight: 600;
+  color: #444;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.status-badge.active {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.inactive {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.actions button {
+  margin-right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.actions button:hover {
+  transform: scale(1.1);
+}
+
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.add-btn,
+.back-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.back-btn {
+  background-color: #6b7280;
+}
+
+.add-btn:hover {
+  background-color: #1e40af;
+}
+
+.back-btn:hover {
+  background-color: #4b5563;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: white;
+}
+
+.status-badge.active {
+  background-color: rgb(156, 239, 156);
+}
+
+.status-badge.inactive {
+  background-color: rgb(225, 73, 73);
+}
+
+.actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-right: 8px;
+  padding: 4px;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.popup {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  width: 400px;
+  position: relative;
+}
+
+.close-popup {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #eee;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.user-form-popup form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-form-popup form input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.user-form-popup form button[type="submit"] {
+  background-color: #007bff;
+  color: white;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}

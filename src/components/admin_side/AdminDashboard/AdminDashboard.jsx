@@ -49,6 +49,10 @@ const AdminDashboard = () => {
           <h3>{parsed.fullname || "Admin"}</h3>
           <p>{parsed.email || "No email available"}</p>
         </div>
+        <div className="brand-section">
+          <h2 className="brand-title">Adstra Digital</h2>
+          <p className="brand-tagline">Elevate. Elegant. Excel.</p>
+        </div>
         <button
           className="logout-btn"
           onClick={handleLogout}
@@ -87,11 +91,13 @@ const AdminDashboard = () => {
           <p>Pending reviews: 2</p>
         </div>
 
+        <a href="/usermanagement">
         <div className="dashboard-box cyan" aria-label="User Management">
           <h4>👥 User Management</h4>
           <p>Active users: 18</p>
           <p>Pending invites: 4</p>
         </div>
+        </a>
 
         <a href="/attendance">
           <div className="dashboard-box gray" aria-label="Attendance Sheet">
@@ -110,7 +116,7 @@ const AdminDashboard = () => {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Join Zoom meeting"
-            >
+              >
               Join Zoom
             </a>
           </p>
