@@ -16,6 +16,7 @@ const AdminLogin = () => {
 
   const [location, setLocation] = useState({ latitude: null, longitude: null });
   const [error, setError] = useState("");
+  const [gpsAvailable, setGpsAvailable] = useState(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -25,13 +26,15 @@ const AdminLogin = () => {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           });
+          setGpsAvailable(true);
         },
         () => {
-          setError("Location access denied or unavailable");
+          setGpsAvailable(false);
+          setError("⚠️ Please allow GPS access to continue.");
         }
       );
     } else {
-      setError("Geolocation is not supported by this browser.");
+      setError("❌ Geolocation is not supported by this browser.");
     }
   }, []);
 
@@ -43,6 +46,11 @@ const AdminLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!gpsAvailable || !location.latitude || !location.longitude) {
+      setError("GPS location is required to login.");
+      return;
+    }
+
     try {
       const response = await axios.post(`${BASE_URL}/attendance/login/`, {
         ...formData,
@@ -50,28 +58,15 @@ const AdminLogin = () => {
       });
 
       if (response.data && response.data.token) {
-        console.log(response.data);
-
-        // ✅ Save only the token
         localStorage.setItem("user", JSON.stringify(response.data.user));
-        console.log(response.data.user);
         localStorage.setItem("authToken", response.data.token);
-
-        // Optional: store other useful info
-        // localStorage.setItem("userName", response.data.username || "");
-        // localStorage.setItem("loginMessage", response.data.message || "");
-
-        login(); // From AuthContext
+        login();
         navigate("/admindashboard");
       } else {
         setError("Login failed: Invalid response");
       }
     } catch (err) {
-      if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("An error occurred during login");
-      }
+      setError(err.response?.data?.error || "An error occurred during login");
       console.error(err);
     }
   };
@@ -106,7 +101,9 @@ const AdminLogin = () => {
 
         {error && <p className="error">{error}</p>}
 
-        <button type="submit">Login</button>
+        <button type="submit" disabled={!gpsAvailable}>
+          {gpsAvailable ? "Login" : "Enable GPS to Login"}
+        </button>
       </form>
     </div>
   );

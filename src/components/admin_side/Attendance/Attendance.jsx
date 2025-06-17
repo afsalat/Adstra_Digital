@@ -225,7 +225,8 @@ const AttendanceTable = () => {
     });
     saveAs(fileData, "attendance.xlsx");
   };
-
+  console.log(attendanceData);
+  
   return (
     <div className="attendance-container">
       <button onClick={() => window.history.back()} className="export-btn">
@@ -310,7 +311,8 @@ const AttendanceTable = () => {
         <table className="attendance-table">
           <thead>
             <tr>
-              <th>User</th>
+              <th>User ID</th>
+              <th>Full Name</th>
               <th>Date</th>
               <th>Check-In</th>
               <th>Check-Out</th>
@@ -324,6 +326,7 @@ const AttendanceTable = () => {
             {attendanceData.map((entry) => (
               <tr key={entry.id}>
                 <td>{entry.user}</td>
+                <td>{entry.fullname}</td>
                 <td>{entry.date}</td>
                 <td>{formatTime(entry.checkin)}</td>
                 <td>{formatTime(entry.checkout)}</td>
