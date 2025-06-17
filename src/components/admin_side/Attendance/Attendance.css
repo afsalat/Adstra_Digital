@@ -68,9 +68,16 @@
 .badge.leave { background-color: #f59e0b; }
 .badge.half-day { background-color: #3b82f6; }
 
-input, select, textarea, button {
+input, select, button {
   font-family: inherit;
   font-size: 0.9rem;
+}
+
+textarea {
+  width: 80vh;
+  border-radius: 10px;
+  height: 10vh;
+  font-family: Georgia, Times, serif;
 }
 
 button {
@@ -210,39 +217,37 @@ button:disabled {
 }
 
 /* Work Report Inline */
-.user-report-editor-inline {
+.user-report-editor-inline-buttons {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-width: 250px;
-  margin: 24px 0;
-}
-
-.user-report-editor-inline textarea {
-  width: 80%;
-  height: 60px;
-  padding: 6px;
-  border: 1px solid #ccc;
-  font-family: serif;
-  border-radius: 10px;
-  resize: vertical;
-  font-family: sans-serif;
-}
-
-.user-report-editor-inline button {
-  background-color: #10b981;
-  color: white;
-  border: none;
-  width: 100px;
-  padding: 10px 20px;
-  border-radius: 9px;
+  justify-content: flex-start;
+  gap: 12px;
   margin-top: 10px;
 }
 
-.user-report-editor-inline button:hover:not(:disabled) {
+.user-report-editor-inline-buttons button {
+  padding: 10px 20px;
+  border-radius: 9px;
+  border: none;
+  font-weight: 500;
+  color: white;
+}
+
+.user-report-editor-inline-buttons .create-btn {
+  background-color: #10b981;
+}
+
+.user-report-editor-inline-buttons .create-btn:hover {
   background-color: #059669;
 }
+
+.user-report-editor-inline-buttons .checkout-btn {
+  background-color: #ed3c2f;
+}
+
+.user-report-editor-inline-buttons .checkout-btn:hover {
+  background-color: #ef8377;
+}
+
 
 /* Pagination */
 .pagination-controls,

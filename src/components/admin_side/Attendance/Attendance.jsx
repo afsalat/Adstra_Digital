@@ -59,7 +59,9 @@ const AttendanceTable = () => {
         const decoded = jwtDecode(token);
         setUserId(decoded.user_id);
         setNewEntry((prev) => ({ ...prev, user: decoded.user_id }));
-        setIsAdmin(decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9);
+        setIsAdmin(
+          decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9
+        );
       } catch (e) {
         console.error("Invalid token:", e);
       }
@@ -238,14 +240,15 @@ const AttendanceTable = () => {
             onChange={(e) => setUserWorkReport(e.target.value)}
             placeholder="Update your work report"
           />
-          <button className="create-btn" onClick={handleWorkReportSubmit}>
-            Submit
-          </button>
+          <div className="user-report-editor-inline-buttons">
+            <button className="create-btn" onClick={handleWorkReportSubmit}>
+              Submit
+            </button>
+            <button onClick={handleLogout} className="checkout-btn">
+              Checkout
+            </button>
+          </div>
         </div>
-
-        <button onClick={handleLogout} className="checkout-btn">
-          Checkout
-        </button>
 
         {isAdmin && (
           <>
@@ -335,7 +338,11 @@ const AttendanceTable = () => {
                     >
                       Yes
                     </button>
-                  ) : entry.validation ? "Yes" : "No"}
+                  ) : entry.validation ? (
+                    "Yes"
+                  ) : (
+                    "No"
+                  )}
                 </td>
               </tr>
             ))}
