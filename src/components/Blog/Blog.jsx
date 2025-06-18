@@ -3,7 +3,6 @@ import Tilt from "react-parallax-tilt";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./Blog.css";
-import img from "../../assets/banner-images/data-analytics-tablet.jpg";
 import img1 from "../../assets/blog_images/shoting-photo-blog.jpeg"
 import { Link } from "react-router-dom";
 
@@ -18,13 +17,13 @@ const blogPosts = [
     title: "Mastering UI/UX Basics",
     slug: "ui-ux-basics",
     excerpt: "Discover key principles that shape modern user interfaces and improve UX.",
-    imageUrl: img
+    imageUrl: img1
   },
   {
     title: "React Performance Secrets",
     slug: "react-performance-secrets",
     excerpt: "Speed up your apps using these little-known performance tricks.",
-    imageUrl: img
+    imageUrl: img1
   },
 ];
 

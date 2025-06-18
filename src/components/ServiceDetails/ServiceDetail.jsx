@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import Tilt from "react-parallax-tilt";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import img from "../../assets/banner-images/business-concept-with-graphic-holography_23-2149160929.webp"
+import img from "../../assets/blog_images/shoting-photo-blog.jpeg"
 import "./ServiceDetail.css";
 import { useParams } from "react-router-dom";
 
