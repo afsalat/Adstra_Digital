@@ -41,7 +41,9 @@ const AdminDashboard = () => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setIsAdmin(decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9);
+        setIsAdmin(
+          decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9
+        );
       } catch (e) {
         console.error("Invalid token:", e);
       }
@@ -105,30 +107,28 @@ const AdminDashboard = () => {
           <p>Projects in progress: 3</p>
           <p>Pending reviews: 2</p>
         </div>
-
-        <a href="/usermanagement">
-          <div className="dashboard-box cyan" aria-label="User Management">
-            <h4>👥 User Management</h4>
-            <p>Active users: 18</p>
-            <p>Pending invites: 4</p>
-          </div>
-        </a>
-
         {isAdmin ? (
-          <a href="/attendance">
-            <div className="dashboard-box gray" aria-label="Attendance Sheet">
-              <h4>📅 Attendance Sheet</h4>
-              <p>Present today: 96%</p>
-              <p>Download logs available</p>
+          <a href="/usermanagement">
+            <div className="dashboard-box cyan" aria-label="User Management">
+              <h4>👥 User Management</h4>
+              <p>Active users: 18</p>
+              <p>Pending invites: 4</p>
             </div>
           </a>
         ) : (
+            <div className="dashboard-box cyan" aria-label="User Management">
+              <h4>👥 User Management</h4>
+              <p>Permission Denied!</p>
+            </div>
+        )}
+
+        <a href="/attendance">
           <div className="dashboard-box gray" aria-label="Attendance Sheet">
             <h4>📅 Attendance Sheet</h4>
             <p>Present today: 96%</p>
             <p>Download logs available</p>
           </div>
-        )}
+        </a>
 
         <div className="dashboard-box navy" aria-label="Online Meetings">
           <h4>📞 Online Meetings</h4>

@@ -7,5 +7,4 @@ urlpatterns = [
     path('user-list/', views.listusers, name="list_user"),
     path('active-inactive/<int:user_id>', views.activeNinactive, name="active_inactive"),
     path('delete-user/<user_id>/',  views.delete_user, name="delete_user")
-
 ]
