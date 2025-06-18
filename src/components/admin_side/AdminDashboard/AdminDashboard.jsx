@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../../Context/AuthContext";
 import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const BASE_URL = process.env.REACT_APP_BACKEND_API_URL;
 
 const AdminDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
+  const [isAdmin, setIsAdmin] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -34,20 +36,17 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-
     const token = localStorage.getItem("authToken");
 
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setUserId(decoded.user_id);
-        setNewEntry((prev) => ({ ...prev, user: decoded.user_id }));
         setIsAdmin(decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9);
       } catch (e) {
         console.error("Invalid token:", e);
       }
     }
-  }, [token]);
+  }, []);
 
   const menuItems = [
     "Home",
@@ -115,21 +114,21 @@ const AdminDashboard = () => {
           </div>
         </a>
 
-        {isAdmin ? 
-        <a href="/attendance">
+        {isAdmin ? (
+          <a href="/attendance">
+            <div className="dashboard-box gray" aria-label="Attendance Sheet">
+              <h4>📅 Attendance Sheet</h4>
+              <p>Present today: 96%</p>
+              <p>Download logs available</p>
+            </div>
+          </a>
+        ) : (
           <div className="dashboard-box gray" aria-label="Attendance Sheet">
             <h4>📅 Attendance Sheet</h4>
             <p>Present today: 96%</p>
             <p>Download logs available</p>
           </div>
-        </a>
-        :  
-        <div className="dashboard-box gray" aria-label="Attendance Sheet">
-            <h4>📅 Attendance Sheet</h4>
-            <p>Present today: 96%</p>
-            <p>Download logs available</p>
-          </div>
-          }
+        )}
 
         <div className="dashboard-box navy" aria-label="Online Meetings">
           <h4>📞 Online Meetings</h4>

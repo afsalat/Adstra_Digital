@@ -4,29 +4,6 @@ import "aos/dist/aos.css";
 import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
-import img1 from "../../assets/banner-images/branding-innovation-creative-inspire-concept.jpg";
-import img2 from "../../assets/banner-images/business-concept-with-graphic-holography_23-2149160929.webp";
-import img3 from "../../assets/banner-images/business-data-presentation.jpg";
-import img4 from "../../assets/banner-images/businessman-man-hand-hold-interface-question-marks-sign-web_150455-5796.jpg";
-import img5 from "../../assets/banner-images/business-statistics_53876-167065.jpg";
-import img6 from "../../assets/banner-images/business-success-report-graph-concept.jpg";
-import img7 from "../../assets/banner-images/question-mark-icon-solving-problem-solution-concept_53876-13887.webp";
-import img8 from "../../assets/banner-images/cropped-photo-serious-young-man-sitting-office-coworking.jpg";
-import img9 from "../../assets/banner-images/data-analytics-tablet.jpg";
-import img10 from "../../assets/banner-images/dynamic-data-visualization-3d_23-2151904311.webp";
-import img11 from "../../assets/banner-images/logo-designer-working-computer-desktop_23-2149142144.webp";
-import img12 from "../../assets/banner-images/magnet-attracts-magnetises-certain-people-candidates-blocks-hiring-highly-qualified-staff_72572-2597.jpg";
-import img13 from "../../assets/banner-images/man-filming-with-professional-camera-1.jpg";
-import img14 from "../../assets/banner-images/man-filming-with-professional-camera.jpg";
-import img15 from "../../assets/banner-images/man-woman-looking-photos.jpg";
-import img16 from "../../assets/banner-images/message-online-chat-social-text-concept_53876-167132.webp";
-import img17 from "../../assets/banner-images/notepad-laptop-concept.jpg";
-import img18 from "../../assets/banner-images/photography-studio-with-equipment-items-arrangement.jpg";
-import img19 from "../../assets/banner-images/senior-startup-businesswoman-holding-presentatin-conference-room-briefing-graph-information.jpg";
-import img20 from "../../assets/banner-images/side-view-man-working-desk.jpg";
-import img21 from "../../assets/banner-images/business-data-presentation.jpg";
-import img22 from "../../assets/banner-images/data-analytics-tablet.jpg";
-import img23 from "../../assets/banner-images/question-mark-icon-solving-problem-solution-concept_53876-13887.webp";
 
 function Banner() {
   const [messages, setMessages] = useState([]);
@@ -34,11 +11,39 @@ function Banner() {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
   const imageData = {
-    row1: [img1, img2, img3],
-    row2: [img4, img5, img6, img7],
-    row3: [img8, img9, img10, img11, img12, img13],
-    row4: [img14, img15, img16, img17],
-    row5: [img18, img19, img20, img21, img22, img23],
+    row1: [
+      "https://adstradigital.com/media/landing_imgs/branding-innovation-creative-inspire-concept.jpg",
+      "https://adstradigital.com/media/landing_imgs/business-concept-with-graphic-holography_23-2149160929.webp",
+      "https://adstradigital.com/media/landing_imgs/business-data-presentation.jpg",
+    ],
+    row2: [
+      "https://adstradigital.com/media/landing_imgs/businessman-man-hand-hold-interface-question-marks-sign-web_150455-5796.jpg",
+      "https://adstradigital.com/media/landing_imgs/business-statistics_53876-167065.jpg",
+      "https://adstradigital.com/media/landing_imgs/business-success-report-graph-concept.jpg",
+      "https://adstradigital.com/media/landing_imgs/question-mark-icon-solving-problem-solution-concept_53876-13887.webp",
+    ],
+    row3: [
+      "https://adstradigital.com/media/landing_imgs/cropped-photo-serious-young-man-sitting-office-coworking.jpg",
+      "https://adstradigital.com/media/landing_imgs/data-analytics-tablet.jpg",
+      "https://adstradigital.com/media/landing_imgs/dynamic-data-visualization-3d_23-2151904311.webp",
+      "https://adstradigital.com/media/landing_imgs/logo-designer-working-computer-desktop_23-2149142144.webp",
+      "https://adstradigital.com/media/landing_imgs/magnet-attracts-magnetises-certain-people-candidates-blocks-hiring-highly-qualified-staff_72572-2597.jpg",
+      "https://adstradigital.com/media/landing_imgs/man-filming-with-professional-camera-1.jpg",
+    ],
+    row4: [
+      "https://adstradigital.com/media/landing_imgs/man-filming-with-professional-camera.jpg",
+      "https://adstradigital.com/media/landing_imgs/man-woman-looking-photos.jpg",
+      "https://adstradigital.com/media/landing_imgs/message-online-chat-social-text-concept_53876-167132.webp",
+      "https://adstradigital.com/media/landing_imgs/notepad-laptop-concept.jpg",
+    ],
+    row5: [
+      "https://adstradigital.com/media/landing_imgs/photography-studio-with-equipment-items-arrangement.jpg",
+      "https://adstradigital.com/media/landing_imgs/senior-startup-businesswoman-holding-presentatin-conference-room-briefing-graph-information.jpg",
+      "https://adstradigital.com/media/landing_imgs/side-view-man-working-desk.jpg",
+      "https://adstradigital.com/media/landing_imgs/business-data-presentation.jpg",
+      "https://adstradigital.com/media/landing_imgs/data-analytics-tablet.jpg",
+      "https://adstradigital.com/media/landing_imgs/question-mark-icon-solving-problem-solution-concept_53876-13887.webp",
+    ],
   };
 
   useEffect(() => {
@@ -83,7 +88,9 @@ function Banner() {
         <div className="banner-left">
           <div className="banner-text-container">
             {loadingMessages ? (
-              <p className="banner-title">Transform Your Digital Presence. Dominate the Market!</p>
+              <p className="banner-title">
+                Transform Your Digital Presence. Dominate the Market!
+              </p>
             ) : (
               <p className="banner-title zoom-animation">
                 {messages[currentMessageIndex]}
