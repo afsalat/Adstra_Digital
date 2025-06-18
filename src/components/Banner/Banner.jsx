@@ -20,7 +20,8 @@ function Banner() {
       "https://adstradigital.com/media/landing_imgs/b1.jpeg",
       "https://adstradigital.com/media/landing_imgs/b2.jpeg",
       "https://adstradigital.com/media/landing_imgs/b3.jpeg", 
-      "https://adstradigital.com/media/landing_imgs/b4.jpeg",    ],
+      "https://adstradigital.com/media/landing_imgs/b4.jpeg",
+    ],
     row3: [
       "https://adstradigital.com/media/landing_imgs/c1.jpeg",
       "https://adstradigital.com/media/landing_imgs/c2.jpeg",
