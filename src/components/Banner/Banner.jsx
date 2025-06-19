@@ -4,6 +4,8 @@ import "aos/dist/aos.css";
 import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 
 function Banner() {
   const [messages, setMessages] = useState([]);
@@ -19,26 +21,26 @@ function Banner() {
     row2: [
       "https://adstradigital.com/media/landing_imgs/b1.jpeg",
       "https://adstradigital.com/media/landing_imgs/b2.jpeg",
-      "https://adstradigital.com/media/landing_imgs/b3.jpeg", 
+      "https://adstradigital.com/media/landing_imgs/b3.jpeg",
       "https://adstradigital.com/media/landing_imgs/b4.jpeg",
     ],
     row3: [
       "https://adstradigital.com/media/landing_imgs/c1.jpeg",
       "https://adstradigital.com/media/landing_imgs/c2.jpeg",
-      "https://adstradigital.com/media/landing_imgs/c3.jpeg", 
+      "https://adstradigital.com/media/landing_imgs/c3.jpeg",
       "https://adstradigital.com/media/landing_imgs/c4.jpeg",
       "https://adstradigital.com/media/landing_imgs/c5.jpeg",
     ],
     row4: [
       "https://adstradigital.com/media/landing_imgs/d1.jpeg",
-      "https://adstradigital.com/media/landing_imgs/d2.jpeg", 
+      "https://adstradigital.com/media/landing_imgs/d2.jpeg",
       "https://adstradigital.com/media/landing_imgs/d3.jpeg",
       "https://adstradigital.com/media/landing_imgs/d4.jpeg",
     ],
     row5: [
       "https://adstradigital.com/media/landing_imgs/e1.jpeg",
       "https://adstradigital.com/media/landing_imgs/e2.jpeg",
-      "https://adstradigital.com/media/landing_imgs/e3.jpeg", 
+      "https://adstradigital.com/media/landing_imgs/e3.jpeg",
       "https://adstradigital.com/media/landing_imgs/e4.jpeg",
       "https://adstradigital.com/media/landing_imgs/e5.jpeg",
     ],
@@ -81,42 +83,46 @@ function Banner() {
   }, [messages]);
 
   return (
-    <div className="banner">
-      <div className="banner-inside">
-        <div className="banner-left">
-          <div className="banner-text-container">
-            {loadingMessages ? (
-              <p className="banner-title">
-                Transform Your Digital Presence. Dominate the Market!
-              </p>
-            ) : (
-              <p className="banner-title zoom-animation">
-                {messages[currentMessageIndex]}
-              </p>
-            )}
-            <a href="#enquiry">
-              <button className="enquiry-button1">Enquiry</button>
-            </a>
+    <div className="banner py-4 pb-6">
+      <div className="container">
+        <div className="row align-items-start flex-wrap-reverse">
+          {/* Left Column */}
+          <div className="col-lg-6 col-md-12 banner-left pt-5 text-center text-lg-start">
+            <div className="banner-text-container d-flex flex-column gap-5">
+              {loadingMessages ? (
+                <p className="banner-title">
+                  Transform Your Digital Presence. Dominate the Market!
+                </p>
+              ) : (
+                <p className="banner-title zoom-animation">
+                  {messages[currentMessageIndex]}
+                </p>
+              )}
+              <a href="#enquiry">
+                <button className="enquiry-button1">Enquiry</button>
+              </a>
+            </div>
           </div>
-        </div>
 
-        <div className="banner-right">
-          <div className="image-grid">
-            {Object.keys(imageData).map((rowKey, rowIndex) => (
-              <div
-                key={rowIndex}
-                className={`image-row ${
-                  rowKey === "row3" || rowKey === "row5"
-                    ? "row-small"
-                    : "row-large"
-                }`}
-                data-aos={rowIndex % 2 === 0 ? "fade-left" : "fade-right"}
-              >
-                {imageData[rowKey].map((src, idx) => (
-                  <img key={idx} src={src} alt={`${rowKey}-${idx}`} />
-                ))}
-              </div>
-            ))}
+          {/* Right Column */}
+          <div className="col-lg-6 col-md-12 banner-right">
+            <div className="image-grid d-flex flex-column gap-2">
+              {Object.keys(imageData).map((rowKey, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className={`image-row d-flex gap-2 overflow-auto ${
+                    rowKey === "row3" || rowKey === "row5"
+                      ? "row-small"
+                      : "row-large"
+                  }`}
+                  data-aos={rowIndex % 2 === 0 ? "fade-left" : "fade-right"}
+                >
+                  {imageData[rowKey].map((src, idx) => (
+                    <img key={idx} src={src} alt={`${rowKey}-${idx}`} />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

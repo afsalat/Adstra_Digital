@@ -118,7 +118,7 @@ const AdminDashboard = () => {
         ) : (
             <div className="dashboard-box cyan" aria-label="User Management">
               <h4>👥 User Management</h4>
-              <p>Permission Denied!</p>
+              <p>Sorry.  You do not have access to this folder</p>
             </div>
         )}
 

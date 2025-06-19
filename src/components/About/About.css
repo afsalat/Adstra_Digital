@@ -1,76 +1,25 @@
-.about {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-    flex-wrap: wrap;
-    gap: 40px;
-}
-
-.about-left,
-.about-right {
-    flex: 1 1 45%;
-    min-width: 300px;
-}
-
-.about-left {
-    flex: 1 1 45%;
-    width: 300px;
-    padding-left: 5%;
-    padding-right: 5%;
-    text-align: left;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.about-left h2 {
-    font-size: 36px;
-    margin-bottom: 20px;
-    color: #333;
-}
-
-.about-left p {
-    font-size: 18px;
-    margin-bottom: 20px;
-    color: #555;
-    line-height: 1.6;
-}
-
-.learn-btn-box {
-    background: rgb(240, 41, 41);
-    color: white;
-    border: none;
-    padding: 1rem 4rem;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 20px;
-}
-
-.learn-btn-box:hover {
-    background-color: #0056b3;
-}
-
-.about-right {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-}
-
-.about-right img {
-    max-width: 80%;
-    height: auto;
-    border-radius: 8px;
-    padding-left: 50px;
-}
-
-
-.about-left ul li {
-  margin-bottom: 10px;
-  font-size: 1.05rem;
+#about p {
+  font-size: 1.1rem;
+  line-height: 1.7;
   color: #444;
-  position: relative;
-  font-weight: bold;
-  list-style: none;
+}
+
+#about h2 {
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  #about h2 {
+    font-size: 1.75rem;
+    text-align: center;
+  }
+
+  #about p {
+    text-align: center;
+  }
+
+  #about .btn {
+    display: block;
+    margin: 0 auto;
+  }
 }

@@ -27,58 +27,58 @@ function ContactUs() {
     fetchCompanyInfo();
   }, []);
 
-  if (loading) {
-    return <p>Loading company information...</p>;
-  }
-
-  if (!info) {
-    return <p>Failed to load company information.</p>;
-  }
+  if (loading) return <p className="text-center py-5">Loading company information...</p>;
+  if (!info) return <p className="text-danger text-center py-5">Failed to load company information.</p>;
 
   return (
-    <section id="contact" className="contact-section">
-      <div className="contact-container">
-        <div className="contact-header">
-          <h2>Contact Us</h2>
-          <p>{info.title}</p>
+    <section id="contact" className="contact-section py-5 bg-light">
+      <div className="container">
+        <div className="text-center mb-5">
+          <h2 className="fw-bold">Contact Us</h2>
+          <p className="text-muted">{info.title}</p>
         </div>
 
-        <div className="contact-details">
-          <div className="contact-inf">
+        <div className="row g-4 align-items-stretch">
+          {/* Contact Info */}
+          <div className="col-md-6">
+            <div className="contact-inf p-4 h-100 rounded shadow-sm bg-white">
+              <h3>Email</h3>
+              <p><a href={`mailto:${info.email}`}>{info.email}</a></p>
 
-            <h3>Email</h3>
-            <p><a href={`mailto:${info.email}`}>{info.email}</a></p>
+              <h3>Phone</h3>
+              <p><a href={`tel:${info.Pphone}`}>{info.Phone}</a></p>
 
-            <h3>Phone</h3>
-            <p><a href={`tel:${info.Pphone}`}>{info.Phone}</a></p>
+              <h3>Business Hours</h3>
+              <p>{info.working_hours}</p>
 
-            <h3>Business Hours</h3>
-            <p>{info.working_hours}</p>
+              <h3>Our Presence</h3>
+              <p>{info.address_1}</p>
+              <p>{info.address_2}</p>
+              <p>{info.address_3}</p>
 
-            <h3>Our Presence</h3>
-            <p>{info.address_1}</p>
-            <p>{info.address_2}</p>
-            <p>{info.address_3}</p>
-
-            <div className="social-links">
-              <h3>Follow Us</h3>
-              <a href={info.facebook} target="_blank" rel="noopener noreferrer">Facebook</a>
-              <a href={info.twitter} target="_blank" rel="noopener noreferrer">Twitter</a>
-              <a href={info.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
+              <div className="social-links mt-4">
+                <h3>Follow Us</h3>
+                <a href={info.facebook} target="_blank" rel="noopener noreferrer">Facebook</a>
+                <a href={info.twitter} target="_blank" rel="noopener noreferrer">Twitter</a>
+                <a href={info.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
+              </div>
             </div>
           </div>
 
-          <div className="contact-map">
-            <iframe
-              title="Google Map"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.0195774986144!2d75.78041528468207!3d11.25892977975988!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba7b4e4b4b4b4b4%3A0x4b4b4b4b4b4b4b4b4!2sSt.+Mary's+English+Church%2C+Kozhikode!5e0!3m2!1sen!2sin!4v1717078500000!5m2!1sen!2sin"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen=""
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+          {/* Map */}
+          <div className="col-md-6">
+            <div className="contact-map rounded overflow-hidden shadow-sm h-100">
+              <iframe
+                title="Google Map"
+                src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d15738.75983755624!2d75.776457!3d11.268645!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba65e98173164d3%3A0x3d7ba61c13bba84!2sCalicut!5e0!3m2!1sen!2sin!4v1718791012345!5m2!1sen!2sin"
+                width="100%"
+                height="100%"
+                style={{ border: 0, minHeight: "400px" }}
+                allowFullScreen=""
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
           </div>
         </div>
       </div>

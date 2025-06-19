@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://adstradigital.com/sitemap.xml

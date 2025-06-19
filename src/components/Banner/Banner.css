@@ -1,47 +1,14 @@
 .banner {
-  padding: 1.4rem 0;
-  padding-bottom: 5.5rem;
-}
-
-.banner-inside {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  max-width: 1200px;
-  margin: 0 auto;
-  flex-wrap: wrap;
-  gap: 2rem;
-}
-
-.banner-left {
-  flex: 1;
-  padding-top: 5.5rem;
-  min-width: 300px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-}
-
-.banner-text-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  background-color: #fff;
+  height: 100vh;
+  margin-top: 10%;
 }
 
 .banner-title {
   font-size: clamp(2rem, 5vw, 3rem);
-  max-width: 90%;
   font-weight: bold;
   color: #181818;
   line-height: 1.2;
-}
-
-.banner-description {
-  font-size: 0.9rem;
-  color: #555;
-  font-weight: bold;
-  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-  min-width: 80%;
 }
 
 .enquiry-button1 {
@@ -53,7 +20,6 @@
   font-weight: bold;
   cursor: pointer;
   border-radius: 20px;
-  align-self: flex-start;
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -62,27 +28,11 @@
   box-shadow: 2px 2px 0px rgb(140, 93, 6);
 }
 
-.banner-right {
-  flex: 1;
-  top: 0;
-}
-
-.image-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.image-row {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  position: relative;
-}
-
 .image-row img {
   transition: transform 0.3s ease;
   object-fit: cover;
+  border: 1px solid #ccc;
+  border-radius: 10px;
 }
 
 .image-row img:hover {
@@ -90,30 +40,21 @@
   z-index: 2;
 }
 
-
-.image-row::-webkit-scrollbar {
-  display: none; /* Chrome, Safari */
-}
-
-
 .row-large img {
   width: 130px;
   height: 80px;
-  object-fit: cover;
-  border: 1px solid #ccc;
-  border-radius: 10px;
 }
 
 .row-small img {
   width: 80px;
   height: 80px;
-  object-fit: cover;
-  border: 1px solid #ccc;
-  border-radius: 10px;
   margin-top: 10px;
   margin-bottom: 10px;
 }
 
+.zoom-animation {
+  animation: zoomInOut 8s ease-in-out infinite;
+}
 
 @keyframes zoomInOut {
   0% {
@@ -134,76 +75,5 @@
   100% {
     opacity: 0;
     transform: scale(0.95);
-  }
-}
-
-.zoom-animation {
-  animation: zoomInOut 8s ease-in-out infinite;
-}
-
-@media screen and (max-width: 430px) {
-  .banner-inside {
-    flex-direction: column;
-    align-items: center;
-    margin-top: 100px;
-  }
-
-  .banner-left,
-  .banner-right {
-    width: 100%;
-    padding: 1rem;
-  }
-  
-  .banner-left {
-    width: 80%;
-  }
-
-  .banner-title {
-    text-align: center;
-    font-size: 2.6rem;
-  }
-
-  .enquiry-button1 {
-    align-self: center;
-  }
-}
-
-
-@media screen and (max-width: 768px) {
-  .row-large img {
-    width: 90px;
-    height: 55px;
-  }
-
-  .row-small img {
-    width: 55px;
-    height: 55px;
-  }
-
-  .image-grid {
-    width: 100%;
-  }
-
-  .image-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .image-row::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .row-large img {
-    width: 70px;
-    height: 45px;
-  }
-
-  .row-small img {
-    width: 45px;
-    height: 45px;
   }
 }

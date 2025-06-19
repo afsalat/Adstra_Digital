@@ -27,43 +27,177 @@ function Footer() {
   if (!footerData) return null;
 
   return (
-    <footer className="footer">
-      <div className="footer__content">
-        <div className="footer__logo-section">
-          <h2 className="footer__logo">{footerData.company_name}</h2>
-          <p className="footer__tagline">{footerData.company_caption}</p>
+    <footer className="footer bg-light pt-5">
+      <div className="container">
+        <div className="row text-center text-md-start gy-4 justify-content-between">
+          {/* Company Info */}
+          <div className="col-md-3">
+            <h4 className="footer__logo mb-2">Adstra Digital</h4>
+            <p className="footer__tagline">{footerData.company_caption}</p>
+            <p className="small">📞 +91 9744779574</p>
+            <p className="small">✉️ info@adstradigital.com</p>
+          </div>
+
+          {/* Quick Links */}
+          <div className="col-md-2">
+            <h5 className="fw-bold mb-3">Quick Links</h5>
+            <ul className="list-unstyled footer__nav">
+              <li>
+                <a href="/" className="footer__nav-link">
+                  Home
+                </a>
+              </li>
+              <li>
+                <a href="/about" className="footer__nav-link">
+                  About
+                </a>
+              </li>
+              <li>
+                <a href="/blogs/all" className="footer__nav-link">
+                  Blog
+                </a>
+              </li>
+              <li>
+                <a href="/#contact" className="footer__nav-link">
+                  Contact
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Services */}
+          <div className="col-md-2">
+            <h5 className="fw-bold mb-3">Services</h5>
+            <ul className="list-unstyled footer__nav">
+              <li>
+                <a href="/service/all" className="footer__nav-link">
+                  All Services
+                </a>
+              </li>
+              <li>
+                <a href="/#digital-marketing" className="footer__nav-link">
+                  Digital Marketing
+                </a>
+              </li>
+              <li>
+                <a href="/#web-development" className="footer__nav-link">
+                  Web Development
+                </a>
+              </li>
+              <li>
+                <a href="/#seo" className="footer__nav-link">
+                  SEO
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div className="col-md-2">
+            <h5 className="fw-bold mb-3">Resources</h5>
+            <ul className="list-unstyled footer__nav">
+              <li>
+                <a href="/sitemap" className="footer__nav-link">
+                  Sitemap
+                </a>
+              </li>
+              <li>
+                <a href="/faqs" className="footer__nav-link">
+                  FAQs
+                </a>
+              </li>
+              <li>
+                <a href="/policy" className="footer__nav-link">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="/terms" className="footer__nav-link">
+                  Terms & Conditions
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Social Media & Downloads */}
+          <div className="col-md-3">
+            <h5 className="fw-bold mb-3">Follow Us</h5>
+            <div className="d-flex gap-3 justify-content-center justify-content-md-start mb-3">
+              <a
+                href="https://www.facebook.com/adstradigital/"
+                target="_blank"
+                rel="noreferrer"
+                className="footer__social-link"
+              >
+                <i className="bi bi-facebook fs-4"></i>
+              </a>
+              <a
+                href={footerData.twitter}
+                target="_blank"
+                rel="noreferrer"
+                className="footer__social-link"
+              >
+                <i className="bi bi-twitter-x fs-4"></i>
+              </a>
+              <a
+                href="https://www.linkedin.com/company/adstra-digital/about/"
+                target="_blank"
+                rel="noreferrer"
+                className="footer__social-link"
+              >
+                <i className="bi bi-linkedin fs-4"></i>
+              </a>
+              <a
+                href="https://www.pinterest.com/adstradigital"
+                target="_blank"
+                rel="noreferrer"
+                className="footer__social-link"
+              >
+                <i className="bi bi-pinterest fs-4"></i>
+              </a>
+              <a
+                href="https://www.instagram.com/adstradigital/"
+                target="_blank"
+                rel="noreferrer"
+                className="footer__social-link"
+              >
+                <i className="bi bi-instagram fs-4"></i>
+              </a>
+            </div>
+
+            <h6 className="fw-semibold mb-2 c-pointer">Downloads</h6>
+            <ul className="list-unstyled footer__nav">
+              <li className="mb-1">
+                <a
+                  href={footerData.brochure}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="footer__nav-link"
+                  download
+                >
+                  📄 Brochure
+                </a>
+              </li>
+              <li>
+                <a
+                  href={footerData.profile_pdf}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="footer__nav-link"
+                  download
+                >
+                  📥 Company Profile
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <nav className="footer__nav" aria-label="Footer Navigation">
-          <a href="/policy" className="footer__nav-link">Privacy Policy</a>
-          <a href="#!" className="footer__nav-link">Terms of Service</a>
-          <a href="/#enquiry" className="footer__nav-link">Contact Us</a>
-        </nav>
-
-        <div className="footer__socials" aria-label="Social Media Links">
-          <a href={footerData.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="footer__social-link">
-            {/* Facebook SVG */}
-            <svg width="24" height="24" fill="currentColor" aria-hidden="true" viewBox="0 0 24 24">
-              <path d="M22.675 0h-21.35C.6 0 0 .6 0 1.325v21.351C0 23.4.6 24 1.325 24h11.495v-9.294H9.691v-3.622h3.129V8.413c0-3.1 1.894-4.788 4.659-4.788 1.325 0 2.466.099 2.797.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.763v2.31h3.587l-.467 3.622h-3.12V24h6.116C23.4 24 24 23.4 24 22.675V1.325C24 .6 23.4 0 22.675 0z" />
-            </svg>
-          </a>
-          <a href={footerData.twitter} target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="footer__social-link">
-            {/* Twitter SVG */}
-            <svg width="24" height="24" fill="currentColor" aria-hidden="true" viewBox="0 0 24 24">
-              <path d="M23.954 4.569c-.885.392-1.83.656-2.825.775a4.932 4.932 0 0 0 2.163-2.724 9.86 9.86 0 0 1-3.127 1.195 4.916 4.916 0 0 0-8.373 4.482A13.949 13.949 0 0 1 1.64 3.161a4.916 4.916 0 0 0 1.523 6.557 4.903 4.903 0 0 1-2.229-.616v.06a4.916 4.916 0 0 0 3.946 4.814 4.902 4.902 0 0 1-2.224.084 4.918 4.918 0 0 0 4.59 3.417 9.867 9.867 0 0 1-6.102 2.104c-.395 0-.787-.023-1.17-.069a13.945 13.945 0 0 0 7.557 2.213c9.054 0 14.002-7.496 14.002-13.986 0-.21 0-.423-.015-.633A10.012 10.012 0 0 0 24 4.59z" />
-            </svg>
-          </a>
-          <a href={footerData.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="footer__social-link">
-            {/* LinkedIn SVG */}
-            <svg width="24" height="24" fill="currentColor" aria-hidden="true" viewBox="0 0 24 24">
-              <path d="M20.447 20.452H17.21v-5.569c0-1.328-.027-3.039-1.852-3.039-1.853 0-2.136 1.445-2.136 2.939v5.669H9.066V9h3.104v1.561h.044c.433-.82 1.49-1.685 3.065-1.685 3.277 0 3.881 2.158 3.881 4.967v6.609zM5.337 7.433a1.8 1.8 0 1 1 0-3.6 1.8 1.8 0 0 1 0 3.6zM6.895 20.452H3.781V9h3.114v11.452zM22.225 0H1.771C.792 0 0 .772 0 1.723v20.554C0 23.226.792 24 1.771 24h20.451C23.2 24 24 23.226 24 22.277V1.723C24 .772 23.2 0 22.225 0z" />
-            </svg>
-          </a>
+        <hr className="my-4" />
+        <div className="text-center small footer__bottom">
+          © {new Date().getFullYear()} {footerData.company_name}. All rights
+          reserved.
         </div>
-      </div>
-
-      <div className="footer__bottom">
-        <p>© {new Date().getFullYear()} {footerData.company_name}. All rights reserved.</p>
       </div>
     </footer>
   );
