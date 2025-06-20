@@ -4,7 +4,7 @@ import "./UserManagement.css";
 import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const BASE_URL = process.env.REACT_APP_BACKEND_API_URL_DEV;
+const BASE_URL = process.env.REACT_APP_BACKEND_API_URL;
 
 const UserList = () => {
   const [users, setUsers] = useState([]);

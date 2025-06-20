@@ -46,21 +46,21 @@ function ContactUs() {
               <p><a href={`mailto:${info.email}`}>{info.email}</a></p>
 
               <h3>Phone</h3>
-              <p><a href={`tel:${info.Pphone}`}>{info.Phone}</a></p>
+              <p><a href={`tel: +91 9744779574`}>+91 9744779574</a></p>
 
               <h3>Business Hours</h3>
               <p>{info.working_hours}</p>
 
               <h3>Our Presence</h3>
-              <p>{info.address_1}</p>
-              <p>{info.address_2}</p>
               <p>{info.address_3}</p>
+              <p>{info.address_2}</p>
+              <p>{info.address_1}</p>
 
               <div className="social-links mt-4">
                 <h3>Follow Us</h3>
-                <a href={info.facebook} target="_blank" rel="noopener noreferrer">Facebook</a>
-                <a href={info.twitter} target="_blank" rel="noopener noreferrer">Twitter</a>
-                <a href={info.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                <a href="https://www.facebook.com/adstradigital/" target="_blank" rel="noopener noreferrer">Facebook</a>
+                <a href="https://x.com/adstradigital" target="_blank" rel="noopener noreferrer">Twitter</a>
+                <a href="https://www.linkedin.com/company/adstra-digital/about/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
               </div>
             </div>
           </div>

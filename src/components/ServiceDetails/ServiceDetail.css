@@ -3,26 +3,26 @@
   margin: 60px auto;
   padding: 40px 25px;
   font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  color: #222831; /* dark slate */
-  background-color: #f9fafb; /* very light grey/white */
+  color: #222831;
+  background-color: #f9fafb;
   line-height: 1.65;
 }
 
-.full-services h2 {
+.full-services h2 { 
   text-align: center;
   font-size: 2.6rem;
   font-weight: 700;
-  color: #f36f21; /* corporate orange */
+  color: #f36f21;
   margin-bottom: 50px;
-  border-bottom: 4px solid #00acc1; /* cyan */
+  border-bottom: 4px solid #00acc1;
   display: inline-block;
   padding-bottom: 8px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .service-block {
-  background-color: #ffffff; /* pure white cards */
-  border-left: 6px solid #f36f21; /* orange accent line */
+  background-color: #ffffff;
+  border-left: 6px solid #f36f21;
   padding: 30px 30px 30px 20px;
   border-radius: 6px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.465);
@@ -67,7 +67,7 @@
 
 .why li {
   list-style: none;
-  color: #f36f21; /* orange */
+  color: #f36f21;
   font-weight: 700;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin-bottom: 10px;
@@ -94,12 +94,14 @@
   height: 450px;
   border-radius: 8px;
   object-fit: cover;
-  box-shadow: 0 6px 18px rgba(0, 172, 193, 0.2);
   transition: transform 0.3s ease;
+  transition: 2s;
 }
 
 .service-image:hover {
-  transform: scale(1.03);
+  transform: scale(1.1) rotateY(18deg);
+  opacity: 100%;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.397));
 }
 
 .service-text {

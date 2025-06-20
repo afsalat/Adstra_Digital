@@ -4,6 +4,8 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import "./Blog.css";
 import img1 from "../../assets/blog_images/shoting-photo-blog.jpeg"
+import img2 from "../../assets/blog_images/blog-flight.jpg"
+import img3 from "../../assets/about-image.avif"
 import { Link } from "react-router-dom";
 
 const blogPosts = [
@@ -14,16 +16,16 @@ const blogPosts = [
     imageUrl: img1
   },
   {
-    title: "Mastering UI/UX Basics",
-    slug: "ui-ux-basics",
-    excerpt: "Discover key principles that shape modern user interfaces and improve UX.",
-    imageUrl: img1
+    title: "The Birth of Creativity",
+    slug: "the-birth-of-creativity",
+    excerpt: " A fleeting thought, like a breeze brushing against the edges of the mind. Not loud, not fully formed—just a feeling, a sensation, a spark.",
+    imageUrl: img2
   },
   {
     title: "React Performance Secrets",
     slug: "react-performance-secrets",
     excerpt: "Speed up your apps using these little-known performance tricks.",
-    imageUrl: img1
+    imageUrl: img3
   },
 ];
 

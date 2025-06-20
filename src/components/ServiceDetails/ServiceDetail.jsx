@@ -2,15 +2,24 @@ import React, { useEffect } from "react";
 import Tilt from "react-parallax-tilt";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import img from "../../assets/blog_images/shoting-photo-blog.jpeg"
 import "./ServiceDetail.css";
+import img from "../../assets/services/studio.jpg"
+import img2 from "../../assets/services/service-social-media.png"
+import img3 from "../../assets/services/lead-generation.png"
+import img4 from "../../assets/services/branding.png"
+import img5 from "../../assets/services/seo.png"
+import img6 from "../../assets/services/analytics.png"
+import img7 from "../../assets/services/content-marketing.png"
+import img8 from "../../assets/services/ads.png"
+import img9 from "../../assets/services/google-ads.png"
+import img10 from "../../assets/services/web.png"
 import { useParams } from "react-router-dom";
 
 const serviceSections = [
   {
     title: "In-House Professional Photography & Video Production",
     slug: "video-production",
-    image: img,
+    image: "https://adstradigital.com/media/services/studio.jpg",
     description:
       "High-quality visuals make a lasting impression. At Adstra Digital, we provide in-house photography and video production, ensuring professional, compelling content that enhances your brand’s identity. Whether it’s corporate branding shoots, product photography, promotional videos, or storytelling content, we make sure your visuals stand out.",
     points: [
@@ -24,6 +33,7 @@ const serviceSections = [
   {
     title: "Social Media Marketing & Campaigns",
     slug: "social-media-marketing",
+    image: "https://adstradigital.com/media/services/service-social-media.png",
     description:
       "We design data-driven marketing campaigns that boost engagement, build brand awareness, and drive conversions across platforms like Facebook, Instagram, LinkedIn, and Twitter.",
     points: [
@@ -37,6 +47,7 @@ const serviceSections = [
   {
     title: "Lead Generation & Performance Marketing",
     slug: "lead-generation",
+    image: "https://adstradigital.com/media/services/lead-generation.png",
     description:
       "We specialize in targeted digital marketing strategies that turn prospects into paying customers using precise advertising techniques and data-driven insights.",
     points: [
@@ -50,6 +61,7 @@ const serviceSections = [
   {
     title: "Branding & Identity Design",
     slug: "branding",
+    image: "https://adstradigital.com/media/services/branding.png",
     description:
       "A brand is more than just a logo—it’s the story, message, and identity behind it. We help businesses craft a strong, recognizable brand through thoughtful design, messaging, and strategy.",
     points: [
@@ -63,6 +75,7 @@ const serviceSections = [
   {
     title: "SEO & Website Optimization",
     slug: "seo-website-optimization",
+    image: "https://adstradigital.com/media/services/seo.png",
     description:
       "We make sure your website ranks higher on Google with smart SEO strategies that enhance its content, speed, and usability.",
     points: [
@@ -76,6 +89,7 @@ const serviceSections = [
   {
     title: "Analytics & Reporting",
     slug: "analytics-reporting",
+    image: "https://adstradigital.com/media/services/analytics.png",
     description:
       "We provide detailed insights that help businesses adjust strategies for better engagement, more conversions, and stronger ROI.",
     points: [
@@ -89,6 +103,7 @@ const serviceSections = [
   {
     title: "Content Marketing & Storytelling",
     slug: "content-marketing",
+    image: "https://adstradigital.com/media/services/content-marketing.png",
     description:
       "Our team creates high-quality blog articles, videos, and infographics tailored to your brand’s message, ensuring content that connects and converts.",
     points: [
@@ -102,6 +117,7 @@ const serviceSections = [
   {
     title: "Paid Advertising (PPC & Display Ads)",
     slug: "paid-advertising",
+    image: "https://adstradigital.com/media/services/ads.png",
     description:
       "We craft high-impact ad campaigns that ensure effective audience targeting and cost-efficient spending.",
     points: [
@@ -114,6 +130,7 @@ const serviceSections = [
   }, {
     title: "Google Ads – Targeted Advertising for Maximum Reach",
     slug: "google-ads",
+    image: "https://adstradigital.com/media/services/google-ads.png",
     description:
       "Google Ads is one of the most effective ways to drive traffic, generate leads, and increase conversions. At Adstra Digital, we create highly optimized ad campaigns that ensure businesses reach the right audience at the right time.",
     points: [
@@ -126,6 +143,7 @@ const serviceSections = [
   }, {
     title: "Web Development & Design",
     slug: "web-development",
+    image: img10,
     description:
       "We build responsive, user-friendly websites tailored to your brand and business goals, ensuring optimal performance and seamless user experience.",
     points: [
@@ -166,8 +184,8 @@ function FullServices() {
           glareMaxOpacity={0.2}
           scale={1.05}
           transitionSpeed={100}
-          tiltMaxAngleX={10}
-          tiltMaxAngleY={10}
+          tiltMaxAngleX={3}
+          tiltMaxAngleY={3}
           perspective={2000}
           gyroscope={true}
           key={index}

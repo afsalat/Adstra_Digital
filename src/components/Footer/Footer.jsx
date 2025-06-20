@@ -132,7 +132,7 @@ function Footer() {
                 <i className="bi bi-facebook fs-4"></i>
               </a>
               <a
-                href={footerData.twitter}
+                href="https://x.com/adstradigital"
                 target="_blank"
                 rel="noreferrer"
                 className="footer__social-link"
