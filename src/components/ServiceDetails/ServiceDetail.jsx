@@ -3,16 +3,6 @@ import Tilt from "react-parallax-tilt";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./ServiceDetail.css";
-import img from "../../assets/services/studio.jpg"
-import img2 from "../../assets/services/service-social-media.png"
-import img3 from "../../assets/services/lead-generation.png"
-import img4 from "../../assets/services/branding.png"
-import img5 from "../../assets/services/seo.png"
-import img6 from "../../assets/services/analytics.png"
-import img7 from "../../assets/services/content-marketing.png"
-import img8 from "../../assets/services/ads.png"
-import img9 from "../../assets/services/google-ads.png"
-import img10 from "../../assets/services/web.png"
 import { useParams } from "react-router-dom";
 
 const serviceSections = [
@@ -143,7 +133,7 @@ const serviceSections = [
   }, {
     title: "Web Development & Design",
     slug: "web-development",
-    image: img10,
+    image: "https://adstradigital.com/media/services/web.png",
     description:
       "We build responsive, user-friendly websites tailored to your brand and business goals, ensuring optimal performance and seamless user experience.",
     points: [

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import "./Footer.css";
 import { db } from "../../Context/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
+import logo from "../../assets/logo/logo_icon.jpeg";
+
 
 function Footer() {
   const [footerData, setFooterData] = useState(null);
@@ -32,7 +34,14 @@ function Footer() {
         <div className="row text-center text-md-start gy-4 justify-content-between">
           {/* Company Info */}
           <div className="col-md-3">
-            <h4 className="footer__logo mb-2">Adstra Digital</h4>
+              <a href="/" className="footer__logo">
+                <img
+                  src={logo}
+                  loading="lazy"
+                  alt="Company Logo"
+                  className="logo me-3"
+                />
+              </a>
             <p className="footer__tagline">{footerData.company_caption}</p>
             <p className="small">📞 +91 9744779574</p>
             <p className="small">✉️ info@adstradigital.com</p>

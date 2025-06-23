@@ -6,7 +6,6 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-
 function Banner() {
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -89,15 +88,11 @@ function Banner() {
           {/* Left Column */}
           <div className="col-lg-6 col-md-12 banner-left pt-5 text-center text-lg-start">
             <div className="banner-text-container d-flex flex-column gap-5">
-              {loadingMessages ? (
-                <p className="banner-title">
-                  Transform Your Digital Presence. Dominate the Market!
-                </p>
-              ) : (
-                <p className="banner-title zoom-animation">
-                  {messages[currentMessageIndex]}
-                </p>
-              )}
+              <h1 className="banner-title zoom-animation">
+                {loadingMessages
+                  ? "Transform Your Digital Presence. Dominate the Market!"
+                  : messages[currentMessageIndex]}
+              </h1>
               <a href="#enquiry">
                 <button className="enquiry-button1">Enquiry</button>
               </a>
@@ -116,9 +111,15 @@ function Banner() {
                       : "row-large"
                   }`}
                   data-aos={rowIndex % 2 === 0 ? "fade-left" : "fade-right"}
+                  data-aos-duration={1000 + rowIndex * 200}
                 >
                   {imageData[rowKey].map((src, idx) => (
-                    <img key={idx} src={src} alt={`${rowKey}-${idx}`} />
+                    <img
+                      key={idx}
+                      src={src}
+                      loading="lazy"
+                      alt={`Banner image ${rowKey} ${idx + 1}`}
+                    />
                   ))}
                 </div>
               ))}

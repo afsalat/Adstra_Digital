@@ -75,7 +75,9 @@ function NavBar() {
 
           {/* Show contact info on mobile inside the menu */}
           <li className="nav-item d-md-none mt-3 text-center">
-            <div className="fw-bold">📞 +91 9744779574 - ✉️ info@adstradigital.com</div>
+            <div className="fw-bold">
+              📞 +91 9744779574 - ✉️ info@adstradigital.com
+            </div>
           </li>
         </ul>
 

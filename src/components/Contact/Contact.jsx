@@ -27,8 +27,14 @@ function ContactUs() {
     fetchCompanyInfo();
   }, []);
 
-  if (loading) return <p className="text-center py-5">Loading company information...</p>;
-  if (!info) return <p className="text-danger text-center py-5">Failed to load company information.</p>;
+  if (loading)
+    return <p className="text-center py-5">Loading company information...</p>;
+  if (!info)
+    return (
+      <p className="text-danger text-center py-5">
+        Failed to load company information.
+      </p>
+    );
 
   return (
     <section id="contact" className="contact-section py-5 bg-light">
@@ -43,13 +49,17 @@ function ContactUs() {
           <div className="col-md-6">
             <div className="contact-inf p-4 h-100 rounded shadow-sm bg-white">
               <h3>Email</h3>
-              <p><a href={`mailto:${info.email}`}>{info.email}</a></p>
+              <p>
+                <a href={`mailto:${info.email}`}>{info.email}</a>
+              </p>
 
               <h3>Phone</h3>
-              <p><a href={`tel: +91 9744779574`}>+91 9744779574</a></p>
+              <p>
+                <a href={`tel: +91 9744779574`}>+91 9744779574</a>
+              </p>
 
               <h3>Business Hours</h3>
-              <p>{info.working_hours}</p>
+              <p>Monday – Friday: 9:30 AM – 5:30 PM</p>
 
               <h3>Our Presence</h3>
               <p>{info.address_3}</p>
@@ -58,10 +68,37 @@ function ContactUs() {
 
               <div className="social-links mt-4">
                 <h3>Follow Us</h3>
-                <a href="https://www.facebook.com/adstradigital/" target="_blank" rel="noopener noreferrer">Facebook</a>
-                <a href="https://x.com/adstradigital" target="_blank" rel="noopener noreferrer">Twitter</a>
-                <a href="https://www.linkedin.com/company/adstra-digital/about/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                <a
+                  href="https://www.facebook.com/adstradigital/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Facebook
+                </a>
+                <a
+                  href="https://www.instagram.com/adstradigital/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Instagram
+                </a>
+                <a
+                  href="https://x.com/adstradigital"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Twitter
+                </a>
+                <a
+                  href="https://www.linkedin.com/company/adstra-digital/about/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  LinkedIn
+                </a>
               </div>
+              <b>We’d love to hear from you!</b>
+              <p>Whether you’re looking to grow your brand, need a digital audit, or just have a question — the team at AdstraDigital is here for you. </p>
             </div>
           </div>
 
@@ -69,15 +106,11 @@ function ContactUs() {
           <div className="col-md-6">
             <div className="contact-map rounded overflow-hidden shadow-sm h-100">
               <iframe
-                title="Google Map"
-                src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d15738.75983755624!2d75.776457!3d11.268645!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba65e98173164d3%3A0x3d7ba61c13bba84!2sCalicut!5e0!3m2!1sen!2sin!4v1718791012345!5m2!1sen!2sin"
-                width="100%"
-                height="100%"
-                style={{ border: 0, minHeight: "400px" }}
-                allowFullScreen=""
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3907.5227192185025!2d76.2796335!3d11.6573199!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba607f2554bfa57%3A0xf47e913680e3620a!2sADSTRA%20DIGITAL!5e0!3m2!1sen!2sin!4v1750496038026!5m2!1sen!2sin"
+                allowfullscreen="true"
                 loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+                referrerpolicy="no-referrer-when-downgrade"
+              ></iframe>
             </div>
           </div>
         </div>
