@@ -62,9 +62,39 @@ function ContactUs() {
               <p>Monday – Friday: 9:30 AM – 5:30 PM</p>
 
               <h3>Our Presence</h3>
-              <p>{info.address_3}</p>
-              <p>{info.address_2}</p>
-              <p>{info.address_1}</p>
+              <p>
+                {info.address_3}
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=Popular+Arcade+1+Floor,+Nearby+English+Church+Nadakkavu,+Kozhikode,+Kerala+673011"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline-primary ms-2"
+                >
+                  Go to 
+                </a>
+              </p>
+              <p>
+                {info.address_2}
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=ADSTRA+DIGITAL,+Anganwadi+Road,+Thirunelli,+Near+Indian+Oil+petrol+pump,+Batheri+Mysore+Road,+Sulthan+Bathery,+Kerala+673592"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline-primary ms-2"
+                >
+                  Go to
+                </a>
+              </p>
+              <p>
+                {info.address_1}
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=Kengeri+Satellite+Town,+Bangalore+560060"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline-primary ms-2"
+                >
+                  Go to
+                </a>
+              </p>
 
               <div className="social-links mt-4">
                 <h3>Follow Us</h3>
@@ -98,7 +128,11 @@ function ContactUs() {
                 </a>
               </div>
               <b>We’d love to hear from you!</b>
-              <p>Whether you’re looking to grow your brand, need a digital audit, or just have a question — the team at AdstraDigital is here for you. </p>
+              <p>
+                Whether you’re looking to grow your brand, need a digital audit,
+                or just have a question — the team at AdstraDigital is here for
+                you.{" "}
+              </p>
             </div>
           </div>
 

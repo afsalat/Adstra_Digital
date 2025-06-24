@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Footer.css";
 import { db } from "../../Context/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import logo from "../../assets/logo/logo_icon.jpeg";
+import logo from "../../assets/logo/logo_new-01.png";
 
 
 function Footer() {

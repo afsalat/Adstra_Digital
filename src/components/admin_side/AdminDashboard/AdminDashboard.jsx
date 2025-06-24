@@ -42,7 +42,7 @@ const AdminDashboard = () => {
       try {
         const decoded = jwtDecode(token);
         setIsAdmin(
-          decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 10
+          decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9
         );
       } catch (e) {
         console.error("Invalid token:", e);

@@ -45,7 +45,7 @@ const AttendanceTable = () => {
         );
       })
       .catch((error) => {
-        alert("❌ Logout failed");
+        alert("❌ Already checkout record");
         console.error("Logout error:", error);
       });
   };
@@ -64,7 +64,6 @@ const AttendanceTable = () => {
       }
     }
   }, [token]);
-
 
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -170,7 +169,6 @@ const AttendanceTable = () => {
     saveAs(blob, "Styled_Attendance.xlsx");
   };
 
-
   const getPlaceName = async (locationStr) => {
     if (!locationStr.includes("latitude")) return locationStr;
     try {
@@ -186,7 +184,12 @@ const AttendanceTable = () => {
   };
 
   useEffect(() => {
+    fetchAttendanceData();
+  }, [token, userId, currentPage]);
+
+  const fetchAttendanceData = () => {
     if (!token || !userId) return;
+
     axios
       .get(`${BASE_URL}/attendance/list-attendance/?page=${currentPage}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -199,10 +202,11 @@ const AttendanceTable = () => {
             location: await getPlaceName(entry.location),
           }))
         );
+        console.log("data - ", userEntries);
         setAttendanceData(updated);
       })
       .catch((err) => console.error("Error fetching attendance:", err));
-  }, [token, userId, currentPage]);
+  };
 
   const handleAddEntry = () => {
     navigator.geolocation.getCurrentPosition(async (position) => {
@@ -277,6 +281,7 @@ const AttendanceTable = () => {
           )
         );
         setWorkReportEntries([{ category: "", description: "" }]);
+        fetchAttendanceData();
       })
       .catch((err) => console.error("Update report error:", err));
   };
@@ -362,6 +367,9 @@ const AttendanceTable = () => {
 
         {/* Action Buttons Grouped */}
         <div className="header-buttons">
+          <button onClick={fetchAttendanceData} className="create-btn">
+            🔁 Manual Refresh
+          </button>
           <button onClick={handleLogout} className="checkout-btn">
             Checkout
           </button>
@@ -500,15 +508,25 @@ const AttendanceTable = () => {
       </div>
 
       <div className="pagination">
-        {Array.from({ length: 5 }, (_, i) => (
-          <button
-            key={i}
-            className={i + 1 === currentPage ? "active" : ""}
-            onClick={() => setCurrentPage(i + 1)}
-          >
-            {i + 1}
-          </button>
-        ))}
+        {Array.from({ length: 7 }, (_, i) => {
+          const page = i + 1;
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const label = date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+          }); // e.g., 21 Jun
+
+          return (
+            <button
+              key={page}
+              className={currentPage === page ? "active" : ""}
+              onClick={() => setCurrentPage(page)}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -5,29 +5,33 @@ import "aos/dist/aos.css";
 import "./Blog.css";
 import img1 from "../../assets/blog_images/shoting-photo-blog.jpeg"
 import img2 from "../../assets/blog_images/blog-flight.jpg"
-import img3 from "../../assets/about-image.avif"
+import img3 from "../../assets/blog_images/Cinema_blog.webp"
 import { Link } from "react-router-dom";
 
 const blogPosts = [
   {
     title: "The Art of In-House Video & Photography",
     slug: "in-house-video-photography",
-    excerpt: "Why top brands are building creative powerhouses in-house and how it’s transforming brand storytelling.",
-    imageUrl: img1
+    excerpt:
+      "Why top brands are building creative powerhouses in-house and how it’s transforming brand storytelling.",
+    imageUrl: img1,
   },
   {
     title: "The Birth of Creativity",
     slug: "the-birth-of-creativity",
-    excerpt: " A fleeting thought, like a breeze brushing against the edges of the mind. Not loud, not fully formed—just a feeling, a sensation, a spark.",
-    imageUrl: img2
+    excerpt:
+      "A fleeting thought, like a breeze brushing against the edges of the mind. Not loud, not fully formed—just a feeling, a sensation, a spark.",
+    imageUrl: img2,
   },
   {
-    title: "React Performance Secrets",
-    slug: "react-performance-secrets",
-    excerpt: "Speed up your apps using these little-known performance tricks.",
-    imageUrl: img3
+    title: "Mastering the Perfect Video Shoot",
+    slug: "perfect-video-shoot-client-happy",
+    excerpt:
+      "Want to ace your next video shoot and impress your client? Here’s a complete guide from planning to delivery.",
+    imageUrl: img3,
   },
 ];
+
 
 const Blog = () => {
   useEffect(() => {

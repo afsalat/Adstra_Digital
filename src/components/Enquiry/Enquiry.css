@@ -1,7 +1,8 @@
-/* Add a bootstrap-friendly container wrapper */
 .enquiry-section {
   padding: 60px 20px;
   background-color: #fdfdfd;
+  width: 80%;
+  margin-left: 10%;
 }
 
 .enquiry-container {

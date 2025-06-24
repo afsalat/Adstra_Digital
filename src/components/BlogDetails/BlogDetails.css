@@ -31,6 +31,14 @@
   flex-wrap: wrap;
 }
 
+.blog-subheading {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  text-transform: none;
+}
 
 .blog-image {
   height: 200px;

@@ -7,6 +7,7 @@ import { useParams } from "react-router-dom";
 import { format } from "date-fns";
 import img from "../../assets/blog_images/shoting-photo-blog.jpeg";
 import img1 from "../../assets/blog_images/blog-flight.jpg";
+import img2 from "../../assets/blog_images/Cinema_blog.webp";
 
 const blogPosts = [
   {
@@ -84,6 +85,104 @@ Every day, every hour, every second—someone, somewhere, is creating. Perhaps t
     imageUrl: img1,
     tags: ["In-house-Media", "Branding", "Photography", "Video"],
   },
+  {
+    title:
+      "How to Make Your Video Shoot Perfect (And Keep Your Client Happy Too)",
+    slug: "perfect-video-shoot-client-happy",
+    author: "Wilson",
+    publishedDate: "2025-06-21",
+    readingTime: "9 min read",
+    excerpt:
+      "A step-by-step guide to executing smooth video shoots while keeping clients satisfied.",
+    content: ` Video is one of the strongest ways to tell a story or sell an idea. But anyone who’s ever worked on a video shoot knows—it can be chaotic. Equipment, lighting, location, people—there’s a lot to manage. And after all that, there’s one big question left: will the client like it?
+
+If you're planning a video shoot and want to do it right, this blog will walk you through the key steps to make your shoot smooth and successful. We’ll also talk about how to work with your client and validate the results. Because when both the shoot and the relationship are handled well, everyone wins.
+
+1. Understand the Client’s Vision
+Before you shoot even one second of video, take time to understand what the client wants. Sit down with them and ask questions like:
+- What is the goal of the video?
+- Who is the audience?
+- What kind of tone or style do you want—fun, professional, emotional?
+- Are there examples of videos they like?
+
+The better you understand their needs, the easier it will be to deliver something they’ll love.
+
+2. Make a Clear Plan
+Once you know the client’s goals, write a script or a basic plan. This doesn’t need to be complex—a simple shot list will do.
+
+A good plan includes:
+- Script or dialogue (if needed)
+- Location details
+- Camera angles
+- People involved
+- Backup ideas in case something goes wrong
+
+When you plan properly, your shoot becomes faster, easier, and more professional.
+
+3. Check the Location in Advance
+Visit the shoot location before the actual day. Check:
+- Lighting: Will you need extra lights?
+- Background: Is it clean and not distracting?
+- Sound: Is there too much noise nearby?
+
+Make notes. Take test shots if possible. This visit can save you from surprises on the day of the shoot.
+
+4. Get Your Equipment Ready
+Always double-check your gear:
+- Camera batteries charged
+- Memory cards cleared
+- Extra cables packed
+- Tripods or gimbals tested
+- Microphones working
+
+It sounds basic, but many shoots get delayed or ruined because of missing or broken gear. Be ready!
+
+5. Set the Right Mood on Set
+How you behave during the shoot affects everyone. Stay calm, polite, and confident. If your team or your client sees you in control, they’ll feel relaxed too.
+
+Be respectful with your direction. Guide people gently. Praise good takes. A little kindness goes a long way, especially when working with non-professional actors or the client themselves.
+
+6. Capture Extra Footage (B-Roll)
+Always shoot more than just the main scenes. Take extra shots—close-ups, slow motion, details of the environment. These are called “B-roll” and they help you make the final video richer and more beautiful.
+
+These extra clips can help cover mistakes, make editing smoother, and impress the client.
+
+7. First Review: Share a Rough Cut
+Once you finish filming and start editing, don’t wait to show the final version all at once. Send your client a “rough cut” early. This is a basic version without full polish.
+
+Ask them:
+- Does the structure feel right?
+- Are we telling your story clearly?
+- Is there anything you’d like changed?
+
+Make it clear that this is a preview, and you’re open to feedback.
+
+8. How to Handle Feedback
+Not all clients speak the language of video. Some may say, “It feels off” without knowing why. Your job is to ask questions and understand what they really want.
+
+At the same time, protect your creative work. If you think a client’s suggestion may hurt the video, explain your view with care. Say something like:
+
+"I understand your point—here’s another idea that might work better and still give the same effect."
+
+Stay calm. Be respectful. Never take feedback personally. This shows you’re a professional.
+
+9. Deliver on Time (or Early!)
+If you promise the client a video in five days, try to deliver in four. Punctuality is rare and highly valued. It shows you’re reliable and organized.
+
+Along with the final video, you can also send short clips, behind-the-scenes footage, or thumbnails they can use for social media.
+
+This extra effort makes you stand out.
+
+Final Words
+A great video shoot is not just about technical quality—it’s about people. Understand your client, plan carefully, work with a kind attitude, and stay open to feedback. That’s how you not only create a strong video, but also a happy and long-lasting client relationship.
+
+With the right mindset and preparation, every shoot can be a success.
+
+(c)adstra digital
+`,
+    imageUrl: img2,
+    tags: ["Video Production", "Client Work", "Filmmaking", "Creative Process"],
+  },
 ];
 
 function BlogDetail() {
@@ -144,9 +243,20 @@ function BlogDetail() {
                 </span>
                 <span> • {post.readingTime}</span>
               </div>
-              {post.content.split("\n").map((paragraph, idx) => (
-                <p key={idx}>{paragraph.trim()}</p>
-              ))}
+              {post.content.split("\n").map((paragraph, idx) => {
+                const trimmed = paragraph.trim();
+                const isSubheading =
+                  trimmed.length > 0 && /^[A-Z][^.!?\n]{5,50}$/.test(trimmed); // heuristic: single line, capitalized, no punctuation
+
+                return isSubheading ? (
+                  <h3 key={idx} className="blog-subheading">
+                    {trimmed}
+                  </h3>
+                ) : (
+                  <p key={idx}>{trimmed}</p>
+                );
+              })}
+
               <ul className="blog-tags">
                 {post.tags.map((tag, i) => (
                   <li key={i}>#{tag}</li>

@@ -4,7 +4,8 @@ import "aos/dist/aos.css";
 import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
-import 'bootstrap/dist/css/bootstrap.min.css';
+import "bootstrap/dist/css/bootstrap.min.css";
+import banner from "../../assets/banner_img.jpeg";
 
 function Banner() {
   const [messages, setMessages] = useState([]);
@@ -127,6 +128,21 @@ function Banner() {
           </div>
         </div>
       </div>
+        <div className="row mt-4">
+          <div className="col-12 text-center">
+            <img
+              src={banner}
+              alt="Main Banner"
+              className="img-fluid rounded shadow"
+              style={{
+                maxHeight: "450px",
+                objectFit: "cover",
+                width: "100%",
+                marginTop: "180px",
+              }}
+            />
+          </div>
+        </div>
     </div>
   );
 }

@@ -31,10 +31,10 @@ function About() {
   };
 
   return (
-    <div id="about" className="container my-5">
+    <div id="about" className="container">
       <div className="row align-items-center">
         <div
-          className="col-md-6 mb-4 mb-md-0 text-center"
+          className="col-md-6 mb-4 text-center"
           data-aos="fade-up"
         >
           <img
