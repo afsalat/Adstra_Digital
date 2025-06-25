@@ -1,6 +1,8 @@
 import secrets
 import string
 from rest_framework.response import Response
+from django.conf import settings
+from django.core.mail import send_mail
 from rest_framework import status
 from django.contrib.auth.hashers import make_password
 from rest_framework.decorators import api_view
@@ -14,9 +16,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from datetime import time
 from utils.jwt_helper import generate_jwt
+from django.views.decorators.cache import never_cache
 from datetime import timedelta
 import traceback
-
 
 
 
@@ -26,6 +28,7 @@ def adduser(request):
     try:
         data = request.data.copy()
 
+        # Generate a random password
         characters = string.ascii_letters + string.digits + string.punctuation
         generated_password = ''.join(secrets.choice(characters) for _ in range(10))
         data['password'] = make_password(generated_password)
@@ -33,6 +36,27 @@ def adduser(request):
         serializer = UserSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
+
+            # Send the password to the user's email
+            email = data.get('email')
+            if email:
+                try:
+                    send_mail(
+                        subject="Your Adstra Digital Account Credentials",
+                        message=(
+                            f"Hello {data.get('fullname')},\n\n"
+                            f"Your Wiseway account has been created.\n\n"
+                            f"Username: {data.get('username')}\n"
+                            f"Password: {generated_password}\n\n"
+                            f"Please change your password after first login."
+                        ),
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                except Exception as mail_err:
+                    print(f"Email sending failed: {mail_err}")
+
             return Response({
                 "message": "User created successfully",
                 "generated_password": generated_password,
@@ -41,6 +65,7 @@ def adduser(request):
         else:
             print(serializer.errors)
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
     except Exception as e:
         print(traceback.format_exc())
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -61,6 +86,7 @@ def delete_user(request, user_id):
 # GET /listusers/ - list users
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@never_cache
 def listusers(request):
     try:
         users = CustomUser.objects.all()

@@ -6,6 +6,7 @@ from .models import Attendance
 from apis.attendance.models import Attendance
 from django.utils import timezone
 from .serializers import AttendanceSerializer
+from django.views.decorators.cache import never_cache
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 import traceback
@@ -15,6 +16,7 @@ from django.utils.timezone import localdate
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@never_cache
 def listAttendance(request):
     try:
         today = localdate()

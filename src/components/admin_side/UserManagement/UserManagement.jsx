@@ -12,6 +12,7 @@ const UserList = () => {
   const [editUser, setEditUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [generatedPassword, setGeneratedPassword] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
 
   const navigate = useNavigate();
@@ -42,9 +43,7 @@ const UserList = () => {
   };
 
   const handleDelete = async (user) => {
-    const confirm = window.confirm(
-      `Are you sure you want to DELETE ${user.fullname}? This action cannot be undone.`
-    );
+    const confirm = window.confirm(`Are you sure you want to DELETE ${user.fullname}?`);
     if (!confirm) return;
 
     try {
@@ -64,7 +63,7 @@ const UserList = () => {
     setDeactivating(true);
     try {
       await axios.put(`${BASE_URL}/user/active-inactive/${user.id}`, {
-        is_active: !user.is_active, // <-- boolean value
+        is_active: !user.is_active,
       });
       await fetchUsers();
     } catch (err) {
@@ -74,6 +73,7 @@ const UserList = () => {
       setDeactivating(false);
     }
   };
+
   const formatTime = (datetime) => {
     if (!datetime) return "-";
     const date = new Date(datetime);
@@ -121,7 +121,7 @@ const UserList = () => {
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td colSpan="7">No users found.</td>
+              <td colSpan="10">No users found.</td>
             </tr>
           ) : (
             users.map((user, index) => (
@@ -136,9 +136,7 @@ const UserList = () => {
                 <td>{user.designation || "—"}</td>
                 <td>
                   <span
-                    className={`status-badge ${
-                      user.is_active ? "active" : "inactive"
-                    }`}
+                    className={`status-badge ${user.is_active ? "active" : "inactive"}`}
                   >
                     {user.is_active ? "Active" : "Inactive"}
                   </span>
@@ -171,12 +169,10 @@ const UserList = () => {
         </tbody>
       </table>
 
+      {/* User Form Popup */}
       {showForm && (
         <div className="popup-overlay" onClick={() => setShowForm(false)}>
-          <div
-            className="popup user-form-popup"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="popup user-form-popup" onClick={(e) => e.stopPropagation()}>
             <button className="close-popup" onClick={() => setShowForm(false)}>
               <X size={18} />
             </button>
@@ -197,12 +193,12 @@ const UserList = () => {
 
                 try {
                   if (editUser) {
-                    await axios.put(
-                      `${BASE_URL}/user/update-user/${editUser.id}`,
-                      formData
-                    );
+                    await axios.put(`${BASE_URL}/user/update-user/${editUser.id}`, formData);
                   } else {
-                    await axios.post(`${BASE_URL}/user/add-user/`, formData);
+                    const res = await axios.post(`${BASE_URL}/user/add-user/`, formData);
+                    if (res.data?.generated_password) {
+                      setGeneratedPassword(res.data.generated_password);
+                    }
                   }
                   await fetchUsers();
                   setShowForm(false);
@@ -212,45 +208,31 @@ const UserList = () => {
                 }
               }}
             >
-              <input
-                name="fullname"
-                placeholder="Full Name"
-                defaultValue={editUser?.fullname || ""}
-                required
-              />
-              <input
-                name="email"
-                type="email"
-                placeholder="Email"
-                defaultValue={editUser?.email || ""}
-                required
-              />
-              <input
-                name="phone"
-                placeholder="Phone"
-                defaultValue={editUser?.phone || ""}
-                required
-              />
-              <input
-                name="username"
-                placeholder="Username"
-                defaultValue={editUser?.username || ""}
-                required
-              />
-              <input
-                name="address"
-                placeholder="Address"
-                defaultValue={editUser?.address || ""}
-              />
-              <input
-                name="designation"
-                placeholder="Designation"
-                defaultValue={editUser?.designation || ""}
-              />
+              <input name="fullname" placeholder="Full Name" defaultValue={editUser?.fullname || ""} required />
+              <input name="email" type="email" placeholder="Email" defaultValue={editUser?.email || ""} required />
+              <input name="phone" placeholder="Phone" defaultValue={editUser?.phone || ""} required />
+              <input name="username" placeholder="Username" defaultValue={editUser?.username || ""} required />
+              <input name="address" placeholder="Address" defaultValue={editUser?.address || ""} />
+              <input name="designation" placeholder="Designation" defaultValue={editUser?.designation || ""} />
               <button type="submit" className="submit-btn">
                 {editUser ? "Update User" : "Create User"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Generated Password Popup */}
+      {generatedPassword && (
+        <div className="popup-overlay" onClick={() => setGeneratedPassword(null)}>
+          <div className="popup" onClick={(e) => e.stopPropagation()}>
+            <button className="close-popup" onClick={() => setGeneratedPassword(null)}>
+              <X size={18} />
+            </button>
+            <h3>🆕 User Created</h3>
+            <p><strong>Generated Password:</strong></p>
+            <div className="password-box">{generatedPassword}</div>
+            <p>successfully sended password through email!</p>
           </div>
         </div>
       )}
