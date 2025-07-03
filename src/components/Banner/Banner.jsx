@@ -5,7 +5,7 @@ import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
 import "bootstrap/dist/css/bootstrap.min.css";
-import banner from "../../assets/banner_img.jpeg";
+import banner from "../../assets/banner_new.png";
 
 function Banner() {
   const [messages, setMessages] = useState([]);
@@ -118,7 +118,7 @@ function Banner() {
                     <img
                       key={idx}
                       src={src}
-                      loading="lazy"
+                      loading="lazy"  
                       alt={`Banner image ${rowKey} ${idx + 1}`}
                     />
                   ))}
@@ -133,11 +133,11 @@ function Banner() {
             <img
               src={banner}
               alt="Main Banner"
-              className="img-fluid rounded shadow"
+              className="img-fluid rounded "
               style={{
-                maxHeight: "450px",
+                maxHeight: "550px",
                 objectFit: "cover",
-                width: "100%",
+                width: "97%",
                 marginTop: "180px",
               }}
             />

@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import "./Gallery.css";
-import Logo from "../../assets/logo/Logo-01.jpg";
+import Logo from "../../assets/team/logo_gellery.png";
 import team_l_1 from "../../assets/team/team-l-1.jpeg";
 import team_r_1 from "../../assets/team/team-r-1.jpeg";
+import team_r_2 from "../../assets/team/team_04.webp";
+import team_l_2 from "../../assets/team/team_05.webp";
+import team_r_3 from "../../assets/team/team_06.webp";
 
 const images = [
   {
@@ -11,7 +14,7 @@ const images = [
     desc: "Visual storytelling through illustration.",
   },
   {
-    src: team_l_1,
+    src: team_r_3,
     title: "3D Animation",
     desc: "Dynamic animations for all industries.",
   },
@@ -31,7 +34,7 @@ const images = [
     desc: "Immersive 3D spaces and worlds.",
   },
   {
-    src: team_r_1,
+    src: team_r_2,
     title: "Simulation",
     desc: "Interactive real-time simulations.",
   },
@@ -41,7 +44,7 @@ const images = [
     desc: "Assets optimized for AR/VR use.",
   },
   {
-    src: team_r_1,
+    src: team_l_2,
     title: "Rendering",
     desc: "Photorealistic rendering output.",
   },

@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admindashboard
+Disallow: /usermanagement
+Disallow: /attendance
+
+Sitemap: https://adstradigital.com/sitemap.xml

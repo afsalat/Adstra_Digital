@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./navbar.css";
-import logo from "../../assets/logo/logo_icon.jpeg";
+import logo from "../../assets/logo/brand_logo.png";
+import bni from "../../assets/bni.png"
 
 function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -43,18 +44,18 @@ function NavBar() {
             </a>
           </li>
           <li className="nav-item">
+            <a className="nav-link" href="/about">
+              About
+            </a>
+          </li>
+          <li className="nav-item">
             <a className="nav-link" href="/service/all">
-              Service
+              Services
             </a>
           </li>
           <li className="nav-item">
             <a className="nav-link" href="/#gallery">
               Gallery
-            </a>
-          </li>
-          <li className="nav-item">
-            <a className="nav-link" href="/about">
-              About
             </a>
           </li>
           <li className="nav-item">
@@ -69,7 +70,7 @@ function NavBar() {
           </li>
           <li className="nav-item">
             <a className="nav-link" href="/blogs/all">
-              Blog
+              Blogs
             </a>
           </li>
 
@@ -80,12 +81,15 @@ function NavBar() {
             </div>
           </li>
         </ul>
+        <img src={bni} alt="BNI Logo" className="bni-logo" style={{ height: "40px", paddingLeft: "5%" }} />
 
         {/* Right - Desktop Only Contact Info */}
-        <div className="navbar-right d-none d-md-flex flex-column text-end ms-auto">
-          <span className="phone fw-bold">📞 +91 9744779574</span>
-          <span className="email fw-bold">✉️ info@adstradigital.com</span>
+      <div className="navbar-right d-none d-md-flex align-items-center gap-3 ms-auto">
+        <div className="text-end">
+          <span className="phone fw-bold d-block">📞 +91 9744779574</span>
+          <span className="email fw-bold d-block">✉️ info@adstradigital.com</span>
         </div>
+      </div>
       </div>
     </nav>
   );
