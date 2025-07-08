@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./navbar.css";
-import logo from "../../assets/logo/brand_logo.png";
+import logo from "../../assets/logo/logo-new-03.png";
 import bni from "../../assets/bni.png"
 
 function NavBar() {
@@ -81,12 +81,11 @@ function NavBar() {
             </div>
           </li>
         </ul>
-        <img src={bni} alt="BNI Logo" className="bni-logo" style={{ height: "40px", paddingLeft: "5%" }} />
 
         {/* Right - Desktop Only Contact Info */}
       <div className="navbar-right d-none d-md-flex align-items-center gap-3 ms-auto">
         <div className="text-end">
-          <span className="phone fw-bold d-block">📞 +91 9744779574</span>
+          <span className="phone fw-b old d-block">📞 +91 9744779574</span>
           <span className="email fw-bold d-block">✉️ info@adstradigital.com</span>
         </div>
       </div>

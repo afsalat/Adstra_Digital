@@ -4,6 +4,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import "./BlogDetails.css";
 import { useParams } from "react-router-dom";
+import { Helmet } from 'react-helmet';
 import { format } from "date-fns";
 import img from "../../assets/blog_images/shoting-photo-blog.jpeg";
 import img1 from "../../assets/blog_images/blog-flight.jpg";
@@ -25,6 +26,7 @@ const blogPosts = [
     imageUrl: img4,
     tags: ["SEO", "AEO", "PPC", "Local SEO", "Digital Strategy"],
     content: `
+      Introduction
       It takes more than just a website to stand out online in the rapidly evolving digital world of today. Your business needs an integrated strategy that incorporates SEO, AEO, GEO, and PPC if it wants to succeed in 2025.
 
       Together, these four pillars of contemporary digital marketing increase your online presence, attract relevant traffic, and turn leads into devoted clients.
@@ -206,7 +208,8 @@ const blogPosts = [
     readingTime: "8 min read",
     excerpt: "Building a creative media powerhouse from within your brand.",
     content: `
-            The scene unfolds like magic. The studio lights hum softly, casting a golden glow over the set. The camera stands firm, its lens poised to capture the perfect shot. The team moves with quiet precision—adjusting angles, refining details, bringing an idea to life. This isn’t just a photoshoot. It’s the heartbeat of a brand, the silent narrator of a company’s story.
+        Introduction
+        The scene unfolds like magic. The studio lights hum softly, casting a golden glow over the set. The camera stands firm, its lens poised to capture the perfect shot. The team moves with quiet precision—adjusting angles, refining details, bringing an idea to life. This isn’t just a photoshoot. It’s the heartbeat of a brand, the silent narrator of a company’s story.
 
 In the fast-paced digital world, where attention spans are fleeting and visual storytelling reigns supreme, brands have realized one crucial truth—outsourcing creative production is no longer the winning strategy. The most powerful brands don’t rely on external agencies to shape their image. They craft their narratives in-house, with a dedicated team of video and photography professionals who know the brand’s DNA like the back of their hand.
 But what does it take to build such a powerhouse? More importantly, how can businesses fully harness the potential of an in-house media setup?
@@ -241,7 +244,9 @@ Because in the end, when a brand tells its own story, it doesn’t just capture 
     readingTime: "10 min read",
     excerpt:
       "The Birth of Creativity: How Ideas Take FlightIt starts as a whisper",
-    content: `A fleeting thought, like a breeze brushing against the edges of the mind. Not loud, not fully formed—just a feeling, a sensation, a spark.
+    content: `
+    Introduction
+    A fleeting thought, like a breeze brushing against the edges of the mind. Not loud, not fully formed—just a feeling, a sensation, a spark.
 Creativity doesn’t arrive with grand gestures. It sneaks in quietly, finding its way into the pauses between thoughts, the moments of stillness where the world fades just enough for something new to emerge.
 Some call it inspiration. Others call it intuition. But at its core, creativity is simply the act of seeing beyond what already exists.
 Where It Begins 
@@ -281,7 +286,9 @@ Every day, every hour, every second—someone, somewhere, is creating. Perhaps t
     readingTime: "9 min read",
     excerpt:
       "A step-by-step guide to executing smooth video shoots while keeping clients satisfied.",
-    content: ` Video is one of the strongest ways to tell a story or sell an idea. But anyone who’s ever worked on a video shoot knows—it can be chaotic. Equipment, lighting, location, people—there’s a lot to manage. And after all that, there’s one big question left: will the client like it?
+    content: `
+    Introduction
+    Video is one of the strongest ways to tell a story or sell an idea. But anyone who’s ever worked on a video shoot knows—it can be chaotic. Equipment, lighting, location, people—there’s a lot to manage. And after all that, there’s one big question left: will the client like it?
 
 If you're planning a video shoot and want to do it right, this blog will walk you through the key steps to make your shoot smooth and successful. We’ll also talk about how to work with your client and validate the results. Because when both the shoot and the relationship are handled well, everyone wins.
 
@@ -372,11 +379,63 @@ With the right mindset and preparation, every shoot can be a success.
   },
 ];
 
+// Interlinking keyword map
+const keywordLinks = {
+  // Blog Topics
+  AEO: "/blogs/seo-aeo-geo-ppc-2025-digital-strategy",
+  GEO: "/blogs/seo-aeo-geo-ppc-2025-digital-strategy",
+  PPC: "/blogs/seo-aeo-geo-ppc-2025-digital-strategy",
+  "AI Marketing": "/blogs/ai-marketing-benefits-business-growth",
+  "Logo Design": "/blogs/branding-trends-2025-logo-design-marketing",
+  Photography: "/blogs/in-house-video-photography",
+  Video: "/blogs/in-house-video-photography",
+  "SEO Website Optimization": "/blogs/seo-website-optimization",
+
+  // Services
+  'Branding': "/service/branding",
+  "PPC": "paid-advertising",
+  "SEO Services": "/service/seo-website-optimization",
+  "SEO": "/service/seo-website-optimization",
+  "Search Engine Optimization": "/service/seo-website-optimization",
+  "Google Ads": "/service/google-ads",
+  "Google Business Management Services": "/service/google-ads",
+  "Paid Advertising Services": "/service/paid-advertising", 
+  "Performance Marketing": "/service/lead-generation",
+  "Lead Generation": "/service/lead-generation",
+  "Social Media Marketing": "/service/social-media-marketing",
+  "Video Production": "/service/video-production",
+  "Content Marketing": "/service/content-marketing",
+  "Web Development": "/service/web-development",
+  "Website Design": "/service/web-development",
+  "Analytics & Reporting": "/service/analytics-reporting",
+};
+
+const interlinkContent = (text, keywordLinks = {}) => {
+  const tagRegex = /(<a [^>]+>.*?<\/a>)/gi;
+  const parts = text.split(tagRegex);
+
+  return parts
+    .map((part) => {
+      if (tagRegex.test(part)) return part;
+
+      Object.entries(keywordLinks).forEach(([keyword, url]) => {
+        const regex = new RegExp(`\\b(${keyword})\\b`, "gi");
+        part = part.replace(
+          regex,
+          `<a href="${url}" class="interlink" target="_blank" rel="noopener noreferrer">$1</a>`
+        );
+      });
+      return part;
+    })
+    .join("");
+};
+
 function BlogDetail() {
   const { slug } = useParams();
 
   useEffect(() => {
     AOS.init({ duration: 1000 });
+    window.scrollTo(0, 0);
   }, []);
 
   const selectedPosts =
@@ -384,137 +443,182 @@ function BlogDetail() {
       ? blogPosts
       : blogPosts.filter((post) => post.slug === slug?.toLowerCase());
 
+  const post = selectedPosts?.[0];
+
+  // SEO Updates
+  useEffect(() => {
+    if (post) {
+      document.title = `${post.title} | AdstraDigital`;
+
+      let meta = document.querySelector("meta[name='description']");
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.setAttribute("name", "description");
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute("content", post.excerpt);
+
+      let canonical = document.querySelector("link[rel='canonical']");
+      if (!canonical) {
+        canonical = document.createElement("link");
+        canonical.setAttribute("rel", "canonical");
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute("href", `https://adstradigital.com/blogs/${post.slug}`);
+
+      // JSON-LD Schema
+      const existingSchema = document.querySelector("#blog-jsonld");
+      if (existingSchema) existingSchema.remove();
+
+      const script = document.createElement("script");
+      script.type = "application/ld+json";
+      script.id = "blog-jsonld";
+      script.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        headline: post.title,
+        image: post.imageUrl,
+        author: {
+          "@type": "Person",
+          name: post.author,
+        },
+        datePublished: post.publishedDate,
+        dateModified: post.publishedDate,
+        description: post.excerpt,
+      });
+      document.head.appendChild(script);
+    }
+  }, [post]);
+
+  if (!slug || slug === "all") {
+    return (
+      <div className="blog-detail-container">
+        <h1 data-aos="fade-down" className="blog-title">Latest Blogs</h1>
+        <div className="blog-menu-grid">
+          {blogPosts.map((post, index) => (
+            <Tilt
+              key={index}
+              glareEnable={true}
+              glareMaxOpacity={0.2}
+              scale={false}
+              transitionSpeed={1000}
+              tiltMaxAngleX={3}
+              tiltMaxAngleY={3}
+              perspective={1500}
+              gyroscope={false}
+            >
+              <a
+                href={`/blogs/${post.slug}`}
+                className="blog-card"
+                data-aos="fade-up"
+                data-aos-delay={index * 100}
+              >
+                <div className="blog-imag" style={{ backgroundImage: `url(${post.imageUrl})` }} />
+                <div className="blog-info">
+                  <h3>{post.title}</h3>
+                  <p className="excerpt">{post.excerpt}</p>
+                  <span className="meta">
+                    {format(new Date(post.publishedDate), "MMM d, yyyy")} • {post.readingTime}
+                  </span>
+                </div>
+              </a>
+            </Tilt>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="blog-detail-container">
-      {!slug || slug === "all" ? (
-        <>
-          <h1 data-aos="fade-down" className="blog-title">
-            Latest Blogs
-          </h1>
-          <div className="blog-menu-grid">
-            {blogPosts.map((post, index) => (
-              <Tilt
-                style={{ height: "100%" }}
-                glareEnable={true}
-                glareMaxOpacity={0.2}
-                scale={false}
-                transitionSpeed={1000}
-                tiltMaxAngleX={3}
-                tiltMaxAngleY={3}
-                perspective={1500}
-                gyroscope={false}
-              >
-                <a
-                  href={`/blogs/${post.slug}`}
-                  className="blog-card"
-                  data-aos="fade-up"
-                  data-aos-delay={index * 100}
-                >
-                  <div
-                    className="blog-imag"
-                    style={{ backgroundImage: `url(${post.imageUrl})` }}
-                  />
-                  <div className="blog-info">
-                    <h3>{post.title}</h3>
-                    <p className="excerpt">{post.excerpt}</p>
-                    <span className="meta">
-                      {format(new Date(post.publishedDate), "MMM d, yyyy")} •{" "}
-                      {post.readingTime}
-                    </span>
+      <div className="blog-detail-layout">
+        {/* Sidebar */}
+        <aside className="blog-sidebar" data-aos="fade-right">
+          <h3>Other Blogs</h3>
+          <div className="sidebar-card-list">
+            {blogPosts
+              .filter((b) => b.slug !== slug)
+              .map((post, index) => (
+                <a href={`/blogs/${post.slug}`} className="sidebar-card" key={index}>
+                  <div className="sidebar-card-img" style={{ backgroundImage: `url(${post.imageUrl})` }} />
+                  <div className="sidebar-card-info">
+                    <h4>{post.title}</h4>
+                    <p>{post.excerpt.slice(0, 60)}...</p>
                   </div>
                 </a>
-              </Tilt>
-            ))}
+              ))}
           </div>
-        </>
-      ) : (
-        <div className="blog-detail-layout">
-          {/* Sidebar */}
-          <aside className="blog-sidebar" data-aos="fade-right">
-            <h3>Other Blogs</h3>
-            <div className="sidebar-card-list">
-              {blogPosts
-                .filter((b) => b.slug !== slug)
-                .map((post, index) => (
-                  <a
-                    href={`/blogs/${post.slug}`}
-                    className="sidebar-card"
-                    key={index}
-                  >
-                    <div
-                      className="sidebar-card-img"
-                      style={{ backgroundImage: `url(${post.imageUrl})` }}
-                    />
-                    <div className="sidebar-card-info">
-                      <h4>{post.title}</h4>
-                      <p>{post.excerpt.slice(0, 60)}...</p>
-                    </div>
-                  </a>
-                ))}
-            </div>
-          </aside>
+        </aside>
 
-          {/* Main Content */}
-          <div className="blog-main-content">
-            {selectedPosts.map((post, index) => (
-              <Tilt
-                key={index}
-                glareEnable={true}
-                glareMaxOpacity={0.2}
-                scale={false}
-                transitionSpeed={5000}
-                tiltMaxAngleX={1}
-                tiltMaxAngleY={1}
-                perspective={1500}
-                gyroscope={false}
-              >
-                <div className="blog-blocks compact" data-aos="fade-up">
+        {/* Main Post */}
+        <div className="blog-main-content">
+          {post && (
+            <Tilt
+              glareEnable={true}
+              glareMaxOpacity={0.2}
+              scale={false}
+              transitionSpeed={5000}
+              tiltMaxAngleX={1}
+              tiltMaxAngleY={1}
+              perspective={1500}
+              gyroscope={false}
+            >
+              <article className="blog-blocks compact" data-aos="fade-up">
+                <header>
                   <div
                     className="blog-image"
                     style={{ backgroundImage: `url(${post.imageUrl})` }}
+                    role="img"
+                    aria-label={post.title}
                   />
                   <div className="animated-shapes">
                     <span className="shape shape1" />
                     <span className="shape shape2" />
                     <span className="shape shape3" />
                   </div>
-                  <div className="blog-content">
-                    <h1>{post.title}</h1>
-                    <div className="blog-meta">
-                      <span>
-                        By <strong>{post.author}</strong>
-                      </span>
-                      <span>
-                        {" "}
-                        | {format(new Date(post.publishedDate), "MMMM d, yyyy")}
-                      </span>
-                      <span> • {post.readingTime}</span>
-                    </div>
-                    {post.content.split("\n").map((paragraph, idx) => {
-                      const trimmed = paragraph.trim();
-                      const isSubheading =
-                        trimmed.length > 0 &&
-                        /^[A-Z][^.!?\n]{5,50}$/.test(trimmed);
-                      return isSubheading ? (
-                        <h3 key={idx} className="blog-subheading">
-                          {trimmed}
-                        </h3>
-                      ) : (
-                        <p key={idx}>{trimmed}</p>
-                      );
-                    })}
-                    <ul className="blog-tags">
-                      {post.tags.map((tag, i) => (
-                        <li key={i}>#{tag}</li>
-                      ))}
-                    </ul>
+                </header>
+
+                <section className="blog-content">
+                  <h1>{post.title}</h1>
+                  <div className="blog-meta">
+                    <span>By <strong>{post.author}</strong></span>
+                    <span> | <time dateTime={new Date(post.publishedDate).toISOString()}>
+                      {format(new Date(post.publishedDate), "MMMM d, yyyy")}
+                    </time></span>
+                    <span> • {post.readingTime}</span>
                   </div>
-                </div>
-              </Tilt>
-            ))}
-          </div>
+
+                  {post.content.split("\n").map((paragraph, idx) => {
+                    const trimmed = paragraph.trim();
+                    const isHeading = /^(What is|Introduction|Conclusion|Benefits|How|Why|Top|Key)/i.test(trimmed);
+                    const headingLevel = /^(What is|Introduction|Conclusion)/i.test(trimmed) ? "h2" : "h3";
+
+                    return isHeading ? (
+                      React.createElement(headingLevel, {
+                        key: idx,
+                        className: "blog-subheading",
+                      }, trimmed)
+                    ) : (
+                      <p
+                        key={idx}
+                        dangerouslySetInnerHTML={{
+                          __html: interlinkContent(trimmed, post.keywordLinks || {}),
+                        }}
+                      />
+                    );
+                  })}
+
+                  <ul className="blog-tags" aria-label="Post Tags">
+                    {post.tags.map((tag, i) => (
+                      <li key={i}>#{tag}</li>
+                    ))}
+                  </ul>
+                </section>
+              </article>
+            </Tilt>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -133,6 +133,7 @@
 
 /* Main Blog Content */
 .blog-main-content {
+  text-align: left;
   width: 75%;
 }
 
@@ -141,7 +142,7 @@
   padding: 2.5rem;
   border-radius: 14px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e0e0e0; /* 👈 Border added for detail view */
+  border: 1px solid #e0e0e0;
   position: relative;
   overflow: hidden;
 }
@@ -243,4 +244,14 @@
   50% {
     transform: translateY(-10px) rotate(180deg);
   }
+}
+
+
+.interlink {
+  color: #007a8a;
+  font-weight: bold;
+  text-decoration: underline;
+}
+.interlink:hover {
+  color: #004d59;
 }

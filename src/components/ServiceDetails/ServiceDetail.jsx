@@ -4,6 +4,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import "./ServiceDetail.css";
 import { useParams } from "react-router-dom";
+import { Helmet } from "react-helmet";
 
 const serviceSections = [
   {
@@ -188,7 +189,7 @@ const serviceSections = [
   },
   {
     title: "Branding & Identity Design",
-    slug: "branding-identity-design",
+    slug: "branding",
     metaTitle:
       "Best Branding & Identity Design Agency | Kozhikode | Kengeri | Wayanad",
     metaDescription:
@@ -597,16 +598,29 @@ function FullServices() {
   const [selectedService, setSelectedService] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-    window.scrollTo(0, 0);
-  }, [label]);
-
   const normalizedLabel = label?.toLowerCase();
 
   const formattedTitle = normalizedLabel
     ?.replace(/-/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const currentService =
+    normalizedLabel && normalizedLabel !== "all"
+      ? serviceSections.find((service) => service.slug === normalizedLabel)
+      : null;
+
+  const metaTitle = currentService?.metaTitle || "Our Services | AdstraDigital";
+  const metaDescription =
+    currentService?.metaDescription ||
+    "Explore the full range of digital services by AdstraDigital – from branding and content to SEO, SMM, and performance marketing.";
+  const canonicalURL = currentService
+    ? `https://www.adstradigital.com/service/${currentService.slug}`
+    : "https://www.adstradigital.com/service/all";
+
+  useEffect(() => {
+    AOS.init({ duration: 500 });
+    window.scrollTo(0, 0);
+  }, [label]);
 
   const filteredServices =
     normalizedLabel === "all" || !normalizedLabel
@@ -618,8 +632,59 @@ function FullServices() {
     setShowModal(true);
   };
 
+  useEffect(() => {
+    // Set <title>
+    document.title = metaTitle;
+
+    // Set <meta name="description">
+    let meta = document.querySelector("meta[name='description']");
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", metaDescription);
+
+    // Set <link rel="canonical">
+    let canonical = document.querySelector("link[rel='canonical']");
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", canonicalURL);
+
+    // Set JSON-LD schema for current service
+    const existingJSONLD = document.querySelector("#service-schema");
+    if (existingJSONLD) {
+      existingJSONLD.remove();
+    }
+
+    if (currentService) {
+      const script = document.createElement("script");
+      script.type = "application/ld+json";
+      script.id = "service-schema";
+      script.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Service",
+        name: currentService.title,
+        description: currentService.metaDescription,
+        provider: {
+          "@type": "Organization",
+          name: "AdstraDigital",
+          url: "https://www.adstradigital.com",
+          logo: "https://www.adstradigital.com/favicon.png",
+        },
+        areaServed: "IN",
+        serviceType: currentService.title,
+      });
+      document.head.appendChild(script);
+    }
+  }, [metaTitle, metaDescription, canonicalURL, currentService]);
+
   return (
-    <div className="full-services">
+    <div className="full-services"> 
+
       <h2 data-aos="fade-down">
         {normalizedLabel === "all" || !normalizedLabel
           ? "Our Specialized Services"

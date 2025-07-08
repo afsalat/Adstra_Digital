@@ -5,12 +5,24 @@ import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Context/firebaseConfig";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useLocation } from "react-router-dom";
 import banner from "../../assets/banner_new.png";
 
 function Banner() {
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.scrollToContact) {
+      const contactEl = document.getElementById("contact");
+      if (contactEl) {
+        contactEl.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [location]);
 
   const imageData = {
     row1: [
@@ -118,7 +130,7 @@ function Banner() {
                     <img
                       key={idx}
                       src={src}
-                      loading="lazy"  
+                      loading="lazy"
                       alt={`Banner image ${rowKey} ${idx + 1}`}
                     />
                   ))}
@@ -128,21 +140,21 @@ function Banner() {
           </div>
         </div>
       </div>
-        <div className="row mt-4">
-          <div className="col-12 text-center">
-            <img
-              src={banner}
-              alt="Main Banner"
-              className="img-fluid rounded "
-              style={{
-                maxHeight: "550px",
-                objectFit: "cover",
-                width: "97%",
-                marginTop: "180px",
-              }}
-            />
-          </div>
+      <div className="row mt-4">
+        <div className="col-12 text-center">
+          <img
+            src={banner}
+            alt="Main Banner"
+            className="img-fluid rounded "
+            style={{
+              maxHeight: "550px",
+              objectFit: "cover",
+              width: "97%",
+              marginTop: "180px",
+            }}
+          />
         </div>
+      </div>
     </div>
   );
 }

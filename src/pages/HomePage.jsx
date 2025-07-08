@@ -9,6 +9,7 @@ import Footer from "../components/Footer/Footer";
 import Blog from "../components/Blog/Blog";
 import ContactUs from "../components/Contact/Contact";
 import WhatsAppFloatingButton from "../components/WhatsappIcon/WhatsappIcon";
+// import TeamDetails from "../components/TeamDetails/TeamDetails";
 
 
 function HomePage() {
@@ -18,7 +19,8 @@ function HomePage() {
             <Banner />
             <About />
             <Service />
-            <Gallery />
+            <Gallery /> 
+            {/* <TeamDetails /> */}
             <Enquiry /> 
             <Blog />
             <ContactUs />

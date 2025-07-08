@@ -2,11 +2,18 @@ import React, { useEffect, useState } from "react";
 import "./Footer.css";
 import { db } from "../../Context/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import logo from "../../assets/logo/brand_logo.png";
+import logo from "../../assets/logo/logo-new-03.png";
+import { useNavigate } from "react-router-dom";
 
 
 function Footer() {
   const [footerData, setFooterData] = useState(null);
+  const navigate = useNavigate();
+
+
+  const handleContactClick = () => {
+    navigate("/", { state: { scrollToContact: true } });
+  };
 
   useEffect(() => {
     const fetchFooterData = async () => {
@@ -34,14 +41,14 @@ function Footer() {
         <div className="row text-center text-md-start gy-4 justify-content-between">
           {/* Company Info */}
           <div className="col-md-3">
-              <a href="/" className="footer__logo">
-                <img
-                  src={logo}
-                  loading="lazy"
-                  alt="Company Logo"
-                  className="logo me-3"
-                />
-              </a>
+            <a href="/" className="footer__logo">
+              <img
+                src={logo}
+                loading="lazy"
+                alt="Company Logo"
+                className="logo me-3"
+              />
+            </a>
             <p className="footer__tagline">{footerData.company_caption}</p>
             <p className="small">📞 +91 9744779574</p>
             <p className="small">✉️ info@adstradigital.com</p>
