@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import "./AboutDetails.css";
-import AOS from "aos";
-import "aos/dist/aos.css";
+import { useNavigate } from "react-router-dom";
 import { db } from "../../Context/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import { Helmet } from "react-helmet";
-import { useNavigate } from "react-router-dom";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import SEOHelmet from "../../services/SEOHelmet";
+import "./AboutDetails.css";
 
 function AboutDetails() {
   const [content, setContent] = useState(null);
@@ -15,78 +15,32 @@ function AboutDetails() {
     navigate("/", { state: { scrollToContact: true } });
   };
 
-  // AOS animation init
   useEffect(() => {
-    setTimeout(() => {
-      AOS.init({ duration: 500, once: true });
-    }, 100);
+    AOS.init({ duration: 600 });
   }, []);
 
-  // Fetch content from Firebase
   useEffect(() => {
     const fetchContent = async () => {
       const docRef = doc(db, "aboutdetails", "uRdguVMJCFd0lQwY6FH2");
       const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setContent(docSnap.data());
-      } else {
-        console.log("No such document!");
-      }
+      if (docSnap.exists()) setContent(docSnap.data());
     };
     fetchContent();
   }, []);
 
-  // Fallback for meta + canonical updates
-  useEffect(() => {
-    document.title = "About Us | Adstra Digital";
-
-    const metaDesc = document.querySelector("meta[name='description']");
-    if (metaDesc) {
-      metaDesc.setAttribute(
-        "content",
-        "Learn more about Adstra Digital – our mission, values, and team behind our digital success."
-      );
-    } else {
-      const meta = document.createElement("meta");
-      meta.name = "description";
-      meta.content =
-        "Learn more about Adstra Digital – our mission, values, and team behind our digital success.";
-      document.head.appendChild(meta);
-    }
-
-    const canonical = document.querySelector("link[rel='canonical']");
-    if (canonical) {
-      canonical.setAttribute("href", "https://adstradigital.com/about");
-    } else {
-      const link = document.createElement("link");
-      link.setAttribute("rel", "canonical");
-      link.setAttribute("href", "https://adstradigital.com/about");
-      document.head.appendChild(link);
-    }
-  }, []);
-
   return (
     <div className="about-details">
-      {/* Helmet for SEO */}
-      <Helmet>
-        <title key="title">About Us | Adstra Digital</title>
-        <meta
-          key="description"
-          name="description"
-          content="Learn more about Adstra Digital – our mission, values, and team behind our digital success."
-        />
-        <link
-          key="canonical"
-          rel="canonical"
-          href="https://www.adstradigital.com/about"
-        />
-      </Helmet>
+      <SEOHelmet
+        title="AdstraDigital– Best Performance-Driven Digital Marketing Agency"
+        description="Learn more about Adstra Digital – our mission, values, and team behind our digital success."
+        canonical="https://adstradigital.com/about"
+      />
 
       {!content ? (
         <div>Loading...</div>
       ) : (
         <>
-          <div className="about-section" data-aos="fade-up" data-aos-delay="0">
+          <div className="about-section" data-aos="fade-up">
             <h2>Who We Are</h2>
             <p>{content.whoWeAre}</p>
           </div>

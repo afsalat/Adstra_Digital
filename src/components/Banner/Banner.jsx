@@ -7,12 +7,12 @@ import { db } from "../../Context/firebaseConfig";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useLocation } from "react-router-dom";
 import banner from "../../assets/banner_new.png";
+import SEOHelmet from "../../services/SEOHelmet"; // ✅ Make sure this exists
 
 function Banner() {
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-
   const location = useLocation();
 
   useEffect(() => {
@@ -96,6 +96,13 @@ function Banner() {
 
   return (
     <div className="banner py-4 pb-6">
+      {/* ✅ Add SEO Helmet for homepage */}
+      <SEOHelmet
+        canonical="https://adstradigital.com/"
+        title="Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital"
+        description="Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing."
+      />
+
       <div className="container">
         <div className="row align-items-start flex-wrap-reverse">
           {/* Left Column */}
@@ -140,12 +147,13 @@ function Banner() {
           </div>
         </div>
       </div>
+
       <div className="row mt-4">
         <div className="col-12 text-center">
           <img
             src={banner}
             alt="Main Banner"
-            className="img-fluid rounded "
+            className="img-fluid rounded"
             style={{
               maxHeight: "550px",
               objectFit: "cover",
