@@ -1,0 +1,40 @@
+{
+  "name": "adstra-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "start": "next start",
+    "export": "next export",
+    "build": "next build && next export",
+    "postexport": "critical public/index.html --inline --minify --base=public/ --width=1300 --height=900"
+  },
+  "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "@react-three/drei": "^10.6.1",
+    "@react-three/fiber": "^9.3.0",
+    "aos": "^2.3.4",
+    "axios": "^1.11.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
+    "firebase": "^12.0.0",
+    "html-react-parser": "^5.2.6",
+    "html2pdf.js": "^0.10.3",
+    "install": "^0.13.0",
+    "jwt-decode": "^4.0.0",
+    "lucide-react": "^0.534.0",
+    "next": "15.3.5",
+    "number-to-words": "^1.2.4",
+    "openai": "^5.10.2",
+    "path": "^0.12.7",
+    "react": "^19.0.0",
+    "react-datepicker": "^8.4.0",
+    "react-dom": "^19.0.0",
+    "react-parallax-tilt": "^1.7.302"
+  },
+  "devDependencies": {
+    "@fullhuman/postcss-purgecss": "^7.0.2",
+    "@next/bundle-analyzer": "^15.4.4",
+    "critical": "^7.2.1"
+  }
+}

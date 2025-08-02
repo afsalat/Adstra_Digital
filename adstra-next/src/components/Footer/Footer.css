@@ -1,0 +1,63 @@
+.footer {
+  background-color: #f8f9fa;
+  font-family: "Segoe UI", sans-serif;
+  color: #333;
+  font-size: 0.875rem; /* Base font size decreased from default */
+}
+
+.footer__logo .logo {
+  width: 160px;
+  height: 60px  ;
+}
+
+.footer__logo {
+  font-size: 1.2rem; /* Reduced from 1.6rem */
+  font-weight: 700;
+  color: #000;
+}
+
+.footer__tagline {
+  font-size: 0.8rem; /* Reduced from 0.95rem */
+  color: #666;
+}
+
+.footer__nav {
+  padding-left: 0;
+}
+
+.footer__nav li {
+  margin-bottom: 4px;
+}
+
+.footer__nav-link {
+  color: #555;
+  text-decoration: none;
+  font-size: 0.82rem;
+  transition: color 0.2s ease-in-out;
+}
+
+.footer__nav-link:hover {
+  color: #007bff;
+}
+
+.footer__social-link {
+  color: #555;
+  font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.footer__social-link:hover {
+  color: #0073e6;
+}
+
+.footer__bottom {
+  color: #999;
+  font-size: 0.75rem;
+  margin-bottom: 20px;
+}
+
+li a {
+  text-decoration: none;
+  color: #333232;
+  font-weight: 450;
+}

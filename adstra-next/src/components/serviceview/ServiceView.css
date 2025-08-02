@@ -1,0 +1,142 @@
+.srvice-detail-wrapper {
+  max-width: 1100px;
+  margin: 4rem auto 0 auto;
+  padding: 3rem 1rem;
+  font-family: 'Poppins', sans-serif;
+  color: #1f2937; /* gray-800 */
+}
+
+.srvice-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: #ca7c38; /* indigo-700 */
+  margin-bottom: 0.5rem;
+}
+
+.srvice-subtitle {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #4b5563; /* gray-600 */
+  margin-bottom: 2rem;
+  max-width: 90%;
+  margin-inline: auto;
+}
+
+.srvice-image-wrapper {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  margin-bottom: 3rem;
+}
+
+.srvice-image {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 1rem;
+}
+
+/* Sections */
+.sction-heading {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #3071a3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+.icon.green {
+  color: #10b981; /* emerald-500 */
+}
+.icon.yellow {
+  color: #facc15; /* yellow-400 */
+}
+
+/* Highlights */
+.highlight-section {
+  margin-bottom: 3rem;
+}
+.highlight-list {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 640px) {
+  .highlight-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.highlight-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+/* Benefits */
+.benefit-section {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 2rem;
+  border-radius: 1rem;
+  margin-bottom: 3rem;
+}
+.benefit-list {
+  padding-left: 1.5rem;
+  list-style: disc;
+  line-height: 1.8;
+  color: #374151;
+}
+
+/* CTA Section */
+.cta-section {
+  background: linear-gradient(to right, #46bbe5, #ca8338);
+  color: #fff;
+  padding: 2.5rem;
+  border-radius: 1rem;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+.cta-section h3 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.cta-section p {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+.cta-section small {
+  display: block;
+  font-size: 0.9rem;
+  color: #c7d2fe;
+  margin-bottom: 1rem;
+}
+.cta-button {
+  padding: 0.75rem 2rem;
+  background: #fff;
+  color: #376fa0;
+  font-weight: 600;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.cta-button:hover {
+  background: #e0e7ff;
+}
+
+.not-found {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #9ca3af;
+}
