@@ -62,7 +62,7 @@ export default function ProposalPreview({ services = [] }) {
         "Welcome to the proposal. This section outlines the purpose and key highlights of the engagement.",
     },
     ...dynamicSections,
-  ]
+  ];
 
   return (
     <div className="proposal-preview-wrapper text-[15px] text-gray-800 leading-relaxed">
@@ -101,7 +101,10 @@ export default function ProposalPreview({ services = [] }) {
                   {Object.entries(groupedServices).map(
                     ([category, items], groupIdx) => (
                       <React.Fragment key={groupIdx}>
-                        <tr className="bg-gray-200 text-gray-700" style={{backgroundColor: "lightgray"}}>
+                        <tr
+                          className="bg-gray-200 text-gray-700"
+                          style={{ backgroundColor: "lightgray" }}
+                        >
                           <td
                             colSpan={5}
                             className="px-4 py-2 font-semibold border border-gray-300"
@@ -145,7 +148,7 @@ export default function ProposalPreview({ services = [] }) {
                   <tr className="bg-indigo-100 text-indigo-800 font-semibold text-sm">
                     <td
                       colSpan={4}
-                      style={{fontSize: "0.8rem", paddingLeft: "5%"}}
+                      style={{ fontSize: "0.8rem", paddingLeft: "5%" }}
                       className="footer-small py-3 text-left border border-gray-300 uppercase"
                     >
                       <b>Amount in Words:</b> ₹ {numberToWords(total)}
@@ -222,7 +225,7 @@ export default function ProposalPreview({ services = [] }) {
         <h4 className="text-xl font-semibold mb-2 text-indigo-700">
           Conclusion
         </h4>
-        <p style={{fontSize:"0.8rem"}}>
+        <p style={{ fontSize: "0.8rem" }}>
           We are committed to delivering quality services with full
           transparency,
           <br />
@@ -232,15 +235,14 @@ export default function ProposalPreview({ services = [] }) {
         </p>
 
         {/* --- Footer --- */}
-        <div style={{fontSize: "0.7rem"}} className="footer-small">
+        <div style={{ fontSize: "0.7rem" }} className="footer-small">
           <p>
             <strong>LUT Registered:</strong> hence ZERO taxation for Overseas
             billing.
+            <br />© {new Date().getFullYear()} <strong>Adstra Digital</strong>.
+            All rights reserved.
             <br />
-          © {new Date().getFullYear()} <strong>Adstra Digital</strong>. All
-          rights reserved.
-          <br />
-          Powered by Passion • Driven by Strategy • Delivered with Creativity
+            Powered by Passion • Driven by Strategy • Delivered with Creativity
           </p>
         </div>
       </div>

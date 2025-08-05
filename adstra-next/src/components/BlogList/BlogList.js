@@ -37,7 +37,9 @@ export default function AllBlogsPage() {
                     />
                     <div className="blog-content">
                       <h2 className="h5 text-primary fw-semibold hover:underline">
+                        <a style={{textDecoration: "none"}} href={`/blogs/${blog.slug}`}>
                         {blog.title}
+                        </a>
                       </h2>
                       <p className="text-muted">
                         {blog.excerpt?.slice(0, 100)}...

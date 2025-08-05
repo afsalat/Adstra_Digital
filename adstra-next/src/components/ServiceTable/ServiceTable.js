@@ -6,21 +6,30 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
   const lastInputRef = useRef(null);
   const [selectedService, setSelectedService] = useState("");
 
-  const handlePredefinedSelect = (e) => {
-    const selected = e.target.value;
-    setSelectedService(selected);
+  const handleCheckboxChange = (serviceName, isChecked) => {
+    if (isChecked) {
+      if (!selectedService.includes(serviceName)) {
+        const subItems = predefinedServices[serviceName] || [];
 
-    const subItems = predefinedServices[selected] || [];
+        const formatted = subItems.map((item) => ({
+          ...item,
+          category: serviceName,
+          amount: (item.quantity || 0) * (item.rate || 0),
+        }));
 
-    const formatted = subItems.map((item) => ({
-      ...item,
-      category: selected,
-      amount: (item.quantity || 0) * (item.rate || 0),
-    }));
+        onChange([...services, ...formatted]);
+        setSelectedService([...selectedService, serviceName]);
 
-    onChange([...services, ...formatted]);
-
-    if (onServiceSelect) onServiceSelect(selected);
+        if (onServiceSelect) onServiceSelect(serviceName);
+      }
+    } else {
+      // Remove all items with this category
+      const updatedServices = services.filter(
+        (s) => s.category !== serviceName
+      );
+      onChange(updatedServices);
+      setSelectedService(selectedService.filter((s) => s !== serviceName));
+    }
   };
 
   const handleItemChange = (index, field, value) => {
@@ -60,19 +69,39 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
     <div className="mb-4">
       <h5 className="fw-bold text-secondary mb-3">💼 Services & Payment</h5>
 
-      <div className="mb-3">
-        <select
-          className="form-select"
-          value={selectedService}
-          onChange={handlePredefinedSelect}
+      <div className="mb-4">
+        <div
+          className="border rounded p-3"
+          style={{
+            maxHeight: "200px",
+            overflowY: "auto",
+            background: "#f9f9f9",
+          }}
         >
-          <option value="">-- Select Predefined Service --</option>
-          {Object.keys(predefinedServices).map((service) => (
-            <option key={service} value={service}>
-              {service}
-            </option>
-          ))}
-        </select>
+          <div className="row">
+            {Object.keys(predefinedServices).map((service) => (
+              <div key={service} className="col-sm-6 mb-2">
+                <div className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id={`service-${service}`}
+                    checked={selectedService.includes(service)}
+                    onChange={(e) =>
+                      handleCheckboxChange(service, e.target.checked)
+                    }
+                  />
+                  <label
+                    className="form-check-label"
+                    htmlFor={`service-${service}`}
+                  >
+                    {service}
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <table className="table table-bordered">

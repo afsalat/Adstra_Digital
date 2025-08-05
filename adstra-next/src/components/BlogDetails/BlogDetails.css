@@ -255,3 +255,22 @@
 .interlink:hover {
   color: #004d59;
 }
+
+
+.blog-bullet-list {
+  padding-left: 1.25rem;
+  margin: 1rem 0;
+}
+
+.blog-bullet-list li {
+  margin-bottom: 0.5rem;
+  list-style-type: disc;
+}
+
+.blog-subheading {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #27292b; /* gray-700 */
+}

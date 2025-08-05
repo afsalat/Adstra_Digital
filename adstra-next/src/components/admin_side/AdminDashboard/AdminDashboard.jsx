@@ -149,15 +149,19 @@ const AdminDashboard = () => {
         </div>
         {isAdmin ? (
           <Link href="/proposal" className="link">
-            <div
-              className="dashboard-box cyan"
-              aria-label="Reports and Analytics"
-            >
-              <h4>Quick Proposal Maker</h4>
+            <div className="dashboard-box" aria-label="Reports and Proposals">
+              <h4>Proposals</h4>
               <p>Any time Any where.</p>
               <p>
-                <a href="#">View Proposal</a>
-              </p>
+                <a
+                  href="/proposal"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="View Proposal"
+                >
+                  View Proposal
+                </a>
+              </p>{" "}
             </div>
           </Link>
         ) : (

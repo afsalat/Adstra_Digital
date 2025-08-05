@@ -20,38 +20,38 @@ export default clientsList;
 
 export const predefinedServices = {
   "Digital Marketing": [
-    { description: "SEO Optimization", quantity: 1, rate: 5000 , gst: "18%"},
-    { description: "Social Media Management", quantity: 1, gst: "18%", rate: 7000 },
-    { description: "Google Ads Setup & Management", quantity: 1, gst: "18%", rate: 6000 },
+    { description: "SEO Optimization", quantity: 1, rate: 0 , gst: "18%"},
+    { description: "Social Media Management", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Google Ads Setup & Management", quantity: 1, gst: "18%", rate: 0 },
   ],
   "ERP Development": [
-    { description: "Backend Development", quantity: 1, gst: "18%", rate: 15000 },
-    { description: "User Training", quantity: 1, gst: "18%", rate: 5000 },
-    { description: "Module Integration", quantity: 1, gst: "18%", rate: 10000 },
+    { description: "Backend Development", quantity: 1, gst: "18%", rate: 0 },
+    { description: "User Training", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Module Integration", quantity: 1, gst: "18%", rate: 0 },
   ],
   "CRM System": [
-    { description: "Lead Management Module", quantity: 1, gst: "18%", rate: 8000 },
-    { description: "Pipeline & Automation Setup", quantity: 1, gst: "18%", rate: 7000 },
+    { description: "Lead Management Module", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Pipeline & Automation Setup", quantity: 1, gst: "18%", rate: 0 },
   ],
   "E-Commerce Website": [
-    { description: "Product Catalog Setup", quantity: 1, gst: "18%", rate: 10000 },
-    { description: "Payment Gateway Integration", quantity: 1, gst: "18%", rate: 5000 },
-    { description: "Admin Panel & Order Management", quantity: 1, gst: "18%", rate: 7000 },
+    { description: "Product Catalog Setup", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Payment Gateway Integration", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Admin Panel & Order Management", quantity: 1, gst: "18%", rate: 0 },
   ],
   "Mobile App Development": [
-    { description: "Android App", quantity: 1, gst: "18%", rate: 20000 },
-    { description: "iOS App", quantity: 1, gst: "18%", rate: 22000 },
-    { description: "API Integration", quantity: 1, gst: "18%", rate: 8000 },
+    { description: "Android App", quantity: 1, gst: "18%", rate: 0 },
+    { description: "iOS App", quantity: 1, gst: "18%", rate: 0 },
+    { description: "API Integration", quantity: 1, gst: "18%", rate: 0 },
   ],
   "Website Design & Development": [
-    { description: "Responsive Web Design", quantity: 1, gst: "18%", rate: 7000 },
-    { description: "Frontend Development", quantity: 1, gst: "18%", rate: 9000 },
-    { description: "Backend Integration", quantity: 1, gst: "18%", rate: 8000 },
+    { description: "Responsive Web Design", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Frontend Development", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Backend Integration", quantity: 1, gst: "18%", rate: 0 },
   ],
   "Graphic Design": [
-    { description: "Logo Design", quantity: 1, gst: "18%", rate: 3000 },
-    { description: "Social Media Banners", quantity: 1, gst: "18%", rate: 2000 },
-    { description: "Brand Guidelines", quantity: 1, gst: "18%", rate: 4000 },
+    { description: "Logo Design", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Social Media Banners", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Brand Guidelines", quantity: 1, gst: "18%", rate: 0 },
   ],
 };
 
