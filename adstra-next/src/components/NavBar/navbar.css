@@ -38,9 +38,10 @@
 }
 
 .nav-links .nav-item .nav-link.active {
+  color: #525862 !important; /* blue text */
+  font-weight: bold;
   text-decoration: underline 2px !important;
 }
-
 
 /* Responsive */
 @media (max-width: 768px) {

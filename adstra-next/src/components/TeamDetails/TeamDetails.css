@@ -1,55 +1,195 @@
-.team-section {
-  background-color: #f8f9fa;
-  text-align: center;
+.team-division {
+  position: relative;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border: 2px solid black;
+  border-radius: 50px;
 }
 
+.team-division::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+}
+
+.division-title {
+  position: absolute;
+  bottom: -6%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ffffff ;
+  padding: 0 1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.division-title::after {
+  display: none; 
+}
+.division-title::after {
+  content: "";
+  display: block;
+  width: 50%;
+  height: 3px;
+  margin: 0.5rem auto 0;
+  border-radius: 2px;
+}
+
+/* Team Grid Layout */
 .team-grid {
   display: flex;
-  gap: 30px;
-  flex-wrap: wrap;
-  justify-content: center;
+  justify-content: space-evenly;
+  overflow: hidden;
 }
 
+/* Card Styling */
 .team-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  width: 280px;
-  height: 480px;
-  transition: transform 0.3s;
+  margin-top: 7%;
+  text-align: center;
+  background: #e7eef4;
+  border-radius: 30%;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.865);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  cursor: pointer;
+  width: 200px;
+  height: 300px; 
+  display: flex;
+  flex-direction: column;
+  justify-content:space-evenly;
 }
 
+/* Hover 3D Effect */
 .team-card:hover {
-  transform: translateY(-10px);
+  transform: translateY(-6px) scale(1.03) rotateX(4deg) rotateY(4deg);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
 }
 
 .teams-image {
   width: 100%;
-  height: 320px;
-  object-fit: cover;
-  border-radius: 8px;
+  height: 280px;
+  background-color: #f8f8f8;
+  border-bottom: 2px solid #eee;
+}
+
+
+/* Image Hover Zoom */
+.team-card:hover .teams-image {
+  transform: scale(1.08);
+}
+
+/* Icon Wrapper for Missing Images */
+.icon-wrapper {
+  background-color: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f0f0f0;
-  overflow: hidden;
+  height: 200px;
 }
 
 .teams-icon {
-  font-size: 100px;
+  font-size: 4rem;
   color: #bbb;
 }
 
-.team-role {
-  font-weight: bold;
-  color: #555;
-  margin-top: 10px;
+/* Name Styling */
+.team-name {
+  margin: 0.8rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
 }
 
-.team-bio {
-  font-size: 0.9rem;
-  color: #666;
+/* Role Text */
+.team-role {
+  margin-top: 0.8rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #555;
+}
+
+/* Input Styling */
+input.form-control,
+textarea.form-control,
+select.form-select {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+
+input.form-control:hover,
+textarea.form-control:hover,
+select.form-select:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px) scale(1.02);
+  border-color: #0d6efd;
+}
+
+input.form-control:focus,
+textarea.form-control:focus,
+select.form-select:focus {
+  box-shadow: 0 10px 25px rgba(13, 110, 253, 0.2);
+  transform: translateY(-2px) scale(1.01);
+  border-color: #0d6efd;
+  outline: none;
+}
+
+/* Team Grid Layout - Horizontal Scroll */
+.team-grid {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto; /* enables horizontal scroll */
+  padding-bottom: 10px;
+  scroll-snap-type: x mandatory; /* smooth snapping */
+}
+
+.team-grid::-webkit-scrollbar {
+  height: 8px; /* thin scrollbar */
+}
+
+.team-grid::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.team-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.team-card {
+  width: 200px;
+  min-height: 300px; /* instead of fixed height */
+  height: auto; /* allow it to grow for long content */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.teams-image {
+  height: 200px; /* reduce height so text fits */
+}
+
+.team-content {
+  font-size: 14px;
+  color: #333;
   margin-top: 5px;
 }
-  
+
+.read-more-btn {
+  color: #007bff;
+  cursor: pointer;
+  font-weight: 500;
+  margin-left: 5px;
+}
+
+.read-more-btn:hover {
+  text-decoration: underline;
+}

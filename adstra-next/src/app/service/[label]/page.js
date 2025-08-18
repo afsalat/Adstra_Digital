@@ -1,5 +1,5 @@
 import Footer from "@/components/Footer/Footer";
-import NavBar from "@/components/NavBar/navbar";
+import NavBar from "@/components/NavBar/Navbar";
 import FullServices from "@/components/ServiceDetails/ServiceDetail";
 import ServiceView from "@/components/serviceview/ServiceView";
 import { serviceSections } from "@/data/services";

@@ -86,7 +86,7 @@ function ContactUs() {
                   Go to
                 </a>
               </p>
-              <p>
+              {/* <p>
                 {info.address_1}
                 <a
                   href="https://www.google.com/maps/search/?api=1&query=Kengeri+Satellite+Town,+Bangalore+560060"
@@ -96,7 +96,7 @@ function ContactUs() {
                 >
                   Go to
                 </a>
-              </p>
+              </p> */}
 
               <div className="social-links mt-4">
                 <h3>Follow Us</h3>

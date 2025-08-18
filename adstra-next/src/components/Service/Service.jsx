@@ -7,7 +7,7 @@ import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import { useRouter } from "next/navigation"; // ✅ Use Next.js router
+import { useRouter } from "next/navigation";
 import { db } from "../../Context/firebaseConfig";
 import { collection, getDocs } from "firebase/firestore";
 

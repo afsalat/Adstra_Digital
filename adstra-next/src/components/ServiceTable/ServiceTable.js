@@ -23,7 +23,6 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
         if (onServiceSelect) onServiceSelect(serviceName);
       }
     } else {
-      // Remove all items with this category
       const updatedServices = services.filter(
         (s) => s.category !== serviceName
       );
@@ -67,13 +66,13 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
 
   return (
     <div className="mb-4">
-      <h5 className="fw-bold text-secondary mb-3">💼 Services & Payment</h5>
+      <h5 className="fw-bold text-secondary mb-3">💼 Services & Pricing</h5>
 
       <div className="mb-4">
         <div
           className="border rounded p-3"
           style={{
-            maxHeight: "200px",
+            maxHeight: "300px",
             overflowY: "auto",
             background: "#f9f9f9",
           }}

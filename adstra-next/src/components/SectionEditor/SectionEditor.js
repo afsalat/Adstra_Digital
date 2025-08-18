@@ -14,11 +14,11 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
 
   useEffect(() => {
     if (
-      (section.title?.toLowerCase() === "introduction" ||
+      (section.title === "Proposal by ADSTRA DIGITAL" ||
         section.type === "introduction") &&
       !section.content
     ) {
-      const defaultIntro = `Welcome to the proposal. This section outlines the purpose and key highlights of the engagement. It sets the tone and expectation for the services being offered.`;
+      const defaultIntro = `We are pleased to present this quotation for your kind consideration. At Adstra Digital, we strive to deliver creative, high-quality solutions tailored to your brand’s unique needs. This proposal outlines our services and pricing for the planned activities, ensuring value, clarity, and impact.`;
 
       onChange({ ...section, content: defaultIntro });
     }
@@ -76,7 +76,7 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
   return (
     <div className="mb-4 border p-3 rounded shadow-sm bg-light">
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <h5 className="text-primary">🧩 Section</h5>
+        <h5 className="text-primary">🧩 {section.title} - Description</h5>
         <button className="btn btn-sm btn-outline-danger" onClick={onRemove}>
           🗑 Remove
         </button>
@@ -221,13 +221,13 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
 
       {/* Buttons */}
       <div className="d-flex gap-2 mb-3">
-        <button
+        {/* <button
           className="btn btn-secondary"
           onClick={handleGenerate}
           disabled={!section.title}
         >
           ⚙️ Generate
-        </button>
+        </button> */}
         <button className="btn btn-outline-dark" onClick={handleCopy}>
           📋 Copy
         </button>

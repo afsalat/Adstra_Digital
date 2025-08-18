@@ -8,6 +8,8 @@ export default function HeaderEditor({ data, onChange }) {
   const [showModal, setShowModal] = useState(false);
   const [referenceList, setReferenceList] = useState([]);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+
   useEffect(() => {
     fetchClients();
     fetchReferences();
@@ -15,22 +17,18 @@ export default function HeaderEditor({ data, onChange }) {
     const now = new Date();
     const offset = now.getTimezoneOffset();
     const local = new Date(now.getTime() - offset * 60000);
-    const formattedDate = local.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const formattedDate = local.toISOString().slice(0, 10);
 
     if (!data.quotationDate) {
       onChange({ ...data, quotationDate: formattedDate });
     }
 
-    // Auto-set quotation date
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    onChange((prev) => ({ ...prev, quotationDate: today }));
-
     // Auto-generate quotation number if not already set
     if (!data.quotationNo) {
-      const currentYear = new Date().getFullYear(); // 2025
+      const currentYear = new Date().getFullYear();
       const uniqueId = Math.floor(Math.random() * 10000)
         .toString()
-        .padStart(4, "0"); // 0001, etc.
+        .padStart(4, "0");
       const generatedQuotationNo = `AD/${currentYear}/${uniqueId}`;
       onChange((prev) => ({ ...prev, quotationNo: generatedQuotationNo }));
     }
@@ -38,50 +36,39 @@ export default function HeaderEditor({ data, onChange }) {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch("http://localhost:8000/proposal/clients/");
-      const json = await res.json();
-      setClients(json);
-    } catch (error) {
-      console.error("❌ Failed to fetch clients", error);
-    }
-  };
+      const res = await fetch(`${API_BASE_URL}/proposal/clients/`);
+      const contentType = res.headers.get("content-type");
 
-  const handleChange = (field, value) => {
-    onChange({ ...data, [field]: value });
-  };
-
-  const handleClientSelect = (e) => {
-    const selectedId = parseInt(e.target.value);
-    const selected = clients.find((c) => c.id === selectedId);
-    if (selected) {
-      onChange({ ...data, billTo: selected });
+      if (contentType && contentType.includes("application/json")) {
+        const json = await res.json();
+        setClients(json);
+      } else {
+        const text = await res.text();
+        console.error("❌ Expected JSON but got:", text);
+      }
+    } catch (err) {
+      console.error("❌ Network error fetching clients:", err);
     }
   };
 
   const fetchReferences = async () => {
     try {
-      const res = await fetch("http://localhost:8000/user/user-list/");
+      const res = await fetch(`${API_BASE_URL}/user/user-list/`);
       const json = await res.json();
-      console.log("📦 Reference API raw:", json);
-
-      // Safely extract the array from 'users'
       setReferenceList(Array.isArray(json.users) ? json.users : []);
     } catch (error) {
       console.error("❌ Failed to fetch references", error);
-      setReferenceList([]); // fallback to empty array
+      setReferenceList([]);
     }
   };
 
   const handleSaveClient = async (newClient) => {
     try {
-      const res = await fetch(
-        "http://localhost:8000/proposal/clients/create/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newClient),
-        }
-      );
+      const res = await fetch(`${API_BASE_URL}/proposal/clients/create/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClient),
+      });
 
       const created = await res.json();
       if (res.ok) {
@@ -96,6 +83,16 @@ export default function HeaderEditor({ data, onChange }) {
       alert("❌ Network error while saving client");
       console.error(error);
     }
+  };
+
+  const handleChange = (field, value) => {
+    onChange({ ...data, [field]: value });
+  };
+
+  const handleClientSelect = (e) => {
+    const selectedId = parseInt(e.target.value);
+    const selected = clients.find((c) => c.id === selectedId);
+    if (selected) onChange({ ...data, billTo: selected });
   };
 
   return (
@@ -143,7 +140,6 @@ export default function HeaderEditor({ data, onChange }) {
         onChange={(e) => handleChange("purpose", e.target.value)}
       />
 
-      {/* Client Dropdown and Add Button */}
       <div className="d-flex gap-2 mb-3">
         <select
           className="form-select"
@@ -166,8 +162,6 @@ export default function HeaderEditor({ data, onChange }) {
           ➕ Add
         </button>
       </div>
-
-      {/* Bill To Fields */}
 
       <input
         className="form-control mb-2"
@@ -226,7 +220,6 @@ export default function HeaderEditor({ data, onChange }) {
         }
       />
 
-      {/* Modal for new client */}
       {showModal && (
         <ClientFormModal
           onClose={() => setShowModal(false)}

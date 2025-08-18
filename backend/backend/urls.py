@@ -10,6 +10,8 @@ urlpatterns = [
     path('user/', include('apis.user.urls')),
     path('attendance/', include('apis.attendance.urls')),
     path('proposal/', include('apis.proposal.urls')),
+    path('invoice/', include('apis.invoice.urls')),
+    path('transactions/', include('apis.transactions.urls')),
 
     path("robots.txt", TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
 ]

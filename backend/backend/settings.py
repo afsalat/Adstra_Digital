@@ -22,7 +22,9 @@ INSTALLED_APPS = [
 
     'apis.user',
     'apis.attendance',
-    'apis.proposal'
+    'apis.proposal',
+    'apis.invoice',
+    'apis.transactions',
 ]
 
 MIDDLEWARE = [

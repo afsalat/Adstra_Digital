@@ -133,6 +133,7 @@ const BlogDetail = ({ blog }) => {
       /^Introduction$/i.test(para) ||
       /^Consulion$/i.test(para) ||
       /^Final Thoughts$/i.test(para) ||
+      /^FAQs$/i.test(para) ||
       /^Conclusion$/i.test(para)
     ) {
       return (

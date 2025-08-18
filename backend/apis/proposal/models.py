@@ -36,14 +36,14 @@ class Proposal(models.Model):
         return f"Proposal #{self.proposal_no} - {self.client.name if self.client else 'Unknown'}"
 
 class ProposalSection(models.Model):
-    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, null=True)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, related_name='sections')
     title = models.CharField(max_length=255, null=True, blank=True)
     type = models.CharField(max_length=50, null=True, blank=True)
     alignment = models.CharField(max_length=50, null=True, blank=True)
     content = models.TextField(null=True, blank=True)
 
 class ProposalService(models.Model):
-    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, null=True)
+    proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, related_name='services')
     description = models.TextField(null=True, blank=True)
     quantity = models.IntegerField(null=True, blank=True)
     rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

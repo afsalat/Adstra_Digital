@@ -1,4 +1,4 @@
-'use client'; // this is required since you're using client-side features like useState, useRouter, AOS, etc.
+'use client';
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,7 @@ function AboutDetails() {
   const router = useRouter();
 
   const handleContactClick = () => {
-    router.push("/?scrollToContact=true"); // use query param to signal scroll target
+    router.push("/?scrollToContact=true");
   };
 
   useEffect(() => {
@@ -43,8 +43,18 @@ function AboutDetails() {
       ) : (
         <>
           <div className="about-section" data-aos="fade-up">
-            <h2>Who We Are</h2>
-            <p>{content.whoWeAre}</p>
+            <h2>About Adstra Digital</h2>
+            <p>{content.AboutAdstraDigital}</p>
+          </div>
+
+          <div className="about-section" data-aos="fade-up" data-aos-delay="100">
+            <h2>How We Work</h2>
+            <p>We keep things practical and straightforward:</p>
+            <ul>
+              {content.HowWeWork.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
           </div>
 
           <div className="about-section" data-aos="fade-up" data-aos-delay="100">
@@ -61,18 +71,24 @@ function AboutDetails() {
             <p>{content.OurMission}</p>
           </div>
 
-          <div className="about-section" data-aos="fade-up" data-aos-delay="300">
-            <h2>Why Adstra Digital?</h2>
-            <ul>
-              {content.WhyAdstraDigital.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
+          <div className="about-section" data-aos="fade-up" data-aos-delay="200">
+            <h2>Training & Support</h2>
+            <p>{content.TrainingSupport}</p>
           </div>
 
-          <div className="about-section team-section" data-aos="fade-up" data-aos-delay="400">
-            <h2>Meet the Team</h2>
-            <p>{content.MeettheTeam}</p>
+          <div className="about-section" data-aos="fade-up" data-aos-delay="200">
+            <h2>Why Choose Us</h2>
+            <p>{content.WhyChooseUs}</p>
+          </div>
+
+          <div className="about-section" data-aos="fade-up" data-aos-delay="200">
+            <h2>Your Strategic Growth Partner</h2>
+            <p>{content.YourStrategicGrowthPartner}</p>
+          </div>
+
+          <div className="about-section" data-aos="fade-up" data-aos-delay="200">
+            <h2>Local Value, National Standards</h2>
+            <p>{content.LocalValueNationalStandards}</p>
           </div>
 
           <div className="about-section contact-cta" data-aos="fade-up" data-aos-delay="500">

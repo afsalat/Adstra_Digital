@@ -2,7 +2,7 @@
 
 import { blogPosts } from "@/data/services";
 import Link from "next/link";
-import NavBar from "../NavBar/navbar";
+import NavBar from "../NavBar/Navbar";
 import Footer from "../Footer/Footer";
 import "./BlogList.css";
 
@@ -22,32 +22,31 @@ export default function AllBlogsPage() {
           <div className="row g-4">
             {blogPosts.map((blog, idx) => (
               <div key={blog.slug} className="col-lg-4 col-md-6 d-flex">
-                <Link
-                  href={`/blogs/${blog.slug}`}
-                  className="w-100 text-decoration-none"
+                <div
+                  className="blog-card animate-zoom-in h-100 w-100"
+                  style={{ animationDelay: `${idx * 0.1}s` }}
                 >
-                  <div
-                    className="blog-card animate-zoom-in h-100"
-                    style={{ animationDelay: `${idx * 0.1}s` }}
-                  >
-                    <img
-                      src={blog.imageUrl || "/assets/default-blog.jpg"}
-                      alt={blog.title}
-                      className="blog-image"
-                    />
-                    <div className="blog-content">
-                      <h2 className="h5 text-primary fw-semibold hover:underline">
-                        <a style={{textDecoration: "none"}} href={`/blogs/${blog.slug}`}>
+                  <img
+                    src={blog.imageUrl || "/assets/default-blog.jpg"}
+                    alt={blog.title}
+                    className="blog-image"
+                  />
+                  <div className="blog-content">
+                    <h2 className="h5 fw-semibold">
+                      <Link
+                        href={`/blogs/${blog.slug}`}
+                        style={{fontWeight: "bold"}}
+                        className="text-dark text-decoration-none hoverunderline"
+                      >
                         {blog.title}
-                        </a>
-                      </h2>
-                      <p className="text-muted">
-                        {blog.excerpt?.slice(0, 100)}...
-                      </p>
-                      <span className="read-more">Read More →</span>
-                    </div>
+                      </Link>
+                    </h2>
+                    <p className="text-muted">
+                      {blog.excerpt?.slice(0, 100)}...
+                    </p>
+                    <span className="read-more">Read More →</span>
                   </div>
-                </Link>
+                </div>
               </div>
             ))}
           </div>

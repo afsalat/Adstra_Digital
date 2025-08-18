@@ -6,7 +6,7 @@ import "aos/dist/aos.css";
 import "./Banner.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/Context/firebaseConfig";
-import banner from "@/assets/banner_new.png";
+import banner from "@/assets/banner_img.jpeg";
 
 function Banner() {
   const [messages, setMessages] = useState([]);

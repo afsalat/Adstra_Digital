@@ -81,7 +81,7 @@
 /* Dashboard Grid */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);  gap: 25px;
+  grid-template-columns: repeat(4, 1fr);  gap: 25px;
   margin-top: 20px;
   padding-bottom: 50px;
 }
@@ -115,7 +115,7 @@
   font-size: 0.95rem;
   color: #374151;
 }
-.dashboard-box a {
+.dashboard-box u {
   color: #ff6f00;
   text-decoration: underline;
   font-weight: 500;
@@ -161,4 +161,13 @@
   .brand-section {
     margin-top: 10px;
   }
+}
+
+
+/* Remove hover for non-admin */
+.no-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  border-color: transparent !important;
+  cursor: not-allowed;
+  opacity: 0.8;
 }

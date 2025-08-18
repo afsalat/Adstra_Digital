@@ -1,5 +1,5 @@
 import { blogPosts } from "@/data/services";
-import NavBar from "@/components/NavBar/navbar";
+import NavBar from "@/components/NavBar/Navbar";
 import Footer from "@/components/Footer/Footer";
 import BlogDetail from "@/components/BlogDetails/BlogDetails";
 

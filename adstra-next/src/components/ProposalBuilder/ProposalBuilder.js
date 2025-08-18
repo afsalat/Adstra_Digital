@@ -12,13 +12,20 @@ export default function ProposalBuilder() {
   const [service, setService] = useState([]);
 
   const [sections, setSections] = useState([
-    { id: Date.now(), title: "Introduction", type: "text", content: "" },
+    {
+      id: Date.now(),
+      title: "Proposal by ADSTRA DIGITAL",
+      type: "text",
+      content: "",
+    },
   ]);
 
   const [headerData, setHeaderData] = useState({
     tagline: "The Soul of a Premium Digital Brand",
-    mainBranch: "Husna Complex, near English Church, West Nadakkave, west, Nadakkave, Kozhikode, Kerala 673011" ,
-    otherBranches: "Anganvadi Road, Thiruvelli, Sulthan Bathery, Wayanad 673592" ,
+    mainBranch:
+      "Husna Complex, near English Church, West Nadakkave, west, Nadakkave, Kozhikode, Kerala 673011",
+    otherBranches:
+      "Anganvadi Road, Thiruvelli, Sulthan Bathery, Wayanad 673592",
     billTo: {
       name: "Client Name",
       address: "City | State | Pin: 673011",
@@ -78,11 +85,10 @@ export default function ProposalBuilder() {
   const handleSaveProposal = async () => {
     try {
       const token = localStorage.getItem("auth_token")?.replace(/"/g, "");
+      const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
       const total = service.reduce((acc, item) => acc + item.amount, 0);
-      const numberToWords = (n) => {
-        return `${n} Rupees only`;
-      };
+      const numberToWords = (n) => `${n} Rupees only`;
 
       const payload = {
         proposal_no: headerData.quotationNo,
@@ -98,7 +104,7 @@ export default function ProposalBuilder() {
         sections: sections,
       };
 
-      const response = await fetch("http://localhost:8000/proposal/create/", {
+      const response = await fetch(`${API_BASE_URL}/proposal/create/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -122,6 +128,12 @@ export default function ProposalBuilder() {
 
   return (
     <div className="container py-5" style={{ minHeight: "100vh" }}>
+      <button onClick={() => window.history.back()} className="btn btn-secondary w-10">
+        Back
+      </button>
+     <br />
+     <br />
+
       <div className="row g-4">
         {/* Left Editor */}
         <div className="col-md-6">

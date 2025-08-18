@@ -100,3 +100,9 @@
   animation: zoom-in 0.6s ease forwards;
   opacity: 0;
 }
+
+
+.hoverunderline:hover {
+  text-decoration: underline;
+  color: #0056b3; /* Bootstrap primary hover shade */
+}

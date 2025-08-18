@@ -40,6 +40,19 @@ def list_proposals(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# @api_view(['GET'])
+# @permission_classes([AllowAny])
+# def get_proposal(request, clientID):
+#     try:
+#         proposal = Proposal.objects.get(Client=clientID)
+
+#         if
+
+#         serializer = ProposalSerializer(proposal, many=True)
+#         return Response(serializer.data)
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 

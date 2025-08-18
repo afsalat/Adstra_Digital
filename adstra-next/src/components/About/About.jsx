@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/context/firebaseConfig"; // ✅ Adjust if your firebaseConfig file path is different
+import { db } from "@/Context/firebaseConfig";
 import Image from "next/image";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./About.css";
-import aboutImage from "@/assets/aboutt.png"; // ✅ Use correct path relative to your asset import
+import aboutImage from "@/assets/aboutnew.jpg";
 import { useRouter } from "next/navigation";
 
 function About() {

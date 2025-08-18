@@ -3,4 +3,32 @@ Disallow: /admindashboard
 Disallow: /usermanagement
 Disallow: /attendance
 
+# Allow specific AI, search, and emerging bots
+User-agent: Claude-User
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Perplexity-User
+User-agent: Gemini-User
+User-agent: Bingbot
+User-agent: Googlebot
+User-agent: Bard
+User-agent: Turingbot
+User-agent: AskOpenAI
+User-agent: HeygenBot
+User-agent: ChatbotsOrgBot
+User-agent: NeuralLoveBot
+User-agent: SocraticOrgBot
+User-agent: DialogflowBot
+User-agent: DeepMindBot
+User-agent: Elbot
+User-agent: TestGPT
+User-agent: GPT-3
+User-agent: GPT-4
+User-agent: GPT-4o
+User-agent: GPT-5
+User-agent: GPT-5o
+User-agent: NextGenAI-Bot
+User-agent: FutureAI-Bot
+Allow: /
+
 Sitemap: https://adstradigital.com/sitemap.xml
