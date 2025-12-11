@@ -28,6 +28,11 @@ const AttendanceTable = () => {
     location: "",
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [locationCache, setLocationCache] = useState({});
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState({ start: "", end: "" });
 
   const router = useRouter();
   const token =
@@ -72,39 +77,94 @@ const AttendanceTable = () => {
 
   useEffect(() => {
     fetchAttendanceData();
-  }, [token, userId, currentPage]);
+  }, [token, userId, currentPage, selectedDate, dateRange.start, dateRange.end]);
 
   const fetchAttendanceData = () => {
     if (!token || !userId) return;
+    let url = `${BASE_URL}/attendance/list-attendance/?page=${currentPage}`;
+    
+    // Add date filter if a specific date is selected
+    if (selectedDate) {
+      url += `&date=${selectedDate}`;
+    }
+    
+    // Add date range filter if set
+    if (dateRange.start && dateRange.end) {
+      url += `&start_date=${dateRange.start}&end_date=${dateRange.end}`;
+    }
+    
     axios
-      .get(`${BASE_URL}/attendance/list-attendance/?page=${currentPage}`, {
+      .get(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then(async (res) => {
+      .then((res) => {
         const userEntries = res.data?.users || res.data?.results?.users || [];
-        const updated = await Promise.all(
-          userEntries.map(async (entry) => ({
-            ...entry,
-            location: await getPlaceName(entry.location),
-          }))
-        );
-        setAttendanceData(updated);
+        // Set data immediately with formatted coordinates
+        const formatted = userEntries.map(entry => ({
+          ...entry,
+          location: formatLocationDisplay(entry.location)
+        }));
+        setAttendanceData(formatted);
+        
+        // Resolve place names in background
+        resolveLocationNames(formatted);
       })
       .catch((err) => console.error("Error fetching attendance:", err));
   };
 
-  const getPlaceName = async (locationStr) => {
-    if (!locationStr.includes("latitude")) return locationStr;
+  const formatLocationDisplay = (locationStr) => {
+    if (!locationStr || !locationStr.includes("latitude")) return locationStr;
     try {
       const locObj = JSON.parse(locationStr.replace(/'/g, '"'));
       const { latitude, longitude } = locObj;
-      const res = await axios.get(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
-      );
-      return res.data.display_name || `${latitude}, ${longitude}`;
+      return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     } catch (err) {
       return locationStr;
     }
+  };
+
+  const resolveLocationNames = async (entries) => {
+    const promises = entries.map(async (entry) => {
+      const cacheKey = entry.location;
+      
+      // Check cache first
+      if (locationCache[cacheKey]) {
+        return { id: entry.id, location: locationCache[cacheKey] };
+      }
+      
+      if (!entry.location || !entry.location.includes(",")) return null;
+      
+      try {
+        const [lat, lng] = entry.location.split(",").map(s => parseFloat(s.trim()));
+        if (isNaN(lat) || isNaN(lng)) return null;
+        
+        const res = await axios.get(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+          { timeout: 5000 }
+        );
+        
+        const placeName = res.data.display_name || entry.location;
+        
+        // Update cache
+        setLocationCache(prev => ({ ...prev, [cacheKey]: placeName }));
+        
+        return { id: entry.id, location: placeName };
+      } catch (err) {
+        return null;
+      }
+    });
+    
+    const results = await Promise.allSettled(promises);
+    
+    // Update only the resolved locations
+    results.forEach((result) => {
+      if (result.status === "fulfilled" && result.value) {
+        const { id, location } = result.value;
+        setAttendanceData(prev => 
+          prev.map(entry => entry.id === id ? { ...entry, location } : entry)
+        );
+      }
+    });
   };
 
   const handleAddEntry = () => {
@@ -122,11 +182,13 @@ const AttendanceTable = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        const readableLocation = await getPlaceName(location);
-        setAttendanceData((prev) => [
-          ...prev,
-          { ...res.data, location: readableLocation },
-        ]);
+        const formattedLocation = formatLocationDisplay(location);
+        const newData = { ...res.data, location: formattedLocation };
+        setAttendanceData((prev) => [...prev, newData]);
+        
+        // Resolve place name in background
+        resolveLocationNames([newData]);
+        
         setNewEntry({
           user: userId,
           date: "",
@@ -144,6 +206,88 @@ const AttendanceTable = () => {
   };
 
   const exportToExcel = async () => {
+    await generateExcelReport(attendanceData, "Attendance_Current_View.xlsx");
+  };
+
+  const formatTime = (datetime) => {
+    if (!datetime) return "-";
+    const date = new Date(datetime);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+  };
+
+  const handleLastWeek = () => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 7);
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    setSelectedDate(null);
+    setCurrentPage(1);
+    setDateRange({
+      start: startStr,
+      end: endStr
+    });
+  };
+
+  const handleLastMonth = () => {
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - 1);
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    setSelectedDate(null);
+    setCurrentPage(1);
+    setDateRange({
+      start: startStr,
+      end: endStr
+    });
+  };
+
+  const clearDateFilters = () => {
+    setDateRange({ start: null, end: null });
+    setSelectedDate(null);
+    setCurrentPage(1);
+  };
+
+  const exportCustomRangeToExcel = async () => {
+    if (!exportDateRange.start || !exportDateRange.end) {
+      alert("Please select both start and end dates");
+      return;
+    }
+
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/attendance/list-attendance/?start_date=${exportDateRange.start}&end_date=${exportDateRange.end}&page=1`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      let allData = res.data?.users || res.data?.results?.users || [];
+      
+      // Fetch all pages if there are more
+      const totalPages = res.data?.total_pages || 1;
+      for (let page = 2; page <= totalPages; page++) {
+        const pageRes = await axios.get(
+          `${BASE_URL}/attendance/list-attendance/?start_date=${exportDateRange.start}&end_date=${exportDateRange.end}&page=${page}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const pageData = pageRes.data?.users || pageRes.data?.results?.users || [];
+        allData = [...allData, ...pageData];
+      }
+
+      await generateExcelReport(allData, `Attendance_${exportDateRange.start}_to_${exportDateRange.end}.xlsx`);
+      setShowExportDialog(false);
+      setExportDateRange({ start: "", end: "" });
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Error exporting data");
+    }
+  };
+
+  const generateExcelReport = async (data, filename) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Attendance");
     worksheet.columns = [
@@ -175,7 +319,7 @@ const AttendanceTable = () => {
       };
     });
 
-    attendanceData.forEach((row) => {
+    data.forEach((row) => {
       let workReports = [];
       try {
         const parsed = JSON.parse(row.work_report);
@@ -237,17 +381,7 @@ const AttendanceTable = () => {
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    saveAs(blob, "Styled_Attendance.xlsx");
-  };
-
-  const formatTime = (datetime) => {
-    if (!datetime) return "-";
-    const date = new Date(datetime);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
-    });
+    saveAs(blob, filename);
   };
 
   const handleWorkReportSubmit = () => {
@@ -286,6 +420,10 @@ const AttendanceTable = () => {
     ]);
   };
 
+  const removeWorkEntry = (index) => {
+    setWorkReportEntries(workReportEntries.filter((_, idx) => idx !== index));
+  };
+
   const handleValidationChange = (id, validation) => {
     axios
       .put(
@@ -322,14 +460,14 @@ const AttendanceTable = () => {
             <div key={idx} className="report-entry-row">
               <input
                 type="text"
-                placeholder="Category"
+                placeholder="Project Name"
                 value={entry.category}
                 onChange={(e) =>
                   handleWorkEntryChange(idx, "category", e.target.value)
                 }
               />
               <textarea
-                placeholder="Description"
+                placeholder="Work Description"
                 value={entry.description}
                 onChange={(e) =>
                   handleWorkEntryChange(idx, "description", e.target.value)
@@ -365,6 +503,15 @@ const AttendanceTable = () => {
           </button>
           {isAdmin && (
             <>
+              <button onClick={handleLastWeek} className="create-btn">
+                📅 Last Week
+              </button>
+              <button onClick={handleLastMonth} className="create-btn">
+                📅 Last Month
+              </button>
+              <button onClick={clearDateFilters} className="create-btn">
+                🔄 Clear Filters
+              </button>
               <button
                 onClick={() => setShowForm(!showForm)}
                 className="create-btn"
@@ -372,11 +519,80 @@ const AttendanceTable = () => {
                 {showForm ? "Cancel" : "Create New Entry"}
               </button>
               <button onClick={exportToExcel} className="export-btn">
-                Export to Excel
+                Export Current View
+              </button>
+              <button onClick={() => setShowExportDialog(true)} className="export-btn">
+                📊 Custom Export
               </button>
             </>
           )}
         </div>
+
+        {/* Custom Export Dialog */}
+        {showExportDialog && (
+          <div className="export-dialog" style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '10px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            zIndex: 1000,
+            minWidth: '400px'
+          }}>
+            <h3 style={{ marginBottom: '20px', color: '#333' }}>Custom Date Range Export</h3>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Start Date:</label>
+              <input
+                type="date"
+                value={exportDateRange.start}
+                onChange={(e) => setExportDateRange(prev => ({ ...prev, start: e.target.value }))}
+                style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }}
+              />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>End Date:</label>
+              <input
+                type="date"
+                value={exportDateRange.end}
+                onChange={(e) => setExportDateRange(prev => ({ ...prev, end: e.target.value }))}
+                style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowExportDialog(false);
+                  setExportDateRange({ start: "", end: "" });
+                }}
+                className="checkout-btn"
+                style={{ padding: '10px 20px' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={exportCustomRangeToExcel}
+                className="export-btn"
+                style={{ padding: '10px 20px' }}
+              >
+                Export
+              </button>
+            </div>
+          </div>
+        )}
+        {showExportDialog && (
+          <div onClick={() => setShowExportDialog(false)} style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999
+          }} />
+        )}
 
         {/* Admin Entry Form */}
         {showForm && isAdmin && (
@@ -499,9 +715,9 @@ const AttendanceTable = () => {
 
       <div className="pagination">
         {Array.from({ length: 7 }, (_, i) => {
-          const page = i + 1;
           const date = new Date();
           date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD format
           const label = date.toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "short",
@@ -509,9 +725,12 @@ const AttendanceTable = () => {
 
           return (
             <button
-              key={page}
-              className={currentPage === page ? "active" : ""}
-              onClick={() => setCurrentPage(page)}
+              key={dateStr}
+              className={selectedDate === dateStr ? "active" : ""}
+              onClick={() => {
+                setSelectedDate(dateStr);
+                setCurrentPage(1); // Reset to page 1 when changing date
+              }}
             >
               {label}
             </button>

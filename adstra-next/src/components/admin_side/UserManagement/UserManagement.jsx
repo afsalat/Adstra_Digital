@@ -86,7 +86,7 @@ const UserList = () => {
     });
   };
 
-  const handleBack = () => router.push("/admindashboard");
+  const handleBack = () => router.push("/admindashboard/");
 
   if (loading) return <p className="loader">Loading users...</p>;
   if (error) return <p className="error">{error}</p>;

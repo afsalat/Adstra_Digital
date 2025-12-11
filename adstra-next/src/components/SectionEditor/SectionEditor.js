@@ -7,11 +7,13 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editData, setEditData] = useState({});
 
+  // Load local history
   useEffect(() => {
     const saved = localStorage.getItem("proposalSections");
     if (saved) setHistory(JSON.parse(saved));
   }, []);
 
+  // Autofill intro content only for the intro section
   useEffect(() => {
     if (
       (section.title === "Proposal by ADSTRA DIGITAL" ||
@@ -19,29 +21,14 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
       !section.content
     ) {
       const defaultIntro = `We are pleased to present this quotation for your kind consideration. At Adstra Digital, we strive to deliver creative, high-quality solutions tailored to your brand’s unique needs. This proposal outlines our services and pricing for the planned activities, ensuring value, clarity, and impact.`;
-
       onChange({ ...section, content: defaultIntro });
     }
   }, [section.title, section.type]);
 
+  // Persist local history
   useEffect(() => {
     localStorage.setItem("proposalSections", JSON.stringify(history));
   }, [history]);
-
-  const handleGenerate = () => {
-    if (!section.title) return;
-
-    const mockContent = `Generated mock content for "${section.title}" of type "${section.type}".`;
-    onChange({ ...section, content: mockContent });
-    setHistory((prev) => [
-      ...prev,
-      {
-        ...section,
-        content: mockContent,
-        time: new Date().toLocaleString(),
-      },
-    ]);
-  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(section.content || "");
@@ -62,7 +49,7 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
 
   const saveEdit = () => {
     const updated = [...history];
-    updated[editingIndex] = { ...editData };
+    updated[editingIndex] = { ...history[editingIndex], ...editData };
     setHistory(updated);
     setEditingIndex(null);
     setEditData({});
@@ -76,7 +63,9 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
   return (
     <div className="mb-4 border p-3 rounded shadow-sm bg-light">
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <h5 className="text-primary">🧩 {section.title} - Description</h5>
+        <h5 className="text-primary">
+          🧩 {section.title || "New Section"} - Description
+        </h5>
         <button className="btn btn-sm btn-outline-danger" onClick={onRemove}>
           🗑 Remove
         </button>
@@ -87,7 +76,7 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
         <label>Section Type</label>
         <select
           className="form-select"
-          value={section.type}
+          value={section.type || "textarea"}
           onChange={(e) => onChange({ ...section, type: e.target.value })}
         >
           <option value="input">Input Field</option>
@@ -96,6 +85,11 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
           <option value="date">Date</option>
           <option value="select">Dropdown</option>
           <option value="checkbox">Yes/No (Checkbox)</option>
+          {/* Optional semantics */}
+          <option value="introduction">Introduction</option>
+          <option value="objective">Objective</option>
+          <option value="approach">Approach</option>
+          <option value="conclusion">Conclusion</option>
         </select>
       </div>
 
@@ -106,7 +100,7 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
           type="text"
           className="form-control"
           value={section.title}
-          placeholder="e.g. Social Media Marketing"
+          placeholder="e.g. Scope of Work"
           onChange={(e) => onChange({ ...section, title: e.target.value })}
         />
       </div>
@@ -213,7 +207,22 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
                   </div>
                 );
               default:
-                return null;
+                // Fallback so unknown types are still editable
+                return (
+                  <textarea
+                    rows={5}
+                    className="form-control"
+                    style={{ textAlign: section.alignment || "left" }}
+                    value={section.content || ""}
+                    onChange={(e) =>
+                      onChange({
+                        ...section,
+                        content: e.target.value,
+                        type: "textarea",
+                      })
+                    }
+                  />
+                );
             }
           })()}
         </div>
@@ -221,13 +230,6 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
 
       {/* Buttons */}
       <div className="d-flex gap-2 mb-3">
-        {/* <button
-          className="btn btn-secondary"
-          onClick={handleGenerate}
-          disabled={!section.title}
-        >
-          ⚙️ Generate
-        </button> */}
         <button className="btn btn-outline-dark" onClick={handleCopy}>
           📋 Copy
         </button>
@@ -282,8 +284,8 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
                   </>
                 ) : (
                   <>
-                    <strong>{item.type.toUpperCase()}</strong> — {item.title}{" "}
-                    <br />
+                    <strong>{item.type?.toUpperCase?.() || "TEXT"}</strong> —{" "}
+                    {item.title} <br />
                     <small>{item.time}</small>
                     <p style={{ textAlign: item.alignment || "left" }}>
                       {item.content}

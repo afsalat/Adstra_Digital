@@ -3,11 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/Context/firebaseConfig";
-import Image from "next/image";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./About.css";
-import aboutImage from "@/assets/aboutnew.jpg";
+import banner from "@/assets/banner_img.jpeg";
 import { useRouter } from "next/navigation";
 
 function About() {
@@ -30,41 +29,74 @@ function About() {
   };
 
   const handleNavigate = () => {
-    router.push("/about");
+    router.push("/about/");
   };
 
   return (
-    <div id="about" className="container">
-      <div className="row align-items-center">
-        <div className="col-md-6 mb-4 text-center" data-aos="fade-up">
-          <Image
-            src={aboutImage}
-            alt="About us"
-            className="img-fluid"
-            placeholder="blur"
+    <>
+      {/* Static Banner Image */}
+      <div className="row" style={{backgroundColor:"black"}}>
+        <div className="col-12 text-center">
+          <img
+            src={banner.src}
+            alt="Main Banner"
+            className="img-fluid rounded"
+            style={{
+              maxHeight: "550px",
+              objectFit: "cover",
+              width: "97%",
+              marginTop: "50px",
+            }}
           />
         </div>
+      </div>
+      <div id="about" className="container-fluid about-section"  style={{backgroundColor:"black"}}>
+        <div className="row align-items-center">
+          <div
+            className="col-md-6 mb-4 text-center video-container"
+            data-aos="fade-up"
+          >
+            {/* 🎥 Replace with your preferred video */}
+            <video
+              className="about-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+            >
+              <source
+                src="https://adstradigital.com/media/video/adstra-logo-intro.mp4"
+                type="video/mp4"
+              />
+              Your browser does not support the video tag.
+            </video>
+          </div>
 
-        <div className="col-md-6 text-start" data-aos="fade-up">
-          <h2 className="fw-bold mb-3">About Adstra Digital</h2>
-          {aboutData.length > 0 ? (
-            aboutData.map((data, index) => (
-              <div key={index}>
-                <p>{data.intro}</p>
-                <p>{data.servicesIntro}</p>
-                <p>{data.difference}</p>
-                <p>{data.commitment}</p>
-              </div>
-            ))
-          ) : (
-            <p>Loading content...</p>
-          )}
-          <button onClick={handleNavigate} className="btn btn-danger mt-3 px-4 py-2">
-            Learn More
-          </button>
+          <div className="col-md-6 text-start about-text" data-aos="fade-up">
+            <h2 className="fw-bold mb-3">About Adstra Digital</h2>
+            {aboutData.length > 0 ? (
+              aboutData.map((data, index) => (
+                <div key={index}>
+                  <p>{data.intro}</p>
+                  <p>{data.servicesIntro}</p>
+                  <p>{data.difference}</p>
+                  <p>{data.commitment}</p>
+                </div>
+              ))
+            ) : (
+              <p>Loading content...</p>
+            )}
+            <button
+              onClick={handleNavigate}
+              className="btn btn-warning mt-3 px-4 py-2"
+            >
+              Learn More
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

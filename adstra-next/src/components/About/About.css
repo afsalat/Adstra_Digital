@@ -1,11 +1,57 @@
+html, body {
+  overflow-x: hidden;   /* block horizontal scroll globally */
+  width: 100%;
+}
+
+#about {
+  margin: 0 auto;
+  max-width: 100vw;     /* prevent wider than viewport */
+  overflow-x: hidden;
+}
+
+.container-fluid {
+  padding-right: 0 !important;  /* remove Bootstrap’s extra spacing */
+  padding-left: 0 !important;
+}
+
+.row {
+  margin-right: 0 !important;   /* ✅ remove bootstrap’s negative margins */
+  margin-left: 0 !important;
+}
+
+.col-md-6 {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+
+/* 🎥 Video Styling */
+.video-container {
+  margin-top: 50px; /* was 200px, too large */
+  width: 100%;
+  max-width: 100%; /* ✅ keep inside screen */
+  overflow: hidden;
+}
+
+
+.about-video {
+  width: 100%;
+  max-width: 100%;
+  height: auto; /* instead of fixed 550px */
+  max-height: 550px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+}
+
 #about p {
   font-size: 1.1rem;
   line-height: 1.7;
-  color: #444;
+  color: #dad6d6;
 }
 
 #about h2 {
-  color: #333;
+  color: #ffffff;
 }
 
 @media (max-width: 768px) {
@@ -20,10 +66,11 @@
 
   #about .btn {
     display: block;
+    background-color: gold;
     margin: 0 auto;
   }
-}
 
-#about {
-  margin-top: 500px;
+  .about-video {
+    height: 250px;
+  }
 }

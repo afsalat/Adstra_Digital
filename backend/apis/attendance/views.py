@@ -21,8 +21,20 @@ def listAttendance(request):
     try:
         today = localdate()
         page = request.query_params.get("page", "1")
+        filter_date = request.query_params.get("date", None)
+        start_date = request.query_params.get("start_date", None)
+        end_date = request.query_params.get("end_date", None)
 
-        if page == "1":
+        if start_date and end_date:
+            # Filter by date range if both provided
+            queryset = Attendance.objects.filter(
+                date__gte=start_date, 
+                date__lte=end_date
+            ).order_by("-date", "-id")
+        elif filter_date:
+            # Filter by specific date if provided
+            queryset = Attendance.objects.filter(date=filter_date).order_by("-id")
+        elif page == "1":
             # Page 1: only today's attendance
             queryset = Attendance.objects.filter(date=today).order_by("-id")
         else:

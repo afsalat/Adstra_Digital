@@ -1,6 +1,6 @@
 
 import NavBar from "@/components/NavBar/Navbar";
-import Banner from "@/components/Banner/Banner";
+import Banner from "@/components/Banner-0-2/Banner";
 import About from "@/components/About/About";
 import Service from "@/components/Service/Service";
 import Gallery from "@/components/Gallery/Gallery";
@@ -27,7 +27,7 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <div className="Homepage">
+    <div className="Homepage"  style={{backgroundColor:"black"}}>
       <NavBar />
       <Banner />
       <About />

@@ -1,105 +1,135 @@
-"use client"; // Required for Next.js Client Component
+"use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import "./Service.css";
-import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
-import * as THREE from "three";
-import AOS from "aos";
-import "aos/dist/aos.css";
+import { useEffect, useState, useRef } from "react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { db } from "../../Context/firebaseConfig";
 import { collection, getDocs } from "firebase/firestore";
+import "./Service.css";
 
-function SpinningBox({ position, images, label, slug, description }) {
-  const router = useRouter(); // ✅
-  const meshRef = useRef();
-  const [clicked, setClicked] = useState(false);
+export default function Service() {
+  const [services, setServices] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
-    AOS.init({ duration: 1000, once: true });
+    const fetchServices = async () => {
+      try {
+        const snap = await getDocs(collection(db, "service"));
+        const data = snap.docs.map((doc) => doc.data());
+        setServices(data);
+      } catch (err) {
+        console.error("Error fetching services:", err);
+      }
+    };
+    fetchServices();
   }, []);
 
-  const textures = useLoader(THREE.TextureLoader, images);
-  const materials = textures.map(
-    (texture) => new THREE.MeshStandardMaterial({ map: texture })
+  return (
+    <section className="services-section">
+      <div className="services-container">
+        <h2 className="services-title">Our Specialized Services</h2>
+
+        <div className="services-grid">
+          {services.map((srv, i) => (
+            <Tilt key={srv.slug || i}>
+              <motion.button
+                type="button"
+                className="service-card"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08, duration: 0.5, ease: "easeOut" }}
+                onClick={() =>
+                  router.push(`/service/${encodeURIComponent(srv.slug)}`)
+                }
+                aria-label={`Learn more about ${srv.label}`}
+              >
+                <span className="card-border" aria-hidden="true" />
+                <span className="card-noise" aria-hidden="true" />
+
+                <div className="img-wrap">
+                  <Image
+                    src={srv.images?.[0] || "/placeholder.jpg"}
+                    alt={srv.label}
+                    fill
+                    sizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 340px"
+                    className="img"
+                    priority={i === 0}
+                  />
+                  <span className="img-reflection" aria-hidden="true" />
+                </div>
+
+                <div className="card-content">
+                  <h3 className="service-title">{srv.label}</h3>
+                  <p className="service-description">{srv.description}</p>
+                  <span className="learn-more-btn">
+                    Learn More
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M5 12h14M13 5l7 7-7 7"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </motion.button>
+            </Tilt>
+          ))}
+        </div>
+      </div>
+    </section>
   );
+}
 
-  useFrame(() => {
-    if (meshRef.current && !clicked) {
-      meshRef.current.rotation.y += 0.01;
-      meshRef.current.rotation.x += 0.005;
-    }
-  });
+function Tilt({ children }) {
+  const ref = useRef(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-50, 50], [7, -7]);
+  const rotateY = useTransform(x, [-50, 50], [-9, 9]);
 
-  const handleClick = () => {
-    setClicked(true);
-    setTimeout(() => {
-      router.push(`/service/${encodeURIComponent(slug)}`);
-    }, 1000);
+  const onMove = (e) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    x.set((px / rect.width) * 100 - 50);
+    y.set((py / rect.height) * 100 - 50);
+  };
+
+  const onLeave = () => {
+    x.set(0);
+    y.set(0);
   };
 
   return (
-    <mesh ref={meshRef} position={position} material={materials}>
-      <boxGeometry args={[1.5, 1.5, 1.5]} />
-      <Html position={[0, 1.1, 0]} center>
-        <div className={`box-on-face ${clicked ? "fade-out" : ""}`} data-aos="fade-up">
-          <h3>{label}</h3>
-          <p>{description}</p>
-          <button className="learn-more-btn" onClick={handleClick} disabled={clicked}>
-            Learn More
-          </button>
-        </div>
-      </Html>
-    </mesh>
+    <motion.div
+      ref={ref}
+      className="tilt-wrap"
+      style={{ perspective: 1100 }}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+    >
+      <motion.div
+        className="tilt-inner"
+        style={{
+          rotateX,
+          rotateY,
+          transformStyle: "preserve-3d",
+        }}
+      >
+        {children}
+      </motion.div>
+    </motion.div>
   );
 }
-
-function Service() {
-  const [boxData, setBoxData] = useState([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "service"));
-        const data = querySnapshot.docs.map((doc) => doc.data());
-        console.log("Fetched service data:", data);
-        setBoxData(data);
-      } catch (error) {
-        console.error("Error fetching services:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  return (
-    <div className="service" style={{ width: "100%", height: "100vh" }}>
-      <h2 className="service-title" style={{ textAlign: "center", margin: "20px" }}>
-        Our Specialized Services
-      </h2>
-      <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[5, 5, 5]} />
-        {boxData.map((box, idx) => {
-          const x = (idx % 5) * 3 - 5.5;
-          const y = -Math.floor(idx / 5) * 3 + 2;
-          const position = [x, y, 0];
-          return (
-            <SpinningBox
-              key={idx}
-              position={position}
-              images={box.images}
-              label={box.label}
-              slug={box.slug}
-              description={box.description}
-            />
-          );
-        })}
-        <OrbitControls enableZoom={true} />
-      </Canvas>
-    </div>
-  );
-}
-
-export default Service;

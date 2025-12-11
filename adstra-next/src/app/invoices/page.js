@@ -13,7 +13,7 @@ export default function InvoiceList() {
 
   useEffect(() => {
     axios
-      .get(`${process.env.NEXT_PUBLIC_API_URL}/invoice/`)
+      .get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/invoice/`)
       .then((res) => setInvoices(res.data))
       .catch((err) => console.error("Failed to fetch invoices:", err));
   }, []);
@@ -76,7 +76,7 @@ export default function InvoiceList() {
           >
             Download PDF
           </button>
-          <Link href="/invoices/create" className="btn btn-primary">
+          <Link href="/invoices/create/" className="btn btn-primary">
             + Create New Invoice
           </Link>
         </div>
@@ -122,7 +122,7 @@ export default function InvoiceList() {
                       className="btn btn-sm btn-info"
                       onClick={() =>
                         router.push(
-                          `/invoices/result/?invoiceID=${inv.invoice_no}`
+                          `/invoices/result/?invoiceID=${inv.invoice_no}/`
                         )
                       }
                     >

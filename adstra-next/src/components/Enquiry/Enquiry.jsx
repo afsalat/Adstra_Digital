@@ -2,8 +2,6 @@
 
 import React, { useState } from "react";
 import emailjs from "@emailjs/browser";
-import { collection, addDoc } from "firebase/firestore";
-import { db } from "../../Context/firebaseConfig";
 import "./Enquiry.css";
 
 function Enquiry() {
@@ -19,6 +17,9 @@ function Enquiry() {
 
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Initialize EmailJS
+  emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -39,15 +40,16 @@ function Enquiry() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateForm()) {
       alert("Please fill all required fields with valid information.");
       return;
     }
 
     setLoading(true);
-    const serviceID = process.env.REACT_APP_EMAILJS_SERVICE_ID;
-    const templateID = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
-    const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
+
+    const serviceID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
+    const templateID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
 
     const emailData = {
       ...formData,
@@ -57,8 +59,7 @@ function Enquiry() {
     };
 
     try {
-      await emailjs.send(serviceID, templateID, emailData, publicKey);
-      await addDoc(collection(db, "enquiries"), formData);
+      await emailjs.send(serviceID, templateID, emailData);
       setSubmitted(true);
       setFormData({
         fullName: "",
@@ -71,117 +72,127 @@ function Enquiry() {
       });
       setTimeout(() => setSubmitted(false), 4000);
     } catch (error) {
-      alert("Submission failed. Please double-check your input and try again.");
-      console.error("Error:", error);
+      console.error("EmailJS Error:", error);
+      alert("Submission failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section id="enquiry" className="enquiry-section">
-      <div className="container enquiry-container">
-        <div className="text-center enquiry-header">
-          <h2>Enquire Now!!!</h2>
-          <p>Fill out the form and let's bring your ideas to life.</p>
-        </div>
-
-        <form className="enquiry-form" onSubmit={handleSubmit}>
-          <div className="row g-3">
-            <div className="col-md-6">
-              <input
-                type="text"
-                name="fullName"
-                placeholder="Full Name *"
-                value={formData.fullName}
-                onChange={handleChange}
-                className="form-control"
-                required
-              />
+    <section id="enquiry" className="py-5 enquiry-section">
+      <div className="container position-relative">
+        <div className="card enquiry-card mx-auto">
+          <div className="card-body p-4 p-md-5">
+            <div className="text-center mb-4">
+              <h2 className="fw-bold text-gold">Enquire Now!!!</h2>
+              <p className="text-white">
+                Fill out the form and let's bring your ideas to life.
+              </p>
             </div>
 
-            <div className="col-md-6">
-              <input
-                type="text"
-                name="company"
-                placeholder="Company Name (if applicable)"
-                value={formData.company}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <input
+                    type="text"
+                    name="fullName"
+                    placeholder="Full Name *"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className="form-control enquiry-input"
+                    required
+                  />
+                </div>
 
-            <div className="col-md-6">
-              <input
-                type="email"
-                name="email"
-                placeholder="Email Address *"
-                value={formData.email}
-                onChange={handleChange}
-                className="form-control"
-                required
-              />
-            </div>
+                <div className="col-md-6">
+                  <input
+                    type="text"
+                    name="company"
+                    placeholder="Company Name (if applicable)"
+                    value={formData.company}
+                    onChange={handleChange}
+                    className="form-control enquiry-input"
+                  />
+                </div>
 
-            <div className="col-md-6">
-              <input
-                type="text"
-                name="phone"
-                placeholder="Phone Number *"
-                value={formData.phone}
-                onChange={handleChange}
-                className="form-control"
-                required
-              />
-            </div>
+                <div className="col-md-6">
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Email Address *"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="form-control enquiry-input"
+                    required
+                  />
+                </div>
 
-            <div className="col-12">
-              <input
-                type="text"
-                name="website"
-                placeholder="Website (if available)"
-                value={formData.website}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
+                <div className="col-md-6">
+                  <input
+                    type="text"
+                    name="phone"
+                    placeholder="Phone Number *"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="form-control enquiry-input"
+                    required
+                  />
+                </div>
 
-            <div className="col-12">
-              <input
-                type="text"
-                name="subject"
-                placeholder="Subject"
-                value={formData.subject}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
+                <div className="col-12">
+                  <input
+                    type="text"
+                    name="website"
+                    placeholder="Website (if available)"
+                    value={formData.website}
+                    onChange={handleChange}
+                    className="form-control enquiry-input"
+                  />
+                </div>
 
-            <div className="col-12">
-              <textarea
-                name="message"
-                placeholder="Your Message *"
-                value={formData.message}
-                onChange={handleChange}
-                className="form-control"
-                rows="5"
-                required
-              />
-            </div>
+                <div className="col-12">
+                  <input
+                    type="text"
+                    name="subject"
+                    placeholder="Subject"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    className="form-control enquiry-input"
+                  />
+                </div>
 
-            <div className="col-12 text-center">
-              <button type="submit" disabled={loading} className="btn btn-primary px-5 py-2 fw-bold">
-                {loading ? "Sending..." : "Send Enquiry"}
-              </button>
-            </div>
+                <div className="col-12">
+                  <textarea
+                    name="message"
+                    placeholder="Your Message *"
+                    value={formData.message}
+                    onChange={handleChange}
+                    className="form-control enquiry-input"
+                    rows="5"
+                    required
+                  />
+                </div>
+
+                <div className="col-12 text-center">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-gld px-5 py-2 fw-bold"
+                  >
+                    {loading ? "Sending..." : "Send Enquiry"}
+                  </button>
+                </div>
+              </div>
+
+              {submitted && (
+                <div className="alert alert-success mt-4 text-center fw-semibold">
+                  Thank you! We’ll be in touch shortly.
+                </div>
+              )}
+            </form>
           </div>
-
-          {submitted && (
-            <div className="success-message mt-4">
-              Thank you! We’ll be in touch shortly.
-            </div>
-          )}
-        </form>
+        </div>
       </div>
     </section>
   );

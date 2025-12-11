@@ -15,10 +15,77 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+// ✅ Metadata (SEO, OG, Twitter, Robots, Icons, Verification, Canonical)
+export const metadata = {
+  title: "Digital Marketing Company in Kozhikode | AdstraDigital",
+  description:
+    "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+  authors: [{ name: "AdstraDigital" }],
+  robots:
+    "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+  openGraph: {
+    type: "website",
+    url: "https://adstradigital.com/",
+    title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
+    description:
+      "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+    images: [
+      {
+        url: "https://adstradigital.com/static/media/logo_icon.jpeg",
+        width: 512,
+        height: 512,
+      },
+    ],
+    siteName: "AdstraDigital",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@AdstraDigital",
+    title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
+    description:
+      "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+    images: ["https://adstradigital.com/static/media/logo_icon.jpeg"],
+  },
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
+  alternates: {
+    canonical: "https://adstradigital.com/",
+  },
+  verification: {
+    google: "8i-QRA6BvD2XQbq9CBVT_7TJlc6fiWS3EWRwUhYB0VY",
+  },
+};
+
+// ✅ Viewport (moved outside metadata)
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#000000",
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
+        {/* Preconnect & Fonts */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Merriweather:wght@400;700&family=Poppins:wght@500;700&display=swap"
+          rel="stylesheet"
+        />
+
+        {/* Preload Key Image */}
+        <link
+          rel="preload"
+          as="image"
+          href="https://adstradigital.com/static/media/logo_icon.jpeg"
+        />
+
         {/* ✅ Bootstrap CSS */}
         <link
           rel="stylesheet"
@@ -53,9 +120,44 @@ export default function RootLayout({ children }) {
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-VZBBBCVJHK');
+            gtag("js", new Date());
+            gtag("config", "G-VZBBBCVJHK");
           `}
+        </Script>
+
+        {/* ✅ JSON-LD Schema (LocalBusiness) */}
+        <Script id="ld-json" type="application/ld+json" strategy="afterInteractive">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            name: "AdstraDigital",
+            url: "https://adstradigital.com",
+            logo: "https://adstradigital.com/static/media/logo_icon.jpeg",
+            description:
+              "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+            telephone: "+91 9744779574",
+            email: "info@adstradigital.com",
+            address: {
+              "@type": "PostalAddress",
+              streetAddress:
+                "Popular Arcade, 1st Floor, Near English Church, Nadakkavu",
+              addressLocality: "Kozhikode",
+              addressRegion: "Kerala",
+              postalCode: "673011",
+              addressCountry: "IN",
+            },
+            openingHours: "Mo-Sa 10:00-18:00",
+            geo: {
+              "@type": "GeoCoordinates",
+              latitude: "11.2555",
+              longitude: "75.7804",
+            },
+            sameAs: [
+              "https://www.facebook.com/adstradigital",
+              "https://www.instagram.com/adstradigital",
+              "https://www.linkedin.com/company/adstra-digital",
+            ],
+          })}
         </Script>
       </body>
     </html>

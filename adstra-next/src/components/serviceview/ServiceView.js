@@ -3,8 +3,11 @@
 import React from "react";
 import "./ServiceView.css";
 import { CheckCircle, Star, Lightbulb } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function ServiceView({ service }) {
+  const router = useRouter();
+
   if (!service) return <p className="not-found">Service not found.</p>;
 
   return (
@@ -58,7 +61,7 @@ export default function ServiceView({ service }) {
             ))}
           </ul>
         </section>
-      )}
+      )}                    
 
       {/* CTA */}
       {service.cta && (
@@ -66,7 +69,7 @@ export default function ServiceView({ service }) {
           <h3>{service.cta.headline}</h3>
           <p>{service.cta.subtext}</p>
           {service.cta.note && <small>{service.cta.note}</small>}
-          <button className="cta-button">{service.cta.button}</button>
+          <button className="cta-button" onClick={() => router.push("/#enquiry")}>{service.cta.button}</button>
         </div>
       )}
     </div>

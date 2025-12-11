@@ -3,20 +3,21 @@
   max-width: 1280px;
   margin: 100px auto;
   padding: 80px 20px;
-  background: #f4f7fa;
+  background: #0d0d0d; /* deep black background */
   font-family: 'Inter', sans-serif;
-  color: #2b2b2b;
+  color: #f5f5f5; /* off-white for readability */
 }
 
 /* Section Block */
 .about-section {
-  background: #fff;
+  background: #111; /* dark card */
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
   padding: 100px;
   margin-bottom: 50px;
   position: relative;
   overflow: hidden;
+  border: 1px solid rgba(255, 215, 0, 0.2); /* subtle gold border */
 }
 
 .about-section::before {
@@ -26,18 +27,34 @@
   right: -10px;
   width: 120px;
   height: 120px;
-  background: linear-gradient(135deg, #007bff, #00c6ff);
-  opacity: 0.1;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.2), transparent);
   border-radius: 50%;
+  animation: pulseGlow 6s infinite ease-in-out; /* added animation */
 }
+
+@keyframes pulseGlow {
+  0% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+}
+
 
 /* Headings */
 .about-section h2 {
   font-size: 32px;
   font-weight: 600;
-  color: #111;
+  color: #ffd700; /* gold */
   margin-bottom: 20px;
-  border-left: 6px solid #007bff;
+  border-left: 6px solid #ffd700;
   padding-left: 16px;
 }
 
@@ -46,7 +63,7 @@
   font-size: 17px;
   line-height: 1.8;
   margin-bottom: 10px;
-  color: #444;
+  color: #f5f5f5; /* light white/gray */
 }
 
 .about-section ul {
@@ -60,15 +77,16 @@
   margin-bottom: 10px;
   position: relative;
   padding-left: 24px;
-  color: #333;
+  color: #e0e0e0;
   list-style: none;
 }
 
 .about-section ul li::before {
+  content: "★"; /* gold star bullet */
   position: absolute;
   left: 0;
   top: 1px;
-  color: #00c6ff;
+  color: #ffd700;
   font-weight: bold;
 }
 
@@ -83,35 +101,39 @@
   height: auto;
   border-radius: 12px;
   margin: 30px auto;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 24px rgba(255, 215, 0, 0.15);
+  border: 2px solid #ffd700;
 }
 
 /* CTA */
 .contact-cta {
-  background: linear-gradient(135deg, #007bff, #00c6ff);
+  background: linear-gradient(135deg, #000, #1a1a1a);
   text-align: center;
   color: #fff;
   border-radius: 16px;
   padding: 60px 30px;
+  border: 2px solid #ffd700;
 }
 
 .contact-cta h2 {
   font-size: 34px;
   margin-bottom: 16px;
+  color: #ffd700;
 }
 
 .contact-cta p {
   font-size: 18px;
   margin-bottom: 30px;
+  color: #f1f1f1;
 }
 
 /* Button */
 .learn-btn {
-  background-color: #fff;
-  color: #007bff;
+  background-color: #ffd700;
+  color: #000;
   padding: 14px 32px;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -119,7 +141,7 @@
 }
 
 .learn-btn:hover {
-  background-color: #0056b3;
+  background-color: #e6c200; /* darker gold */
   color: #fff;
 }
 

@@ -5,6 +5,7 @@ import ServiceView from "@/components/serviceview/ServiceView";
 import { serviceSections } from "@/data/services";
 import { notFound } from "next/navigation";
 import ServiceSchema from "@/components/Schema/ServiceSchema"; // 👈 Import schema
+import ContactUs from "@/components/Contact/Contact";
 
 export async function generateStaticParams() {
   return [
@@ -16,7 +17,7 @@ export async function generateStaticParams() {
 }
 
 export function generateMetadata({ params }) {
-  const label = params.label?.toLowerCase();
+  const label = params?.label?.toLowerCase();
   const service = serviceSections.find((s) => s.slug === label);
 
   if (!label || label === "all") {
@@ -25,7 +26,7 @@ export function generateMetadata({ params }) {
       description:
         "Explore the full range of digital solution by AdstraDigital – from branding and content to SEO, SMM, and performance marketing.",
       alternates: {
-        canonical: "https://adstradigital.com/service/all",
+        canonical: "https://adstradigital.com/service/all/",
       },
     };
   }
@@ -37,7 +38,7 @@ export function generateMetadata({ params }) {
     description:
       service.metaDescription || `Discover ${service.title} services from AdstraDigital.`,
     alternates: {
-      canonical: `https://adstradigital.com/service/${service.slug}`,
+      canonical: `https://adstradigital.com/service/${service.slug}/`,
     },
   };
 }
@@ -50,7 +51,7 @@ export default function ServicePage({ params }) {
   if (!isAll && !service) return notFound();
 
   return (
-    <>
+    <div style={{backgroundColor: "black"}}>
       <NavBar />
 
       {/* ✅ Structured Schema for SEO */}
@@ -65,8 +66,8 @@ export default function ServicePage({ params }) {
           <ServiceView service={service} />
         </>
       )}
-
+      <ContactUs />
       <Footer />
-    </>
+    </div>
   );
 }

@@ -1,50 +1,78 @@
 .enquiry-section {
-  padding: 60px 20px;
-  top: 0;
-  background-color: #fdfdfd;
-  width: 50%;
-  margin-left: 25%;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.enquiry-container {
-  background-color: #fff;
+
+
+/* keep card above video */
+.enquiry-card {
+  background: linear-gradient(145deg, #0d0d0d, #1a1a1a);
   border-radius: 16px;
-  box-shadow:
-    0 12px 20px rgba(252, 155, 37, 0.25),
-    0 8px 40px rgba(11, 86, 183, 0.25);
-  padding: 40px 30px;
-  max-width: 800px;
+  box-shadow: 0 12px 25px rgba(255, 215, 0, 0.2),
+              0 8px 40px rgba(255, 215, 0, 0.15);
+  max-width: 850px;
+  position: relative;
+  z-index: 2; /* above video & overlay */
 }
 
-.enquiry-header h2 {
-  font-size: 2rem;
-  font-weight: 700;
+.card-body {
+  border-radius: 16px;
+  background: linear-gradient(180deg, #111, #2a2a2a);
+  padding: 2rem;
 }
 
-.enquiry-form input,
-.enquiry-form textarea {
-  border-radius: 12px;
-  padding: 14px;
-  font-size: 1rem;
-  font-weight: 500;
-  box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.05);
+.text-gold {
+  color: #ffd700;
+  text-shadow: 1px 1px 8px rgba(255, 215, 0, 0.4);
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
-.enquiry-form input::placeholder,
-.enquiry-form textarea::placeholder {
-  font-style: italic;
-  color: #aaa;
+.enquiry-input {
+  border-radius: 10px !important;
+  background: #1c1c1c !important;
+  border: 1px solid #333 !important;
+  color: #f8f8f8 !important;
+  font-size: 15px;
+  padding: 12px 14px;
+  transition: all 0.3s ease-in-out;
 }
 
-.enquiry-form textarea {
-  resize: vertical;
+.enquiry-input::placeholder {
+  color: #d0d4d7 !important;
 }
 
-.success-message {
-  background: #e6f4ea;
-  color: #2a662a;
-  padding: 12px 20px;
-  border-radius: 10px;
-  border: 1.5px solid #a1d99b;
-  font-weight: 600;
+.enquiry-input:focus {
+  border-color: #ffd700 !important;
+  background: #222 !important;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.6) !important;
+  outline: none !important;
+}
+
+.btn-gld {
+  background: linear-gradient(135deg, #ffd700, #c5a600) !important;
+  border: none !important;
+  color: #111 !important;
+  font-weight: 700 !important;
+  padding: 12px 30px;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+}
+
+.btn-gld:hover {
+  background: linear-gradient(135deg, #c5a600, #ffd700) !important;
+  transform: scale(1.07) translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 215, 0, 0.35);
+}
+
+.alert-success {
+  background: rgba(40, 167, 69, 0.1);
+  border: 1px solid rgba(40, 167, 69, 0.4);
+  color: #28a745;
+  border-radius: 8px;
 }

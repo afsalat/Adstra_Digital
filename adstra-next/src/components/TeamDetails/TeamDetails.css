@@ -2,8 +2,9 @@
   position: relative;
   margin-bottom: 3rem;
   padding-bottom: 1.5rem;
-  border: 2px solid black;
-  border-radius: 50px;
+  border: 2px solid rgb(140, 140, 140);
+  border-radius: 10px;
+  margin-right: 10px;
 }
 
 .team-division::after {
@@ -20,16 +21,13 @@
   bottom: -6%;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #ffffff ;
+  background-color: #010101;
   padding: 0 1rem;
   font-size: 1.2rem;
   font-weight: bold;
-  color: #333;
+  color: #e6e6e6;
 }
 
-.division-title::after {
-  display: none; 
-}
 .division-title::after {
   content: "";
   display: block;
@@ -39,74 +37,79 @@
   border-radius: 2px;
 }
 
-/* Team Grid Layout */
 .team-grid {
   display: flex;
-  justify-content: space-evenly;
-  overflow: hidden;
+  justify-content:flex-start;
+  gap: 60px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-left: 30px;
+  margin-right: 30px;
+  scroll-snap-type: x mandatory;
+}
+.team-grid::-webkit-scrollbar {
+  height: 8px;
+}
+.team-grid::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+.team-grid::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Card Styling */
 .team-card {
-  margin-top: 7%;
+  margin-top: 30px;
   text-align: center;
-  background: #e7eef4;
-  border-radius: 30%;
+  background: #d0cfc8;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.865);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  transform-style: preserve-3d;
-  perspective: 1000px;
-  cursor: pointer;
-  width: 200px;
-  height: 300px; 
+  width: 250px;
+  height: 250px;
   display: flex;
   flex-direction: column;
-  justify-content:space-evenly;
+  justify-content: space-evenly;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.85);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
 }
-
-/* Hover 3D Effect */
 .team-card:hover {
-  transform: translateY(-6px) scale(1.03) rotateX(4deg) rotateY(4deg);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
 }
 
-.teams-image {
-  width: 100%;
-  height: 280px;
-  background-color: #f8f8f8;
-  border-bottom: 2px solid #eee;
-}
-
-
-/* Image Hover Zoom */
-.team-card:hover .teams-image {
-  transform: scale(1.08);
-}
-
-/* Icon Wrapper for Missing Images */
+/* Image / Icon */
+.teams-image,
 .icon-wrapper {
-  background-color: #f8f9fa;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.team-card:hover .teams-image {
+  transform: scale(1.05);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+}
+.icon-wrapper {
+  background: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 200px;
+  left: 50;
 }
-
 .teams-icon {
   font-size: 4rem;
   color: #bbb;
 }
 
-/* Name Styling */
+/* Member Info */
 .team-name {
   margin: 0.8rem 0;
   font-size: 1rem;
   font-weight: 600;
   color: #333;
 }
-
-/* Role Text */
 .team-role {
   margin-top: 0.8rem;
   font-size: 0.95rem;
@@ -114,82 +117,24 @@
   color: #555;
 }
 
-/* Input Styling */
-input.form-control,
-textarea.form-control,
-select.form-select {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 15px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+/* Separator */
+.separator {
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, #007bff, #00c4ff);
+  border-radius: 2px;
+  margin: 0.5rem auto;
 }
 
-input.form-control:hover,
-textarea.form-control:hover,
-select.form-select:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  transform: translateY(-3px) scale(1.02);
-  border-color: #0d6efd;
-}
-
-input.form-control:focus,
-textarea.form-control:focus,
-select.form-select:focus {
-  box-shadow: 0 10px 25px rgba(13, 110, 253, 0.2);
-  transform: translateY(-2px) scale(1.01);
-  border-color: #0d6efd;
-  outline: none;
-}
-
-/* Team Grid Layout - Horizontal Scroll */
-.team-grid {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto; /* enables horizontal scroll */
-  padding-bottom: 10px;
-  scroll-snap-type: x mandatory; /* smooth snapping */
-}
-
-.team-grid::-webkit-scrollbar {
-  height: 8px; /* thin scrollbar */
-}
-
-.team-grid::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-}
-
-.team-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.team-card {
-  width: 200px;
-  min-height: 300px; /* instead of fixed height */
-  height: auto; /* allow it to grow for long content */
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-}
-.teams-image {
-  height: 200px; /* reduce height so text fits */
-}
-
-.team-content {
-  font-size: 14px;
-  color: #333;
-  margin-top: 5px;
-}
-
+/* Read More */
 .read-more-btn {
   color: #007bff;
   cursor: pointer;
   font-weight: 500;
   margin-left: 5px;
+  transition: color 0.2s;
 }
-
 .read-more-btn:hover {
   text-decoration: underline;
+  color: #0056b3;
 }

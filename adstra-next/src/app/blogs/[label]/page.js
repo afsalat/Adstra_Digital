@@ -11,8 +11,9 @@ export async function generateStaticParams() {
 }
 
 // SEO Metadata
-export function generateMetadata({ params }) {
-  const blog = blogPosts.find((b) => b.slug === params.label);
+export async function generateMetadata({ params }) {
+  const { label } = await params;
+  const blog = blogPosts.find((b) => b.slug === label);
 
   if (!blog) {
     return {
@@ -25,14 +26,14 @@ export function generateMetadata({ params }) {
     title: `${blog.excerptTitle} | AdstraDigital`,
     description: blog.excerpt || blog.content?.slice(0, 150),
     alternates: {
-      canonical: `https://adstradigital.com/blogs/${blog.slug}`,
+      canonical: `https://adstradigital.com/blogs/${blog.slug}/`,
     },
     openGraph: {
       title: blog.title,
       description: blog.excerpt,
       images: [{ url: blog.imageUrl }],
       type: "article",
-      url: `https://adstradigital.com/blogs/${blog.slug}`,
+      url: `https://adstradigital.com/blogs/${blog.slug}/`,
     },
     twitter: {
       card: "summary_large_image",
@@ -44,8 +45,9 @@ export function generateMetadata({ params }) {
 }
 
 // Blog Page Component
-export default function BlogDetailPage({ params }) {
-  const blog = blogPosts.find((b) => b.slug === params.label);
+export default async function BlogDetailPage({ params }) {
+  const { label } = await params;
+  const blog = blogPosts.find((b) => b.slug === label);
 
   if (!blog) {
     return (
@@ -170,7 +172,7 @@ export default function BlogDetailPage({ params }) {
         "@id": `https://adstradigital.com${blog.imageUrl}`,
         "inLanguage": "en-US",
         "url": `https://adstradigital.com${blog.imageUrl}`,
-        "contentUrl": `https://adstradigital.com${blog.imageUrl}`,
+        "contentUrl": `https://adstradigital.com${blog.imageUrl}`,  
         "width": 1200,
         "height": 628
       },

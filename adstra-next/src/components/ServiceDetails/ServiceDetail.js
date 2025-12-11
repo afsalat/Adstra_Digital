@@ -5,7 +5,7 @@ import Tilt from "react-parallax-tilt";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./ServiceDetail.css";
-import Link from "next/link"; // ✅ for navigation
+import Link from "next/link";
 import { serviceSections } from "@/data/services";
 import ServiceSchema from "@/components/Schema/ServiceSchema";
 
@@ -31,8 +31,7 @@ function FullServices({ label }) {
   }, [label]);
 
   return (
-    <div className="full-services">
-      {/* Optional: Structured data for current page */}
+    <div className="full-services container">
       {currentService && <ServiceSchema service={currentService} />}
 
       <h1 data-aos="fade-down">
@@ -42,9 +41,10 @@ function FullServices({ label }) {
       </h1>
 
       <h2 className="service-subtitle">
-        SEO & Website Optimization Google Ads & Paid Advertising Social Media
-        Marketing & Lead Generation Branding & Identity Design Creative Content
-        Production Web Design & Development Google Business Profile Management
+        SEO & Website Optimization • Google Ads & Paid Advertising • Social
+        Media Marketing & Lead Generation • Branding & Identity Design •
+        Creative Content Production • Web Design & Development • Google Business
+        Profile Management
       </h2>
 
       {filteredServices.length > 0 ? (
@@ -60,44 +60,47 @@ function FullServices({ label }) {
             gyroscope={true}
           >
             <div
-              className="service-block"
+              className="service-block row align-items-center"
               data-aos="fade-up"
               data-aos-delay={100}
             >
-              <div className="service-content">
+              {/* Left Image */}
+              <div className="col-md-5 text-center mb-4 mb-md-0">
                 <img
                   src={service.image}
                   alt={service.title}
-                  className="service-image"
+                  className="service-image img-fluid"
                 />
-                <div className="service-text">
-                  <h3>{service.title}</h3>
-                  <p>{service.description || service.intro}</p>
-                  <ul>
-                    {(service.points || service.services)
-                      ?.slice(0, 3)
-                      .map((item, idx) => (
-                        <li key={idx}>
-                          {typeof item === "string" ? (
-                            item
-                          ) : (
-                            <>
-                              <strong>{item.title}:</strong> {item.description}
-                            </>
-                          )}
-                        </li>
-                      ))}
-                  </ul>
-                  <Link href={`/service/${service.slug}`}>
-                    <button className="learn-morebtn">Learn More</button>
-                  </Link>
-                </div>
+              </div>
+
+              {/* Right Text */}
+              <div className="col-md-7 service-text">
+                <h3>{service.title}</h3>
+                <p>{service.description || service.intro}</p>
+                <ul>
+                  {(service.points || service.services)
+                    ?.slice(0, 3)
+                    .map((item, idx) => (
+                      <li key={idx}>
+                        {typeof item === "string" ? (
+                          item
+                        ) : (
+                          <>
+                            <strong>{item.title}:</strong> {item.description}
+                          </>
+                        )}
+                      </li>
+                    ))}
+                </ul>
+                <Link href={`/service/${service.slug}/`}>
+                  <button className="learn-morebtn">Learn More</button>
+                </Link>
               </div>
             </div>
           </Tilt>
         ))
       ) : (
-        <p style={{ textAlign: "center" }}>No services found.</p>
+        <p className="text-center">No services found.</p>
       )}
     </div>
   );

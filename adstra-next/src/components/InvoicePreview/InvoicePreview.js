@@ -44,7 +44,7 @@ export default function InvoicePreview() {
     html2pdf().set(opt).from(element).save();
   };
 
-  const goToCreate = () => router.push("/invoices/create");
+  const goToCreate = () => router.push("/invoices/create/");
   const goToList = () => router.push("/invoices/");
 
   return (

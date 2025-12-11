@@ -1,4 +1,5 @@
 import AboutDetails from "@/components/AboutDetails/AboutDetails";
+import ContactUs from "@/components/Contact/Contact";
 import Footer from "@/components/Footer/Footer";
 import NavBar from "@/components/NavBar/Navbar";
 import Script from "next/script";
@@ -8,7 +9,7 @@ export const metadata = {
   description:
     "Learn more about Adstra Digital, a marketing agency delivering ROI-driven SEO, ads, and brand strategy with creative solutions and measurable results.",
   alternates: {
-    canonical: "https://adstradigital.com/about",
+    canonical: "https://adstradigital.com/about/",
   },
   icons: {
     icon: "/favicon.ico",
@@ -106,13 +107,14 @@ export default function AboutPage() {
   };
 
   return (
-    <>
+    <div style={{backgroundColor: "black", paddingLeft: "20px"}}>
       <NavBar />
       {/* ✅ SEO-friendly H1 */}
       <h1 className="text-3xl font-bold text-center my-6">
         About Adstra Digital
       </h1>
       <AboutDetails />
+      <ContactUs />
       <Footer />
 
       {/* ✅ Structured Data Schema */}
@@ -122,6 +124,6 @@ export default function AboutPage() {
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
       />
-    </>
+    </div>
   );
 }

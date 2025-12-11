@@ -35,7 +35,7 @@ function AboutDetails() {
       <SEOHelmet
         title="AdstraDigital – Best Performance-Driven Digital Marketing Agency"
         description="Learn more about Adstra Digital – our mission, values, and team behind our digital success."
-        canonical="https://adstradigital.com/about"
+        canonical="https://adstradigital.com/about/"
       />
 
       {!content ? (
@@ -43,7 +43,7 @@ function AboutDetails() {
       ) : (
         <>
           <div className="about-section" data-aos="fade-up">
-            <h2>About Adstra Digital</h2>
+            <h2>About Us</h2>
             <p>{content.AboutAdstraDigital}</p>
           </div>
 

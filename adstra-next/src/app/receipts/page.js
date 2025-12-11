@@ -82,7 +82,7 @@ const ReceiptManager = () => {
                   <button
                     className="btn btn-sm btn-info"
                     onClick={() =>
-                      router.push(`/receipts/result?id=${receipt.id}`)
+                      router.push(`/receipts/result?id=${receipt.id}/`)
                     }
                   >
                     View

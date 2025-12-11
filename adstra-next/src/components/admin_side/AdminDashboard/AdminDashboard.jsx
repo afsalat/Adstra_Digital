@@ -40,7 +40,7 @@ const AdminDashboard = () => {
 
     localStorage.removeItem("authToken");
     logout();
-    router.push("/userlogin");
+    router.push("/userlogin/");
   };
 
   // Decode token to check admin rights
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
 
         {/* Attendance */}
         <div className="col-sm-12 col-md-6 col-lg-3">
-          <Link href="/attendance" className="link">
+          <Link href="/attendance/" className="link">
             <div className="dashboard-box gray" role="link">
               <h4>📅 Attendance Sheet</h4>
               <p>! Don't Miss Work Report</p>
@@ -184,7 +184,7 @@ const AdminDashboard = () => {
         {/* User Management */}
         <div className="col-sm-12 col-md-6 col-lg-3">
           {isAdmin ? (
-            <Link href="/usermanagement" className="link">
+            <Link href="/usermanagement/" className="link">
               <div className="dashboard-box cyan">
                 <h4>👥 User Management</h4>
                 <p>Manage users & permissions</p>
@@ -203,7 +203,7 @@ const AdminDashboard = () => {
         {/* Proposals */}
         <div className="col-sm-12 col-md-6 col-lg-3">
           {isAdmin ? (
-            <Link href="/proposal" className="link">
+            <Link href="/proposal/" className="link">
               <div className="dashboard-box">
                 <h4>📑 Proposals</h4>
                 <p>Any time Any where.</p>
@@ -222,7 +222,7 @@ const AdminDashboard = () => {
         {/* Invoices */}
         <div className="col-sm-12 col-md-6 col-lg-3">
           {isAdmin ? (
-            <Link href="/invoices" className="link">
+            <Link href="/invoices/" className="link">
               <div className="dashboard-box">
                 <h4>🧾 Invoices</h4>
                 <p>Track Client Invoices</p>
@@ -241,7 +241,7 @@ const AdminDashboard = () => {
         {/* Receipts */}
         <div className="col-sm-12 col-md-6 col-lg-3">
           {isAdmin ? (
-            <Link href="/receipts" className="link">
+            <Link href="/receipts/" className="link">
               <div className="dashboard-box">
                 <h4>📄 Receipts</h4>
                 <p>Track your billing and payments</p>

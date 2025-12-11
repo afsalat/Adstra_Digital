@@ -1,20 +1,44 @@
+/* ============================
+   Logo
+============================ */
 .logo {
-  width: 180px;
-  height: 70px;
+  width: clamp(120px, 15vw, 180px);
+  height: auto;
+  object-fit: contain;
 }
 
-.hamburger {
+/* ============================
+   Navbar
+============================ */
+.navbar {
+  width: 100%;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem clamp(16px, 4vw, 40px);
+  position: relative;
+  flex-wrap: wrap;
+}
+
+/* ============================
+   Hamburger Menu
+============================ */
+.hamburger {
+  display: none;
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
 }
+
 .bar {
   width: 25px;
   height: 3px;
-  background-color: #333;
+  background-color: #fff;
   transition: 0.4s;
 }
+
 .bar.open:nth-child(1) {
   transform: rotate(45deg) translate(5px, 5px);
 }
@@ -25,48 +49,151 @@
   transform: rotate(-45deg) translate(5px, -5px);
 }
 
+/* ============================
+   Nav Links
+============================ */
+.nav-links {
+  display: flex;
+  gap: 0.3rem;
+  list-style: none;
+  align-items: center;
+  transition: max-height 0.3s ease;
+}
+
 .nav-links .nav-item .nav-link {
-  font-size: medium;
+  font-size: clamp(14px, 1vw, 16px);
   font-weight: bold;
-  color: #000 !important;
+  color: #d4af37 !important;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-links .nav-item .nav-link:hover {
-  color: #0d1214 !important;
   text-decoration: underline 2px;
 }
 
 .nav-links .nav-item .nav-link.active {
-  color: #525862 !important; /* blue text */
   font-weight: bold;
-  text-decoration: underline 2px !important;
+  text-decoration: underline 2px #d2cbb4 !important;
 }
 
-/* Responsive */
+/* ============================
+   Navbar Bottom / Contact Info
+============================ */
+.navbar-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.5rem clamp(16px, 4vw, 40px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.contact-info {
+  font-size: clamp(12px, 1vw, 14px);
+  color: #c7c7c7;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-info .phone,
+.contact-info .email {
+  font-weight: bold;
+  font-size: clamp(13px, 1vw, 16px);
+  white-space: nowrap;
+  text-decoration: none;
+  color: #c7c7c7;
+  font-family: Cambria, Cochin, Georgia, Times, "Times New Roman", serif;
+}
+
+.contact-info .phone:hover,
+.contact-info .email:hover {
+  text-decoration: underline;
+  color: #d4af37;
+}
+
+/* ISO Logo */
+.iso-logo {
+  border-radius: 10px;
+  object-fit: cover;
+  max-width: 220px;
+  height: auto;
+  margin-left: 0;
+}
+
+/* ============================
+   Responsive Breakpoints
+============================ */
+@media (max-width: 1024px) {
+  .nav-links {
+    gap: 1rem;
+  }
+  .contact-info {
+    gap: 10px;
+  }
+}
+
 @media (max-width: 768px) {
+  /* Show Hamburger */
+  .hamburger {
+    display: flex;
+  }
+
+  /* Collapse Nav Links into vertical menu */
   .nav-links {
     flex-direction: column;
     width: 100%;
-    padding: 1rem 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    gap: 10px;
+  }
+
+  /* Expand Nav Links when open */
+  .nav-links.open {
+    max-height: 500px; /* big enough to show all links */
   }
 
   .nav-links li {
+    width: 100%;
+    text-align: center;
     margin-bottom: 0.5rem;
   }
 
-  .navbar-right {
-    display: none !important;
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+
+  .navbar-bottom {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .contact-info {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .iso-logo {
+    margin: 0 auto;
   }
 }
 
-.phone,
-.email {
-  color: #333;
-  font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-}
+@media (max-width: 480px) {
+  .logo {
+    width: clamp(100px, 25vw, 140px);
+  }
 
-.navbar {
-  z-index: 1000;
-  background: white !important;
+  .nav-links .nav-item .nav-link {
+    font-size: clamp(12px, 3vw, 14px);
+  }
+
+  .contact-info .phone,
+  .contact-info .email {
+    font-size: clamp(12px, 3vw, 14px);
+  }
 }

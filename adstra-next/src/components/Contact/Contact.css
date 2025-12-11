@@ -1,35 +1,945 @@
-.contact-inf h3 {
-  margin-top: 20px;
-  font-size: 20px;
-  color: #0077cc;
+/* Contact.css - Adstra Digital Premium */
+.adstra-contact-hero {
+  background: linear-gradient(135deg, #0a0a0a 0%, #0f1a2b 30%, #1a0b2e 70%, #2d1b69 100%);
+  color: #f1f1f1;
+  padding: 120px 0;
+  font-family: "Poppins", sans-serif;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.contact-inf p,
-.contact-inf a {
-  margin: 8px 0;
-  color: #333;
-  font-size: 16px;
-  text-decoration: none;
+.adstra-contact-hero.adstra-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.contact-inf a:hover {
-  color: #005999;
-  text-decoration: underline;
-}
-
-.social-links a {
-  display: inline-block;
-  margin-right: 15px;
-  font-weight: 500;
-  color: #0077cc;
-}
-
-.social-links a:hover {
-  color: #005999;
-}
-
-.contact-map iframe {
-  border: none;
+/* Cosmic Background */
+.adstra-cosmic-bg {
+  position: absolute;
   width: 100%;
   height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.adstra-nebula-1 {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  top: 10%;
+  left: 5%;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+  animation: adstra-nebula-pulse 8s ease-in-out infinite;
+}
+
+.adstra-nebula-2 {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  bottom: 10%;
+  right: 5%;
+  background: radial-gradient(circle, rgba(255, 107, 107, 0.08) 0%, transparent 70%);
+  animation: adstra-nebula-pulse 10s ease-in-out infinite reverse;
+}
+
+.adstra-stars {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20% 30%, #fff, transparent),
+    radial-gradient(2px 2px at 40% 70%, #fff, transparent),
+    radial-gradient(1px 1px at 60% 20%, #fff, transparent),
+    radial-gradient(1px 1px at 80% 80%, #fff, transparent);
+  animation: adstra-stars-twinkle 4s ease-in-out infinite;
+}
+
+@keyframes adstra-nebula-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+@keyframes adstra-stars-twinkle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Particle Field */
+.adstra-particle-field {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.adstra-particle {
+  position: absolute;
+  background: linear-gradient(45deg, #ffd700, #667eea);
+  border-radius: 50%;
+  animation: adstra-particle-float 6s ease-in-out infinite;
+}
+
+.adstra-particle-1 { width: 4px; height: 4px; top: 20%; left: 10%; animation-delay: 0s; }
+.adstra-particle-2 { width: 6px; height: 6px; top: 60%; left: 85%; animation-delay: 1s; }
+.adstra-particle-3 { width: 3px; height: 3px; top: 80%; left: 15%; animation-delay: 2s; }
+
+@keyframes adstra-particle-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+  50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
+}
+
+/* Premium Loading */
+.adstra-contact-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 150px 0;
+  background: linear-gradient(135deg, #0a0a0a 0%, #0f1a2b 100%);
+  color: #fff;
+}
+
+.adstra-loading-orb {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 30px;
+}
+
+.adstra-orb-inner {
+  width: 100%;
+  height: 100%;
+  border: 3px solid rgba(102, 126, 234, 0.3);
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: adstra-orb-spin 2s linear infinite;
+}
+
+.adstra-rocket-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffd700;
+  animation: adstra-rocket-bounce 1s ease-in-out infinite;
+}
+
+@keyframes adstra-orb-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes adstra-rocket-bounce {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-5px); }
+}
+
+/* Hero Header */
+.adstra-hero-header {
+  text-align: center;
+  margin-bottom: 60px;
+  position: relative;
+}
+
+.adstra-title-glory {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.adstra-crown-wrapper, .adstra-star-burst {
+  padding: 15px;
+  background: rgba(255, 215, 0, 0.1);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  animation: adstra-crown-glow 3s ease-in-out infinite;
+}
+
+.adstra-crown-icon, .adstra-star-icon {
+  color: #ffd700;
+  width: 30px;
+  height: 30px;
+}
+
+.adstra-main-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.adstra-title-glow {
+  display: block;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+}
+
+.adstra-title-gradient {
+  display: block;
+  background: linear-gradient(45deg, #ffd700, #667eea, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: adstra-gradient-shift 4s ease-in-out infinite;
+}
+
+@keyframes adstra-gradient-shift {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(45deg); }
+}
+
+/* Service Navigator */
+.adstra-service-navigator {
+  margin-bottom: 50px;
+}
+
+.adstra-navigator-track {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 20px;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.adstra-nav-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 25px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50px;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.adstra-nav-pill:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  transform: translateY(-3px);
+}
+
+.adstra-nav-pill.adstra-nav-active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: transparent;
+  color: #fff;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.adstra-nav-sparkle {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ffd700;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.adstra-nav-pill.adstra-nav-active .adstra-nav-sparkle {
+  opacity: 1;
+  animation: adstra-sparkle-pulse 1s ease-in-out infinite;
+}
+
+/* Contact Matrix */
+.adstra-contact-matrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+/* Nexus Card */
+.adstra-nexus-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(20px);
+  border-radius: 30px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.adstra-nexus-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.adstra-nexus-card:hover::before {
+  left: 100%;
+}
+
+.adstra-nexus-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 40px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+  position: relative;
+}
+
+.adstra-nexus-glow {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.4), transparent 70%);
+  filter: blur(10px);
+}
+
+.adstra-nexus-icon {
+  color: #667eea;
+  width: 40px;
+  height: 40px;
+  z-index: 2;
+}
+
+.adstra-nexus-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 5px 0;
+  background: linear-gradient(45deg, #fff, #667eea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Nexus Grid */
+.adstra-nexus-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.adstra-nexus-node {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
+  border: 1px solid transparent;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.adstra-nexus-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.adstra-nexus-node:hover::before {
+  left: 100%;
+}
+
+.adstra-nexus-node:hover {
+  background: rgba(102, 126, 234, 0.05);
+  border-color: rgba(102, 126, 234, 0.2);
+  transform: translateX(10px);
+}
+
+.adstra-node-orb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.adstra-node-orb::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, #667eea, #764ba2, #ffd700);
+  border-radius: 50%;
+  z-index: -1;
+  animation: adstra-orb-rotate 3s linear infinite;
+}
+
+@keyframes adstra-orb-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.adstra-node-icon {
+  color: #fff;
+  width: 24px;
+  height: 24px;
+}
+
+.adstra-node-content h4 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.adstra-node-link {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.adstra-node-link:hover {
+  color: #ffd700;
+  transform: translateX(5px);
+}
+
+.adstra-node-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 15px;
+  color: #ffd700;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Victory Metrics */
+.adstra-victory-metrics {
+  display: flex;
+  justify-content: space-around;
+  margin: 40px 0;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.adstra-metric-crystal {
+  text-align: center;
+  position: relative;
+}
+
+.adstra-metric-crystal::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 50%;
+  filter: blur(10px);
+}
+
+.adstra-metric-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffd700;
+  margin-bottom: 5px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.adstra-metric-label {
+  font-size: 0.8rem;
+  color: #ccc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Social Galaxy */
+.adstra-social-galaxy {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.adstra-social-galaxy h4 {
+  color: #fff;
+  margin-bottom: 25px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.adstra-galaxy-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.adstra-galaxy-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  color: #fff;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.adstra-galaxy-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.adstra-galaxy-link:hover::before {
+  left: 100%;
+}
+
+.adstra-galaxy-link:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.adstra-facebook-orbit:hover { background: rgba(59, 89, 152, 0.2); }
+.adstra-instagram-orbit:hover { background: rgba(225, 48, 108, 0.2); }
+.adstra-twitter-orbit:hover { background: rgba(29, 161, 242, 0.2); }
+.adstra-linkedin-orbit:hover { background: rgba(0, 119, 181, 0.2); }
+
+/* Terminal Card */
+.adstra-terminal-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(20px);
+  border-radius: 30px;
+  padding: 40px;
+  border: 1px solid rgba(255, 215, 0, 0.1);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.adstra-terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+  position: relative;
+}
+
+.adstra-terminal-glow {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.4), transparent 70%);
+  filter: blur(10px);
+}
+
+.adstra-terminal-icon {
+  color: #ffd700;
+  width: 40px;
+  height: 40px;
+  z-index: 2;
+}
+
+.adstra-terminal-header h3 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 5px 0;
+  background: linear-gradient(45deg, #fff, #ffd700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cosmic Map */
+.adstra-cosmic-map {
+  flex: 1;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid rgba(255, 215, 0, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.adstra-cosmic-map iframe {
+  width: 100%;
+  height: 400px;
+  border: none;
+  transition: all 0.4s ease;
+  filter: grayscale(30%) contrast(120%) brightness(0.8);
+}
+
+.adstra-cosmic-map:hover iframe {
+  filter: grayscale(0%) contrast(140%) brightness(1);
+  transform: scale(1.02);
+}
+
+.adstra-map-hologram {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(45deg, transparent 30%, rgba(102, 126, 234, 0.1) 50%, transparent 70%);
+  animation: adstra-hologram-scan 3s linear infinite;
+}
+
+@keyframes adstra-hologram-scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.adstra-map-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 10px 20px;
+  border-radius: 25px;
+  color: #ffd700;
+  font-size: 0.9rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Terminal Features */
+.adstra-terminal-features {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 25px;
+  flex-wrap: wrap;
+}
+
+.adstra-feature-comet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 215, 0, 0.1);
+  border-radius: 20px;
+  color: #ffd700;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.adstra-feature-comet:hover {
+  background: rgba(255, 215, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* CTA Constellation */
+.adstra-cta-constellation {
+  margin-top: 80px;
+}
+
+.adstra-constellation-core {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(255, 215, 0, 0.1));
+  backdrop-filter: blur(20px);
+  border-radius: 40px;
+  padding: 60px 40px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.adstra-constellation-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.3), transparent 70%);
+  filter: blur(40px);
+  animation: adstra-glow-pulse 4s ease-in-out infinite;
+}
+
+.adstra-cta-crown {
+  display: inline-flex;
+  padding: 20px;
+  background: rgba(255, 215, 0, 0.1);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  margin-bottom: 20px;
+  animation: adstra-crown-float 3s ease-in-out infinite;
+}
+
+.adstra-cta-crown-icon {
+  color: #ffd700;
+  width: 40px;
+  height: 40px;
+}
+
+.adstra-cta-beacon {
+  color: #667eea;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 20px;
+  animation: adstra-beacon-pulse 2s ease-in-out infinite;
+}
+
+.adstra-cta-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.adstra-cta-empire {
+  background: linear-gradient(45deg, #ffd700, #667eea, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: adstra-empire-shimmer 3s ease-in-out infinite;
+}
+
+.adstra-cta-prophecy {
+  color: #ccc;
+  font-size: 1.1rem;
+  max-width: 700px;
+  margin: 0 auto 30px;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+.adstra-victory-manifest {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin: 30px 0;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.adstra-manifest-item {
+  color: #ffd700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255, 215, 0, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.adstra-cta-portals {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 30px 0;
+}
+
+.adstra-portal {
+  padding: 18px 35px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.adstra-portal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.adstra-portal:hover::before {
+  left: 100%;
+}
+
+.adstra-portal-royal {
+  background: linear-gradient(135deg, #ffd700, #ff6b6b);
+  color: #1a1a1a;
+  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+}
+
+.adstra-portal-royal:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 20px 40px rgba(255, 215, 0, 0.6);
+}
+
+.adstra-portal-imperial {
+  background: transparent;
+  color: #667eea;
+  border-color: #667eea;
+}
+
+.adstra-portal-imperial:hover {
+  background: #667eea;
+  color: #fff;
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.4);
+}
+
+.adstra-cta-edict {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #ffd700;
+  font-size: 0.9rem;
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255, 215, 0, 0.05);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.adstra-edict-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .adstra-contact-hero {
+    padding: 80px 0;
+  }
+  
+  .adstra-main-title {
+    font-size: 2.5rem;
+  }
+  
+  .adstra-title-glory {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .adstra-contact-matrix {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .adstra-nexus-card,
+  .adstra-terminal-card {
+    padding: 30px 20px;
+  }
+  
+  .adstra-navigator-track {
+    padding: 15px;
+    border-radius: 25px;
+  }
+  
+  .adstra-nav-pill {
+    padding: 12px 20px;
+  }
+  
+  .adstra-victory-manifest {
+    grid-template-columns: 1fr;
+  }
+  
+  .adstra-cta-portals {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .adstra-portal {
+    width: 250px;
+    justify-content: center;
+  }
+}
+
+/* Additional Animations */
+@keyframes adstra-crown-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+@keyframes adstra-beacon-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+@keyframes adstra-empire-shimmer {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(45deg); }
+}
+
+@keyframes adstra-glow-pulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+@keyframes adstra-sparkle-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
 }

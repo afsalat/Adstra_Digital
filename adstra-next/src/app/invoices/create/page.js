@@ -21,7 +21,7 @@ export default function CreateInvoice() {
   const [selectedProposalId, setSelectedProposalId] = useState("");
 
   const router = useRouter();
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
   const toWords = new ToWords({
     localeCode: "en-IN",

@@ -1,4 +1,6 @@
 "use client";
+
+import { toWords } from "number-to-words";
 import { useState } from "react";
 import SectionEditor from "../SectionEditor/SectionEditor";
 import ProposalPreview from "../ProposalPreview/ProposalPreview";
@@ -8,14 +10,20 @@ import HeaderEditor from "../HeaderEditor/HeaderEditor";
 import ServiceTable from "../ServiceTable/ServiceTable";
 import { serviceExtraDetails } from "../../data/clientData";
 
+function newId() {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export default function ProposalBuilder() {
   const [service, setService] = useState([]);
-
   const [sections, setSections] = useState([
     {
-      id: Date.now(),
+      id: newId(),
       title: "Proposal by ADSTRA DIGITAL",
-      type: "text",
+      type: "textarea",
+      alignment: "left",
       content: "",
     },
   ]);
@@ -38,48 +46,47 @@ export default function ProposalBuilder() {
   });
 
   const updateSection = (id, updated) => {
-    setSections(sections.map((sec) => (sec.id === id ? updated : sec)));
+    setSections((prev) => prev.map((sec) => (sec.id === id ? updated : sec)));
   };
 
   const removeSection = (id) => {
-    setSections(sections.filter((sec) => sec.id !== id));
+    setSections((prev) => prev.filter((sec) => sec.id !== id));
   };
 
-  const addSection = () => {
-    setSections([
-      ...sections,
-      { id: Date.now(), title: "", type: "text", content: "" },
-    ]);
-  };
-
+  // Add a manual section associated to a selected service (textarea)
   const addExtraSectionFromService = (serviceName) => {
     const detail = serviceExtraDetails[serviceName];
     if (!detail) return;
 
-    const exists = sections.some(
-      (s) => s.title === serviceName && s.type === "textarea"
-    );
-
-    if (exists) {
-      setSections(
-        sections.map((s) =>
+    setSections((prev) => {
+      const exists = prev.some(
+        (s) => s.title === serviceName && s.type === "textarea"
+      );
+      if (exists) {
+        return prev.map((s) =>
           s.title === serviceName && s.type === "textarea"
             ? { ...s, content: detail }
             : s
-        )
-      );
-    } else {
-      setSections([
-        ...sections,
+        );
+      }
+      return [
+        ...prev,
         {
-          id: Date.now(),
+          id: newId(),
           title: serviceName,
           type: "textarea",
           alignment: "left",
           content: detail,
         },
-      ]);
-    }
+      ];
+    });
+  };
+
+  // Remove the manual section when that service is unchecked
+  const removeExtraSectionFromService = (serviceName) => {
+    setSections((prev) =>
+      prev.filter((s) => !(s.title === serviceName && s.type === "textarea"))
+    );
   };
 
   const handleSaveProposal = async () => {
@@ -87,8 +94,18 @@ export default function ProposalBuilder() {
       const token = localStorage.getItem("auth_token")?.replace(/"/g, "");
       const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
-      const total = service.reduce((acc, item) => acc + item.amount, 0);
-      const numberToWords = (n) => `${n} Rupees only`;
+      // Calculate total same way as ProposalPreview
+      const total = service.reduce((acc, item) => {
+        const qty = item.quantity || 1;
+        const rate = item.rate || 0;
+        const gstRate = parseFloat(item.gst || "18");
+        const base = qty * rate;
+        const gst = (base * gstRate) / 100;
+        return acc + base + gst;
+      }, 0);
+
+      const numberToWords = (n) =>
+        toWords(n).replace(/\b\w/g, (c) => c.toUpperCase()) + " Only";
 
       const payload = {
         proposal_no: headerData.quotationNo,
@@ -101,13 +118,14 @@ export default function ProposalBuilder() {
           ...item,
           gst: parseFloat(item.gst) || 0,
         })),
-        sections: sections,
+        sections,
       };
 
       const response = await fetch(`${API_BASE_URL}/proposal/create/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -128,11 +146,12 @@ export default function ProposalBuilder() {
 
   return (
     <div className="container py-5" style={{ minHeight: "100vh" }}>
-      <button onClick={() => window.history.back()} className="btn btn-secondary w-10">
+      <button
+        onClick={() => window.history.back()}
+        className="btn btn-secondary w-10"
+      >
         Back
       </button>
-     <br />
-     <br />
 
       <div className="row g-4">
         {/* Left Editor */}
@@ -150,7 +169,9 @@ export default function ProposalBuilder() {
                 services={service}
                 onChange={setService}
                 onServiceSelect={addExtraSectionFromService}
+                onServiceUnselect={removeExtraSectionFromService}
               />
+
               {sections.map((sec) => (
                 <SectionEditor
                   key={sec.id}
@@ -162,7 +183,21 @@ export default function ProposalBuilder() {
             </div>
 
             <div className="sticky-bottom bg-white pt-2 pb-3 mt-auto d-flex justify-content-between align-items-center border-top">
-              <button className="btn btn-outline-primary" onClick={addSection}>
+              <button
+                className="btn btn-outline-primary"
+                onClick={() =>
+                  setSections((prev) => [
+                    ...prev,
+                    {
+                      id: newId(),
+                      title: "",
+                      type: "textarea",
+                      alignment: "left",
+                      content: "",
+                    },
+                  ])
+                }
+              >
                 ➕ Add Section
               </button>
             </div>

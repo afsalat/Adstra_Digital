@@ -19,6 +19,8 @@ export default function AllBlogsPage() {
             Stay updated with our insights, strategies, and innovations.
           </p>
 
+
+          {/* Blog Cards */}
           <div className="row g-4">
             {blogPosts.map((blog, idx) => (
               <div key={blog.slug} className="col-lg-4 col-md-6 d-flex">
@@ -34,14 +36,14 @@ export default function AllBlogsPage() {
                   <div className="blog-content">
                     <h2 className="h5 fw-semibold">
                       <Link
-                        href={`/blogs/${blog.slug}`}
-                        style={{fontWeight: "bold"}}
-                        className="text-dark text-decoration-none hoverunderline"
+                        href={`/blogs/${blog.slug}/`}
+                        style={{ fontWeight: "bold" }}
+                        className="hoverunderline"
                       >
                         {blog.title}
                       </Link>
                     </h2>
-                    <p className="text-muted">
+                    <p className="text-white">
                       {blog.excerpt?.slice(0, 100)}...
                     </p>
                     <span className="read-more">Read More →</span>
@@ -51,6 +53,23 @@ export default function AllBlogsPage() {
             ))}
           </div>
         </div>
+          {/* 🔗 BlogAdda Badge */}
+          <div className="text-center mb-5">
+            <a
+              href="http://www.blogadda.com"
+              title="Visit BlogAdda.com to discover Indian blogs"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://www.blogadda.com/images/blogadda.png"
+                width="120"
+                height="25"
+                alt="Visit BlogAdda.com to discover Indian blogs"
+              />
+            </a>
+            <h6 style={{marginTop: "10px"}}>Proud to Be a Part of BlogAdda Community</h6>
+          </div>
       </section>
       <Footer />
     </>

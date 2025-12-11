@@ -1,0 +1,167 @@
+/* Section wrapper */
+.recognition-section {
+  position: relative;
+  padding: 80px 20px;
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(255, 215, 0, 0.06), transparent),
+              radial-gradient(900px 500px at 90% 20%, rgba(93, 93, 93, 0.12), transparent),
+              linear-gradient(180deg, #0a0a0a, #0e0e0e 40%, #0a0a0a);
+  color: #fff;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Animated grid background */
+.recognition-section::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background:
+    linear-gradient(0deg, transparent 24%, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.06) 26%, transparent 27%, transparent 74%, rgba(255,255,255,0.06) 75%, rgba(255,255,255,0.06) 76%, transparent 77%),
+    linear-gradient(90deg, transparent 24%, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.06) 26%, transparent 27%, transparent 74%, rgba(255,255,255,0.06) 75%, rgba(255,255,255,0.06) 76%, transparent 77%);
+  background-size: 40px 40px;
+  opacity: 0.12;
+  transform: translateZ(0);
+  animation: subtleGrid 20s linear infinite;
+  z-index: 0;
+}
+@keyframes subtleGrid {
+  0% { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-40px,-40px,0); }
+}
+
+.recognition-container {
+  max-width: 1120px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Headers */
+.recognition-title {
+  text-align: center;
+  font-size: clamp(1.8rem, 1.2rem + 2.5vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #fff, #ffd369 50%, #fff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.recognition-subtitle {
+  text-align: center;
+  color: #cfcfcf;
+  margin: 0 auto 28px;
+  max-width: 720px;
+}
+
+/* BlogAdda tagline chip */
+.recognition-tagline {
+  width: fit-content;
+  margin: 0 auto 26px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 211, 105, 0.16), rgba(255, 211, 105, 0.06));
+  border: 1px solid rgba(255, 211, 105, 0.35);
+  color: #ffe7a0;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 12px rgba(255, 211, 105, 0.15), 0 8px 26px rgba(0,0,0,0.35);
+}
+.recognition-tagline .highlight {
+  color: #fff;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(255, 211, 105, 0.65);
+}
+
+/* Marquee container */
+.recognition-marquee {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* Track for infinite scroll */
+.recognition-track {
+  display: flex;
+  gap: 18px;
+  will-change: transform;
+  animation: marquee 28s linear infinite;
+}
+.recognition-track:hover {
+  animation-play-state: paused; /* pause on hover */
+}
+/* @keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+} */
+
+/* Cards */
+.recognition-card {
+  position: relative;
+  min-width: 100px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    0 10px 24px rgba(255, 215, 0, 0.08),
+    0 2px 12px rgba(0,0,0,0.35);
+  backdrop-filter: blur(6px);
+  text-align: center;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transform-style: preserve-3d;
+}
+.recognition-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(from 180deg at 50% 50%, rgba(255, 211, 105, 0.0), rgba(255, 211, 105, 0.25), rgba(255, 211, 105, 0.0) 70%);
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.recognition-card:hover {
+  transform: translateY(-4px) rotateX(0.6deg) rotateY(-0.6deg);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    0 16px 36px rgba(255, 215, 0, 0.18),
+    0 6px 18px rgba(0,0,0,0.45);
+  border-color: rgba(255,255,255,0.12);
+}
+.recognition-card:hover::after {
+  opacity: 1;
+}
+
+/* Logo wrapper */
+.recognition-logo {
+  display: grid;
+  place-items: center;
+  height: 62px;
+  margin-bottom: 10px;
+}
+.recognition-logo img {
+  max-height: 64px;
+  max-width: 170px;
+  object-fit: contain;
+  filter: brightness(1) contrast(1.05);
+}
+
+/* Note text */
+.recognition-note {
+  font-size: 0.92rem;
+  word-wrap:break-word;
+  color: #dbdbdb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .recognition-section { padding: 64px 16px; }
+  .recognition-track { gap: 14px; }
+  .recognition-card { min-width: 200px; }
+}
