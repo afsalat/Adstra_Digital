@@ -33,6 +33,10 @@ function NavBar() {
     setIsMenuOpen((prev) => !prev);
   };
 
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
+
   const navLinks = [
     ["Home", "/"],
     ["About", "/about/"],
@@ -78,6 +82,7 @@ function NavBar() {
                 <Link
                   href={path}
                   className={`nav-link ${activePath === path ? "active" : ""}`}
+                  onClick={closeMenu}
                 >
                   {label}
                 </Link>

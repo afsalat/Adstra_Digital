@@ -11,6 +11,30 @@ import { useRouter } from "next/navigation";
 
 export const blogPosts = [
   {
+    "title": "eCommerce App Development: Pricing, Features & Budget Planning",
+    "slug": "ecommerce-app-development-pricing-features-budget",
+    "excerpt": "Find eCommerce app development costs, essential features, and smart budget planning. Build high-quality apps with Adstra Digital for scalable business growth.",
+    "imageUrl": "https://adstradigital.com/media/blog_images/ecommerce-app-developments.png"
+  },
+  {
+    "title": "2026’s Top AI-Driven Digital Marketing Trends",
+    "slug": "ai-driven-digital-marketing-trends-2026",
+    "excerpt": "Discover the top AI-driven digital marketing trends for 2026. From hyper-personalization to predictive analytics, learn how AI is revolutionizing marketing in Kerala and beyond.",
+    "imageUrl": "https://adstradigital.com/media/blog_images/ai_marketing_trends_2026.png"
+  },
+  {
+    "title": "Hybrid vs Native Apps: Which Is the Smarter Choice for Modern Businesses?",
+    "slug": "hybrid-vs-native-apps-modern-businesses",
+    "excerpt": "Hybrid vs native apps explained for modern businesses—compare cost, performance, scalability, and choose the right app strategy for growth.",
+    "imageUrl": "https://adstradigital.com/media/blog_images/hybrid-vs-native-apps.png"
+  },
+  {
+    "title": "Perplexity SEO Guide: How to Get AI Search Engines to Feature Your Website",
+    "slug": "perplexity-seo-guide-ai-search-engines",
+    "excerpt": "Optimize your website for Perplexity and AI search engines with expert tips on structure, schema, authority, and content strategy to get featured in AI-generated answers.",
+    "imageUrl": "https://adstradigital.com/media/blog_images/perplexity-seo-guide.png"
+  },
+  {
     "title": "10 Reasons Flutter Is the Future of Mobile App Development",
     "slug": "10-reasons-flutter-future-mobile-app-development",
     "excerpt": "Explore why Flutter is revolutionizing mobile app development with cross-platform capabilities, hot reload, cost efficiency, and native-like performance for Android and iOS.",
@@ -185,8 +209,10 @@ const Blog = () => {
                     <Image
                       src={post.imageUrl}
                       alt={post.title}
-                      layout="fill"
-                      objectFit="cover"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="blog-image"
+                      priority={index === 0}
                     />
                   </div>
                   <div className="blog-card__content">

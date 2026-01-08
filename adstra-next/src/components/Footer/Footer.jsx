@@ -81,7 +81,9 @@ const Footer = () => {
             <h5 className="fw-bold mb-3">Resources</h5>
             <ul className="list-unstyled footer__nav">
               <li><a href="/sitemap/">Sitemap</a></li>
-              <li><a href="/policy/">Privacy Policy</a></li>
+              <li><a href="/privacypolicy/">Privacy Policy</a></li>
+              <li><a href="/TermsNconditions/">Terms & Conditions</a></li>
+              <li><a href="/refundpolicy/">Refund Policy</a></li>
             </ul>
           </div>
 

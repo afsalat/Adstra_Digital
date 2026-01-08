@@ -16,8 +16,9 @@ export async function generateStaticParams() {
   ];
 }
 
-export function generateMetadata({ params }) {
-  const label = params?.label?.toLowerCase();
+export async function generateMetadata({ params }) {
+  const { label: rawLabel } = await params;
+  const label = rawLabel?.toLowerCase();
   const service = serviceSections.find((s) => s.slug === label);
 
   if (!label || label === "all") {
@@ -43,15 +44,16 @@ export function generateMetadata({ params }) {
   };
 }
 
-export default function ServicePage({ params }) {
-  const label = params.label?.toLowerCase();
+export default async function ServicePage({ params }) {
+  const { label: rawLabel } = await params;
+  const label = rawLabel?.toLowerCase();
   const service = serviceSections.find((s) => s.slug === label);
   const isAll = !label || label === "all";
 
   if (!isAll && !service) return notFound();
 
   return (
-    <div style={{backgroundColor: "black"}}>
+    <div style={{ backgroundColor: "black" }}>
       <NavBar />
 
       {/* ✅ Structured Schema for SEO */}

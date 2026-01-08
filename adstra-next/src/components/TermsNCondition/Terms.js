@@ -1,32 +1,24 @@
 import './Terms.css';
+
 export const metadata = {
-  title: 'Terms & Conditions - adinvoice.in',
-  description: 'Please read these terms carefully before using our platform.',
+  title: 'Terms & Conditions - Adstra Digital',
+  description: 'Read our complete Terms and Conditions for using the Adstra Digital platform.',
 };
 
 export default function TermsAndConditions() {
-  const currentYear = new Date().getFullYear();
-
   return (
     <div className="terms-page">
-      
-      {/* Header */}
       <header className="terms-header">
         <div className="header-container">
-          <div className="logo">
-            adinvoice.in
-          </div>
+          <div className="logo">Adstra Digital</div>
           <nav>
             <a href="/" className="nav-link">Home</a>
           </nav>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="main-content">
         <div className="content-wrapper">
-          
-          {/* Page Title */}
           <div className="page-title-section">
             <h1 className="main-title">Terms & Conditions</h1>
             <p className="sub-title">
@@ -34,146 +26,203 @@ export default function TermsAndConditions() {
             </p>
           </div>
 
-          {/* White Card Container */}
           <div className="terms-card">
-            
-            {/* Section 1 */}
             <section>
-              <h2 className="section-heading">
-                <span className="number-badge">1</span>
-                Acceptance of Terms
-              </h2>
-              <p className="section-text">
-                By accessing or using <strong>adinvoice.in</strong>, you agree to
-                comply with these Terms & Conditions. If you do not agree, you
-                must discontinue use of the platform immediately.
+              <p className="intro-text">
+                This document is an electronic record in terms of Information Technology Act, 2000 and rules
+                there under as applicable and the amended provisions pertaining to electronic records in various
+                statutes as amended by the Information Technology Act, 2000. This electronic record is generated
+                by a computer system and does not require any physical or digital signatures.
+              </p>
+              <p className="intro-text">
+                This document is published in accordance with the provisions of Rule 3 (1) of the Information
+                Technology (Intermediaries guidelines) Rules, 2011 that require publishing the rules and
+                regulations, privacy policy and Terms of Use for access or usage of domain name
+                <strong> https://adstradigital.com/ </strong> ('Website'), including the related mobile site and mobile application
+                (hereinafter referred to as 'Platform').
+              </p>
+              <p className="intro-text">
+                The Platform is owned by <strong>ADSTRA DIGITAL</strong>, a company incorporated under the Companies
+                Act, 1956 with its registered office at Adstra Digital Sulthan Bathery Batheri Mysore Road,
+                Sulthan Bathery, India (hereinafter referred to as 'Platform Owner', 'we', 'us', 'our').
               </p>
             </section>
 
-            {/* Section 2 */}
             <section>
-              <h2 className="section-heading">
-                <span className="number-badge">2</span>
-                Services Provided
-              </h2>
+              <h2 className="section-heading">Overview</h2>
               <p className="section-text">
-                adinvoice.in offers online invoicing tools to create, manage, and
-                share invoices digitally. The platform may include features such
-                as client management, payment tracking, and reporting.
+                Your use of the Platform and services and tools are governed by the following terms and
+                conditions ("Terms of Use") as applicable to the Platform including the applicable policies which
+                are incorporated herein by way of reference. If You transact on the Platform, You shall be subject
+                to the policies that are applicable to the Platform for such transaction.
+              </p>
+              <p className="section-text">
+                By mere use of the Platform, You shall be contracting with the Platform Owner and these terms and conditions including the
+                policies constitute Your binding obligations with Platform Owner. These Terms of Use relate to
+                your use of our website, goods (as applicable) or services (as applicable) (collectively, 'Services').
+              </p>
+              <p className="section-text">
+                Any terms and conditions proposed by You which are in addition to or which conflict with these
+                Terms of Use are expressly rejected by the Platform Owner and shall be of no force or effect.
+              </p>
+              <p className="section-text">
+                <strong>These Terms of Use can be modified at any time without assigning any reason. It is your
+                responsibility to periodically review these Terms of Use to stay informed of updates.</strong>
               </p>
             </section>
 
-            {/* Section 3 */}
             <section>
-              <h2 className="section-heading">
-                <span className="number-badge">3</span>
-                User Responsibilities
-              </h2>
-              <ul className="section-list">
-                <li>You are responsible for the accuracy of all information entered into invoices.</li>
-                <li>You agree not to use the platform for fraudulent, illegal, or unauthorized purposes.</li>
-                <li>You must maintain the confidentiality of your account credentials.</li>
-              </ul>
+              <h2 className="section-heading">Definition of User</h2>
+              <p className="section-text">
+                For the purpose of these Terms of Use, wherever the context so requires 'you', 'your' or 'user' shall
+                mean any natural or legal person who has agreed to become a user/buyer on the Platform.
+              </p>
             </section>
 
-            {/* Section 4 */}
             <section>
-              <h2 className="section-heading">
-                <span className="number-badge">4</span>
-                Data & Privacy
-              </h2>
-              <ul className="section-list">
-                <li>All data entered into adinvoice.in remains your responsibility.</li>
-                <li>We implement reasonable security measures to protect your information, but we cannot guarantee absolute protection against unauthorized access.</li>
-                <li>Usage of the platform is subject to our Privacy Policy.</li>
-              </ul>
+              <h2 className="section-heading">Agreement to Terms</h2>
+              <p className="section-text emphasis">
+                ACCESSING, BROWSING OR OTHERWISE USING THE PLATFORM INDICATES YOUR
+                AGREEMENT TO ALL THE TERMS AND CONDITIONS UNDER THESE TERMS OF USE,
+                SO PLEASE READ THE TERMS OF USE CAREFULLY BEFORE PROCEEDING.
+              </p>
             </section>
 
-            {/* Section 5 */}
             <section>
-              <h2 className="section-heading">
-                <span className="number-badge">5</span>
-                Payments & Fees
-              </h2>
-              <ul className="section-list">
-                <li>Certain features may be offered as paid services.</li>
-                <li>Fees, if applicable, will be communicated clearly before purchase.</li>
-                <li>Non-payment may result in suspension or termination of access.</li>
-              </ul>
-            </section>
+              <h2 className="section-heading">Terms of Use</h2>
+              <div className="terms-list">
+                <div className="list-item">
+                  <p><strong>1. Registration and Information</strong></p>
+                  <p className="section-text">
+                    To access and use the Services, you agree to provide true, accurate and complete information
+                    to us during and after registration, and you shall be responsible for all acts done through the
+                    use of your registered account on the Platform.
+                  </p>
+                </div>
 
-            {/* Section 6 */}
-            <section>
-              <h2 className="section-heading">
-                <span className="number-badge">6</span>
-                Intellectual Property
-              </h2>
-              <ul className="section-list">
-                <li>All content, design, and technology of adinvoice.in are owned by <strong>Adstra Digital</strong>.</li>
-                <li>Users are granted a limited, non-transferable license to use the platform for invoicing purposes only.</li>
-              </ul>
-            </section>
+                <div className="list-item">
+                  <p><strong>2. No Warranty</strong></p>
+                  <p className="section-text">
+                    Neither we nor any third parties provide any warranty or guarantee as to the accuracy,
+                    timeliness, performance, completeness or suitability of the information and materials offered
+                    on this website or through the Services, for any specific purpose. You acknowledge that such
+                    information and materials may contain inaccuracies or errors and we expressly exclude
+                    liability for any such inaccuracies or errors to the fullest extent permitted by law.
+                  </p>
+                </div>
 
-            {/* Section 7 */}
-            <section>
-              <h2 className="section-heading">
-                <span className="number-badge">7</span>
-                Limitation of Liability
-              </h2>
-              <ul className="section-list">
-                <li>adinvoice.in is provided “as is” without warranties of any kind.</li>
-                <li>Adstra Digital shall not be liable for any indirect, incidental, or consequential damages arising from use of the platform.</li>
-              </ul>
-            </section>
+                <div className="list-item">
+                  <p><strong>3. Use at Your Own Risk</strong></p>
+                  <p className="section-text">
+                    Your use of our Services and the Platform is solely and entirely at your own risk and
+                    discretion for which we shall not be liable to you in any manner. You are required to
+                    independently assess and ensure that the Services meet your requirements.
+                  </p>
+                </div>
 
-            {/* Section 8 */}
-            <section>
-              <h2 className="section-heading">
-                <span className="number-badge">8</span>
-                Termination
-              </h2>
-              <ul className="section-list">
-                <li>We reserve the right to suspend or terminate accounts that violate these Terms & Conditions.</li>
-                <li>Upon termination, access to invoicing data may be restricted.</li>
-              </ul>
-            </section>
+                <div className="list-item">
+                  <p><strong>4. Intellectual Property Rights</strong></p>
+                  <p className="section-text">
+                    The contents of the Platform and the Services are proprietary to us and are licensed to us.
+                    You will not have any authority to claim any intellectual property rights, title, or interest in
+                    its contents. The contents includes and is not limited to the design, layout, look and graphics.
+                  </p>
+                </div>
 
-            {/* Section 9 */}
-            <section>
-              <h2 className="section-heading">
-                <span className="number-badge">9</span>
-                Amendments
-              </h2>
-              <ul className="section-list">
-                <li>These Terms & Conditions may be updated periodically.</li>
-                <li>Continued use of the platform after changes indicates acceptance of the revised terms.</li>
-              </ul>
-            </section>
+                <div className="list-item">
+                  <p><strong>5. Unauthorized Use</strong></p>
+                  <p className="section-text">
+                    You acknowledge that unauthorized use of the Platform and/or the Services may lead to
+                    action against you as per these Terms of Use and/or applicable laws.
+                  </p>
+                </div>
 
-            {/* Section 10 - Special Box */}
-            <section className="highlight-box">
-              <h2 className="section-heading">
-                <span className="number-badge dark">10</span>
-                Governing Law
-              </h2>
-              <ul className="section-list">
-                <li>These Terms & Conditions are governed by the laws of <strong>India</strong>.</li>
-                <li>Any disputes shall be subject to the jurisdiction of courts in <strong>Kozhikode, Kerala</strong>.</li>
-              </ul>
-            </section>
-          </div>
+                <div className="list-item">
+                  <p><strong>6. Payment Obligations</strong></p>
+                  <p className="section-text">
+                    You agree to pay us the charges associated with availing the Services.
+                  </p>
+                </div>
 
-          {/* Contact Note */}
-          <div className="contact-footer">
-            <p>If you have any questions regarding these terms, please contact us.</p>
+                <div className="list-item">
+                  <p><strong>7. Lawful Use Only</strong></p>
+                  <p className="section-text">
+                    You agree not to use the Platform and/or Services for any purpose that is unlawful, illegal or
+                    forbidden by these Terms, or Indian or local laws that might apply to you.
+                  </p>
+                </div>
+
+                <div className="list-item">
+                  <p><strong>8. Third-Party Links and Websites</strong></p>
+                  <p className="section-text">
+                    You agree and acknowledge that website and the Services may contain links to other third
+                    party websites. On accessing these links, you will be governed by the terms of use, privacy
+                    policy and such other policies of such third party websites. These links are provided for your
+                    convenience to provide further information.
+                  </p>
+                </div>
+
+                <div className="list-item">
+                  <p><strong>9. Legally Binding Contract</strong></p>
+                  <p className="section-text">
+                    You understand that upon initiating a transaction for availing the Services you are entering
+                    into a legally binding and enforceable contract with the Platform Owner for the Services.
+                  </p>
+                </div>
+
+                <div className="list-item">
+                  <p><strong>10. Indemnification</strong></p>
+                  <p className="section-text">
+                    You shall indemnify and hold harmless Platform Owner, its affiliates, group companies (as
+                    applicable) and their respective officers, directors, agents, and employees, from any claim or
+                    demand, or actions including reasonable attorney's fees, made by any third party or penalty
+                    imposed due to or arising out of Your breach of this Terms of Use, privacy Policy and other
+                    Policies, or Your violation of any law, rules or regulations or the rights (including
+                    infringement of intellectual property rights) of a third party.
+                  </p>
+                </div>
+
+                <div className="list-item">
+                  <p><strong>11. Force Majeure</strong></p>
+                  <p className="section-text">
+                    Notwithstanding anything contained in these Terms of Use, the parties shall not be liable for
+                    any failure to perform an obligation under these Terms if performance is prevented or
+                    delayed by a force majeure event.
+                  </p>
+                </div>
+
+                <div className="list-item">
+                  <p><strong>12. Governing Law</strong></p>
+                  <p className="section-text">
+                    These Terms and any dispute or claim relating to it, or its enforceability, shall be governed
+                    by and construed in accordance with the laws of India.
+                  </p>
+                </div>
+
+                <div className="list-item">
+                  <p><strong>13. Jurisdiction</strong></p>
+                  <p className="section-text">
+                    All disputes arising out of or in connection with these Terms shall be subject to the exclusive
+                    jurisdiction of the courts in Sulthan Bathery and Kerala.
+                  </p>
+                </div>
+
+                <div className="list-item">
+                  <p><strong>14. Contact Information</strong></p>
+                  <p className="section-text">
+                    All concerns or communications relating to these Terms must be communicated to us using
+                    the contact information provided on this website.
+                  </p>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="site-footer">
         <div className="copyright-text">
-          &copy; {currentYear} Adstra Digital. All rights reserved.
+          &copy; 2025 Adstra Digital. All rights reserved.
         </div>
       </footer>
     </div>

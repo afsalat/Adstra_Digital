@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import "./TeamDetails.css";
-import { FaUserCircle } from "react-icons/fa";
+import { FaUserCircle, FaLinkedin, FaTwitter } from "react-icons/fa";
 
 const teamMembers = [
   {
@@ -41,20 +41,6 @@ const teamMembers = [
       "Sree specializes in branding, UI/UX design, and motion graphics. With a sharp eye for aesthetics and brand identity, she creates designs that are not only visually appealing but also strategically aligned with business goals. Her expertise extends to 3D modeling and ad creatives, ensuring every project communicates with impact and clarity.",
   },
   {
-    name: "Muhammed Jasil",
-    role: "Video | Design Division",
-    image: null,
-    content:
-      "Muhammed Jasil is dedicated to building robust and scalable digital solutions. Skilled in full-stack development, API integration, and performance optimization, he ensures that every project runs smoothly from backend logic to frontend experience. His expertise in modern frameworks and problem-solving mindset makes him a key force in driving Adstra Digital’s technology forward.",
-  },
-  {
-    name: "Rafiya",
-    role: "Video | Design Division",
-    image: null,
-    content:
-      "Rafiya is passionate about turning concepts into compelling visual narratives. Skilled in video editing, 3D modeling, and high-quality ad production, he brings stories to life through dynamic visuals. His creativity in motion graphics and promotional content ensures that every video engages, inspires, and drives results.",
-  },
-  {
     name: "Afsal",
     role: "IT Division",
     image: "https://adstradigital.com/media/team/afsal.jpeg",
@@ -64,9 +50,9 @@ const teamMembers = [
   {
     name: "Muhammed Mishal",
     role: "IT Division",
-    image: "https://adstradigital.com/media/team/mishal.jpeg",
+    image: "https://adstradigital.com/media/team/Mishal.png ",
     content:
-      "Mishal is an intern developer who is learning and contributing to web and application development projects. He is gaining hands-on experience while supporting the team in delivering quality digital solutions.",
+      "Mishal is an python developer who is learning and contributing to web and application development projects. He is gaining hands-on experience while supporting the team in delivering quality digital solutions.",
   },
   {
     name: "Manoj",
@@ -81,6 +67,34 @@ const teamMembers = [
     image: null,
     content:
       "Neha brings structure and precision to every campaign. From timelines to execution, he ensures projects run smoothly and deliver measurable success for our clients.",
+  },
+  {
+    name: "Jagath",
+    role: "IT Division",
+    image: "https://adstradigital.com/media/team/Jagath.png",
+    content:
+      "Jagath is a skilled Flutter developer specializing in cross-platform mobile application development. With expertise in creating responsive and user-friendly mobile solutions, he delivers high-performance applications that enhance user experience and drive business growth.",
+  },
+  {
+    name: "Jidu",
+    role: "Video | Design Division",
+    image: "https://adstradigital.com/media/team/Jidu.png",
+    content:
+      "Jidu is a talented motion graphic designer who brings animations and visual effects to life. With a keen eye for detail and creative storytelling, he creates engaging motion graphics that captivate audiences and enhance brand messaging.",
+  },
+  {
+    name: "Rafia",
+    role: "Video | Design Division",
+    image: "https://adstradigital.com/media/team/Rafia.png",
+    content:
+      "Rafia is a creative graphic designer passionate about crafting visually stunning designs. Skilled in UI/UX design, branding, and digital assets, he transforms ideas into compelling visual solutions that elevate brand identity and user engagement.",
+  },
+  {
+    name: "Kiran",
+    role: "IT Division",
+    image: "https://adstradigital.com/media/team/Kiran.png",
+    content:
+      "Kiran is a proficient Python developer with expertise in backend development and scripting. He specializes in building robust, scalable solutions and automation scripts that optimize business processes and enhance system performance.",
   },
 ];
 
@@ -118,56 +132,48 @@ const TeamDetails = () => {
 
   return (
     <section className="team-section py-5 px-3 px-md-5">
-      <h2 className="text-center text-white mb-5">Meet Our Team</h2>
+      <div className="team-header mb-5">
+        <h2 className="team-title text-center text-white mb-2">Meet Our Team</h2>
+        <p className="team-subtitle text-center">Talented professionals driving innovation and excellence</p>
+      </div>
 
-      <div className="row g-5">
+      <div className="team-container">
         {groupedMembers.map(([role, members], idx) => (
-          <div key={idx} className="col-md-6 col-sm-12">
-            <div className="team-division h-100">
-              <h3 className="division-title text-center">{role}</h3>
+          <div key={idx} className="team-division-wrapper mb-5">
+            <div className="division-header">
+              <h3 className="division-title">{role}</h3>
+              <div className="title-underline"></div>
+            </div>
 
-              <div className="team-grid">
-                {members.map((member, index) => (
-                  <div key={index} className="col-md-4 col-sm-6 mb-4">
-                    <article className="team-card text-center p-4 shadow rounded h-100 bg-white border-0">
-                      {/* Profile Image */}
-                      <figure className="team-figure mb-3 position-relative">
-                        {member.image ? (
-                          <img
-                            src={member.image}
-                            alt={member.name}
-                            className="teams-image shadow-sm"
-                            style={{
-                              width: "120px",
-                              height: "160px",
-                            }}
-                          />
-                        ) : (
-                          <div
-                            className="teams-image icon-wrapper d-flex justify-content-center align-items-center border-primary shadow-sm"
-                            style={{
-                              width: "120px",
-                              height: "160px",
-                              background: "#f8f9fa",
-                              marginLeft: "40px",
-                            }}
-                          >
-                            <FaUserCircle
-                              className="teams-icon text-muted"
-                              size={60}
-                            />
-                          </div>
-                        )}
-                      </figure>
+            <div className="team-grid">
+              {members.map((member, index) => (
+                <div key={index} className="team-card-wrapper">
+                  <article className="team-card">
+                    {/* Image Container */}
+                    <div className="image-container">
+                      {member.image ? (
+                        <img
+                          src={member.image}
+                          alt={member.name}
+                          className="team-image"
+                        />
+                      ) : (
+                        <div className="placeholder-avatar">
+                          <FaUserCircle size={80} />
+                        </div>
+                      )}
+                    </div>
 
-                      {/* Member Info */}
-                      <h6 className="text-primary fw-bold">{member.role}</h6>
-                      <div className="separator my-2 mx-auto"></div>
+                    {/* Content Container */}
+                    <div className="card-content">
+                      <h4 className="member-name">{member.name}</h4>
+                      <p className="member-role">{role}</p>
+                      <div className="separator"></div>
                       <ReadMore text={member.content} limit={90} />
-                    </article>
-                  </div>
-                ))}
-              </div>
+                    </div>
+                  </article>
+                </div>
+              ))}
             </div>
           </div>
         ))}

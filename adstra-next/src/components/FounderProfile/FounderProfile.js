@@ -7,10 +7,10 @@ function FounderProfile() {
   return (
     <div className="founder-profile text-center">
       <Image
-        src="/assets/founder.jpeg"
+        src="/assets/founder.png"
         alt="Founder"
-        width={1000}
-        height={700}
+        width={1100}
+        height={600}
         className="founder-img"
         priority
       />

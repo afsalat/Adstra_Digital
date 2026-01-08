@@ -190,6 +190,38 @@ export default function SiteMap() {
             <li>
               <Link
                 className="dropdown-item"
+                href="/blogs/ecommerce-app-development-pricing-features-budget/"
+              >
+                eCommerce App Development: Pricing, Features & Budget Planning
+              </Link>
+            </li>
+            <li>
+              <Link
+                className="dropdown-item"
+                href="/blogs/ai-driven-digital-marketing-trends-2026/"
+              >
+                2026’s Top AI-Driven Digital Marketing Trends
+              </Link>
+            </li>
+            <li>
+              <Link
+                className="dropdown-item"
+                href="/blogs/hybrid-vs-native-apps-modern-businesses/"
+              >
+                Hybrid vs Native Apps: Which Is the Smarter Choice for Modern Businesses?
+              </Link>
+            </li>
+            <li>
+              <Link
+                className="dropdown-item"
+                href="/blogs/perplexity-seo-guide-ai-search-engines/"
+              >
+                Perplexity SEO Guide: How to Get AI Search Engines to Feature Your Website
+              </Link>
+            </li>
+            <li>
+              <Link
+                className="dropdown-item"
                 href="/blogs/ai-seo-strategy-to-rank-in-ai-powered-search-results/"
               >
                 AI SEO Strategy: How to Rank in AI-Powered Search Results

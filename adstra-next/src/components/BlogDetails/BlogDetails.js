@@ -112,6 +112,22 @@ const keywordLinks = {
   "Audience Segmentation": "/blogs/social-media-conversion-strategy/",
   "Customer Journey Mapping": "/blogs/social-media-conversion-strategy/",
   "Calls to Action (CTAs)": "/blogs/social-media-conversion-strategy/",
+
+  // eCommerce App Development
+  "eCommerce app": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Mobile shopping": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Payment gateway": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Shopping app": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Budget planning": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "App features": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Order tracking": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Product catalog": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Wishlist": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Cart": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Push notifications": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Admin panel": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "Multi-vendor": "/blogs/ecommerce-app-development-pricing-features-budget/",
+  "App maintenance": "/blogs/ecommerce-app-development-pricing-features-budget/",
 };
 
 const createInterlinker = () => {
@@ -138,12 +154,29 @@ const createInterlinker = () => {
 };
 
 const BlogDetail = ({ blog }) => {
+  const sidebarRef = React.useRef(null);
+
   useEffect(() => {
     AOS.init({ duration: 1000 });
     window.scrollTo(0, 0);
   }, []);
 
   const getImageUrl = (img) => img || "/assets/default-blog.jpg";
+
+  const scrollSidebar = (direction) => {
+    if (sidebarRef.current) {
+      const scrollAmount = 300;
+      const currentScroll = sidebarRef.current.scrollLeft;
+      const targetScroll =
+        direction === "left"
+          ? currentScroll - scrollAmount
+          : currentScroll + scrollAmount;
+      sidebarRef.current.scrollTo({
+        left: targetScroll,
+        behavior: "smooth",
+      });
+    }
+  };
 
   const suggestions = blogPosts.filter((b) => b.slug !== blog.slug);
 
@@ -156,7 +189,7 @@ const BlogDetail = ({ blog }) => {
   const interlinkText = createInterlinker();
 
   const formatSection = (para, index, allParas) => {
-    // Headings
+    // Headings - Only specific section names
     if (
       /^Introduction$/i.test(para) ||
       /^Consulion$/i.test(para) ||
@@ -171,7 +204,25 @@ const BlogDetail = ({ blog }) => {
       );
     }
 
-    // Numbered points
+    // Section titles with "?" stay as paragraphs with styling (fun emphasis)
+    if (para.includes("?") && para.length < 80) {
+      return (
+        <p key={index} className="blog-section-title" style={{ fontSize: "1.2em", fontWeight: "600", color: "#FFD700", marginTop: "1.5em", marginBottom: "0.8em" }}>
+          {interlinkText(para)}
+        </p>
+      );
+    }
+
+    // Numbered points (section headers like "A. Type of App")
+    if (/^[A-Z]\.\s+/.test(para)) {
+      return (
+        <h3 className="blog-subheading" style={{ fontSize: "1.1em", fontWeight: "700", color: "#FFD700", marginTop: "1.2em" }} key={index}>
+          {interlinkText(para)}
+        </h3>
+      );
+    }
+
+    // Numbered points (numbered lists like "1. How much...")
     if (/^\d+\.\s+/.test(para)) {
       return (
         <h3 className="blog-subheading" key={index}>
@@ -180,14 +231,17 @@ const BlogDetail = ({ blog }) => {
       );
     }
 
-    // Bullet points
-    if (/^[-•*]\s+/.test(para)) {
+    // Bullet points with fun emoji support
+    if (/^[-•*✔]\s+/.test(para)) {
       const items = [];
       for (let i = index; i < allParas.length; i++) {
         const next = allParas[i];
-        if (next && /^[-•*]\s+/.test(next)) {
+        if (next && /^[-•*✔]\s+/.test(next)) {
+          const cleanedText = next.replace(/^[-•*✔]\s+/, "");
           items.push(
-            <li key={i}>{interlinkText(next.replace(/^[-•*]\s+/, ""))}</li>
+            <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "#ffffff" }}>
+              {interlinkText(cleanedText)}
+            </li>
           );
           allParas[i] = null;
         } else {
@@ -195,14 +249,14 @@ const BlogDetail = ({ blog }) => {
         }
       }
       return (
-        <ul key={`ul-${index}`} className="blog-bullet-list">
+        <ul key={`ul-${index}`} className="blog-bullet-list" style={{ marginLeft: "1.5em", marginBottom: "1em" }}>
           {items}
         </ul>
       );
     }
 
-    // Paragraph
-    return <p key={index}>{interlinkText(para)}</p>;
+    // Paragraph with better spacing
+    return <p key={index} style={{ lineHeight: "1.8", marginBottom: "1em", color: "#ffffff" }}>{interlinkText(para)}</p>;
   };
 
   return (
@@ -210,8 +264,26 @@ const BlogDetail = ({ blog }) => {
       <div className="blog-detail-layout">
         {/* Sidebar */}
         <aside className="blog-sidebar" data-aos="fade-right">
-          <h3>Suggested Reads</h3>
-          <div className="sidebar-card-list">
+          <div className="sidebar-header">
+            <h3>Suggested Reads</h3>
+            <div className="sidebar-nav-buttons">
+              <button
+                className="sidebar-nav-btn left-btn"
+                onClick={() => scrollSidebar("left")}
+                aria-label="Scroll left"
+              >
+                ‹
+              </button>
+              <button
+                className="sidebar-nav-btn right-btn"
+                onClick={() => scrollSidebar("right")}
+                aria-label="Scroll right"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+          <div className="sidebar-card-list" ref={sidebarRef}>
             {suggestions.map((sug) => (
               <Link
                 key={sug.slug}

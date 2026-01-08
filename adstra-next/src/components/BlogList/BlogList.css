@@ -1,4 +1,4 @@
-.blogs-section {
+.bloglist-section {
   background: linear-gradient(135deg, #000000, #111111, #1a1a1a);
   min-height: 100vh;
   padding-top: 80px;
@@ -7,7 +7,7 @@
 }
 
 /* Blog Card */
-.blog-card {
+.bloglist-card {
   background: #0f0f0f;
   border: 1px solid rgba(255, 215, 0, 0.4);
   border-radius: 15px;
@@ -20,14 +20,14 @@
   height: 100%;
 }
 
-.blog-card:hover {
+.bloglist-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 12px 35px rgba(255, 215, 0, 0.3);
   border-color: #FFD700;
 }
 
 /* Blog Image */
-.blog-image {
+.bloglist-image {
   width: 100%;
   height: 200px;
   object-fit: cover;
@@ -36,14 +36,14 @@
 }
 
 /* Blog Content */
-.blog-content {
+.bloglist-content {
   padding: 1.3rem;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 
-.blog-content h2 {
+.bloglist-content h2 {
   color: #FFD700;
   font-weight: 700;
   font-size: 1.15rem;
@@ -51,11 +51,11 @@
   transition: color 0.3s ease;
 }
 
-.blog-content h2:hover {
+.bloglist-content h2:hover {
   color: #FFD700;
 }
 
-.blog-content p {
+.bloglist-content p {
   flex-grow: 1;
   color: #d1d5db;
   margin-top: 8px;
@@ -65,7 +65,7 @@
 }
 
 /* Read More */
-.read-more {
+.bloglist-read-more {
   color: #FFD700;
   text-decoration: none;
   font-weight: 600;
@@ -74,53 +74,55 @@
   transition: color 0.3s ease, transform 0.2s;
 }
 
-.read-more:hover {
+.bloglist-read-more:hover {
   color: #fff;
   transform: translateX(3px);
 }
 
 /* Animations */
-@keyframes fade-up {
+@keyframes bloglist-fade-up {
   0% {
     opacity: 0;
     transform: translateY(30px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.animate-fade-up {
-  animation: fade-up 0.8s ease forwards;
+.bloglist-animate-fade-up {
+  animation: bloglist-fade-up 0.8s ease forwards;
 }
 
-.delay-1 {
+.bloglist-delay-1 {
   animation-delay: 0.2s;
 }
 
-@keyframes zoom-in {
+@keyframes bloglist-zoom-in {
   0% {
     transform: scale(0.95);
     opacity: 0;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
   }
 }
 
-.animate-zoom-in {
-  animation: zoom-in 0.6s ease forwards;
+.bloglist-animate-zoom-in {
+  animation: bloglist-zoom-in 0.6s ease forwards;
   opacity: 0;
 }
 
 /* Hover underline for titles */
-.hoverunderline {
+.bloglist-hoverunderline {
   color: #FFD700 !important;
 }
 
-.hoverunderline:hover {
+.bloglist-hoverunderline:hover {
   text-decoration: underline;
   color: #eae8dd !important;
 }

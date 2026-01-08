@@ -11,6 +11,7 @@ import Footer from "@/components/Footer/Footer";
 import WhatsAppFloatingButton from "@/components/WhatsappIcon/WhatsappIcon";
 import TrustedListings from "@/components/TrustedListings/TrustedListings";
 import TeamDetails from "@/components/TeamDetails/TeamDetails";
+import FounderProfile from "@/components/FounderProfile/FounderProfile";
 
 export const metadata = {
   title: "Best Digital Marketing Agency in Kerala | AdstraDigital",
@@ -35,6 +36,7 @@ export default function Home() {
       <Gallery />
       <Enquiry />
       <TrustedListings />
+      <FounderProfile />
       <TeamDetails />
       <Blog />
       <ContactUs />

@@ -11,11 +11,19 @@ import { useRouter } from "next/navigation";
 
 function About() {
   const [aboutData, setAboutData] = useState([]);
+  const [showOfferPopup, setShowOfferPopup] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
     fetchData();
+
+    // Show popup every 20 seconds
+    const popupInterval = setInterval(() => {
+      setShowOfferPopup(true);
+    }, 100000);
+
+    return () => clearInterval(popupInterval);
   }, []);
 
   const fetchData = async () => {
@@ -34,8 +42,28 @@ function About() {
 
   return (
     <>
+      {/* Offer Popup Modal */}
+      {showOfferPopup && (
+        <div className="offer-popup-overlay" onClick={() => setShowOfferPopup(false)}>
+          <div className="offer-popup-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="offer-popup-close"
+              onClick={() => setShowOfferPopup(false)}
+              aria-label="Close popup"
+            >
+              ✕
+            </button>
+            <img
+              src="/assets/free_seo.png"
+              alt="Free SEO Offer"
+              className="offer-popup-image"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Static Banner Image */}
-      <div className="row" style={{backgroundColor:"black"}}>
+      <div className="row" style={{ backgroundColor: "black" }}>
         <div className="col-12 text-center">
           <img
             src={banner.src}
@@ -50,7 +78,7 @@ function About() {
           />
         </div>
       </div>
-      <div id="about" className="container-fluid about-section"  style={{backgroundColor:"black"}}>
+      <div id="about" className="container-fluid about-section" style={{ backgroundColor: "black" }}>
         <div className="row align-items-center">
           <div
             className="col-md-6 mb-4 text-center video-container"

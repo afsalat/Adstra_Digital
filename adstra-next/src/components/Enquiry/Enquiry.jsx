@@ -82,6 +82,15 @@ function Enquiry() {
   return (
     <section id="enquiry" className="py-5 enquiry-section">
       <div className="container position-relative">
+        {/* Banner Image at Top */}
+        <div className="enquiry-banner-container mb-4">
+          <img
+            src="/assets/adinvoice_pricing.jpeg"
+            alt="Enquiry Banner"
+            className="enquiry-banner-img"
+          />
+        </div>
+
         <div className="card enquiry-card mx-auto">
           <div className="card-body p-4 p-md-5">
             <div className="text-center mb-4">
