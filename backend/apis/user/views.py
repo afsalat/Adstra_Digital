@@ -37,25 +37,30 @@ def adduser(request):
         if serializer.is_valid():
             serializer.save()
 
-            # Send the password to the user's email
+            # Send the password to the user's email in background
             email = data.get('email')
             if email:
-                try:
-                    send_mail(
-                        subject="Your Adstra Digital Account Credentials",
-                        message=(
-                            f"Hello {data.get('fullname')},\n\n"
-                            f"Your Wiseway account has been created.\n\n"
-                            f"Username: {data.get('username')}\n"
-                            f"Password: {generated_password}\n\n"
-                            f"Please change your password after first login."
-                        ),
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email],
-                        fail_silently=False,
-                    )
-                except Exception as mail_err:
-                    print(f"Email sending failed: {mail_err}")
+                def send_email_task():
+                    try:
+                        send_mail(
+                            subject="Your Adstra Digital Account Credentials",
+                            message=(
+                                f"Hello {data.get('fullname')},\n\n"
+                                f"Your Wiseway account has been created.\n\n"
+                                f"Username: {data.get('username')}\n"
+                                f"Password: {generated_password}\n\n"
+                                f"Please change your password after first login."
+                            ),
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            recipient_list=[email],
+                            fail_silently=False,
+                        )
+                    except Exception as mail_err:
+                        print(f"Email sending failed: {mail_err}")
+
+                import threading
+                email_thread = threading.Thread(target=send_email_task)
+                email_thread.start()
 
             return Response({
                 "message": "User created successfully",

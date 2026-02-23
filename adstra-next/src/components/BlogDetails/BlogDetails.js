@@ -99,7 +99,7 @@ const keywordLinks = {
   "Google Ads": "/service/google-ads",
   "Paid Advertising Services": "/service/paid-advertising/",
   "digital marketing": "/service/content-marketing/",
-  "marketing strategies": "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/", 
+  "marketing strategies": "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
 
   // NEW: Social Media Strategy to Boost Your Conversion Rate
   "Social Media Conversion": "/blogs/social-media-conversion-strategy/",
@@ -139,8 +139,12 @@ const createInterlinker = () => {
   const regex = new RegExp(`\\b(${keywords.join("|")})\\b`, "gi");
 
   return (text) => {
+    // 1. Handle Markdown Bold: **text** -> <strong>text</strong>
+    const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong style="color: inherit; font-weight: 700;">$1</strong>');
+
+    // 2. Handle Interlinking & Parse HTML
     return parse(
-      text.replace(regex, (match) => {
+      formattedText.replace(regex, (match) => {
         const link = keywordLinks[match];
         if (!link) return match;
 
@@ -180,10 +184,13 @@ const BlogDetail = ({ blog }) => {
 
   const suggestions = blogPosts.filter((b) => b.slug !== blog.slug);
 
-  const sections = blog.content
-    ?.trim()
-    .split(/\n\s*\n/)
-    .map((para) => para.trim())
+  const rawSections = blog.content?.trim().split(/\n\s*\n/) || [];
+  const sections = rawSections
+    .flatMap((section) => {
+      // Split by newline if followed by a list marker (including "1)" style)
+      // Lookahead matches: newline, then optional whitespace, then marker
+      return section.split(/\r?\n(?=\s*(?:[-•*✔]|\d+[\.)])\s)/).map((s) => s.trim());
+    })
     .filter(Boolean);
 
   const interlinkText = createInterlinker();
@@ -222,13 +229,95 @@ const BlogDetail = ({ blog }) => {
       );
     }
 
-    // Numbered points (numbered lists like "1. How much...")
-    if (/^\d+\.\s+/.test(para)) {
-      return (
-        <h3 className="blog-subheading" key={index}>
-          {interlinkText(para)}
-        </h3>
-      );
+    // Markdown Table Support
+    if (para.includes("|") && para.includes("---") && para.split("\n").length >= 3) {
+      const rows = para.trim().split("\n").map(row => row.trim()).filter(Boolean);
+      const tableRows = rows.map(row => {
+        // Remove outer pipes if present (e.g. | col | col |)
+        const content = row.replace(/^\||\|$/g, '');
+        return content.split("|").map(cell => cell.trim());
+      });
+
+      // Find separator row index (row containing ---)
+      const separatorIndex = tableRows.findIndex(row => row.some(cell => /^[-: ]+$/.test(cell)));
+
+      if (separatorIndex !== -1) {
+        const headerRow = tableRows[0]; // Assuming first row is header if separator exists
+        const bodyRows = tableRows.filter((_, idx) => idx !== separatorIndex && idx !== 0);
+
+        return (
+          <div key={index} className="blog-table-container" style={{ overflowX: "auto", marginBottom: "2em" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", color: "#ffffff", border: "1px solid #444" }}>
+              <thead>
+                <tr>
+                  {headerRow.map((cell, idx) => (
+                    <th key={`th-${idx}`} style={{ border: "1px solid #444", padding: "10px", backgroundColor: "#222", fontWeight: "700" }}>
+                      {interlinkText(cell)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bodyRows.map((row, rIdx) => (
+                  <tr key={`tr-${rIdx}`}>
+                    {row.map((cell, cIdx) => (
+                      <td key={`td-${rIdx}-${cIdx}`} style={{ border: "1px solid #444", padding: "10px" }}>
+                        {interlinkText(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+    }
+
+    // Numbered items: Decide if Header (H3) or List (<ol>)
+    if (/^\d+[\.)]\s+/.test(para)) {
+      // Check if the NEXT item also looks like a numbered item
+      // If it exists and matches pattern, we treat THIS and subsequent items as a LIST.
+      // Otherwise, we treat this single item as a SECTION HEADER (H3).
+
+      let isList = false;
+      if (index + 1 < allParas.length) {
+        const next = allParas[index + 1];
+        if (next && /^\d+[\.)]\s+/.test(next)) {
+          isList = true;
+        }
+      }
+
+      if (isList) {
+        const items = [];
+        for (let i = index; i < allParas.length; i++) {
+          const next = allParas[i];
+          if (next && /^\d+[\.)]\s+/.test(next)) {
+            // Strip the number marker for the LI, as OL provides it
+            const cleanedText = next.replace(/^\d+[\.)]\s+/, "");
+            items.push(
+              <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "#ffffff" }}>
+                {interlinkText(cleanedText)}
+              </li>
+            );
+            allParas[i] = null; // Mark as consumed
+          } else {
+            break;
+          }
+        }
+        return (
+          <ol key={`ol-${index}`} className="blog-numbered-list" style={{ marginLeft: "1.5em", marginBottom: "1em", color: "#ffffff" }}>
+            {items}
+          </ol>
+        );
+      } else {
+        // Treat as Header
+        return (
+          <h3 className="blog-subheading" key={index}>
+            {interlinkText(para)}
+          </h3>
+        );
+      }
     }
 
     // Bullet points with fun emoji support

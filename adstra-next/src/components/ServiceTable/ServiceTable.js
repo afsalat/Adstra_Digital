@@ -72,7 +72,7 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
   };
 
   const subtotal = useMemo(
-    () => services.reduce((sum, item) => sum + (item.amount || 0), 0),
+    () => services.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0),
     [services]
   );
   const gst = useMemo(() => subtotal * 0.18, [subtotal]);
@@ -82,9 +82,19 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
     if (lastInputRef.current) lastInputRef.current.focus();
   }, [services.length]);
 
+  // When services are cleared externally (e.g. New Proposal reset), untick all checkboxes
+  useEffect(() => {
+    if (services.length === 0) {
+      setSelectedService([]);
+    }
+  }, [services.length]);
+
   return (
     <div className="mb-4">
-      <h5 className="fw-bold text-secondary mb-3">💼 Services & Pricing</h5>
+      <h5 className="fw-bold text-secondary mb-3" style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+        Services &amp; Pricing
+      </h5>
 
       {/* Service selector */}
       <div className="mb-4">
@@ -156,6 +166,8 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
                   className="form-control"
                   value={item.quantity}
                   min={1}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => { if (e.target.value === "") handleItemChange(idx, "quantity", 1); }}
                   onChange={(e) =>
                     handleItemChange(idx, "quantity", e.target.value)
                   }
@@ -167,12 +179,14 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
                   className="form-control"
                   value={item.rate}
                   min={0}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => { if (e.target.value === "") handleItemChange(idx, "rate", 0); }}
                   onChange={(e) =>
                     handleItemChange(idx, "rate", e.target.value)
                   }
                 />
               </td>
-              <td>₹{item.amount?.toFixed(2) || "0.00"}</td>
+              <td>₹{parseFloat(item.amount || 0).toFixed(2)}</td>
               <td>
                 <button
                   className="btn btn-sm btn-danger"

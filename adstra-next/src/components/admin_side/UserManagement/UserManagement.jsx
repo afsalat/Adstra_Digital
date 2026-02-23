@@ -11,6 +11,8 @@ const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [editUser, setEditUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,6 +44,11 @@ const UserList = () => {
   const handleEdit = (user) => {
     setEditUser(user);
     setShowForm(true);
+  };
+
+  const handleView = (user) => {
+    setSelectedUser(user);
+    setShowDetails(true);
   };
 
   const handleDelete = async (user) => {
@@ -76,13 +83,13 @@ const UserList = () => {
     }
   };
 
-  const formatTime = (datetime) => {
+  const formatDate = (datetime) => {
     if (!datetime) return "-";
     const date = new Date(datetime);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -134,7 +141,7 @@ const UserList = () => {
                 <td>{user.email}</td>
                 <td>{user.address}</td>
                 <td>{user.phone || "—"}</td>
-                <td>{formatTime(user.joining_date)}</td>
+                <td>{formatDate(user.joining_date)}</td>
                 <td>{user.designation || "—"}</td>
                 <td>
                   <span
@@ -144,7 +151,7 @@ const UserList = () => {
                   </span>
                 </td>
                 <td className="actions">
-                  <button title="View">
+                  <button onClick={() => handleView(user)} title="View">
                     <Eye size={16} />
                   </button>
                   <button onClick={() => handleEdit(user)} title="Edit">
@@ -204,7 +211,10 @@ const UserList = () => {
                   await fetchUsers();
                   setShowForm(false);
                 } catch (err) {
-                  alert("Failed to save user.");
+                  const errorMsg = err.response?.data?.errors
+                    ? Object.entries(err.response.data.errors).map(([key, val]) => `${key}: ${val}`).join("\n")
+                    : "Failed to save user.";
+                  alert(errorMsg);
                   console.error(err);
                 }
               }}
@@ -233,6 +243,32 @@ const UserList = () => {
             <p><strong>Generated Password:</strong></p>
             <div className="password-box">{generatedPassword}</div>
             <p>successfully sent password through email!</p>
+          </div>
+        </div>
+      )}
+
+      {showDetails && selectedUser && (
+        <div className="popup-overlay" onClick={() => setShowDetails(false)}>
+          <div className="popup user-details-popup" onClick={(e) => e.stopPropagation()}>
+            <button className="close-popup" onClick={() => setShowDetails(false)}>
+              <X size={18} />
+            </button>
+            <h3>👤 User Details</h3>
+            <div className="details-content">
+              <p><strong>Full Name:</strong> {selectedUser.fullname}</p>
+              <p><strong>Username:</strong> {selectedUser.username}</p>
+              <p><strong>Email:</strong> {selectedUser.email}</p>
+              <p><strong>Phone:</strong> {selectedUser.phone || "—"}</p>
+              <p><strong>Address:</strong> {selectedUser.address || "—"}</p>
+              <p><strong>Designation:</strong> {selectedUser.designation || "—"}</p>
+              <p><strong>Joining Date:</strong> {formatDate(selectedUser.joining_date)}</p>
+              <p>
+                <strong>Status:</strong>
+                <span className={`status-badge ${selectedUser.is_active ? "active" : "inactive"}`} style={{ marginLeft: "8px" }}>
+                  {selectedUser.is_active ? "Active" : "Inactive"}
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       )}

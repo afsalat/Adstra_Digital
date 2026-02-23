@@ -125,6 +125,12 @@ export default function RootLayout({ children }) {
           `}
         </Script>
 
+        {/* ✅ Razorpay Checkout */}
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
+
         {/* ✅ JSON-LD Schema (LocalBusiness) */}
         <Script id="ld-json" type="application/ld+json" strategy="afterInteractive">
           {JSON.stringify({

@@ -117,3 +117,7 @@ EMAIL_HOST_USER = 'info.adstradigital@gmail.com'
 EMAIL_HOST_PASSWORD = 'aofbpwroussfozcv'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 VV = "Z0d!acleo#007"
+
+# Razorpay Configuration
+RAZORPAY_KEY_ID = 'rzp_live_S1IlVSTMXlrAkz'
+RAZORPAY_KEY_SECRET = 'nCyE7pNVj7yJ0HfnuGUGC8aJ'

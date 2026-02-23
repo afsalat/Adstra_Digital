@@ -1,29 +1,30 @@
-
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
+import { Printer, FileDown, ArrowLeft, LayoutList } from "lucide-react";
 
 export default function InvoicePreview() {
   const invoiceRef = useRef();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const invoiceId = searchParams.get("invoiceID");
+  const invoiceId = searchParams.get("invoiceID")?.replace(/\/+$/, "");
 
   const [invoice, setInvoice] = useState(null);
   const [items, setItems] = useState([]);
 
   const API_BASE =
-    process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
+    process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
 
   useEffect(() => {
-    axios.get(`${API_BASE}/invoice/view/${invoiceId}/`).then((res) => {
+    if (!invoiceId) return;
+    axios.get(`${API_BASE}/invoice/view/${invoiceId}/?_=${Date.now()}`).then((res) => {
       setInvoice(res.data);
-      console.log(res.data);
+      console.log("DEBUG: Fetched invoice:", res.data);
       setItems(res.data.items);
     });
-  }, []);
+  }, [invoiceId, API_BASE]);
 
   const handlePrint = () => window.print();
 
@@ -51,21 +52,34 @@ export default function InvoicePreview() {
     <>
       {/* Buttons */}
       {/* Action Buttons */}
-      <div className="d-flex justify-content-end gap-2 p-3 no-print">
-        <button className="btn btn-primary btn-sm" onClick={handlePrint}>
-          🖨️ Print
-        </button>
-        <button className="btn btn-success btn-sm" onClick={handleDownloadPDF}>
-          📄 Download PDF
+      <div className="flex justify-end gap-3 p-6 no-print bg-slate-50/50">
+        <button
+          className="flex items-center gap-2 px-4 py-2 bg-[#0B2545] text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 text-sm font-semibold"
+          onClick={handlePrint}
+        >
+          <Printer size={18} />
+          Print
         </button>
         <button
-          className="btn btn-outline-secondary btn-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[#1CA3C4] text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 text-sm font-semibold"
+          onClick={handleDownloadPDF}
+        >
+          <FileDown size={18} />
+          Download PDF
+        </button>
+        <button
+          className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-all duration-300 hover:scale-105 active:scale-95 text-sm font-semibold"
           onClick={goToCreate}
         >
-          🔙 Back to Create Form
+          <ArrowLeft size={18} />
+          Back to Create Form
         </button>
-        <button className="btn btn-outline-dark btn-sm" onClick={goToList}>
-          📋 Invoice List
+        <button
+          className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-all duration-300 hover:scale-105 active:scale-95 text-sm font-semibold"
+          onClick={goToList}
+        >
+          <LayoutList size={18} />
+          Invoice List
         </button>
       </div>
 
@@ -90,7 +104,7 @@ export default function InvoicePreview() {
           <div
             style={{
               display: "flex",
-              alignItems: "flex-start",
+              alignItems: "center",
               marginRight: "10%",
             }}
           >
@@ -171,10 +185,10 @@ export default function InvoicePreview() {
                   <td>
                     {invoice?.date
                       ? new Date(invoice.date).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
                       : "—"}
                   </td>
                 </tr>
@@ -188,8 +202,14 @@ export default function InvoicePreview() {
                 </tr>
                 <tr>
                   <th>Payment status:</th>
-                  <td className="text-capitalize">
-                    {invoice?.status || "Unpaid"}
+                  <td>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${invoice?.status === 'paid' ? 'bg-green-100 text-green-700' :
+                      invoice?.status === 'partially_paid' ? 'bg-blue-100 text-blue-700' :
+                        invoice?.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
+                          'bg-red-100 text-red-700'
+                      }`}>
+                      {invoice?.status ? invoice.status.replace("_", " ").toUpperCase() : "UNPAID"}
+                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -202,11 +222,11 @@ export default function InvoicePreview() {
           <table className="table table-bordered table-sm">
             <thead className="table-dark">
               <tr>
-                <th>Description</th>
-                <th>Qty</th>
-                <th className="text-end">Rate</th>
-                <th className="text-end">GST</th>
-                <th className="text-end">Amount</th>
+                <th className="text-center">Description</th>
+                <th className="text-center">Qty</th>
+                <th className="text-center">Rate</th>
+                <th className="text-center">GST</th>
+                <th className="text-center">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -231,9 +251,60 @@ export default function InvoicePreview() {
                   </tr>
                 );
               })}
+              {/* Subtotal Row */}
+              <tr>
+                <td colSpan="4" className="text-end text-muted" style={{ fontSize: "12px" }}>
+                  Subtotal
+                </td>
+                <td className="text-end" style={{ fontSize: "12px" }}>
+                  ₹{(invoice?.items?.reduce((sum, item) => {
+                    const base = (Number(item.rate) || 0) * (Number(item.quantity) || 0);
+                    const gst = (base * (Number(item.gst) || 0)) / 100;
+                    return sum + base + gst;
+                  }, 0) || 0).toFixed(2)}
+                </td>
+              </tr>
+
+              {/* Discount Row */}
+              {Number(invoice?.discount_amount) > 0 && (
+                <tr>
+                  <td colSpan="4" className="text-end text-danger" style={{ fontSize: "12px" }}>
+                    Discount (-)
+                  </td>
+                  <td className="text-end text-danger" style={{ fontSize: "12px" }}>
+                    - ₹{Number(invoice.discount_amount).toFixed(2)}
+                  </td>
+                </tr>
+              )}
+
+              {/* Fee Row */}
+              {Number(invoice?.additional_fee) > 0 && (
+                <tr>
+                  <td colSpan="4" className="text-end text-muted" style={{ fontSize: "12px" }}>
+                    Additional Fee (+)
+                  </td>
+                  <td className="text-end" style={{ fontSize: "12px" }}>
+                    + ₹{Number(invoice.additional_fee).toFixed(2)}
+                  </td>
+                </tr>
+              )}
+
+              {/* Tax Row */}
+              {Number(invoice?.tax_amount) > 0 && (
+                <tr>
+                  <td colSpan="4" className="text-end text-muted" style={{ fontSize: "12px" }}>
+                    Taxes / Adjustments (+)
+                  </td>
+                  <td className="text-end" style={{ fontSize: "12px" }}>
+                    + ₹{Number(invoice.tax_amount).toFixed(2)}
+                  </td>
+                </tr>
+              )}
+
+              {/* Grand Total Row */}
               <tr>
                 <td colSpan="4" className="text-end fw-bold">
-                  Total Amount
+                  Grand Total
                 </td>
                 <td className="text-end fw-bold text-primary">
                   ₹
@@ -244,7 +315,7 @@ export default function InvoicePreview() {
               </tr>
               {invoice?.total_in_words && (
                 <tr>
-                  <td colSpan="5" className="fst-italic text-end text-muted">
+                  <td colSpan="5" className="fst-italic text-end text-muted" style={{ fontSize: "11px" }}>
                     (In Words): {invoice.total_in_words}
                   </td>
                 </tr>

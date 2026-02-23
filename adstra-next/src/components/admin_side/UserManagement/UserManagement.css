@@ -4,7 +4,7 @@
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   max-width: 90%;
-  margin: auto;
+  margin: 50px auto;
 }
 
 .password-box {
@@ -116,28 +116,7 @@
   background-color: #4b5563;
 }
 
-.status-badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  color: white;
-}
 
-.status-badge.active {
-  background-color: rgb(156, 239, 156);
-}
-
-.status-badge.inactive {
-  background-color: rgb(225, 73, 73);
-}
-
-.actions button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  margin-right: 8px;
-  padding: 4px;
-}
 
 .popup-overlay {
   position: fixed;
@@ -190,4 +169,27 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.details-content {
+  margin-top: 15px;
+}
+
+.details-content p {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #444;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 8px;
+}
+
+.details-content p:last-child {
+  border-bottom: none;
+}
+
+.details-content strong {
+  display: inline-block;
+  width: 130px;
+  color: #222;
+  font-weight: 600;
 }

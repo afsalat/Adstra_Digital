@@ -5,11 +5,26 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/Context/AuthContext";
 import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
+import SessionExpiredModal from "@/components/common/SessionExpiredModal";
 import "./AdminDashboard.css";
+import {
+  CalendarCheck,
+  BarChart3,
+  PenTool,
+  Video,
+  Users,
+  Building2,
+  FileText,
+  Receipt,
+  Scroll,
+  ArrowRight,
+  LogOut
+} from "lucide-react";
 
 const AdminDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
   const { logout } = useAuth();
   const router = useRouter();
   const [user, setUser] = useState({});
@@ -38,9 +53,18 @@ const AdminDashboard = () => {
 
     if (!confirmLogout) return;
 
+    performLogout();
+  };
+
+  const performLogout = () => {
     localStorage.removeItem("authToken");
+    localStorage.removeItem("user"); // Clear user data too
     logout();
     router.push("/userlogin/");
+  };
+
+  const handleSessionExpiredLogin = () => {
+    performLogout();
   };
 
   // Decode token to check admin rights
@@ -49,17 +73,31 @@ const AdminDashboard = () => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
+
+        // Check for token expiration
+        if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+          setIsSessionExpired(true);
+          return;
+        }
+
         setIsAdmin(
           decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9
         );
       } catch (e) {
         console.error("Invalid token:", e);
+        // Optional: clear invalid token
+        localStorage.removeItem("authToken");
+        router.push("/userlogin/");
       }
+    } else {
+      // No token found, redirect to login
+      router.push("/userlogin/");
     }
   }, []);
 
   const menuItems = [
     "Home",
+    "Finance",
     "Profile",
     "Assigned Projects",
     "Team",
@@ -67,46 +105,37 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="admin-dashboard container" role="main">
+    <div className="admin-dashboard">
       {/* Top Bar */}
-      <header className="top-bar row align-items-center mb-4" role="banner">
-        <div className="col-md-3 user-info">
+      <header className="top-bar">
+        <div className="user-info">
           <h3>{user?.fullname || "Admin"}</h3>
           <p>{user?.email || "No email available"}</p>
         </div>
-        <div className="col-md-6 brand-section text-center">
+
+        <div className="brand-section">
           <h2 className="brand-title">Adstra Digital</h2>
-          <p className="brand-tagline">
-            The Sole of a Premium Digital Marketing Brand
-          </p>
+          <p className="brand-tagline">The Sole of a Premium Digital Marketing Brand</p>
         </div>
-        <div className="col-md-3 text-md-end text-center mt-3 mt-md-0">
-          <button
-            className="logout-btn"
-            onClick={handleLogout}
-            aria-label="Logout"
-          >
-            Logout
-          </button>
-        </div>
+
+        <button className="logout-btn" onClick={handleLogout} aria-label="Logout">
+          <LogOut size={18} />
+          <span>Logout</span>
+        </button>
       </header>
 
+      {isSessionExpired && (
+        <SessionExpiredModal onLogin={handleSessionExpiredLogin} />
+      )}
+
       {/* Navigation Menu */}
-      <nav className="menu-bar" role="navigation" aria-label="Main menu">
-        <ul className="d-flex flex-wrap justify-content-center list-unstyled m-0 p-0 gap-3">
+      <nav className="menu-bar">
+        <ul>
           {menuItems.map((item) => (
             <li
               key={item}
-              className={`px-3 py-2 rounded ${
-                activeMenu === item ? "active" : ""
-              }`}
+              className={activeMenu === item ? "active" : ""}
               onClick={() => setActiveMenu(item)}
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") setActiveMenu(item);
-              }}
-              role="button"
-              aria-pressed={activeMenu === item}
             >
               {item}
             </li>
@@ -115,147 +144,204 @@ const AdminDashboard = () => {
       </nav>
 
       {/* Dashboard Grid */}
-      <section className="row g-4 mt-3" aria-live="polite">
+      <section className="dashboard-grid">
 
-        {/* Attendance */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          <Link href="/attendance/" className="link">
-            <div className="dashboard-box gray" role="link">
-              <h4>📅 Attendance Sheet</h4>
-              <p>! Don't Miss Work Report</p>
-              <u>Work Status</u>
-            </div>
-          </Link>
-        </div>
-
-        {/* Work Status */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          {isAdmin ? (
-            <div className="dashboard-box orange">
-              <h4>📊 Work Status</h4>
-              <p>Projects in progress</p>
-              <u>Coming Soon</u>
-            </div>
-          ) : (
-            <div className="dashboard-box orange no-hover">
-              <h4>📊 Work Status</h4>
-              <p>Access denied</p>
-              <u>Coming Soon</u>
-            </div>
-          )}
-        </div>
-
-        {/* Blogs Creator */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          {isAdmin ? (
-            <Link href="" className="link">
-              <div className="dashboard-box gray" role="link">
-                <h4>📝 Blogs Creator</h4>
-                <p>Make SEO-friendly blogs</p>
-                <u>Coming Soon</u>
+        {/* HOME MENU ITEMS */}
+        {activeMenu === "Home" && (
+          <>
+            {/* Attendance */}
+            <Link href="/attendance/" className="link">
+              <div className="dashboard-box indigo">
+                <div className="icon-wrapper">
+                  <CalendarCheck size={28} />
+                </div>
+                <h4>Attendance Sheet</h4>
+                <p>Track daily attendance and submit work reports.</p>
+                <span className="action-link">Open Sheet <ArrowRight size={16} /></span>
               </div>
             </Link>
-          ) : (
-            <div className="dashboard-box gray no-hover">
-              <h4>📝 Blogs Creator</h4>
-              <p>Access denied</p>
-              <u>Coming Soon</u>
-            </div>
-          )}
-        </div>
 
-        {/* Online Meetings */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          {isAdmin ? (
-            <div className="dashboard-box navy" aria-label="Online Meetings">
-              <h4>📞 Online Meetings</h4>
-              <p>Next: Team Sync @ 3:00 PM</p>
-              <u>Coming Soon</u>
-            </div>
-          ) : (
-            <div className="dashboard-box navy no-hover">
-              <h4>📞 Online Meetings</h4>
-              <p>Access denied</p>
-              <u>Coming Soon</u>
-            </div>
-          )}
-        </div>
-
-        {/* User Management */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          {isAdmin ? (
-            <Link href="/usermanagement/" className="link">
-              <div className="dashboard-box cyan">
-                <h4>👥 User Management</h4>
-                <p>Manage users & permissions</p>
-                <u>View Team</u>
+            {/* Work Status */}
+            {isAdmin ? (
+              <div className="dashboard-box amber">
+                <div className="icon-wrapper">
+                  <BarChart3 size={28} />
+                </div>
+                <h4>Work Status</h4>
+                <p>Monitor ongoing projects and task progress.</p>
+                <span className="action-link">View Status <ArrowRight size={16} /></span>
               </div>
-            </Link>
-          ) : (
-            <div className="dashboard-box cyan no-hover">
-              <h4>👥 User Management</h4>
-              <p> </p>
-              <p>Access denied</p>
-            </div>
-          )}
-        </div>
-
-        {/* Proposals */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          {isAdmin ? (
-            <Link href="/proposal/" className="link">
-              <div className="dashboard-box">
-                <h4>📑 Proposals</h4>
-                <p>Any time Any where.</p>
-                <u>View Proposals</u>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <BarChart3 size={28} />
+                </div>
+                <h4>Work Status</h4>
+                <p>Access denied</p>
               </div>
-            </Link>
-          ) : (
-            <div className="dashboard-box no-hover">
-              <h4>📑 Proposals</h4>
-              <p> </p>
-              <p>Access denied</p>
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Invoices */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          {isAdmin ? (
-            <Link href="/invoices/" className="link">
-              <div className="dashboard-box">
-                <h4>🧾 Invoices</h4>
-                <p>Track Client Invoices</p>
-                <u>View Invoices</u>
+            {/* Blogs Creator */}
+            {isAdmin ? (
+              <Link href="" className="link">
+                <div className="dashboard-box rose">
+                  <div className="icon-wrapper">
+                    <PenTool size={28} />
+                  </div>
+                  <h4>Blogs Creator</h4>
+                  <p>Create and manage SEO-friendly blog content.</p>
+                  <span className="action-link">Create Blog <ArrowRight size={16} /></span>
+                </div>
+              </Link>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <PenTool size={28} />
+                </div>
+                <h4>Blogs Creator</h4>
+                <p>Access denied</p>
               </div>
-            </Link>
-          ) : (
-            <div className="dashboard-box no-hover">
-              <h4>🧾 Invoices</h4>
-              <p> </p>
-              <p>Access denied</p>
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Receipts */}
-        <div className="col-sm-12 col-md-6 col-lg-3">
-          {isAdmin ? (
-            <Link href="/receipts/" className="link">
-              <div className="dashboard-box">
-                <h4>📄 Receipts</h4>
-                <p>Track your billing and payments</p>
-                <u>View Receipt</u>
+            {/* Online Meetings */}
+            {isAdmin ? (
+              <div className="dashboard-box sky">
+                <div className="icon-wrapper">
+                  <Video size={28} />
+                </div>
+                <h4>Online Meetings</h4>
+                <p>Next: Team Sync @ 3:00 PM</p>
+                <span className="action-link">Join Meeting <ArrowRight size={16} /></span>
               </div>
-            </Link>
-          ) : (
-            <div className="dashboard-box no-hover">
-              <h4>📄 Receipts</h4>
-              <p> </p>
-              <p>Access denied</p>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <Video size={28} />
+                </div>
+                <h4>Online Meetings</h4>
+                <p>Access denied</p>
+              </div>
+            )}
+
+            {/* User Management */}
+            {isAdmin ? (
+              <Link href="/usermanagement/" className="link">
+                <div className="dashboard-box emerald">
+                  <div className="icon-wrapper">
+                    <Users size={28} />
+                  </div>
+                  <h4>User Management</h4>
+                  <p>Manage team members and permissions.</p>
+                  <span className="action-link">Manage Users <ArrowRight size={16} /></span>
+                </div>
+              </Link>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <Users size={28} />
+                </div>
+                <h4>User Management</h4>
+                <p>Access denied</p>
+              </div>
+            )}
+
+
+          </>
+        )}
+
+        {/* FINANCE MENU ITEMS */}
+        {activeMenu === "Finance" && (
+          <>
+            {/* Client Companies */}
+            {isAdmin ? (
+              <Link href="/clientcompanies/" className="link">
+                <div className="dashboard-box indigo">
+                  <div className="icon-wrapper">
+                    <Building2 size={28} />
+                  </div>
+                  <h4>Client Companies</h4>
+                  <p>Manage client details and partnerships.</p>
+                  <span className="action-link">View Clients <ArrowRight size={16} /></span>
+                </div>
+              </Link>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <Building2 size={28} />
+                </div>
+                <h4>Client Companies</h4>
+                <p>Access denied</p>
+              </div>
+            )}
+
+            {/* Proposals */}
+            {isAdmin ? (
+              <Link href="/proposal/" className="link">
+                <div className="dashboard-box amber">
+                  <div className="icon-wrapper">
+                    <FileText size={28} />
+                  </div>
+                  <h4>Proposals</h4>
+                  <p>Create and track business proposals.</p>
+                  <span className="action-link">View Proposals <ArrowRight size={16} /></span>
+                </div>
+              </Link>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <FileText size={28} />
+                </div>
+                <h4>Proposals</h4>
+                <p>Access denied</p>
+              </div>
+            )}
+
+            {/* Invoices */}
+            {isAdmin ? (
+              <Link href="/invoices/" className="link">
+                <div className="dashboard-box rose">
+                  <div className="icon-wrapper">
+                    <Receipt size={28} />
+                  </div>
+                  <h4>Invoices</h4>
+                  <p>Track and manage client invoices.</p>
+                  <span className="action-link">View Invoices <ArrowRight size={16} /></span>
+                </div>
+              </Link>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <Receipt size={28} />
+                </div>
+                <h4>Invoices</h4>
+                <p>Access denied</p>
+              </div>
+            )}
+
+            {/* Receipts */}
+            {isAdmin ? (
+              <Link href="/receipts/" className="link">
+                <div className="dashboard-box sky">
+                  <div className="icon-wrapper">
+                    <Scroll size={28} />
+                  </div>
+                  <h4>Receipts</h4>
+                  <p>Track billing and payment receipts.</p>
+                  <span className="action-link">View Receipts <ArrowRight size={16} /></span>
+                </div>
+              </Link>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <Scroll size={28} />
+                </div>
+                <h4>Receipts</h4>
+                <p>Access denied</p>
+              </div>
+            )}
+          </>
+        )}
+
       </section>
     </div>
   );

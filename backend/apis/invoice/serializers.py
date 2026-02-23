@@ -60,7 +60,7 @@ class CreateInvoiceFromProposalSerializer(serializers.Serializer):
         proposal = Proposal.objects.get(id=validated_data['proposal_id'])
 
         invoice = Invoice.objects.create(
-            invoice_no=f"INV-{proposal.proposal_no}",
+            invoice_no=Invoice.generate_invoice_number(),
             proposal=proposal,
             client=proposal.client,
             total_amount=proposal.total_amount,

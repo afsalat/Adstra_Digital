@@ -26,8 +26,8 @@ export default function ProposalPreview({
   let totalGST = 0;
 
   services.forEach((item) => {
-    const qty = item.quantity || 1;
-    const rate = item.rate || 0;
+    const qty = parseFloat(item.quantity || 1);
+    const rate = parseFloat(item.rate || 0);
     const gstRate = parseFloat(item.gst || "18");
     const baseAmount = qty * rate;
     const gstAmount = (baseAmount * gstRate) / 100;
@@ -80,14 +80,13 @@ export default function ProposalPreview({
     <div className="proposal-preview-wrapper text-[15px] text-gray-800 leading-relaxed">
       {/* --- Services Table --- */}
       <div className="pdf-page">
-        <div className="mb-2 text-center">
-          <div className="border-b-2 border-indigo-200 mt-5 w-24 mx-auto" />
-        </div>
+
 
         {services.length > 0 && (
-          <div className="border-t mt-3">
-            <h4 className="text-xl font-bold text-indigo-800">
-              💼 Services In Brief
+          <div className="border-t pt-6" style={{ marginTop: "60px", paddingTop: "24px" }}>
+            <h4 className="text-xl font-bold text-indigo-800" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>
+              Services In Brief
             </h4>
             <div className="w-full overflow-x-auto">
               <table className="w-full text-sm border border-gray-800 shadow-md rounded overflow-hidden">
@@ -126,8 +125,8 @@ export default function ProposalPreview({
                           </td>
                         </tr>
                         {items.map((item, idx) => {
-                          const qty = item.quantity || 1;
-                          const rate = item.rate || 0;
+                          const qty = parseFloat(item.quantity || 1);
+                          const rate = parseFloat(item.rate || 0);
                           const gstRate = parseFloat(item.gst || "18");
                           const baseAmount = qty * rate;
                           const gstAmount = (baseAmount * gstRate) / 100;
@@ -135,12 +134,10 @@ export default function ProposalPreview({
 
                           return (
                             <tr
-                              key={`${category}-${idx}-${
-                                item.id ?? item.description
-                              }`}
-                              className={`${
-                                idx % 2 === 0 ? "bg-white" : "bg-indigo-50"
-                              } hover:bg-indigo-100 transition`}
+                              key={`${category}-${idx}-${item.id ?? item.description
+                                }`}
+                              className={`${idx % 2 === 0 ? "bg-white" : "bg-indigo-50"
+                                } hover:bg-indigo-100 transition`}
                             >
                               <td className="px-4 py-2 border border-gray-200">
                                 {item.description}
@@ -206,7 +203,7 @@ export default function ProposalPreview({
           return (
             <div
               key={`${sec.title || "section"}-${i}`}
-              className="mb-8 pb-6 border-b border-dashed border-gray-300 last:border-none last:pb-0"
+              className="mb-8 pb-6 last:pb-0"
             >
               <h4
                 className="text-xl sm:text-2xl font-bold text-indigo-700 mb-2"
@@ -226,9 +223,10 @@ export default function ProposalPreview({
       </div>
 
       {/* --- Bank Details --- */}
-      <div className="mt-6 p-4 text-center rounded-md bg-gray-50">
-        <h4 className="text-lg font-semibold text-gray-800 mb-2">
-          🏦 We bank with HDFC Bank
+      <div className="mt-8 pt-6 p-4 text-center rounded-md bg-gray-50" style={{ marginTop: "50px" }}>
+        <h4 className="text-lg font-semibold text-gray-800 mb-2" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22" /><rect x="2" y="11" width="20" height="11" /><path d="M12 2L2 7h20z" /><line x1="12" y1="11" x2="12" y2="22" /><line x1="7" y1="11" x2="7" y2="22" /><line x1="17" y1="11" x2="17" y2="22" /></svg>
+          We bank with HDFC Bank
         </h4>
         <p>
           <strong>Account Holder:</strong> Adstra Digital<br />

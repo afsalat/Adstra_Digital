@@ -8,23 +8,23 @@ const teamMembers = [
   {
     name: "Sharda",
     role: "SEO Division",
-    image: "https://adstradigital.com/media/team/sharda.jpeg",
+    image: "https://adstradigital.com/media/team/sharda.png",
     content:
       "Sharda is a data-driven expert with a remarkable talent for helping businesses get found online. With her deep understanding of search engine algorithms, she develops long-term strategies that drive organic growth. She specializes in technical SEO, keyword research, and content optimization. Sharda's mission is to provide clients with a clear roadmap to dominate their search rankings.",
   },
   {
     name: "Divya",
     role: "Social Media Division",
-    image: "https://adstradigital.com/media/team/divya.jpeg",
+    image: "https://adstradigital.com/media/team/divya.png",
     content:
       "Divya is a dynamic social media manager with a knack for creating engaging content and building strong online communities. She excels at translating a brand's voice into a compelling social media presence. Her expertise includes content strategy, community management, and social media advertising. Divya's goal is to help businesses connect authentically with their audience and turn followers into loyal customers.",
   },
   {
-    name: "Anamika",
+    name: "Aradhya",
     role: "Social Media Division",
-    image: "",
+    image: "https://adstradigital.com/media/team/aradhya.png",
     content:
-      "Anamika works as an assistant to Divya, supporting the social media division with content creation, campaign execution, and community engagement. She plays a key role in ensuring smooth daily operations and helps bring innovative ideas to enhance brand visibility and audience interaction.",
+      "Aradhya works as an assistant to Divya, supporting the social media division with content creation, campaign execution, and community engagement. She plays a key role in ensuring smooth daily operations and helps bring innovative ideas to enhance brand visibility and audience interaction.",
   },
   {
     name: "Komal",
@@ -36,14 +36,14 @@ const teamMembers = [
   {
     name: "sreekumar",
     role: "Video | Design Division",
-    image: "https://adstradigital.com/media/team/sunsreekumar.webp",
+    image: "https://adstradigital.com/media/team/sunsreekumar.png",
     content:
       "Sree specializes in branding, UI/UX design, and motion graphics. With a sharp eye for aesthetics and brand identity, she creates designs that are not only visually appealing but also strategically aligned with business goals. Her expertise extends to 3D modeling and ad creatives, ensuring every project communicates with impact and clarity.",
   },
   {
     name: "Afsal",
     role: "IT Division",
-    image: "https://adstradigital.com/media/team/afsal.jpeg",
+    image: "https://adstradigital.com/media/team/afsal.png",
     content:
       "Afsal and his team lead the charge in web and application development, delivering sleek, high performance digital solutions. Their expertise ensures every project runs smoothly, from concept to launch.",
   },
@@ -57,17 +57,11 @@ const teamMembers = [
   {
     name: "Manoj",
     role: "Sales Marketing Division",
-    image: "https://adstradigital.com/media/team/manoj.jpeg",
+    image: "https://adstradigital.com/media/team/manoj.png",
     content:
       "Manoj is passionate about helping businesses grow. With expertise in digital lead generation and market research, he ensures your brand connects with the right audience at the right time.",
   },
-  {
-    name: "Neha",
-    role: "Sales Marketing Division",
-    image: null,
-    content:
-      "Neha brings structure and precision to every campaign. From timelines to execution, he ensures projects run smoothly and deliver measurable success for our clients.",
-  },
+
   {
     name: "Jagath",
     role: "IT Division",
@@ -95,6 +89,20 @@ const teamMembers = [
     image: "https://adstradigital.com/media/team/Kiran.png",
     content:
       "Kiran is a proficient Python developer with expertise in backend development and scripting. He specializes in building robust, scalable solutions and automation scripts that optimize business processes and enhance system performance.",
+  },
+  {
+    name: "Athira",
+    role: "IT Division",
+    image: "https://adstradigital.com/media/team/athira.png",
+    content:
+      "Athira is a dedicated Python Developer Intern who is eager to learn and contribute to backend development projects. She assists the team in building efficient solutions and is committed to honing her skills in software development.",
+  },
+  {
+    name: "Iyrine Reetha",
+    role: "Sales Marketing Division",
+    image: "https://adstradigital.com/media/team/irine.png",
+    content:
+      "Iyrine Reetha is a dedicated sales and marketing professional who plays a key role in expanding brand reach and driving business growth. She specializes in client relationship management and executing strategic marketing initiatives to deliver impactful results.",
   },
 ];
 

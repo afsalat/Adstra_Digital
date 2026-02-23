@@ -3,7 +3,7 @@ import NavBar from "@/components/NavBar/Navbar";
 import Footer from "@/components/Footer/Footer";
 import BlogDetail from "@/components/BlogDetails/BlogDetails";
 
-// Static path generation
+// Static path generation - updated for GMB post
 export async function generateStaticParams() {
   return blogPosts.map((post) => ({
     label: post.slug,
@@ -172,7 +172,7 @@ export default async function BlogDetailPage({ params }) {
         "@id": `https://adstradigital.com${blog.imageUrl}`,
         "inLanguage": "en-US",
         "url": `https://adstradigital.com${blog.imageUrl}`,
-        "contentUrl": `https://adstradigital.com${blog.imageUrl}`,  
+        "contentUrl": `https://adstradigital.com${blog.imageUrl}`,
         "width": 1200,
         "height": 628
       },

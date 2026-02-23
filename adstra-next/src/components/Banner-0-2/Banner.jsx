@@ -66,7 +66,7 @@ function Banner() {
           const list = Array.isArray(data.header) ? data.header : [data.header];
           setMessages(list.filter(Boolean));
         }
-      } catch {}
+      } catch { }
     };
     fetchMessages();
   }, []);
@@ -114,9 +114,8 @@ function Banner() {
     const y = (e.clientY - top - height / 2) / height;
     requestAnimationFrame(() => {
       if (ctaRef.current) {
-        ctaRef.current.style.transform = `translate3d(${x * 4}px, ${
-          y * 4
-        }px, 0)`;
+        ctaRef.current.style.transform = `translate3d(${x * 4}px, ${y * 4
+          }px, 0)`;
       }
     });
   };
@@ -212,34 +211,87 @@ function Banner() {
                 <div
                   className="popup-conten"
                   onClick={(e) => e.stopPropagation()}
+                  style={{
+                    maxHeight: "90vh",
+                    overflowY: "auto",
+                    padding: "2rem",
+                  }}
                 >
                   <button className="popup-close" onClick={closePopupI}>
                     ✕
                   </button>
-                  <h2>🚀 Internship Opportunities</h2>
-                  <br />
-                  <p>
-                    Join <strong>Adstra Digital</strong> as an intern and gain
-                    real-world experience in{" "}
-                    <strong>Digital Marketing, Design, and Development</strong>.
-                    Work with industry experts and build your career.
+                  <h2 style={{ fontSize: "1.8rem", marginBottom: "1rem" }}>
+                    🐍 Python Internship Opportunity at Adstra Digital
+                  </h2>
+
+                  <p style={{ fontSize: "1.1rem", marginBottom: "1.5rem" }}>
+                    <strong>Are you ready to turn your passion for coding into a career?</strong>
                   </p>
 
-                  {/* ✅ Sponsored Note */}
-                  <p
-                    style={{
-                      marginTop: "1rem",
-                      fontStyle: "italic",
-                      color: "#555",
-                    }}
-                  >
-                    Sponsored by Students
+                  <p style={{ marginBottom: "1.5rem" }}>
+                    At Adstra Digital, we believe in nurturing talent and giving students
+                    the chance to shine in real commercial projects.
                   </p>
+
+                  <h3 style={{ fontSize: "1.4rem", marginTop: "1.5rem", marginBottom: "1rem" }}>
+                    ✨ Why Join Us?
+                  </h3>
+
+                  <ul style={{
+                    listStyle: "none",
+                    paddingLeft: "0",
+                    marginBottom: "1.5rem",
+                    lineHeight: "1.8"
+                  }}>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      <strong>🎯 Hands-on Experience:</strong> Work directly on major CRM,
+                      e-commerce, and other live projects.
+                    </li>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      <strong>📚 Step-by-Step Learning:</strong> Begin with a written and
+                      practical test. Any unskilled areas will be guided and covered by our
+                      expert technical mentors.
+                    </li>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      <strong>🎓 Certified Internship Certificate:</strong> Globally valid
+                      recognition of your hard work and achievement.
+                    </li>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      <strong>💼 Career Pathway:</strong> Successful interns will be offered
+                      jobs in our IT division.
+                    </li>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      <strong>🚀 Growth & Confidence:</strong> Learn, build, and showcase your
+                      skills in a professional environment.
+                    </li>
+                  </ul>
+
+                  <h3 style={{ fontSize: "1.4rem", marginTop: "1.5rem", marginBottom: "1rem" }}>
+                    📋 Internship Details
+                  </h3>
+
+                  <ul style={{
+                    listStyle: "disc",
+                    paddingLeft: "1.5rem",
+                    marginBottom: "1.5rem",
+                    lineHeight: "1.8"
+                  }}>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      This is a student-paid internship designed to give you industry-level exposure.
+                    </li>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      Duration and project allocation will be based on performance and learning pace.
+                    </li>
+                    <li style={{ marginBottom: "0.8rem" }}>
+                      You will be part of a team that values creativity, discipline, and innovation.
+                    </li>
+                  </ul>
 
                   {/* ✅ Technologies Section */}
                   <div
                     style={{
-                      marginTop: "1rem",
+                      marginTop: "1.5rem",
+                      marginBottom: "1.5rem",
                       display: "flex",
                       gap: "10px",
                       justifyContent: "center",
@@ -247,18 +299,66 @@ function Banner() {
                     }}
                   >
                     <span className="tech-tag">Python</span>
-                    <span className="tech-tag">Next.js</span>
-                    <span className="tech-tag">React.js</span>
-                    <span className="tech-tag">MySQL</span>
+                    <span className="tech-tag">Django</span>
+                    <span className="tech-tag">CRM</span>
+                    <span className="tech-tag">E-Commerce</span>
                   </div>
 
-                  <a
-                    href="mailto:hr@adstradigital.com"
-                    className="cta primary"
-                    style={{ marginTop: "1.5rem", display: "inline-block" }}
-                  >
-                    Apply Now
-                  </a>
+                  <div style={{
+                    background: "rgba(255, 215, 0, 0.1)",
+                    padding: "1.5rem",
+                    borderRadius: "10px",
+                    marginBottom: "1.5rem",
+                    border: "2px solid rgba(255, 215, 0, 0.3)"
+                  }}>
+                    <h3 style={{ fontSize: "1.3rem", marginBottom: "1rem" }}>
+                      📞 How to Apply
+                    </h3>
+                    <p style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
+                      Don't just dream about becoming a Python developer — take the first step today!
+                    </p>
+                    <p style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
+                      Call us now at <a href="tel:9744779574" style={{ color: "#FFD700" }}>974477 9574</a> to secure your place.
+                    </p>
+                    <p style={{ fontStyle: "italic", fontSize: "0.95rem" }}>
+                      Seats are limited, and opportunities like this don't wait.
+                    </p>
+                  </div>
+
+                  <p style={{
+                    fontSize: "1.2rem",
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    marginTop: "1.5rem",
+                    marginBottom: "1.5rem"
+                  }}>
+                    Your future in IT starts here. Join Adstra Digital and code your way to success!
+                  </p>
+
+                  <div style={{
+                    display: "flex",
+                    gap: "1rem",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                    marginTop: "1.5rem"
+                  }}>
+                    <a
+                      href="tel:9744779574"
+                      className="cta primary"
+                      style={{ display: "inline-block" }}
+                    >
+                      📞 Call Now
+                    </a>
+                    <a
+                      href="https://wa.me/919744779574?text=Hi,%20I'm%20interested%20in%20the%20Python%20Internship%20at%20Adstra%20Digital"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cta ghost"
+                      style={{ display: "inline-block" }}
+                    >
+                      💬 WhatsApp
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
@@ -279,10 +379,10 @@ function Banner() {
                       {t === 0
                         ? "Campaign Creative"
                         : t === 1
-                        ? "Motion & Reels"
-                        : t === 2
-                        ? "3D/CGI Visuals"
-                        : "Brand Stories"}
+                          ? "Motion & Reels"
+                          : t === 2
+                            ? "3D/CGI Visuals"
+                            : "Brand Stories"}
                     </figcaption>
                   </figure>
                 ))}

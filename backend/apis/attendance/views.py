@@ -41,6 +41,11 @@ def listAttendance(request):
             # From page 2 onwards: exclude today
             queryset = Attendance.objects.exclude(date=today).order_by("-date", "-id")
 
+        # Check for export flag
+        if request.query_params.get("export") == "true":
+            serializer = AttendanceSerializer(queryset, many=True)
+            return Response({"users": serializer.data})
+
         paginator = StandardResultsSetPagination()
         result_page = paginator.paginate_queryset(queryset, request)
         serializer = AttendanceSerializer(result_page, many=True)
