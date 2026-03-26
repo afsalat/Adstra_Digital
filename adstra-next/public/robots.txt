@@ -1,136 +1,26 @@
-# Robots.txt for AdstraDigital.com
-# Last Updated: August 28, 2025
-# Purpose: Control crawler access and protect sensitive directories
+# robots.txt - AdstraDigital
+# Last updated: 2026-03-12
 
-# General crawling rules for all bots
 User-agent: *
-Disallow: /admindashboard
-Disallow: /usermanagement
-Disallow: /attendance
+Allow: /
+
+# Internal and admin routes
+Disallow: /admindashboard/
+Disallow: /usermanagement/
+Disallow: /attendance/
+Disallow: /clientcompanies/
+Disallow: /proposal/
+Disallow: /invoices/
+Disallow: /receipts/
+Disallow: /userlogin/
 Disallow: /admin/
-Disallow: /private/
-Disallow: /temp/
-Disallow: /cache/
-Disallow: /logs/
-Disallow: /*.php$
-Disallow: /wp-admin/
-Disallow: /wp-includes/
-Disallow: /wp-content/plugins/
-Disallow: /wp-content/themes/
-Allow: /wp-content/uploads/
-Allow: /
+Disallow: /api/
 
-# Crawl delay to prevent server overload
-Crawl-delay: 1
-
-# Major search engine bots (explicit permissions)
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Slurp
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
-
-User-agent: Baiduspider
-Allow: /
-
-User-agent: YandexBot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: LinkedInBot
-Allow: /
-
-# AI Training Bots (currently allowed - modify if needed)
-User-agent: GPTBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: CCBot
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: anthropic-ai
-Allow: /
-
-User-agent: Claude-Web
-Allow: /
-
-# Block aggressive scrapers and unwanted bots
-User-agent: AhrefsBot
-Disallow: /
-
-User-agent: SemrushBot
-Disallow: /
-
-User-agent: MJ12bot
-Disallow: /
-
-User-agent: DotBot
-Disallow: /
-
-User-agent: BLEXBot
-Disallow: /
-
-User-agent: serpstatbot
-Disallow: /
-
-User-agent: MegaIndex
-Disallow: /
-
-User-agent: ZoominfoBot
-Disallow: /
-
-User-agent: DataForSeoBot
-Disallow: /
-
-User-agent: PetalBot
-Disallow: /
-
-# Development and testing environments
-User-agent: *
+# Sensitive/system paths
+Disallow: /.git/
+Disallow: /.env
 Disallow: /dev/
 Disallow: /staging/
 Disallow: /test/
-Disallow: /beta/
-Disallow: /.git/
-Disallow: /.env
-Disallow: /config/
-Disallow: /database/
-Disallow: /backup/
 
-# File types to exclude from crawling
-User-agent: *
-Disallow: /*.sql$
-Disallow: /*.log$
-Disallow: /*.bak$
-Disallow: /*.old$
-Disallow: /*.tmp$
-Disallow: /*.gz$
-Disallow: /*.zip$
-Disallow: /*.tar$
-
-# Sitemap location
 Sitemap: https://adstradigital.com/sitemap.xml
-Sitemap: https://adstradigital.com/sitemap-images.xml
-Sitemap: https://adstradigital.com/sitemap-news.xml
-
-# Additional crawling directives
-# Host: adstradigital.com (for Yandex)

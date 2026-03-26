@@ -18,7 +18,7 @@ const keywordLinks = {
   "SEO Services": "/service/seo-website-optimization/",
   "Google Ads": "/service/google-ads/",
   "Google Business Management Services": "/service/google-ads/",
-  "Paid Advertising Services": "/service/paid-advertising/",
+  "Paid Advertising Services": "/service/google-ads/",
   "Content Marketing": "/service/content-marketing/",
   "Digital Marketing": "/service/content-marketing/",
   "Marketing Strategies": "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
@@ -45,7 +45,7 @@ const keywordLinks = {
   "in-house photography": "/blogs/in-house-video-photography/",
 
   // Creative Thought & Process
-  "Adstra Digital": "/about",
+  "Adstra Digital": "/about/",
   "creative ideas": "/blogs/birth-of-creativity-ideas/",
   "creative mindset": "/blogs/birth-of-creativity-ideas/",
   "creative journey": "/blogs/birth-of-creativity-ideas/",
@@ -96,22 +96,32 @@ const keywordLinks = {
   GA4: "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
 
   // Services cross-links still useful from those blogs
-  "Google Ads": "/service/google-ads",
-  "Paid Advertising Services": "/service/paid-advertising/",
+  "Google Ads": "/service/google-ads/",
+  "Paid Advertising Services": "/service/google-ads/",
   "digital marketing": "/service/content-marketing/",
   "marketing strategies": "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
 
   // NEW: Social Media Strategy to Boost Your Conversion Rate
-  "Social Media Conversion": "/blogs/social-media-conversion-strategy/",
-  "Engagement Rate": "/blogs/social-media-conversion-strategy/",
-  "Shoppable Posts": "/blogs/social-media-conversion-strategy/",
-  "Retargeting Ads": "/blogs/social-media-conversion-strategy/",
-  "Customer Retention": "/blogs/social-media-conversion-strategy/",
-  "Conversion Optimization": "/blogs/social-media-conversion-strategy/",
-  "Mobile-Friendly Landing Pages": "/blogs/social-media-conversion-strategy/",
-  "Audience Segmentation": "/blogs/social-media-conversion-strategy/",
-  "Customer Journey Mapping": "/blogs/social-media-conversion-strategy/",
-  "Calls to Action (CTAs)": "/blogs/social-media-conversion-strategy/",
+  "Social Media Conversion":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Engagement Rate":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Shoppable Posts":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Retargeting Ads":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Customer Retention":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Conversion Optimization":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Mobile-Friendly Landing Pages":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Audience Segmentation":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Customer Journey Mapping":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
+  "Calls to Action (CTAs)":
+    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
 
   // eCommerce App Development
   "eCommerce app": "/blogs/ecommerce-app-development-pricing-features-budget/",
@@ -128,6 +138,26 @@ const keywordLinks = {
   "Admin panel": "/blogs/ecommerce-app-development-pricing-features-budget/",
   "Multi-vendor": "/blogs/ecommerce-app-development-pricing-features-budget/",
   "App maintenance": "/blogs/ecommerce-app-development-pricing-features-budget/",
+
+  // Conversational Search & AI Trends 2026
+  "Conversational Search": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
+  "AI Trends": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
+  "conversational SEO": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
+  "AI Overviews": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
+  "Generative Engine Optimization": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
+
+  // AI Social Media Tools 2026
+  "AI social media tools": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
+  "AI automation": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
+  "AI content marketing": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
+  "Smart scheduling": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
+  "AI chatbots": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
+
+  // YouTube SEO Tips 2026
+  "YouTube SEO Tips": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
+  "YouTube video optimization": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
+  "YouTube ranking factors": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
+  "Video SEO strategy": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
 };
 
 const createInterlinker = () => {
@@ -184,7 +214,7 @@ const BlogDetail = ({ blog }) => {
 
   const suggestions = blogPosts.filter((b) => b.slug !== blog.slug);
 
-  const rawSections = blog.content?.trim().split(/\n\s*\n/) || [];
+  const rawSections = blog.content?.trim().split(/\r?\n\s*\r?\n/) || [];
   const sections = rawSections
     .flatMap((section) => {
       // Split by newline if followed by a list marker (including "1)" style)
@@ -212,7 +242,8 @@ const BlogDetail = ({ blog }) => {
     }
 
     // Section titles with "?" stay as paragraphs with styling (fun emphasis)
-    if (para.includes("?") && para.length < 80) {
+    // Avoid matching if it looks like a numbered FAQ item (handled below)
+    if (para.includes("?") && para.length < 100 && !/^\s*\d+[\.)]\s+/.test(para)) {
       return (
         <p key={index} className="blog-section-title" style={{ fontSize: "1.2em", fontWeight: "600", color: "#FFD700", marginTop: "1.5em", marginBottom: "0.8em" }}>
           {interlinkText(para)}
@@ -274,33 +305,33 @@ const BlogDetail = ({ blog }) => {
       }
     }
 
-    // Numbered items: Decide if Header (H3) or List (<ol>)
-    if (/^\d+[\.)]\s+/.test(para)) {
+    if (/^\s*\d+[\.)]\s+/.test(para)) {
       // Check if the NEXT item also looks like a numbered item
-      // If it exists and matches pattern, we treat THIS and subsequent items as a LIST.
-      // Otherwise, we treat this single item as a SECTION HEADER (H3).
+      // BUT for FAQs, we usually want them as separate Headers if interleaved with text.
+      // We'll treat as list ONLY if there are 3+ consecutive numbered items (likely a real list).
+      // Otherwise, treat as a Section Header (H3) to preserve numbering and styling.
 
-      let isList = false;
-      if (index + 1 < allParas.length) {
-        const next = allParas[index + 1];
-        if (next && /^\d+[\.)]\s+/.test(next)) {
-          isList = true;
+      let sequentialCount = 0;
+      for (let i = index; i < allParas.length; i++) {
+        if (allParas[i] && /^\s*\d+[\.)]\s+/.test(allParas[i])) {
+          sequentialCount++;
+        } else {
+          break;
         }
       }
 
-      if (isList) {
+      if (sequentialCount >= 3) {
         const items = [];
         for (let i = index; i < allParas.length; i++) {
           const next = allParas[i];
-          if (next && /^\d+[\.)]\s+/.test(next)) {
-            // Strip the number marker for the LI, as OL provides it
-            const cleanedText = next.replace(/^\d+[\.)]\s+/, "");
+          if (next && /^\s*\d+[\.)]\s+/.test(next)) {
+            const cleanedText = next.replace(/^\s*\d+[\.)]\s+/, "");
             items.push(
               <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "#ffffff" }}>
                 {interlinkText(cleanedText)}
               </li>
             );
-            allParas[i] = null; // Mark as consumed
+            allParas[i] = null;
           } else {
             break;
           }
@@ -311,9 +342,9 @@ const BlogDetail = ({ blog }) => {
           </ol>
         );
       } else {
-        // Treat as Header
+        // Treat as Header (FAQ Question style)
         return (
-          <h3 className="blog-subheading" key={index}>
+          <h3 className="blog-subheading" style={{ fontSize: "1.2em", color: "#FFD700", marginBottom: "0.5em" }} key={index}>
             {interlinkText(para)}
           </h3>
         );

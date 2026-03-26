@@ -56,21 +56,23 @@ export default function AllBlogsPage() {
           </div>
         </div>
         {/* 🔗 BlogAdda Badge */}
-        <div className="text-center mb-5">
+        <div className="bloglist-blogadda mb-5">
           <a
-            href="http://www.blogadda.com"
+            className="bloglist-blogadda-link"
+            href="https://www.blogadda.com"
             title="Visit BlogAdda.com to discover Indian blogs"
             target="_blank"
             rel="noopener noreferrer"
           >
             <img
+              className="bloglist-blogadda-img"
               src="https://www.blogadda.com/images/blogadda.png"
               width="120"
               height="25"
               alt="Visit BlogAdda.com to discover Indian blogs"
             />
           </a>
-          <h6 style={{ marginTop: "10px" }}>Proud to Be a Part of BlogAdda Community</h6>
+          <h6 className="bloglist-blogadda-text">Proud to Be a Part of BlogAdda Community</h6>
         </div>
       </section>
       <Footer />

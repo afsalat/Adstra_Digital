@@ -15,20 +15,29 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-// ✅ Metadata (SEO, OG, Twitter, Robots, Icons, Verification, Canonical)
 export const metadata = {
+  metadataBase: new URL("https://adstradigital.com"),
   title: "Digital Marketing Company in Kozhikode | AdstraDigital",
   description:
-    "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+    "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
   authors: [{ name: "AdstraDigital" }],
-  robots:
-    "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
     url: "https://adstradigital.com/",
     title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
     description:
-      "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+      "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
     images: [
       {
         url: "https://adstradigital.com/static/media/logo_icon.jpeg",
@@ -44,7 +53,7 @@ export const metadata = {
     site: "@AdstraDigital",
     title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
     description:
-      "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+      "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
     images: ["https://adstradigital.com/static/media/logo_icon.jpeg"],
   },
   icons: {
@@ -59,7 +68,6 @@ export const metadata = {
   },
 };
 
-// ✅ Viewport (moved outside metadata)
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -71,7 +79,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
-        {/* Preconnect & Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
@@ -79,14 +86,12 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
 
-        {/* Preload Key Image */}
         <link
           rel="preload"
           as="image"
           href="https://adstradigital.com/static/media/logo_icon.jpeg"
         />
 
-        {/* ✅ Bootstrap CSS */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -94,7 +99,6 @@ export default function RootLayout({ children }) {
           crossOrigin="anonymous"
         />
 
-        {/* ✅ Bootstrap Icons */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
@@ -103,7 +107,6 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>{children}</AuthProvider>
 
-        {/* ✅ Bootstrap JS */}
         <Script
           src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
           integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
@@ -111,7 +114,6 @@ export default function RootLayout({ children }) {
           strategy="afterInteractive"
         />
 
-        {/* ✅ Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-VZBBBCVJHK"
           strategy="afterInteractive"
@@ -125,13 +127,11 @@ export default function RootLayout({ children }) {
           `}
         </Script>
 
-        {/* ✅ Razorpay Checkout */}
         <Script
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="lazyOnload"
         />
 
-        {/* ✅ JSON-LD Schema (LocalBusiness) */}
         <Script id="ld-json" type="application/ld+json" strategy="afterInteractive">
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -140,7 +140,7 @@ export default function RootLayout({ children }) {
             url: "https://adstradigital.com",
             logo: "https://adstradigital.com/static/media/logo_icon.jpeg",
             description:
-              "Grow your business with AdstraDigital— a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding & content marketing.",
+              "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
             telephone: "+91 9744779574",
             email: "info@adstradigital.com",
             address: {

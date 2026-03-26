@@ -6,7 +6,7 @@ const RecognitionSection = () => {
     {
       name: "BlogAdda",
       img: "https://www.blogadda.com/images/blogadda.png",
-      link: "http://www.blogadda.com",
+      link: "https://www.blogadda.com",
       note: "Proud to be a part of BlogAdda community",
       external: true,
       width: 120,

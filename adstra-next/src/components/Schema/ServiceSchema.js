@@ -1,165 +1,189 @@
-"use client";
+const BASE_URL = "https://adstradigital.com";
 
-import React from "react";
+const organizationSchema = {
+  "@type": "Organization",
+  "@id": `${BASE_URL}/#organization`,
+  name: "AdstraDigital",
+  url: BASE_URL,
+  logo: {
+    "@type": "ImageObject",
+    url: `${BASE_URL}/favicon.png`,
+  },
+  sameAs: [
+    "https://www.facebook.com/adstradigital",
+    "https://www.instagram.com/adstradigital",
+    "https://www.linkedin.com/company/adstradigital",
+  ],
+};
 
-export default function ServiceSchema() {
-  const schema = {
-    "@context": "https://schema.org",
-    "@graph": [
+export default function ServiceSchema({ service, isAll = false }) {
+  if (!isAll && !service) return null;
+
+  if (isAll) {
+    const pageUrl = `${BASE_URL}/service/all/`;
+    const graph = [
       {
         "@type": "WebPage",
-        "@id": "https://adstradigital.com/service/all/",
-        "url": "https://adstradigital.com/service/all/",
-        "name": "All-in-One Digital Solutions from AdstraDigital | Kerala",
-        "description":
-          "Explore the full range of digital solution by AdstraDigital – from branding and content to SEO, SMM, and performance marketing.",
-        "inLanguage": "en",
-        "isPartOf": {
-          "@id": "https://adstradigital.com",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: "All-in-One Digital Solutions from AdstraDigital | Kerala",
+        description:
+          "Explore the full range of digital solutions by AdstraDigital, from branding and content to SEO, social media, and performance marketing.",
+        inLanguage: "en",
+        isPartOf: {
+          "@id": `${BASE_URL}/#website`,
         },
       },
       {
-        "@type": "Organization",
-        "@id": "https://share.google/jQUwqdtXBwqetcI3N",
-        "name": "AdstraDigital",
-        "url": "https://adstradigital.com",
-        "logo": {
-          "@type": "ImageObject",
-          "url":
-            "https://adstradigital.com/_next/static/media/logo-new-03.a8aee72e.png",
-        },
-        "sameAs": [
-          "https://www.facebook.com/adstradigital",
-          "https://www.instagram.com/adstradigital",
-          "https://www.linkedin.com/company/adstradigital",
-        ],
-      },
-      {
-        "@type": "BreadcrumbList",
-        "itemListElement": [
+        "@type": "ItemList",
+        "@id": `${pageUrl}#services`,
+        itemListElement: [
           {
             "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "https://adstradigital.com/",
+            position: 1,
+            name: "Video Production",
+            url: `${BASE_URL}/service/video-production/`,
           },
           {
             "@type": "ListItem",
-            "position": 2,
-            "name": "Services",
-            "item": "https://adstradigital.com/service/all/",
+            position: 2,
+            name: "Social Media Marketing",
+            url: `${BASE_URL}/service/social-media-marketing/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "Lead Generation & Performance Marketing",
+            url: `${BASE_URL}/service/lead-generation-performance-marketing/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 4,
+            name: "Branding",
+            url: `${BASE_URL}/service/branding/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 5,
+            name: "SEO & Website Optimization",
+            url: `${BASE_URL}/service/seo-website-optimization/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 6,
+            name: "Analytics & Reporting",
+            url: `${BASE_URL}/service/analytics-reporting/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 7,
+            name: "Content Marketing",
+            url: `${BASE_URL}/service/content-marketing/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 8,
+            name: "Google Ads",
+            url: `${BASE_URL}/service/google-ads/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 9,
+            name: "Web Development",
+            url: `${BASE_URL}/service/web-development/`,
           },
         ],
       },
-      {
-        "@type": "LocalBusiness",
-        "name": "AdstraDigital",
-        "image":
-          "https://adstradigital.com/_next/static/media/logo-new-03.a8aee72e.png",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress":
-            "First Floor, Husna Complex, Near English Church, Nadakkavu West",
-          "addressLocality": "Kozhikode",
-          "addressRegion": "Kerala",
-          "postalCode": "673011",
-          "addressCountry": "IN",
-        },
-        "url": "https://adstradigital.com",
-        "telephone": "+91 9744779574",
-        "priceRange": "$$",
-        "openingHours": "Mo-Fr 09:00-18:00",
+      organizationSchema,
+    ];
+
+    return (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": graph,
+          }),
+        }}
+      />
+    );
+  }
+
+  const serviceUrl = `${BASE_URL}/service/${service.slug}/`;
+  const graph = [
+    {
+      "@type": "WebPage",
+      "@id": `${serviceUrl}#webpage`,
+      url: serviceUrl,
+      name: service.metaTitle || `${service.title} | AdstraDigital`,
+      description:
+        service.metaDescription ||
+        service.description ||
+        service.intro ||
+        `Explore ${service.title} by AdstraDigital.`,
+      inLanguage: "en",
+      isPartOf: {
+        "@id": `${BASE_URL}/#website`,
       },
-      {
-        "@type": "Service",
-        "serviceType": "Search Engine Optimization (SEO)",
-        "provider": {
-          "@id":
-            "https://adstradigital.com/service/seo-website-optimization/",
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "India",
-        },
+      breadcrumb: {
+        "@id": `${serviceUrl}#breadcrumb`,
       },
-      {
-        "@type": "Service",
-        "serviceType": "Social Media Management",
-        "provider": {
-          "@id":
-            "https://adstradigital.com/service/social-media-marketing-campaigns/",
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${serviceUrl}#breadcrumb`,
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: `${BASE_URL}/`,
         },
-        "areaServed": {
-          "@type": "Place",
-          "name": "India",
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Services",
+          item: `${BASE_URL}/service/all/`,
         },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: service.title,
+          item: serviceUrl,
+        },
+      ],
+    },
+    {
+      "@type": "Service",
+      "@id": `${serviceUrl}#service`,
+      name: service.title,
+      serviceType: service.title,
+      description:
+        service.metaDescription ||
+        service.description ||
+        service.intro ||
+        `Explore ${service.title} by AdstraDigital.`,
+      provider: {
+        "@id": `${BASE_URL}/#organization`,
       },
-      {
-        "@type": "Service",
-        "serviceType": "Lead Generation & Performance Marketing",
-        "provider": {
-          "@id":
-            "https://adstradigital.com/service/lead-generation-performance-marketing/",
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "India",
-        },
+      areaServed: {
+        "@type": "Country",
+        name: "India",
       },
-      {
-        "@type": "Service",
-        "serviceType": "Branding & Identity Design",
-        "provider": {
-          "@id":
-            "https://adstradigital.com/service/branding-identity-design/",
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "India",
-        },
-      },
-      {
-        "@type": "Service",
-        "serviceType": "Website Design & Development",
-        "provider": {
-          "@id": "https://adstradigital.com/service/web-development-design/",
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "India",
-        },
-      },
-      {
-        "@type": "Service",
-        "serviceType": "Professional Photography & Video Production",
-        "provider": {
-          "@id": "https://adstradigital.com/service/video-production/",
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "India",
-        },
-      },
-      {
-        "@type": "Service",
-        "serviceType": "Paid Advertising (PPC & Display Ads)",
-        "provider": {
-          "@id":
-            "https://adstradigital.com/service/paid-advertising-ppc-display-ads/",
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "India",
-        },
-      },
-    ],
-  };
+      url: serviceUrl,
+    },
+    organizationSchema,
+  ];
 
   return (
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{
-        __html: JSON.stringify(schema),
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": graph,
+        }),
       }}
     />
   );

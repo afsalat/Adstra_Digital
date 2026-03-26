@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -6,7 +6,6 @@ import { db } from "../../Context/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import SEOHelmet from "../../services/SEOHelmet";
 import "./AboutDetails.css";
 
 function AboutDetails() {
@@ -32,12 +31,6 @@ function AboutDetails() {
 
   return (
     <div className="about-details">
-      <SEOHelmet
-        title="AdstraDigital – Best Performance-Driven Digital Marketing Agency"
-        description="Learn more about Adstra Digital – our mission, values, and team behind our digital success."
-        canonical="https://adstradigital.com/about/"
-      />
-
       {!content ? (
         <div>Loading...</div>
       ) : (

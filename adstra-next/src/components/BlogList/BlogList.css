@@ -126,3 +126,26 @@
   text-decoration: underline;
   color: #eae8dd !important;
 }
+
+.bloglist-blogadda {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.bloglist-blogadda-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bloglist-blogadda-img {
+  display: block;
+  margin: 0 auto;
+}
+
+.bloglist-blogadda-text {
+  margin-top: 10px;
+}

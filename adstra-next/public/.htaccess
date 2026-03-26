@@ -1,0 +1,42 @@
+# =============================================
+# HTTPS Redirect (HTTP -> HTTPS)
+# =============================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1) Canonical host: www -> non-www (handle optional :port too)
+    RewriteCond %{HTTP_HOST} ^www\.adstradigital\.com(:[0-9]+)?$ [NC]
+    RewriteRule ^ https://adstradigital.com%{REQUEST_URI} [L,R=301,NE]
+
+    # 2) Force HTTPS on canonical host (proxy-safe to avoid loops)
+    RewriteCond %{HTTP_HOST} ^adstradigital\.com(:[0-9]+)?$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteRule ^ https://adstradigital.com%{REQUEST_URI} [L,R=301,NE]
+</IfModule>
+
+# =============================================
+# Security Headers
+# =============================================
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Header always set Content-Security-Policy "upgrade-insecure-requests"
+</IfModule>
+
+# =============================================
+# Caching for Static Assets
+# =============================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-javascript "access plus 1 month"
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>

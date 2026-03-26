@@ -1,10 +1,5 @@
 import './Terms.css';
 
-export const metadata = {
-  title: 'Terms & Conditions - Adstra Digital',
-  description: 'Read our complete Terms and Conditions for using the Adstra Digital platform.',
-};
-
 export default function TermsAndConditions() {
   return (
     <div className="terms-page">
