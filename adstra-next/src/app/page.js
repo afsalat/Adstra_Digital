@@ -2,7 +2,6 @@
 import NavBar from "@/components/NavBar/Navbar";
 import Banner from "@/components/Banner-0-2/Banner";
 import About from "@/components/About/About";
-import Service from "@/components/Service/Service";
 import Gallery from "@/components/Gallery/Gallery";
 import Enquiry from "@/components/Enquiry/Enquiry";
 import Blog from "@/components/Blog/Blog";
@@ -11,7 +10,6 @@ import Footer from "@/components/Footer/Footer";
 import WhatsAppFloatingButton from "@/components/WhatsappIcon/WhatsappIcon";
 import TrustedListings from "@/components/TrustedListings/TrustedListings";
 import TeamDetails from "@/components/TeamDetails/TeamDetails";
-import FounderProfile from "@/components/FounderProfile/FounderProfile";
 
 export const metadata = {
   title: "Best Digital Marketing Agency in Kerala | AdstraDigital",
@@ -28,15 +26,13 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <div className="Homepage"  style={{backgroundColor:"black"}}>
+    <div className="Homepage public-page-shell">
       <NavBar />
       <Banner />
+      <TrustedListings />
       <About />
-      <Service />
       <Gallery />
       <Enquiry />
-      <TrustedListings />
-      <FounderProfile />
       <TeamDetails />
       <Blog />
       <ContactUs />

@@ -8,9 +8,7 @@ import "./Blog.css";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { blogPosts } from "../../data/services";
-
-
-
+import { getBlogImagePath } from "@/utils/contentImage";
 
 const Blog = () => {
   const router = useRouter();
@@ -49,7 +47,7 @@ const Blog = () => {
                 >
                   <div className="blog-card__image">
                     <Image
-                      src={post.imageUrl}
+                      src={getBlogImagePath(post)}
                       alt={post.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

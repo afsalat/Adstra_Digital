@@ -27,21 +27,21 @@ export default function ProformaHeader({
         <div className="col-6 text-end text-sm leading-tight">
           {/* Main Branch */}
           <div className="mb-3">
-            <div style={{fontWeight: "bold", fontSize: "0.8rem"}}> Main Branch</div>
-            <div className="text-gray-800" style={{fontSize: "0.6rem"}}>
+            <div style={{ fontWeight: "bold", fontSize: "0.8rem" }}> Main Branch</div>
+            <div className="text-gray-800" style={{ fontSize: "0.6rem" }}>
               {mainBranch}
             </div>
           </div>
 
           {/* Other Branches */}
-            <div>
-              <div style={{fontWeight: "bold", fontSize: "0.8rem"}}>
-                 Registered Office
-              </div>
-                <div className="text-gray-700" style={{fontSize: "0.6rem"}}>
-                  {otherBranches}
-                </div>
+          <div>
+            <div style={{ fontWeight: "bold", fontSize: "0.8rem" }}>
+              Registered Office
             </div>
+            <div className="text-gray-700" style={{ fontSize: "0.6rem" }}>
+              {otherBranches}
+            </div>
+          </div>
         </div>
       </div>
 

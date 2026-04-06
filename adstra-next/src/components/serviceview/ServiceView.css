@@ -1,161 +1,445 @@
-.srvice-detail-wrapper {
-  max-width: 1100px;
-  margin: 5rem auto 0 auto;
-  padding: 3rem 1rem;
-  font-family: 'Poppins', sans-serif;
-  color: #f5f5f5; /* light text */
-  background-color: #000; /* black background */
-  border-radius: 12px;
-}
-
-/* Title */
-.srvice-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  text-align: center;
-  color: #FFD700; /* gold */
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.srvice-subtitle {
-  text-align: center;
-  font-size: 1rem;
-  color: #d1d5db; /* gray-300 */
-  margin-bottom: 2rem;
-  max-width: 85%;
-  margin-inline: auto;
-}
-
-/* Image */
-.srvice-image-wrapper {
-  border-radius: 1rem;
+.service-page {
+  position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.25);
-  margin-bottom: 3rem;
-}
-.srvice-image {
-  width: 100%;
-  height: 400px;
-  object-fit: cover;
-  border-radius: 1rem;
-  border: 3px solid #FFD700; /* gold border */
+  padding: 128px 0 84px;
 }
 
-/* Section Headings */
-.section-heading {
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: #FFD700;
-  display: flex;
+.service-page::before,
+.service-page::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.service-page::before {
+  top: 90px;
+  left: -110px;
+  width: 300px;
+  height: 300px;
+  background: rgba(212, 166, 58, 0.15);
+}
+
+.service-page::after {
+  right: -120px;
+  top: 260px;
+  width: 280px;
+  height: 280px;
+  background: rgba(78, 133, 214, 0.13);
+}
+
+.service-page__shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.service-page__hero,
+.service-page__panel,
+.service-page__section-block,
+.service-page__benefits,
+.service-page__related,
+.service-page__cta {
+  border: 1px solid rgba(28, 36, 48, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 251, 0.94));
+  box-shadow: 0 26px 62px rgba(15, 23, 42, 0.08);
+}
+
+.service-page__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+  gap: 26px;
+  padding: 36px;
+  border-radius: 36px;
+}
+
+.service-page__eyebrow,
+.service-page__section-tag {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.2rem;
+  justify-content: center;
+  width: fit-content;
+  padding: 0.68rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(155, 107, 8, 0.14);
+  background: rgba(255, 248, 230, 0.9);
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
-.icon {
-  flex-shrink: 0;
-}
-.icon.green {
-  color: #32cd32; /* lime green */
-}
-.icon.yellow {
-  color: #FFD700; /* gold */
+.service-page__hero-copy h1 {
+  margin: 16px 0 14px;
+  max-width: 11ch;
+  color: var(--text-primary);
+  font-size: clamp(3rem, 2.3rem + 2.6vw, 5.1rem);
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.06em;
 }
 
-/* Highlights */
-.highlight-section {
-  margin-bottom: 3rem;
+.service-page__tagline {
+  margin: 0 0 16px;
+  color: var(--accent-strong);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
-.highlight-list {
-  display: grid;
-  gap: 1rem;
+
+.service-page__lead,
+.service-page__section-header p,
+.service-page__panel p,
+.service-page__capability-card p,
+.service-page__benefit-item p,
+.service-page__related-card p,
+.service-page__cta-copy p {
+  color: var(--text-secondary);
+  line-height: 1.82;
 }
-@media (min-width: 640px) {
-  .highlight-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
+
+.service-page__lead {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 1.04rem;
 }
-.highlight-item {
+
+.service-page__actions {
   display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid #FFD700;
-  border-radius: 0.75rem;
-  background: #111; /* dark gray card */
-  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.15);
-  transition: transform 0.3s ease;
-}
-.highlight-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
 }
 
-/* Benefits */
-.benefit-section {
-  background: #111;
-  border: 1px solid #FFD700;
-  padding: 2rem;
-  border-radius: 1rem;
-  margin-bottom: 3rem;
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
-}
-.benefit-list {
-  padding-left: 1.5rem;
-  list-style: disc;
-  line-height: 1.8;
-  color: #f5f5f5;
+.service-page__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* CTA Section */
-.cta-section {
-  background: linear-gradient(135deg, #000, #222);
-  color: #FFD700;
-  padding: 2.5rem;
-  border-radius: 1rem;
-  text-align: center;
-  box-shadow: 0 10px 24px rgba(255, 215, 0, 0.2);
-  border: 2px solid #FFD700;
-}
-.cta-section h3 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-.cta-section p {
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-  color: #f5f5f5;
-}
-.cta-section small {
-  display: block;
-  font-size: 0.9rem;
-  color: #bbb;
-  margin-bottom: 1rem;
-}
-.cta-button {
-  padding: 0.75rem 2rem;
-  background: #FFD700;
-  color: #000;
-  font-weight: 600;
-  border: none;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 15px rgba(255, 215, 0, 0.3);
-}
-.cta-button:hover {
-  background: #fff;
-  color: #111;
+.service-page__button:hover {
   transform: translateY(-2px);
 }
 
-/* Not Found */
+.service-page__button--primary {
+  border: none;
+  background: linear-gradient(135deg, #f6cf64 0%, #d4a63a 100%);
+  color: #16110a;
+  box-shadow: 0 18px 34px rgba(212, 166, 58, 0.24);
+}
+
+.service-page__button--secondary {
+  border: 1px solid rgba(28, 36, 48, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-primary);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.service-page__hero-visual {
+  display: grid;
+  gap: 18px;
+}
+
+.service-page__image-frame {
+  position: relative;
+  overflow: hidden;
+  min-height: 420px;
+  border-radius: 30px;
+  border: 1px solid rgba(28, 36, 48, 0.08);
+  background: linear-gradient(135deg, rgba(18, 27, 40, 0.08), rgba(212, 166, 58, 0.08));
+}
+
+.service-page__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.service-page__meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.service-page__meta-card {
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(28, 36, 48, 0.08);
+  background:
+    linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.service-page__meta-card strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--accent-strong);
+  font-size: clamp(1.8rem, 1.45rem + 1vw, 2.5rem);
+  font-weight: 900;
+  line-height: 0.92;
+}
+
+.service-page__meta-card span {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.service-page__story-grid,
+.service-page__closing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 28px;
+}
+
+.service-page__panel,
+.service-page__section-block,
+.service-page__benefits,
+.service-page__related,
+.service-page__cta {
+  border-radius: 34px;
+  padding: 34px;
+}
+
+.service-page__panel--accent {
+  background:
+    linear-gradient(135deg, rgba(23, 34, 53, 0.98), rgba(54, 82, 123, 0.94));
+}
+
+.service-page__panel h2,
+.service-page__section-header h2,
+.service-page__cta h2 {
+  margin: 16px 0 14px;
+  color: var(--text-primary);
+  font-size: clamp(2rem, 1.55rem + 1.1vw, 3rem);
+  font-weight: 850;
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.service-page__panel--accent h2,
+.service-page__panel--accent p,
+.service-page__panel--accent .service-page__section-tag,
+.service-page__panel--accent .service-page__checklist li {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.service-page__panel--accent .service-page__section-tag {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.service-page__panel p {
+  margin: 0;
+}
+
+.service-page__checklist {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-page__checklist li {
+  position: relative;
+  padding-left: 24px;
+  line-height: 1.72;
+}
+
+.service-page__checklist li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62rem;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f6cf64, #7bb5ff);
+}
+
+.service-page__capabilities-grid,
+.service-page__benefit-list,
+.service-page__related-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.service-page__capabilities-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.service-page__benefit-list,
+.service-page__related-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.service-page__capability-card,
+.service-page__benefit-item,
+.service-page__related-card {
+  border: 1px solid rgba(28, 36, 48, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 255, 0.94));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.service-page__capability-card {
+  min-height: 220px;
+  padding: 24px;
+  border-radius: 26px;
+}
+
+.service-page__capability-card span,
+.service-page__benefit-item span {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.service-page__capability-card h3,
+.service-page__related-card h3 {
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  font-size: 1.22rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.service-page__capability-card p,
+.service-page__related-card p,
+.service-page__benefit-item p {
+  margin: 0;
+}
+
+.service-page__benefit-item {
+  min-height: 180px;
+  padding: 24px;
+  border-radius: 24px;
+}
+
+.service-page__related-card {
+  display: block;
+  min-height: 240px;
+  padding: 24px;
+  border-radius: 26px;
+  text-decoration: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.service-page__related-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 52px rgba(15, 23, 42, 0.1);
+}
+
+.service-page__related-card span {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--accent-strong);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.service-page__cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 251, 241, 0.98), rgba(244, 248, 255, 0.96));
+}
+
+.service-page__cta-copy p,
+.service-page__cta-copy small {
+  display: block;
+  margin: 0;
+}
+
+.service-page__cta-copy small {
+  margin-top: 14px;
+  color: var(--text-secondary);
+}
+
 .not-found {
+  max-width: 900px;
+  margin: 140px auto 60px;
   text-align: center;
-  padding: 2rem;
-  font-size: 1.2rem;
-  color: #FFD700;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1100px) {
+  .service-page__hero,
+  .service-page__story-grid,
+  .service-page__cta {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .service-page__capabilities-grid,
+  .service-page__benefit-list,
+  .service-page__related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .service-page__hero-copy h1 {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .service-page {
+    padding: 108px 0 64px;
+  }
+
+  .service-page__shell {
+    padding: 0 16px;
+  }
+
+  .service-page__hero,
+  .service-page__panel,
+  .service-page__section-block,
+  .service-page__benefits,
+  .service-page__related,
+  .service-page__cta {
+    padding: 24px 20px;
+    border-radius: 26px;
+  }
+
+  .service-page__image-frame {
+    min-height: 280px;
+    border-radius: 22px;
+  }
+
+  .service-page__meta-grid,
+  .service-page__capabilities-grid,
+  .service-page__benefit-list,
+  .service-page__related-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .service-page__actions {
+    flex-direction: column;
+  }
+
+  .service-page__button {
+    width: 100%;
+  }
 }

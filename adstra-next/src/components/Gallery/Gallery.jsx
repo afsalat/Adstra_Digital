@@ -1,117 +1,55 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import "./Gallery.css";
 
-import Logo from "../../assets/logo-v-white.png";
-import team_l_3 from "../../assets/team/client1.jpeg";
-
-const images = [
-    {
-        src: null,
-        title: "Concept Art",
-        desc: "Visual storytelling through illustration.",
-    },
-    {
-        src: null,
-        title: "3D Animation",
-        desc: "Dynamic animations for all industries.",
-    },
-    {
-        src: null,
-        title: "Product Modeling",
-        desc: "Precision models for marketing.",
-    },
-    {
-        src: null,
-        title: "Character Design",
-        desc: "Unique and stylized character concepts.",
-    },
-    {
-        src: team_l_3,
-        title: "Environment Art",
-        desc: "Immersive 3D spaces and worlds.",
-    },
-    {
-        src: null,
-        title: "Simulation",
-        desc: "Interactive real-time simulations.",
-    },
-    {
-        src: null,
-        title: "AR/VR Ready",
-        desc: "Assets optimized for AR/VR use.",
-    },
-    {
-        src: null,
-        title: "Rendering",
-        desc: "Photorealistic rendering output.",
-    },
-];
-
 function Gallery() {
-    const [popupData, setPopupData] = useState(null);
+  const sectionRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
 
-    const openPopup = (item) => setPopupData(item);
-    const closePopup = () => setPopupData(null);
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return undefined;
 
-    return (
-        <div id="gallery" className="gallery">
-            {/* 🎥 Background video */}
-            {/* <video autoPlay muted loop playsInline className="bg-video">
-        <source
-          src="https://adstradigital.com/media/video/adstra-golddest.mp4"
-          type="video/mp4"
-        />
-      </video> */}
-
-            {/* overlay */}
-            <div className="gallery-overlay"></div>
-
-            <h2 className="gallery-title">Gallery</h2>
-
-            <div className="gallery-grid">
-                {images.map((item, index) => (
-                    <div
-                        key={index}
-                        className={`gallery-item item-${index + 1}`}
-                        onClick={() => openPopup(item)}
-                    >
-                        {item.src && <Image src={item.src} alt={item.title} />}
-                        <div className="image-overlay">
-                            <h4>{item.title}</h4>
-                            <p>{item.desc}</p>
-                        </div>
-                    </div>
-                ))}
-
-                <div className="center-branding">
-                    <Image src={Logo} alt="Adstra Logo" className="brand-logo" />
-                </div>
-            </div>
-
-            {/* Popup */}
-            {popupData && (
-                <div className="popup-overlay" onClick={closePopup}>
-                    <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-                        <button className="close-btn" onClick={closePopup}>
-                            ×
-                        </button>
-                        <div className="popup-body">
-                            <div className="popup-left">
-                                {popupData.src && <Image src={popupData.src} alt={popupData.title} />}
-                            </div>
-                            <div className="popup-right">
-                                <h3>{popupData.title}</h3>
-                                <p>{popupData.desc}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setIsVisible(true);
+        observer.disconnect();
+      },
+      { threshold: 0.2 }
     );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section id="gallery" className="gallery-section" ref={sectionRef}>
+      <div className="gallery-aurora gallery-aurora--left" />
+      <div className="gallery-aurora gallery-aurora--right" />
+
+      <div className="gallery-shell">
+        <div className={`gallery-header ${isVisible ? "is-visible" : ""}`}>
+          <span className="gallery-kicker">Gallery</span>
+          <h2 className="gallery-title">Clean Space For New Gallery Content</h2>
+          <p className="gallery-copy">
+            All existing gallery images have been removed. This section is now ready
+            for your new layout, media, or feature.
+          </p>
+        </div>
+
+        <div className={`gallery-empty-state ${isVisible ? "is-visible" : ""}`}>
+          <div className="gallery-empty-state__grid" />
+          <div className="gallery-empty-state__content">
+            <span className="gallery-empty-state__label">Empty Canvas</span>
+            <h3>Build the next gallery experience here.</h3>
+            <p>No image cards are rendered in this section now.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default Gallery;

@@ -1,0 +1,110 @@
+.cloud-divider {
+  position: relative;
+  height: clamp(340px, 36vw, 560px);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(12, 14, 18, 0.92) 0%, rgba(22, 25, 31, 0.84) 46%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(246, 247, 250, 0.88) 100%);
+}
+
+.cloud-divider::before,
+.cloud-divider::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cloud-divider::before {
+  top: 0;
+  height: 32%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.cloud-divider::after {
+  bottom: 0;
+  height: 44%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.cloud-divider__veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255, 255, 255, 0.09), transparent 30%),
+    radial-gradient(circle at 76% 12%, rgba(255, 255, 255, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), transparent 48%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.clouds {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.clouds-1,
+.clouds-2,
+.clouds-3 {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  left: 0;
+  height: 100%;
+  background-repeat: repeat-x;
+  background-position: 0 0;
+  background-size: auto 100%;
+  filter: grayscale(1) contrast(1.08) brightness(0.78);
+}
+
+.clouds-1 {
+  background-image: url("https://s.cdpn.io/15514/clouds_2.png");
+  animation: clouds-loop-1 20s linear infinite;
+  opacity: 0.64;
+}
+
+.clouds-2 {
+  background-image: url("https://s.cdpn.io/15514/clouds_1.png");
+  animation: clouds-loop-2 15s linear infinite;
+  opacity: 0.5;
+}
+
+.clouds-3 {
+  background-image: url("https://s.cdpn.io/15514/clouds_3.png");
+  animation: clouds-loop-3 17s linear infinite;
+  opacity: 0.42;
+}
+
+@keyframes clouds-loop-1 {
+  to {
+    background-position: -1000px 0;
+  }
+}
+
+@keyframes clouds-loop-2 {
+  to {
+    background-position: -1000px 0;
+  }
+}
+
+@keyframes clouds-loop-3 {
+  to {
+    background-position: -1579px 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .cloud-divider {
+    height: 280px;
+  }
+
+  .clouds {
+    opacity: 0.42;
+  }
+}

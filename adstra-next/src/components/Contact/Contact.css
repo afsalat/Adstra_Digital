@@ -564,6 +564,8 @@
   height: 100%;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .adstra-terminal-header {
@@ -685,6 +687,95 @@
 .adstra-feature-comet:hover {
   background: rgba(255, 215, 0, 0.2);
   transform: translateY(-2px);
+}
+
+.adstra-terminal-brief {
+  margin-top: 26px;
+  padding: 24px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(102, 126, 234, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.adstra-terminal-brief__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.adstra-terminal-brief__intro h4 {
+  margin: 10px 0;
+  font-size: 1.22rem;
+  color: #fff;
+}
+
+.adstra-terminal-brief__intro p {
+  margin: 0;
+  color: #d8deea;
+  line-height: 1.7;
+}
+
+.adstra-terminal-brief__grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.adstra-terminal-mini-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.adstra-terminal-mini-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(102, 126, 234, 0.2));
+  color: #ffd700;
+  flex-shrink: 0;
+}
+
+.adstra-terminal-mini-card h5 {
+  margin: 0 0 6px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.adstra-terminal-mini-card p {
+  margin: 0;
+  color: #d8deea;
+  line-height: 1.65;
+  font-size: 0.94rem;
+}
+
+.adstra-terminal-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.14);
+  color: #f4d889;
+  line-height: 1.6;
 }
 
 /* CTA Constellation */
@@ -942,4 +1033,183 @@
 @keyframes adstra-sparkle-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.5); }
+}
+
+/* Light theme overrides */
+.adstra-contact-hero {
+  background: linear-gradient(135deg, #fbf5ea 0%, #ffffff 42%, #eef5fb 100%);
+  color: var(--text-primary);
+}
+
+.adstra-contact-loading {
+  background: linear-gradient(135deg, #ffffff 0%, #f4f7fb 100%);
+  color: var(--text-primary);
+}
+
+.adstra-nebula-1 {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+}
+
+.adstra-nebula-2 {
+  background: radial-gradient(circle, rgba(212, 166, 58, 0.1) 0%, transparent 70%);
+}
+
+.adstra-stars {
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, rgba(28, 36, 48, 0.22), transparent),
+    radial-gradient(2px 2px at 40% 70%, rgba(28, 36, 48, 0.18), transparent),
+    radial-gradient(1px 1px at 60% 20%, rgba(28, 36, 48, 0.2), transparent),
+    radial-gradient(1px 1px at 80% 80%, rgba(28, 36, 48, 0.16), transparent);
+}
+
+.adstra-particle {
+  background: linear-gradient(45deg, var(--accent), #60a5fa);
+}
+
+.adstra-crown-wrapper,
+.adstra-star-burst,
+.adstra-cta-crown {
+  background: rgba(212, 166, 58, 0.1);
+  border-color: rgba(212, 166, 58, 0.24);
+}
+
+.adstra-main-title,
+.adstra-title-glow,
+.adstra-social-galaxy h4,
+.adstra-node-content h4,
+.adstra-terminal-header h3,
+.adstra-terminal-brief__intro h4,
+.adstra-terminal-mini-card h5,
+.adstra-cta-title {
+  color: var(--text-primary);
+  text-shadow: none;
+}
+
+.adstra-title-gradient,
+.adstra-cta-empire,
+.adstra-terminal-header h3,
+.adstra-nexus-title {
+  background: linear-gradient(45deg, var(--accent-strong), #3b82f6, #dc8a2f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.adstra-hero-subtitle,
+.adstra-nexus-subtitle,
+.adstra-node-content p,
+.adstra-metric-label,
+.adstra-cta-prophecy,
+.adstra-map-overlay span,
+.adstra-terminal-header p,
+.adstra-terminal-brief__intro p,
+.adstra-terminal-mini-card p {
+  color: var(--text-secondary);
+}
+
+.adstra-navigator-track,
+.adstra-nexus-card,
+.adstra-terminal-card,
+.adstra-constellation-core {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: rgba(28, 36, 48, 0.08);
+  box-shadow: var(--shadow-soft);
+}
+
+.adstra-nav-pill,
+.adstra-nexus-node,
+.adstra-galaxy-link,
+.adstra-victory-metrics,
+.adstra-feature-comet,
+.adstra-terminal-brief,
+.adstra-terminal-mini-card,
+.adstra-terminal-note,
+.adstra-manifest-item,
+.adstra-cta-edict {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(28, 36, 48, 0.08);
+  color: var(--text-primary);
+}
+
+.adstra-nav-pill {
+  color: var(--text-secondary);
+}
+
+.adstra-nav-pill:hover,
+.adstra-nexus-node:hover,
+.adstra-galaxy-link:hover {
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.adstra-nav-pill.adstra-nav-active {
+  background: linear-gradient(135deg, #dbeafe, #fef3c7);
+  color: var(--text-primary);
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.14);
+}
+
+.adstra-nexus-header,
+.adstra-social-galaxy,
+.adstra-terminal-header {
+  border-bottom-color: rgba(28, 36, 48, 0.08);
+}
+
+.adstra-node-link,
+.adstra-portal-imperial {
+  color: #2563eb;
+}
+
+.adstra-node-badge {
+  background: rgba(212, 166, 58, 0.12);
+  border-color: rgba(212, 166, 58, 0.24);
+  color: var(--accent-strong);
+}
+
+.adstra-node-orb,
+.adstra-node-orb::before {
+  background: linear-gradient(135deg, #60a5fa, #d4a63a);
+}
+
+.adstra-metric-value,
+.adstra-feature-comet,
+.adstra-terminal-brief__eyebrow,
+.adstra-terminal-mini-card__icon,
+.adstra-terminal-note,
+.adstra-manifest-item,
+.adstra-cta-edict,
+.adstra-map-overlay,
+.adstra-terminal-icon,
+.adstra-crown-icon,
+.adstra-star-icon,
+.adstra-cta-crown-icon {
+  color: var(--accent-strong);
+}
+
+.adstra-cosmic-map {
+  border-color: rgba(212, 166, 58, 0.24);
+  box-shadow: var(--shadow-soft);
+}
+
+.adstra-cosmic-map iframe {
+  filter: grayscale(10%) contrast(105%) brightness(1);
+}
+
+.adstra-map-overlay {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(212, 166, 58, 0.24);
+}
+
+.adstra-terminal-mini-card__icon {
+  background: linear-gradient(135deg, rgba(212, 166, 58, 0.16), rgba(59, 130, 246, 0.14));
+}
+
+.adstra-portal-royal {
+  color: var(--text-primary);
+}
+
+.adstra-portal-imperial {
+  background: #ffffff;
+}
+
+.adstra-portal-imperial:hover {
+  color: #ffffff;
 }

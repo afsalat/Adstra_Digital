@@ -7,6 +7,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import { format } from "date-fns";
 import Link from "next/link";
+import { getBlogImagePath } from "@/utils/contentImage";
 import "./BlogDetails.css";
 
 const keywordLinks = {
@@ -195,8 +196,6 @@ const BlogDetail = ({ blog }) => {
     window.scrollTo(0, 0);
   }, []);
 
-  const getImageUrl = (img) => img || "/assets/default-blog.jpg";
-
   const scrollSidebar = (direction) => {
     if (sidebarRef.current) {
       const scrollAmount = 300;
@@ -245,7 +244,7 @@ const BlogDetail = ({ blog }) => {
     // Avoid matching if it looks like a numbered FAQ item (handled below)
     if (para.includes("?") && para.length < 100 && !/^\s*\d+[\.)]\s+/.test(para)) {
       return (
-        <p key={index} className="blog-section-title" style={{ fontSize: "1.2em", fontWeight: "600", color: "#FFD700", marginTop: "1.5em", marginBottom: "0.8em" }}>
+        <p key={index} className="blog-section-title" style={{ fontSize: "1.2em", fontWeight: "600", color: "var(--accent-strong)", marginTop: "1.5em", marginBottom: "0.8em" }}>
           {interlinkText(para)}
         </p>
       );
@@ -254,7 +253,7 @@ const BlogDetail = ({ blog }) => {
     // Numbered points (section headers like "A. Type of App")
     if (/^[A-Z]\.\s+/.test(para)) {
       return (
-        <h3 className="blog-subheading" style={{ fontSize: "1.1em", fontWeight: "700", color: "#FFD700", marginTop: "1.2em" }} key={index}>
+        <h3 className="blog-subheading" style={{ fontSize: "1.1em", fontWeight: "700", color: "var(--accent-strong)", marginTop: "1.2em" }} key={index}>
           {interlinkText(para)}
         </h3>
       );
@@ -278,11 +277,11 @@ const BlogDetail = ({ blog }) => {
 
         return (
           <div key={index} className="blog-table-container" style={{ overflowX: "auto", marginBottom: "2em" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", color: "#ffffff", border: "1px solid #444" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", color: "var(--text-primary)", border: "1px solid rgba(28, 36, 48, 0.12)" }}>
               <thead>
                 <tr>
                   {headerRow.map((cell, idx) => (
-                    <th key={`th-${idx}`} style={{ border: "1px solid #444", padding: "10px", backgroundColor: "#222", fontWeight: "700" }}>
+                    <th key={`th-${idx}`} style={{ border: "1px solid rgba(28, 36, 48, 0.12)", padding: "10px", backgroundColor: "var(--surface-alt)", fontWeight: "700" }}>
                       {interlinkText(cell)}
                     </th>
                   ))}
@@ -292,7 +291,7 @@ const BlogDetail = ({ blog }) => {
                 {bodyRows.map((row, rIdx) => (
                   <tr key={`tr-${rIdx}`}>
                     {row.map((cell, cIdx) => (
-                      <td key={`td-${rIdx}-${cIdx}`} style={{ border: "1px solid #444", padding: "10px" }}>
+                      <td key={`td-${rIdx}-${cIdx}`} style={{ border: "1px solid rgba(28, 36, 48, 0.12)", padding: "10px" }}>
                         {interlinkText(cell)}
                       </td>
                     ))}
@@ -327,7 +326,7 @@ const BlogDetail = ({ blog }) => {
           if (next && /^\s*\d+[\.)]\s+/.test(next)) {
             const cleanedText = next.replace(/^\s*\d+[\.)]\s+/, "");
             items.push(
-              <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "#ffffff" }}>
+              <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "var(--text-secondary)" }}>
                 {interlinkText(cleanedText)}
               </li>
             );
@@ -337,14 +336,14 @@ const BlogDetail = ({ blog }) => {
           }
         }
         return (
-          <ol key={`ol-${index}`} className="blog-numbered-list" style={{ marginLeft: "1.5em", marginBottom: "1em", color: "#ffffff" }}>
+          <ol key={`ol-${index}`} className="blog-numbered-list" style={{ marginLeft: "1.5em", marginBottom: "1em", color: "var(--text-secondary)" }}>
             {items}
           </ol>
         );
       } else {
         // Treat as Header (FAQ Question style)
         return (
-          <h3 className="blog-subheading" style={{ fontSize: "1.2em", color: "#FFD700", marginBottom: "0.5em" }} key={index}>
+          <h3 className="blog-subheading" style={{ fontSize: "1.2em", color: "var(--accent-strong)", marginBottom: "0.5em" }} key={index}>
             {interlinkText(para)}
           </h3>
         );
@@ -359,7 +358,7 @@ const BlogDetail = ({ blog }) => {
         if (next && /^[-•*✔]\s+/.test(next)) {
           const cleanedText = next.replace(/^[-•*✔]\s+/, "");
           items.push(
-            <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "#ffffff" }}>
+            <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "var(--text-secondary)" }}>
               {interlinkText(cleanedText)}
             </li>
           );
@@ -376,7 +375,7 @@ const BlogDetail = ({ blog }) => {
     }
 
     // Paragraph with better spacing
-    return <p key={index} style={{ lineHeight: "1.8", marginBottom: "1em", color: "#ffffff" }}>{interlinkText(para)}</p>;
+    return <p key={index} style={{ lineHeight: "1.8", marginBottom: "1em", color: "var(--text-secondary)" }}>{interlinkText(para)}</p>;
   };
 
   return (
@@ -413,7 +412,7 @@ const BlogDetail = ({ blog }) => {
                 <div
                   className="sidebar-card-img"
                   style={{
-                    backgroundImage: `url(${getImageUrl(sug.imageUrl)})`,
+                    backgroundImage: `url(${getBlogImagePath(sug)})`,
                   }}
                 />
                 <div className="sidebar-card-info">
@@ -436,7 +435,7 @@ const BlogDetail = ({ blog }) => {
               <div
                 className="blog-image"
                 style={{
-                  backgroundImage: `url(${getImageUrl(blog.imageUrl)})`,
+                  backgroundImage: `url(${getBlogImagePath(blog)})`,
                 }}
                 role="img"
                 aria-label={blog.title}
@@ -445,7 +444,7 @@ const BlogDetail = ({ blog }) => {
 
             <section className="blog-content mt-4">
               <h1>{blog.title}</h1>
-              <div className="blog-meta text-white mb-3">
+              <div className="blog-meta mb-3">
                 <span>
                   By <strong>{blog.author || "AdstraDigital"}</strong>
                 </span>

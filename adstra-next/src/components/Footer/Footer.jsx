@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import "./Footer.css";
 import { db } from "@/Context/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import logo from "../../assets/logo/png-white.png";
+import logo from "../../assets/logo/logo_new-01.png";
 import { useRouter } from "next/navigation";
 
 const Footer = () => {
@@ -101,10 +101,10 @@ const Footer = () => {
         </div>
 
       </div>
-        <hr className="my-4" />
-        <div className="text-center small footer__bottom">
-          © {new Date().getFullYear()} {footerData.company_name}. All rights reserved.
-        </div>
+      <hr className="my-4" />
+      <div className="text-center small footer__bottom">
+        © {new Date().getFullYear()} {footerData.company_name}. All rights reserved.
+      </div>
     </footer>
   );
 };

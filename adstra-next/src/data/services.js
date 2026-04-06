@@ -11,7 +11,7 @@ export const serviceSections = [
       "At AdstraDigital, we believe that powerful stories build powerful brands. Our in-house professional photography and video production team brings your brand to life through stunning visuals, crisp editing, and compelling storytelling.",
     overview:
       "Whether you're a startup in Kozhikode, an established brand in Wayanad, or a national business looking for video editing services in India, we provide end-to-end video solutions tailored for your growth.",
-    image: "https://adstradigital.com/media/services/video-production.jpg",
+    image: "/media/services/video-production.jpg",
     services: [
       {
         title: "Brand Video Production",
@@ -66,7 +66,7 @@ export const serviceSections = [
     overview:
       "Our data-driven campaigns help brands stand out, stay consistent, and sell more.",
     image:
-      "https://adstradigital.com/media/services/social-media-marketing.jpg",
+      "/media/services/social-media-marketing.png",
     services: [
       {
         title: "Social Media Strategy & Planning",
@@ -134,7 +134,7 @@ export const serviceSections = [
     overview:
       "Our team blends targeted ad campaigns, funnel optimization, and smart analytics to turn interest into action.",
     image:
-      "https://adstradigital.com/media/services/lead-generation-performance-marketing.webp",
+      "/media/services/lead-generation-performance-marketing.png",
     services: [
       {
         title: "Targeted Lead Generation",
@@ -193,7 +193,7 @@ export const serviceSections = [
       "At AdstraDigital, we don’t just create logos—we build identities that leave lasting impressions. Whether you're a startup in Sulthan Bathery, a retail chain in Kengeri, or a national brand looking to evolve, our branding & identity design services are tailored to create recognizable, memorable, and profitable brands.",
     overview:
       "In today’s crowded market, a compelling brand is more than just a logo. It's your voice, your story, and the emotion people associate with your business. We help you define and design your entire brand personality—so you stand out on every channel, from social media to store shelves.",
-    image: "https://adstradigital.com/media/services/branding.png",
+    image: "/media/services/branding.png",
     services: [
       {
         title: "Logo Design & Visual Identity",
@@ -249,7 +249,7 @@ export const serviceSections = [
     overview:
       "Whether you're in Kengeri, Wayanad, or anywhere in Kerala, showing up on the first page of search results builds credibility, traffic, and trust. With personalized SEO strategies, we improve your ranking across Google and other search engines through a mix of content, technical fixes, and link building.",
     image:
-      "https://adstradigital.com/media/services/seo-website-optimization.jpg",
+      "/media/services/seo-website-optimization.png",
     services: [
       {
         title: "Local SEO",
@@ -307,7 +307,7 @@ export const serviceSections = [
       "At AdstraDigital, we believe that you can’t grow what you don’t measure. That’s why every campaign—whether it's SEO, paid advertising, or social media—is backed by solid analytics and performance reporting. We help you understand what’s working, what’s not, and where your biggest opportunities lie.",
     overview:
       "From social insights to traffic funnels, we give you actionable data that drives better decisions and higher returns across your digital marketing channels. Our team builds reports that cut the fluff and focus on your KPIs.",
-    image: "https://adstradigital.com/media/services/analytics-reporting.jpg",
+    image: "/media/services/analytics-reporting.png",
     services: [
       {
         title: "Social Media Performance",
@@ -357,7 +357,7 @@ export const serviceSections = [
       "At AdstraDigital, we don’t just write content—we create narratives that spark action. Whether you’re a startup or a scaling brand, our content marketing services in Kozhikode & Wayanad help you build authority, drive organic traffic, and earn customer loyalty.",
     overview:
       "Content marketing in 2025 is more than writing—it's about connection. From blog strategies and brand storytelling to funnel content and SEO-rich articles, we fuel your brand with creative, search-optimized, and customer-centric content.",
-    image: "https://adstradigital.com/media/services/content-marketing.jpg",
+    image: "/media/services/content-marketing.png",
     services: [
       {
         title: "Content Strategy & Planning",
@@ -422,7 +422,7 @@ export const serviceSections = [
   //     "In today’s digital world, organic growth is powerful—but paid ads are your shortcut to scale. At AdstraDigital, we specialize in PPC advertising services that get your business seen by the right people—at the right time—on the right platforms.",
   //   overview:
   //     "PPC (Pay-Per-Click) is a results-focused digital ad model where you only pay for clicks. We help businesses appear on Google, Meta, YouTube, and more—driving high-quality traffic, retargeting leads, and scaling ROI with every campaign.",
-  //   image: "https://adstradigital.com/media/services/paid-advertising.jpg",
+  //   image: "/media/services/paid-advertising.png",
   //   services: [
   //     {
   //       title: "Google Ads Campaigns",
@@ -482,7 +482,7 @@ export const serviceSections = [
       "Looking to drive high-converting traffic to your website? Google Ads is one of the fastest and most effective ways to get your business in front of the right audience—exactly when they’re searching for what you offer.",
     overview:
       "At AdstraDigital, we create highly targeted, ROI-focused Google Ads campaigns that boost visibility, generate qualified leads, and turn clicks into conversions.",
-    image: "https://adstradigital.com/media/services/google-ads.webp",
+    image: "/media/services/google-ads.png",
     services: [
       {
         title: "Search Ads",
@@ -538,7 +538,7 @@ export const serviceSections = [
       "A great website is more than just a digital address—it’s your brand’s first impression, your sales machine, and your trust builder.",
     overview:
       "At AdstraDigital, we combine creative design with powerful development to create custom websites that are fast, functional, mobile-ready, and SEO-friendly. We build digital storefronts designed for visibility, engagement, and conversion.",
-    image: "https://adstradigital.com/media/services/web.jpg",
+    image: "/media/services/web-development.png",
     services: [
       {
         title: "Custom Website Design",
@@ -593,7 +593,7 @@ export const blogPosts = [
     "title": "25 Practical YouTube SEO Tips to Boost Your Video Rankings",
     "slug": "25-practical-youtube-seo-tips-boost-video-rankings",
     "excerpt": "Find 25 practical YouTube SEO tips to rank higher in 2026. Learn how to optimize videos, increase views, improve watch time, and grow your channel organically.",
-    "imageUrl": "https://adstradigital.com/media/blog_images/youtube-seo-tips-2026.png",
+    "imageUrl": "/media/blog_images/25-practical-youtube-seo-tips-boost-video-rankings.png",
     "excerptTitle": "25 Practical YouTube SEO Tips for Video Rankings 2026 | AdstraDigital",
     "metaDescription": "Boost your YouTube rankings in 2026 with 25 practical SEO tips. Learn about keyword research, watch time optimization, and engagement strategies with Adstra Digital.",
     "author": "Adstra Digital Team",
@@ -826,7 +826,7 @@ Yes. YouTube focuses more on watch time and engagement, while Google focuses mor
     "title": "Best AI Social Media Tools for Brands, Creators, and Agencies in 2026",
     "slug": "best-ai-social-media-tools-brands-creators-agencies-2026",
     "excerpt": "View the top AI Powered Social Media Tools for Brands, Creatives, And Agencies In 2026 To Enhance Growth And Engagement Through Automation, Generative AI, And Smart Analytics.",
-    "imageUrl": "https://adstradigital.com/media/blog_images/ai-social-media-tools-2026.png",
+    "imageUrl": "/media/blog_images/best-ai-social-media-tools-brands-creators-agencies-2026-banner.jpeg",
     "excerptTitle": "Best AI Social Media Tools for Brands, Creators & Agencies 2026 | AdstraDigital",
     "metaDescription": "Explore the best AI powered social media tools in 2026 for automation, content creation, and analytics to scale your brand with Adstra Digital.",
     "author": "Adstra Digital Team",
@@ -1028,7 +1028,7 @@ Absolutely. AI tools save time and help small businesses compete with larger bra
     "title": "Conversational Search & AI Trends: The New Era of Digital Marketing in 2026",
     "slug": "conversational-search-ai-trends-digital-marketing-2026",
     "excerpt": "Businesses must adapt to conversational SEO and AI Trends as users move away from keyword-based search. Learn how to optimize for AI Overviews and voice search in 2026.",
-    "imageUrl": "https://adstradigital.com/media/blog_images/conversational-search-ai-trends-2026.png",
+    "imageUrl": "/media/blog_images/conversational-search-ai-trends-digital-marketing-2026-banner.jpeg",
     "excerptTitle": "Conversational Search & AI Trends 2026 | AdstraDigital",
     "metaDescription": "Learn what conversational search is, how AI Trends are revolutionizing SEO, and how to optimize your brand for AI-powered search in 2026 with Adstra Digital.",
     "author": "Adstra Digital Team",
@@ -1295,7 +1295,7 @@ Yes. Conversational and voice-based queries are increasingly being used by local
   "title": "Kerala’s Most Trusted Mobile App Development Company – Build High-Quality Apps That Grow Your Business",
   "slug": "kerala-trusted-mobile-app-development-company-adstra-digital",
   "excerpt": "Adstra Digital, Kerala's trusted mobile app development company, creates high-quality Android, iOS, and cross-platform apps that drive business growth, user engagement, and ROI.",
-  "imageUrl": "https://adstradigital.com/media/blog_images/mobile-app-development-kerala.png",
+  "imageUrl": "/media/blog_images/kerala-trusted-mobile-app-development-company-adstra-digital-banner.jpeg",
   "excerptTitle": "Kerala's Trusted Mobile App Development Company | Adstra Digital",
   "metaDescription": "Adstra Digital, Kerala's most trusted mobile app development company, creates high-quality mobile & web apps that boost business growth, user engagement, and ROI.",
   "author": "Adstra Digital Team",
@@ -1537,7 +1537,7 @@ Yes. We deliver detailed documentation covering both the user/admin side, as wel
   "title": "10 Reasons Flutter Is the Future of Mobile App Development",
   "slug": "10-reasons-flutter-future-mobile-app-development",
   "excerpt": "Explore why Flutter is revolutionizing mobile app development with cross-platform capabilities, hot reload, cost efficiency, and native-like performance for Android and iOS.",
-  "imageUrl": "https://adstradigital.com/media/blog_images/flutter-mobile-app-development.png",
+  "imageUrl": "/media/blog_images/10-reasons-flutter-future-mobile-app-development-banner.jpeg",
   "excerptTitle": "10 Reasons Flutter Is the Future of Mobile App Development | Adstra Digital",
   "metaDescription": "Discover top 10 benefits of using Flutter for mobile app development. Build scalable, high-performance applications for Android & iOS with single codebase efficiency.",
   "author": "Adstra Digital Team",
@@ -1684,7 +1684,7 @@ Yes. Flutter apps compile to native ARM code and use a powerful rendering engine
     excerpt:
       "Discover India's top digital marketing agencies that deliver measurable results through SEO, social media, performance marketing, and comprehensive digital solutions for business growth.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/best-digital-marketing-agencies-india.png",
+      "/media/blog_images/best-digital-marketing-agencies-india.png",
     excerptTitle: "Best Digital Marketing Agencies in India | Adstra Digital",
     metaDescription:
       "Check out the best digital marketing agencies in India to make your business grow with SEO, social media and performance marketing.",
@@ -1757,7 +1757,7 @@ Adstra Digital (C)
     excerpt:
       "Struggling with social media marketing? Discover the top 10 challenges businesses face and learn how Adstra Digital's proven strategies can transform your social media presence and drive real results.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/social-media-challenges-solutions.png",
+      "/media/blog_images/social-media-marketing-challenges-solutions-banner.jpeg",
     excerptTitle: "10 Social Media Marketing Challenges Solved",
     metaDescription:
       "Overcome common social media marketing challenges with Adstra Digital. Learn solutions for low engagement, ROI measurement, content creation, and platform management.",
@@ -1941,7 +1941,7 @@ Adstra Digital (C)
     slug: "paid-vs-organic-search-better-roi",
     excerpt:
       "Struggling to decide between paid search and organic search for your digital marketing strategy? Discover which approach delivers better ROI and how to balance both for maximum results.",
-    imageUrl: "https://adstradigital.com/media/blog_images/organic_vs_paid.png",
+    imageUrl: "/media/blog_images/paid-vs-organic-search-better-roi-banner.jpeg",
     excerptTitle: "Paid vs. Organic Search: Which Delivers Better ROI?",
     metaDescription:
       "Compare paid vs organic search ROI for your brand. Learn when to use PPC advertising vs SEO strategies and how to combine both for maximum digital marketing results.",
@@ -2155,7 +2155,7 @@ Adstra Digital (C)
     publishedDate: "2025-10-07",
     readingTime: "8 min read",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/adstra-digital-iso-iaf-certified-agency.jpg",
+      "/media/blog_images/adstra-digital-iso-iaf-certified-agency-digital-marketing-banner.jpeg",
     metaTitle:
       "Adstra Digital – ISO & IAF Certified Agency for Excellence in Digital Marketing",
     metaDescription:
@@ -2341,7 +2341,7 @@ Reach out to Adstra Digital - shoot us a message, drop an email, or give us a ri
     excerpt:
       "Want to boost your website traffic and visibility? Discover Kerala’s top digital marketing agencies offering SEO, SMM, and web solutions to grow your business.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/top-digital-marketing-agencies-kerala.jpg",
+      "/media/blog_images/need-more-traffic-top-digital-marketing-agencies-kerala-banner.jpeg",
     excerptTitle:
       "Need More Traffic? Find Kerala’s Top Digital Marketing Agencies",
     metaDescription:
@@ -2571,7 +2571,7 @@ Adstra Digital provides a full range of digital marketing strategies including S
     excerpt:
       "Learn Google Gemini SEO secrets to get your website featured in AI search results. Boost visibility, traffic, and brand growth with Adstra Digital’s expertise.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/google-gemini-seo-ai-results.png",
+      "/media/blog_images/google-gemini-seo-secrets-to-rank-in-ai-search-results-banner.jpeg",
     excerptTitle: "Google Gemini SEO Secrets to Rank in AI Search Results",
     metaDescription:
       "Learn Google Gemini SEO secrets to get your website featured in AI search results. Boost visibility, traffic, and brand growth with Adstra Digital’s expertise.",
@@ -2764,7 +2764,7 @@ Small businesses can employ Gemini to pick up trending topics and user interests
     excerpt:
       "Discover how Web 3.0 is transforming digital marketing with AI, blockchain, and decentralization. Learn strategies for SEO, social media, website design, and app development in the Web 3.0 era with Adstra Digital.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/web3-and-digital-marketing-complete-guide-for-businesses.png",
+      "/media/blog_images/web3-and-digital-marketing-complete-guide-for-businesses.png",
     metaTitle: "Web 3.0 & Digital Marketing: Complete Guide for Businesses",
     metaDescription:
       "Explore how Web 3.0 and digital marketing work together. Learn how AI, blockchain, and decentralization are reshaping SEO, social media, and website design for businesses in Kerala and beyond.",
@@ -2956,7 +2956,7 @@ We integrate SEO, social media, website design, and app development with Web 3.0
     excerpt:
       "Want your brand to rank in AI-powered search? Explore the advanced SEO strategies and key ranking factors that will keep your brand ahead with Adstra Digital.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/ai-seo-strategy-to-rank-in-ai-powered-search-results.png",
+      "/media/blog_images/ai-seo-strategy-to-rank-in-ai-powered-search-results.png",
     content: `
 Introduction  
 
@@ -3136,7 +3136,7 @@ We specialize in future-proof SEO strategies, helping brands rank in AI-powered 
     excerpt:
       "Boost your conversion rate with a powerful social media strategy. Adstra Digital helps brands grow through data-driven, result-focused campaigns.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/social-media-strategy-to-boost-your-conversion-rate.jpg",
+      "/media/blog_images/social-media-strategy-to-boost-your-conversion-rate-banner.jpeg",
     content: `
 Introduction  
 
@@ -3285,7 +3285,7 @@ A7. We use Facebook Pixel, Google Analytics, UTM parameters, event tracking, and
     publishedDate: "2025-09-04",
     readingTime: "10 min read",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/google-ads-services-increase-business-roi.webp",
+      "/media/blog_images/google-ads-services-increase-business-roi.png",
     metaTitle: "How Google Ads Services Can Enhance Your ROI | AdstraDigital",
     metaDescription:
       "Increase your sales with Google Ads Services. As Adstra Digital, the premier Google Ads agency in Kerala, we generate hundreds of high-quality leads and ROI for local businesses.",
@@ -3440,7 +3440,7 @@ Definitely — it lowers CPA by re-engaging warm leads.
     publishedDate: "2025-08-21",
     readingTime: "9 min read",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/ecommerce-india-2025.jpg",
+      "/media/blog_images/ecommerce-in-india-2025-growth-trends-digital-strategy.png",
     metaTitle: "E-Commerce in India 2025: Growth, Trends & Digital Strategy",
     metaDescription:
       "E-commerce in India is booming in 2025. See key trends and a step-by-step digital strategy from Adstra Digital to grow traffic, sales, and ROI.",
@@ -3560,7 +3560,7 @@ India’s e-commerce market is expected to surpass the U.S. to become the second
     author: "Adstra Digital",
     publishedDate: "2025-08-21",
     readingTime: "8 min read",
-    imageUrl: "https://adstradigital.com/media/blog_images/CompleteStategy.jpg",
+    imageUrl: "/media/blog_images/performance-max-2-ai-driven-paid-marketing-guide.png",
     metaTitle: "Performance Max 2.0: Guide to AI-Driven Paid Marketing",
     metaDescription:
       "Learn how to use Google’s Performance Max 2.0 campaigns for smarter, AI-driven paid marketing. Get expert strategies, tips, and insights from AdstraDigital.",
@@ -3771,7 +3771,7 @@ India’s e-commerce market is expected to surpass the U.S. to become the second
     publishedDate: "2025-08-21",
     readingTime: "7 min read",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/google-sge-ai-2025.jpg",
+      "/media/blog_images/google-sge-ai-search-impact-2025-banner.jpeg",
     metaTitle: "How Google SGE & AI Search Will Impact Website Traffic in 2025",
     metaDescription:
       "Learn how Google SGE and AI-powered search are transforming SEO and what it means for your website traffic, visibility, and content strategy in 2025.",
@@ -3962,7 +3962,7 @@ India’s e-commerce market is expected to surpass the U.S. to become the second
     excerpt:
       "In 2025, every brand needs a strong digital strategy. Adstra Digital helps businesses grow through SEO, ads, and creative branding solutions.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/blogbranding2025.jpg",
+      "/media/blog_images/digital-strategy-essential-2025.png",
     content: `
 2025 is no ordinary year — it will represent a crucial point. Given how quickly people can change their minds about what they want, a brand not executing with a solid digital plan is likely to be left behind. Whether you are a new start-up in Kozhikode or an age-old brand in Mumbai, working with a digital marketing agency in Kerala ensures your strategy is rooted in local insights while targeting global growth.
 
@@ -4052,7 +4052,7 @@ A local agency understands regional audiences, language nuances, and local searc
     readingTime: "6 min read",
     excerpt:
       "Learn how to grow your business online in 2025 by combining SEO, AEO, GEO, and PPC. Find out how to rank, reach, and convert with AdstraDigital.",
-    imageUrl: "https://adstradigital.com/media/blog_images/blog_2.jpg",
+    imageUrl: "/media/blog_images/seo-aeo-geo-ppc-2025-digital-strategy.png",
     tags: ["SEO", "AEO", "GEO", "PPC", "Digital Marketing Strategy", "Search Optimization"],
     seo: {
       primaryKeyword: "SEO AEO GEO PPC 2025 Strategy",
@@ -4170,7 +4170,7 @@ Contact us now for a free consultation and let’s shape the digital future of y
     readingTime: "5 min read",
     excerpt:
       "Learn about the top logo design trends for 2025 and how they can boost your digital marketing results.",
-    imageUrl: "https://adstradigital.com/media/blog_images/blog_1.jpg",
+    imageUrl: "/media/blog_images/branding-trends-2025-logo-design-marketing.png",
     tags: ["Logo Design", "Branding", "Brand Strategy", "Digital Marketing", "Design Trends 2025", "Brand Identity"],
     seo: {
       primaryKeyword: "Logo Design Branding Strategy 2025",
@@ -4318,7 +4318,7 @@ Ready to make your marketing smarter? Contact us for a free consultation today.
 
 (c)adstra digital
 `,
-    imageUrl: "https://adstradigital.com/media/blog_images/blog_3.jpg",
+    imageUrl: "/media/blog_images/ai-marketing-benefits-business-growth.webp",
   },
   {
     title: "House Video & Photography: Turning Brand Vision Into Reality",
@@ -4331,7 +4331,7 @@ Ready to make your marketing smarter? Contact us for a free consultation today.
     excerpt:
       "Create powerful stories with in-house video & photography. AdstraDigital ensures faster production, better brand control, and unmatched creative quality.",
     imageUrl:
-      "https://adstradigital.com/media/blog_images/shoting-photo-blog.jpeg",
+      "/media/blog_images/in-house-video-photography.jpg",
     seo: {
       primaryKeyword: "In-House Video Photography Production",
       secondaryKeywords: ["professional video production services", "in-house photography services", "corporate video production", "brand video storytelling", "content production company", "video marketing services"]
@@ -4411,7 +4411,7 @@ Contact AdstraDigital today for tailored in-house media solutions.
       "The Birth of Creativity: How Great Ideas Begin with a Whisper",
     excerpt:
       "Discover how creative ideas are born—from subtle sparks to bold innovations. Explore the journey of imagination with AdstraDigital.",
-    imageUrl: "https://adstradigital.com/media/blog_images/blog-flight.jpg",
+    imageUrl: "/media/blog_images/birth-of-creativity-ideas.png",
     content: `
 Introduction 
 
@@ -4665,14 +4665,14 @@ Contact us today to make your next video shoot a success.
 (c)adstra digital
 
 `,
-    imageUrl: "https://adstradigital.com/media/blog_images/Cinema_blog.webp",
+    imageUrl: "/media/blog_images/perfect-video-shoot-client-happy.jpg",
     tags: ["Video Production", "Client Work", "Filmmaking", "Creative Process"],
   },
   {
     "title": "eCommerce App Development: Pricing, Features & Budget Planning",
     "slug": "ecommerce-app-development-pricing-features-budget",
     "excerpt": "Discover eCommerce app development costs, essential features, and smart budget planning. Build high-quality apps with Adstra Digital for scalable business growth.",
-    "imageUrl": "https://adstradigital.com/media/blog_images/ecommerce-app-development.png",
+    "imageUrl": "/media/blog_images/ecommerce-app-development-pricing-features-budget.jpeg",
     "excerptTitle": "eCommerce App Development: Pricing, Features & Budget Planning | Adstra Digital",
     "metaDescription": "Discover eCommerce app development costs, essential features, and smart budget planning. Build high-quality apps with Adstra Digital for scalable business growth.",
     "author": "Adstra Digital Team",
@@ -4944,7 +4944,7 @@ Absolutely. Adstra Digital builds scalable apps, allowing upgrades such as coupo
     title: "2026's Top AI-Driven Digital Marketing Trends",
     slug: "2026-top-ai-driven-digital-marketing-trends",
     excerpt: "Discover the leading AI-driven digital marketing trends for 2026. From hyper-personalization to predictive analytics, learn how AI is transforming marketing in Kerala and beyond.",
-    imageUrl: "https://adstradigital.com/media/blog_images/ai-digital-marketing-trends-2026.png",
+    imageUrl: "/media/blog_images/2026-top-ai-driven-digital-marketing-trends.webp",
     excerptTitle: "2026's Top AI-Driven Digital Marketing Trends | Adstra Digital",
     metaDescription: "Explore top AI-driven digital marketing trends for 2026. Learn hyper-personalization, AI content creation, marketing automation, predictive analytics, voice search optimization, and ethical AI practices.",
     author: "Adstra Digital Team",

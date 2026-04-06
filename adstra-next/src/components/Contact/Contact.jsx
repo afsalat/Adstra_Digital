@@ -260,15 +260,63 @@ function ContactUs() {
               <div className="adstra-terminal-features">
                 <div className="adstra-feature-comet">
                   <div className="adstra-comet-icon">⚡</div>
-                  <span>High-Speed WiFi</span>
+                  <span>Strategy Sessions</span>
                 </div>
                 <div className="adstra-feature-comet">
                   <div className="adstra-comet-icon">🚀</div>
-                  <span>Launch Ready</span>
+                  <span>Launch Planning</span>
                 </div>
                 <div className="adstra-feature-comet">
                   <div className="adstra-comet-icon">🌌</div>
-                  <span>Infinite Ideas</span>
+                  <span>Creative Brainstorming</span>
+                </div>
+              </div>
+
+              <div className="adstra-terminal-brief">
+                <div className="adstra-terminal-brief__intro">
+                  <span className="adstra-terminal-brief__eyebrow">What happens when you visit</span>
+                  <h4>From first conversation to launch plan, we keep it direct and actionable.</h4>
+                  <p>
+                    Walk in with a business goal and leave with a clearer roadmap for
+                    content, media, web, and growth execution.
+                  </p>
+                </div>
+
+                <div className="adstra-terminal-brief__grid">
+                  <article className="adstra-terminal-mini-card">
+                    <div className="adstra-terminal-mini-card__icon">
+                      <MessageCircle size={18} />
+                    </div>
+                    <div>
+                      <h5>Discovery Call</h5>
+                      <p>We unpack your goals, blockers, audience, and current momentum.</p>
+                    </div>
+                  </article>
+
+                  <article className="adstra-terminal-mini-card">
+                    <div className="adstra-terminal-mini-card__icon">
+                      <Target size={18} />
+                    </div>
+                    <div>
+                      <h5>Strategy Mapping</h5>
+                      <p>We align the right channels, creative direction, and conversion path.</p>
+                    </div>
+                  </article>
+
+                  <article className="adstra-terminal-mini-card">
+                    <div className="adstra-terminal-mini-card__icon">
+                      <TrendingUp size={18} />
+                    </div>
+                    <div>
+                      <h5>Growth Action Plan</h5>
+                      <p>Get practical next steps, timelines, and execution priorities.</p>
+                    </div>
+                  </article>
+                </div>
+
+                <div className="adstra-terminal-note">
+                  <Sparkles size={16} />
+                  <span>Prefer remote? We can turn the same session into a quick online strategy meet.</span>
                 </div>
               </div>
             </div>

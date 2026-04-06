@@ -107,17 +107,11 @@ export default function AboutPage() {
   };
 
   return (
-    <div style={{backgroundColor: "black", paddingLeft: "20px"}}>
+    <div className="public-page-shell">
       <NavBar />
-      {/* ✅ SEO-friendly H1 */}
-      <h1 className="text-3xl font-bold text-center my-6">
-        About Adstra Digital
-      </h1>
       <AboutDetails />
       <ContactUs />
       <Footer />
-
-      {/* ✅ Structured Data Schema */}
       <Script
         id="about-schema"
         type="application/ld+json"

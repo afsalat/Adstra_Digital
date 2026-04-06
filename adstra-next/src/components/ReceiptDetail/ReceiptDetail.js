@@ -64,9 +64,8 @@ export default function MoneyReceipt({ id }) {
       heightLeft -= pdfHeight;
     }
 
-    const filename = `money_receipt_${
-      receipt?.invoice?.invoice_no || receipt?.invoice_no || receipt?.id
-    }.pdf`;
+    const filename = `money_receipt_${receipt?.invoice?.invoice_no || receipt?.invoice_no || receipt?.id
+      }.pdf`;
     pdf.save(filename);
   };
 

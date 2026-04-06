@@ -1,0 +1,41 @@
+.blob-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.blob-filter-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.blob-main {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.blob {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  transform: translate(-50%, -50%);
+}
+
+.inner-dot {
+  position: absolute;
+  box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.24);
+}
+
+@media (pointer: coarse) {
+  .blob-container {
+    display: none;
+  }
+}

@@ -1,21 +1,43 @@
 @import "tailwindcss";
 
 :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 214, 219, 220;
-    --background-end-rgb: 255, 255, 255;
+    --foreground-rgb: 28, 36, 48;
+    --background-start-rgb: 255, 255, 255;
+    --background-end-rgb: 244, 247, 250;
+    --site-bg: #f8fafc;
+    --site-bg-soft: #fdfbf7;
+    --surface: #ffffff;
+    --surface-alt: #f4f7fb;
+    --surface-warm: #fbf5ea;
+    --text-primary: #1c2430;
+    --text-secondary: #5b6576;
+    --accent: #d4a63a;
+    --accent-strong: #9b6b08;
+    --border-soft: rgba(28, 36, 48, 0.12);
+    --shadow-soft: 0 18px 48px rgba(15, 23, 42, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --foreground-rgb: 255, 255, 255;
-        --background-start-rgb: 0, 0, 0;
-        --background-end-rgb: 0, 0, 0;
-    }
+html {
+    background:
+        radial-gradient(circle at top left, rgba(212, 166, 58, 0.1), transparent 28%),
+        linear-gradient(180deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%);
 }
 
 body {
     color: rgb(var(--foreground-rgb));
+    background: transparent;
+    min-height: 100vh;
+    font-family: "Poppins", var(--font-geist-sans), sans-serif;
+}
+
+a {
+    color: inherit;
+}
+
+.Homepage,
+.public-page-shell {
+    background: transparent;
+    color: var(--text-primary);
 }
 
 /* --- Premium Loading Animations --- */

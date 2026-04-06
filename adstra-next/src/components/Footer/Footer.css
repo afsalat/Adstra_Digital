@@ -1,18 +1,19 @@
 /* === Footer Base === */
 .footer {
-  background: #000; /* pure black */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, #f9fbfd 100%);
   font-family: "Poppins", sans-serif;
-  color: #f5f5f5; /* soft white */
+  color: var(--text-primary);
   font-size: 0.9rem;
   padding-top: 3rem;
   padding-bottom: 1rem;
   position: relative;
   z-index: 1;
+  border-top: 1px solid var(--border-soft);
 }
 
 .footer h5,
 .footer h6 {
-  color: #ffd700; /* gold headings */
+  color: var(--accent-strong);
   font-weight: 600;
   margin-bottom: 1rem;
 }
@@ -30,7 +31,7 @@
 
 .footer__tagline {
   font-size: 0.85rem;
-  color: #ccc;
+  color: var(--text-secondary);
   margin-top: 0.6rem;
 }
 
@@ -40,7 +41,7 @@
 }
 
 .footer__nav a {
-  color: #f5f5f5;
+  color: var(--text-primary);
   text-decoration: none;
   font-size: 0.85rem;
   transition: all 0.3s ease;
@@ -55,12 +56,12 @@
   height: 1px;
   bottom: -2px;
   left: 0;
-  background-color: #ffd700;
+  background-color: var(--accent);
   transition: width 0.3s ease;
 }
 
 .footer__nav a:hover {
-  color: #ffd700;
+  color: var(--accent-strong);
 }
 
 .footer__nav a:hover::after {
@@ -70,34 +71,34 @@
 /* === Social Icons === */
 .footer__social-link,
 .footer a i {
-  color: #fff;
+  color: var(--text-primary);
   transition: all 0.3s ease;
 }
 
 .footer a i:hover {
-  color: #ffd700;
+  color: var(--accent-strong);
   transform: translateY(-2px);
 }
 
 /* === Downloads === */
 .footer__downloads li a {
-  color: #ccc;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   transition: all 0.3s ease;
 }
 
 .footer__downloads li a:hover {
-  color: #ffd700;
+  color: var(--accent-strong);
   padding-left: 4px;
 }
 
 /* === Divider & Bottom === */
 .footer hr {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-soft);
 }
 
 .footer__bottom {
-  color: #999;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   margin-top: 10px;
   letter-spacing: 0.5px;

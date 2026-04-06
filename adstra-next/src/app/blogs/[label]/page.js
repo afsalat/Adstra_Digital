@@ -2,6 +2,7 @@ import { blogPosts } from "@/data/services";
 import NavBar from "@/components/NavBar/Navbar";
 import Footer from "@/components/Footer/Footer";
 import BlogDetail from "@/components/BlogDetails/BlogDetails";
+import { getAbsoluteSiteUrl, getBlogImagePath } from "@/utils/contentImage";
 
 // Static path generation - updated for GMB post
 export async function generateStaticParams() {
@@ -22,6 +23,9 @@ export async function generateMetadata({ params }) {
     };
   }
 
+  const blogImageUrl = getBlogImagePath(blog);
+  const absoluteBlogImageUrl = getAbsoluteSiteUrl(blogImageUrl);
+
   return {
     title: `${blog.excerptTitle} | AdstraDigital`,
     description: blog.excerpt || blog.content?.slice(0, 150),
@@ -31,7 +35,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: blog.title,
       description: blog.excerpt,
-      images: [{ url: blog.imageUrl }],
+      images: [{ url: absoluteBlogImageUrl }],
       type: "article",
       url: `https://adstradigital.com/blogs/${blog.slug}/`,
     },
@@ -39,7 +43,7 @@ export async function generateMetadata({ params }) {
       card: "summary_large_image",
       title: blog.title,
       description: blog.excerpt,
-      images: [blog.imageUrl],
+      images: [absoluteBlogImageUrl],
     },
   };
 }
@@ -62,6 +66,9 @@ export default async function BlogDetailPage({ params }) {
     );
   }
 
+  const blogImageUrl = getBlogImagePath(blog);
+  const absoluteBlogImageUrl = getAbsoluteSiteUrl(blogImageUrl);
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -74,12 +81,12 @@ export default async function BlogDetailPage({ params }) {
           "@id": "https://adstradigital.com/blogs/all/"
         },
         "primaryImageOfPage": {
-          "@id": `https://adstradigital.com${blog.imageUrl}`
+          "@id": absoluteBlogImageUrl
         },
         "image": {
-          "@id": `https://adstradigital.com${blog.imageUrl}`
+          "@id": absoluteBlogImageUrl
         },
-        "thumbnailUrl": `https://adstradigital.com${blog.imageUrl}`,
+        "thumbnailUrl": absoluteBlogImageUrl,
         "datePublished": blog.publishedDate,
         "dateModified": blog.publishedDate,
         "breadcrumb": {
@@ -139,7 +146,7 @@ export default async function BlogDetailPage({ params }) {
           "@id": "https://adstradigital.com/#organization"
         },
         "image": {
-          "@id": `https://adstradigital.com${blog.imageUrl}`
+          "@id": absoluteBlogImageUrl
         },
         "inLanguage": "en-US"
       },
@@ -149,7 +156,7 @@ export default async function BlogDetailPage({ params }) {
         "headline": blog.title,
         "alternativeHeadline": blog.excerptTitle,
         "description": blog.excerpt,
-        "image": `https://adstradigital.com${blog.imageUrl}`,
+        "image": absoluteBlogImageUrl,
         "author": {
           "@type": "Person",
           "name": blog.author
@@ -169,10 +176,10 @@ export default async function BlogDetailPage({ params }) {
       },
       {
         "@type": "ImageObject",
-        "@id": `https://adstradigital.com${blog.imageUrl}`,
+        "@id": absoluteBlogImageUrl,
         "inLanguage": "en-US",
-        "url": `https://adstradigital.com${blog.imageUrl}`,
-        "contentUrl": `https://adstradigital.com${blog.imageUrl}`,
+        "url": absoluteBlogImageUrl,
+        "contentUrl": absoluteBlogImageUrl,
         "width": 1200,
         "height": 628
       },

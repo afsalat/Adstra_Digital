@@ -1,149 +1,181 @@
 "use client";
-import React from "react";
-import { Container, Row, Col, Button, Card } from "react-bootstrap";
+
+import React, { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import "./Career.css";
+
+const perks = [
+  "Work on digital projects that blend strategy, creative, and technology.",
+  "Collaborate with a fast-moving team that values ownership and clarity.",
+  "Keep learning through real client work, experimentation, and feedback.",
+  "Build campaigns and platforms for ambitious brands across industries.",
+];
+
+const jobs = [
+  {
+    title: "Python Developer Intern",
+    type: "Internship",
+    desc:
+      "Support internal tools, backend workflows, and digital systems that improve delivery speed and operational quality.",
+    location: "Kozhikode, India",
+    phone: "+91 9744779574",
+    email: "info.adstradigital@gmail.com",
+  },
+  {
+    title: "Marketing Executive",
+    type: "Full Time",
+    desc:
+      "Plan campaigns, coordinate execution, and turn market insight into growth-focused marketing actions for client brands.",
+    location: "Kozhikode, India",
+    phone: "+91 9744779574",
+    email: "info.adstradigital@gmail.com",
+  },
+];
 
 export default function Career() {
+  useEffect(() => {
+    AOS.init({
+      duration: 850,
+      once: true,
+      easing: "ease-out-cubic",
+      anchorPlacement: "top-bottom",
+    });
+  }, []);
+
   return (
-    <section
-      style={{
-        backgroundColor: "#000",
-        color: "#fff",
-        minHeight: "100vh",
-        padding: "60px 0",
-        marginTop: "80px",
-      }}
-    >
-      <Container>
-        {/* Header Section */}
-        <Row className="text-center mb-5">
-          <Col>
-            <h1 style={{ fontWeight: "bold", color: "#FFD700" }}>
-              Join Our Team
-            </h1>
-            <p
-              style={{ fontSize: "18px", maxWidth: "700px", margin: "0 auto" }}
-            >
-              At <span style={{ color: "#FFD700" }}>Adstra Digital</span>, we
-              believe in innovation, creativity, and building a future where
-              technology empowers businesses. Explore career opportunities with
-              us and grow your career in a dynamic environment.
+    <section className="career-page">
+      <div className="career-page__shell">
+        <div className="career-page__hero">
+          <div className="career-page__hero-copy" data-aos="fade-right">
+            <span className="career-page__eyebrow">Careers At Adstra</span>
+            <h1>Join a team that builds with clarity, pace, and ambition.</h1>
+            <p className="career-page__lead">
+              At <strong>Adstra Digital</strong>, we believe strong work comes
+              from people who care about craft, collaboration, and measurable
+              outcomes. Explore opportunities to grow with a team that values
+              ideas and execution equally.
             </p>
-          </Col>
-        </Row>
 
-        {/* Why Work With Us Section */}
-        <Row className="mb-5">
-          <Col md={6}>
-            <h2 style={{ color: "#FFD700" }}>Why Work With Us?</h2>
-            <ul style={{ fontSize: "16px", lineHeight: "1.8" }}>
-              <li> - Work on cutting-edge digital solutions</li>
-              <li> - Collaborative and innovative culture</li>
-              <li> - Continuous learning & career growth</li>
-              <li> - Work with global brands and clients</li>
-              <li> - Fun workplace with team-building activities</li>
-            </ul>
-          </Col>
-          <Col md={6}>
-            <img
-              src="https://adstradigital.com/media/team/carrer-office.jpg"
-              alt="Career at Adstra Digital"
-              className="img-fluid rounded shadow"
-              style={{ height: "220px", width: "400px" }}
-            />
-          </Col>
-        </Row>
+            <div className="career-page__hero-metrics" data-aos="fade-up" data-aos-delay="120">
+              <article>
+                <strong>{jobs.length}</strong>
+                <span>Current openings</span>
+              </article>
+              <article>
+                <strong>24h</strong>
+                <span>Fast response culture</span>
+              </article>
+              <article>
+                <strong>360</strong>
+                <span>Cross-functional exposure</span>
+              </article>
+            </div>
+          </div>
 
-        {/* Open Positions */}
-        <Row className="text-center mb-4">
-          <Col>
-            <h2 style={{ color: "#FFD700" }}>Current Openings</h2>
+          <div className="career-page__hero-panel" data-aos="fade-left" data-aos-delay="140">
+            <div className="career-page__image-frame">
+              <img
+                src="https://adstradigital.com/media/team/carrer-office.jpg"
+                alt="Career at Adstra Digital"
+                className="career-page__image"
+              />
+            </div>
+
+            <div className="career-page__spotlight">
+              <span className="career-page__section-tag">Why Adstra</span>
+              <p>
+                Small enough to move fast. Skilled enough to deliver serious
+                work. Structured enough to help you grow.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="career-page__benefits">
+          <div className="career-page__section-header" data-aos="fade-up">
+            <span className="career-page__section-tag">Work Environment</span>
+            <h2>Why people enjoy building here.</h2>
             <p>
-              Find the right opportunity and become a part of our growing team.
+              We keep the environment practical, collaborative, and focused on
+              improvement, so people can do meaningful work without noise.
             </p>
-          </Col>
-        </Row>
+          </div>
 
-        <Row>
-          {[
-            {
-              title: "Python Developer Intern",
-              desc: " Sponsored by you, Powered by us  Build responsive and modern web applications using React & Next.js.",
-              location: "Kozhikode, India",
-              phone: "+91 9744779574",
-              email: "info.adstradigital@gmail.com",
-            },
-            {
-              title: "Marketing Executive",
-              desc: "Plan and execute marketing strategies, manage campaigns, and generate leads.",
-              location: "Kozhikode, India",
-              phone: "+91 9744779574",
-              email: "info.adstradigital@gmail.com",
-            },
-          ].map((job, index) => (
-            <Col md={4} className="mb-4" key={index}>
-              <Card
-                style={{
-                  backgroundColor: "#111",
-                  color: "#fff",
-                  border: "1px solid #FFD700",
-                  borderRadius: "12px",
-                  minHeight: "250px",
-                }}
-                className="shadow-sm"
+          <div className="career-page__benefit-grid">
+            {perks.map((perk, index) => (
+              <article
+                key={perk}
+                className="career-page__benefit-card"
+                data-aos="zoom-in-up"
+                data-aos-delay={index * 70}
               >
-                <Card.Body>
-                  <Card.Title style={{ color: "#FFD700", fontWeight: "bold" }}>
-                    {job.title}
-                  </Card.Title>
-                  <Card.Text>{job.desc}</Card.Text>
-                  <p style={{ fontSize: "14px", opacity: 0.8 }}>
-                    📍 {job.location}
-                  </p>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <p>{perk}</p>
+              </article>
+            ))}
+          </div>
+        </div>
 
-                  <hr style={{ borderColor: "#FFD700" }} />
-
-                  <p style={{ marginBottom: "5px" }}>
-                    📧{" "}
-                    <a
-                      href={`mailto:${job.email}`}
-                      style={{ color: "#FFD700", textDecoration: "none" }}
-                    >
-                      {job.email}
-                    </a>
-                  </p>
-                  <p>
-                    📞{" "}
-                    <a
-                      href={`tel:${job.phone}`}
-                      style={{ color: "#FFD700", textDecoration: "none" }}
-                    >
-                      {job.phone}
-                    </a>
-                  </p>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        {/* Call to Action */}
-        <Row className="text-center mt-5">
-          <Col>
-            <h2 style={{ color: "#FFD700" }}>Didn’t Find Your Role?</h2>
+        <div className="career-page__openings" data-aos="fade-up">
+          <div className="career-page__section-header">
+            <span className="career-page__section-tag">Current Openings</span>
+            <h2>Open roles with room to grow.</h2>
             <p>
-              We’re always looking for talented people. Share your resume with
-              us at{" "}
-              <a
-                href="mailto:info.adstradigital@gmail.com"
-                style={{ color: "#FFD700" }}
-              >
-                info.adstradigital@gmail.com{" "}
-              </a>{" "}
-              and we’ll reach out when the right opportunity comes up.
+              Find the role that matches your strengths and help us build better
+              digital outcomes for ambitious brands.
             </p>
-          </Col>
-        </Row>
-      </Container>
+          </div>
+
+          <div className="career-page__jobs-grid">
+            {jobs.map((job, index) => (
+              <article
+                className="career-page__job-card"
+                key={job.title}
+                data-aos="fade-up"
+                data-aos-delay={index * 90}
+              >
+                <div className="career-page__job-top">
+                  <span className="career-page__job-type">{job.type}</span>
+                  <h3>{job.title}</h3>
+                  <p>{job.desc}</p>
+                </div>
+
+                <div className="career-page__job-meta">
+                  <div>
+                    <label>Location</label>
+                    <span>{job.location}</span>
+                  </div>
+                  <div>
+                    <label>Email</label>
+                    <a href={`mailto:${job.email}`}>{job.email}</a>
+                  </div>
+                  <div>
+                    <label>Phone</label>
+                    <a href={`tel:${job.phone}`}>{job.phone}</a>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="career-page__cta" data-aos="zoom-in-up">
+          <div className="career-page__cta-copy">
+            <span className="career-page__section-tag">Still Interested?</span>
+            <h2>Didn’t find your exact role?</h2>
+            <p>
+              We’re always open to meeting thoughtful people who can strengthen
+              the team. Send your resume and portfolio, and we’ll reach out when
+              there’s a strong fit.
+            </p>
+          </div>
+
+          <a className="career-page__cta-button" href="mailto:info.adstradigital@gmail.com">
+            info.adstradigital@gmail.com
+          </a>
+        </div>
+      </div>
     </section>
   );
 }

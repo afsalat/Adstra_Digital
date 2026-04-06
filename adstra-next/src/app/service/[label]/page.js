@@ -53,7 +53,7 @@ export default async function ServicePage({ params }) {
   if (!isAll && !service) return notFound();
 
   return (
-    <div style={{ backgroundColor: "black" }}>
+    <div className="public-page-shell">
       <NavBar />
 
       {/* ✅ Structured Schema for SEO */}
