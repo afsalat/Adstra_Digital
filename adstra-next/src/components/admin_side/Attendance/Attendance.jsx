@@ -7,8 +7,9 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import "./Attendance.css";
 import CustomAlert from "@/components/common/CustomAlert/CustomAlert";
+import API_BASE_URL from "@/utils/apiBase";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const BASE_URL = API_BASE_URL;
 
 // --- Sub-components ---
 

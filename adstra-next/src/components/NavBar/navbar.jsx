@@ -6,6 +6,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import "./navbar.css";
 
+const normalizePath = (value = "") => {
+  if (!value) return "/";
+  if (value === "/") return "/";
+  return value.endsWith("/") ? value.slice(0, -1) : value;
+};
+
+const normalizeHashPath = (pathname, hash = "") =>
+  hash ? `${normalizePath(pathname)}${hash}` : normalizePath(pathname);
+
 function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activePath, setActivePath] = useState("");
@@ -14,11 +23,7 @@ function NavBar() {
   useEffect(() => {
     const updateActivePath = () => {
       const hash = window.location.hash;
-      if (hash) {
-        setActivePath(`${pathname}${hash}`);
-      } else {
-        setActivePath(pathname);
-      }
+      setActivePath(normalizeHashPath(pathname, hash));
     };
 
     updateActivePath();
@@ -35,14 +40,46 @@ function NavBar() {
   };
 
   const navLinks = [
-    ["Home", "/"],
-    ["About", "/about/"],
-    ["Services", "/service/all/"],
-    ["Gallery", "/#gallery"],
-    ["Enquiry", "/#enquiry"],
-    ["Contact us", "/#contact"],
-    ["Careers", "/career/"],
-    ["Blogs", "/blogs/all/"],
+    {
+      label: "Home",
+      href: "/",
+      isActive: () => activePath === "/",
+    },
+    {
+      label: "About",
+      href: "/about/",
+      isActive: () => normalizePath(pathname).startsWith("/about"),
+    },
+    {
+      label: "Services",
+      href: "/service/all/",
+      isActive: () => normalizePath(pathname).startsWith("/service"),
+    },
+    {
+      label: "Gallery",
+      href: "/#gallery",
+      isActive: () => activePath === "/#gallery",
+    },
+    {
+      label: "Enquiry",
+      href: "/#enquiry",
+      isActive: () => activePath === "/#enquiry",
+    },
+    {
+      label: "Contact us",
+      href: "/#contact",
+      isActive: () => activePath === "/#contact",
+    },
+    {
+      label: "Careers",
+      href: "/career/",
+      isActive: () => normalizePath(pathname).startsWith("/career"),
+    },
+    {
+      label: "Blogs",
+      href: "/blogs/all/",
+      isActive: () => normalizePath(pathname).startsWith("/blogs"),
+    },
   ];
 
   return (
@@ -70,11 +107,11 @@ function NavBar() {
             className={`nav nav-links flex-column flex-md-row ms-md-auto ${isMenuOpen ? "active d-flex" : "d-none d-md-flex"
               }`}
           >
-            {navLinks.map(([label, path]) => (
+            {navLinks.map(({ label, href, isActive }) => (
               <li className="nav-item" key={label}>
                 <Link
-                  href={path}
-                  className={`nav-link ${activePath === path ? "active" : ""}`}
+                  href={href}
+                  className={`nav-link ${isActive() ? "active" : ""}`}
                   onClick={closeMenu}
                 >
                   {label}

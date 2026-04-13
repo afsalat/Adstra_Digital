@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 
 export default function CreateTransaction() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function CreateTransaction() {
     balanceAmount: "",
   });
 
-  const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+  const API_URL = API_BASE_URL;
 
   useEffect(() => {
     axios

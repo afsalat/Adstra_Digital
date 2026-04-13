@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import API_BASE_URL from "@/utils/apiBase";
 
 export default function MoneyReceipt({ id }) {
   const [receipt, setReceipt] = useState(null);
@@ -14,9 +15,7 @@ export default function MoneyReceipt({ id }) {
   useEffect(() => {
     if (!id) return;
     axios
-      .get(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/transactions/details/${id}/`
-      )
+      .get(`${API_BASE_URL}/transactions/details/${id}/`)
       .then((res) => {
         setReceipt(res.data);
       })

@@ -5,6 +5,7 @@ import axios from "axios";
 import { ToWords } from "to-words";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import API_BASE_URL from "@/utils/apiBase";
 import "./CreateInvoice.css";
 
 export default function CreateInvoice() {
@@ -27,7 +28,7 @@ export default function CreateInvoice() {
   const [showPreview, setShowPreview] = useState(false);
 
   const router = useRouter();
-  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
+  const API_BASE = API_BASE_URL;
 
   const toWords = new ToWords({
     localeCode: "en-IN",
@@ -165,7 +166,7 @@ export default function CreateInvoice() {
   useEffect(() => {
     const fetchNextInvoiceNumber = async () => {
       try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/invoice/next-number/`);
+        const response = await axios.get(`${API_BASE_URL}/invoice/next-number/`);
         if (response.data && response.data.next_invoice_number) {
           setInvoice((prev) => ({ ...prev, invoice_no: response.data.next_invoice_number }));
         }

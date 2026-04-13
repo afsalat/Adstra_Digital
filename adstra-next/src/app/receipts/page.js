@@ -5,8 +5,9 @@ import axios from "axios";
 import Model from "../../components/Modal.jsx";
 import ReceiptForm from "./create/page";
 import { useRouter } from "next/navigation";
+import API_BASE_URL from "@/utils/apiBase";
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const API_URL = API_BASE_URL;
 
 const ReceiptManager = () => {
   const [receipts, setReceipts] = useState([]);

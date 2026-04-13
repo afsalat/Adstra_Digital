@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import API_BASE_URL from "@/utils/apiBase";
 import "./InvoiceList.css";
 
 export default function InvoiceList() {
@@ -25,7 +26,7 @@ export default function InvoiceList() {
   const [trashEndDate, setTrashEndDate] = useState("");
   const router = useRouter();
 
-  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
+  const API_BASE = API_BASE_URL;
 
   useEffect(() => {
     fetchInvoices();

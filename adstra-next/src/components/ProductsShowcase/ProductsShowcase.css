@@ -1,0 +1,211 @@
+.products-section {
+  position: relative;
+  padding: 84px 20px;
+  background:
+    radial-gradient(circle at top left, rgba(212, 166, 58, 0.1), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.08), transparent 26%),
+    linear-gradient(180deg, #f6f8fb 0%, #eef3f8 100%);
+  overflow: hidden;
+}
+
+.products-shell {
+  max-width: 1420px;
+  margin: 0 auto;
+}
+
+.products-heading {
+  display: grid;
+  gap: 14px;
+  max-width: 760px;
+  margin-bottom: 32px;
+}
+
+.products-kicker,
+.products-card__status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.58rem 0.92rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  color: #8f631d;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.products-heading h2 {
+  margin: 0;
+  color: #17263a;
+  font-size: clamp(2rem, 1.6rem + 1vw, 3rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.045em;
+}
+
+.products-heading p {
+  margin: 0;
+  color: #58687b;
+  font-size: 1.03rem;
+  line-height: 1.8;
+}
+
+.products-list {
+  display: grid;
+  gap: 22px;
+}
+
+.products-card {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+  gap: 26px;
+  align-items: center;
+  padding: 24px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 22px 56px rgba(15, 23, 42, 0.08);
+}
+
+.products-card--reverse .products-card__media {
+  order: 2;
+}
+
+.products-card--reverse .products-card__content {
+  order: 1;
+}
+
+.products-card__media {
+  width: 100%;
+}
+
+.products-card__image-wrap {
+  position: relative;
+  min-height: 360px;
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #f8fafc, #eef3f8);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.products-card__image {
+  object-fit: contain;
+  object-position: center;
+  padding: 12px;
+}
+
+.products-card__content {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.products-card__content h3 {
+  margin: 0;
+  color: #17263a;
+  font-size: clamp(1.7rem, 1.45rem + 0.6vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.products-card__content p {
+  margin: 0;
+  color: #556579;
+  line-height: 1.82;
+  font-size: 1rem;
+}
+
+.products-card__points {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.products-card__points li {
+  position: relative;
+  padding-left: 20px;
+  color: #556579;
+  line-height: 1.7;
+}
+
+.products-card__points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.72rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d4a63a, #60a5fa);
+}
+
+.products-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.products-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 22px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.products-button:hover {
+  transform: translateY(-2px);
+}
+
+.products-button--primary {
+  background: #17263a;
+  color: #ffffff;
+  box-shadow: 0 16px 32px rgba(23, 38, 58, 0.16);
+}
+
+.products-button--secondary {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: #17263a;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 992px) {
+  .products-card {
+    grid-template-columns: 1fr;
+  }
+
+  .products-card__image-wrap {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .products-section {
+    padding: 64px 14px;
+  }
+
+  .products-card {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .products-card__image-wrap {
+    min-height: 240px;
+    border-radius: 18px;
+  }
+
+  .products-button {
+    width: 100%;
+  }
+}

@@ -1,13 +1,12 @@
 /* RecentProposalsModal.js */
 import React, { useState, useEffect } from "react";
+import API_BASE_URL from "@/utils/apiBase";
 
 export default function RecentProposalsModal({ show, onClose, onAction }) {
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [error, setError] = useState("");
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
 
     const fetchProposals = async () => {
         setLoading(true);

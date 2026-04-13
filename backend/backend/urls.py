@@ -2,18 +2,26 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.generic import TemplateView
+from django.http import HttpResponse
+
+
+def health_check(_request):
+    return HttpResponse("OK", content_type="text/plain")
+
+
+def robots_txt(_request):
+    return HttpResponse("User-agent: *\nAllow: /\n", content_type="text/plain")
 
 
 urlpatterns = [
+    path('', health_check, name='health_check'),
     path('admin/', admin.site.urls),
     path('user/', include('apis.user.urls')),
     path('attendance/', include('apis.attendance.urls')),
     path('proposal/', include('apis.proposal.urls')),
     path('invoice/', include('apis.invoice.urls')),
     path('transactions/', include('apis.transactions.urls')),
-
-    path("robots.txt", TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
+    path('robots.txt', robots_txt, name='robots_txt'),
 ]
 
 

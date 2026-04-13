@@ -10,6 +10,7 @@ import HeaderEditor from "../HeaderEditor/HeaderEditor";
 import ServiceTable from "../ServiceTable/ServiceTable";
 import RecentProposalsModal from "./RecentProposalsModal"; // Import Modal
 import { serviceExtraDetails } from "../../data/clientData";
+import API_BASE_URL from "@/utils/apiBase";
 
 function newId() {
   return typeof crypto !== "undefined" && crypto.randomUUID
@@ -113,9 +114,6 @@ export default function ProposalBuilder() {
 
     try {
       const token = localStorage.getItem("auth_token")?.replace(/"/g, "");
-      const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
-
-
       // Calculate total same way as ProposalPreview
       const total = service.reduce((acc, item) => {
         const qty = item.quantity || 1;
@@ -222,7 +220,6 @@ export default function ProposalBuilder() {
   ], []);
 
   const handleNewProposal = async () => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
     // Reset all form state
     setService([]);
     setSections(DEFAULT_SECTIONS());

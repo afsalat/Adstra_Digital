@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Printer, FileDown, ArrowLeft, LayoutList } from "lucide-react";
+import API_BASE_URL from "@/utils/apiBase";
 
 export default function InvoicePreview() {
   const invoiceRef = useRef();
@@ -14,8 +15,7 @@ export default function InvoicePreview() {
   const [invoice, setInvoice] = useState(null);
   const [items, setItems] = useState([]);
 
-  const API_BASE =
-    process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
+  const API_BASE = API_BASE_URL;
 
   useEffect(() => {
     if (!invoiceId) return;

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 import "./PaymentButton.css";
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const API_URL = API_BASE_URL;
 
 export default function PaymentButton({
     invoiceId,

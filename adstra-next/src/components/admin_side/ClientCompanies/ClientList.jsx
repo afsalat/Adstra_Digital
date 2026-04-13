@@ -5,8 +5,9 @@ import axios from "axios";
 import "./ClientList.css";
 import { Edit, Eye, Plus, ArrowLeft, X, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import API_BASE_URL from "@/utils/apiBase";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const BASE_URL = API_BASE_URL;
 
 const ClientList = () => {
     const [clients, setClients] = useState([]);

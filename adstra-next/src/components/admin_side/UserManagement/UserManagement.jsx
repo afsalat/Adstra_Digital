@@ -5,8 +5,9 @@ import axios from "axios";
 import "./UserManagement.css";
 import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import API_BASE_URL from "@/utils/apiBase";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const BASE_URL = API_BASE_URL;
 
 const UserList = () => {
   const [users, setUsers] = useState([]);

@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/Context/AuthContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LoadingScreen from "@/components/common/LoadingScreen/LoadingScreen";
+import API_BASE_URL from "@/utils/apiBase";
 import "./AdminLogin.css";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const BASE_URL = API_BASE_URL;
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import API_BASE_URL from "@/utils/apiBase";
 import ClientFormModal from "../ClientFormModal/ClientFormModal";
 
 export default function HeaderEditor({ data, onChange }) {
@@ -9,8 +10,6 @@ export default function HeaderEditor({ data, onChange }) {
   const [referenceList, setReferenceList] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
-
-  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://adstradigital.com/api";
 
   useEffect(() => {
     fetchClients();

@@ -7,6 +7,7 @@ import "./BlobCursor.css";
 export default function BlobCursor({
   blobType = "circle",
   fillColor = "#5227FF",
+  glossy = true,
   trailCount = 3,
   sizes = [60, 125, 75],
   innerSizes = [20, 35, 25],
@@ -152,9 +153,22 @@ export default function BlobCursor({
               width: sizes[index] ?? sizes[sizes.length - 1] ?? 60,
               height: sizes[index] ?? sizes[sizes.length - 1] ?? 60,
               borderRadius: blobType === "circle" ? "50%" : "0%",
-              backgroundColor: fillColor,
+              background: glossy
+                ? `
+                  radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.72) 14%, rgba(255, 255, 255, 0.18) 28%, transparent 42%),
+                  radial-gradient(circle at 68% 76%, rgba(165, 100, 0, 0.18) 0%, transparent 48%),
+                  linear-gradient(145deg, #fff4a3 0%, ${fillColor} 44%, #d29b00 100%)
+                `
+                : fillColor,
               opacity: opacities[index] ?? opacities[opacities.length - 1] ?? 0.6,
-              boxShadow: `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px 0 ${shadowColor}`,
+              boxShadow: glossy
+                ? `
+                  ${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur * 2}px 0 ${shadowColor},
+                  inset -10px -14px 18px rgba(128, 81, 0, 0.18),
+                  inset 8px 10px 18px rgba(255, 255, 255, 0.34)
+                `
+                : `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px 0 ${shadowColor}`,
+              border: glossy ? "1px solid rgba(255,255,255,0.38)" : "none",
             }}
           >
             <div
@@ -162,16 +176,20 @@ export default function BlobCursor({
               style={{
                 width: innerSizes[index] ?? innerSizes[innerSizes.length - 1] ?? 20,
                 height: innerSizes[index] ?? innerSizes[innerSizes.length - 1] ?? 20,
-                top:
-                  ((sizes[index] ?? sizes[sizes.length - 1] ?? 60) -
-                    (innerSizes[index] ?? innerSizes[innerSizes.length - 1] ?? 20)) /
-                  2,
-                left:
-                  ((sizes[index] ?? sizes[sizes.length - 1] ?? 60) -
-                    (innerSizes[index] ?? innerSizes[innerSizes.length - 1] ?? 20)) /
-                  2,
+                top: glossy
+                  ? (sizes[index] ?? sizes[sizes.length - 1] ?? 60) * 0.16
+                  : ((sizes[index] ?? sizes[sizes.length - 1] ?? 60) -
+                      (innerSizes[index] ?? innerSizes[innerSizes.length - 1] ?? 20)) /
+                    2,
+                left: glossy
+                  ? (sizes[index] ?? sizes[sizes.length - 1] ?? 60) * 0.2
+                  : ((sizes[index] ?? sizes[sizes.length - 1] ?? 60) -
+                      (innerSizes[index] ?? innerSizes[innerSizes.length - 1] ?? 20)) /
+                    2,
                 backgroundColor: innerColor,
                 borderRadius: blobType === "circle" ? "50%" : "0%",
+                filter: glossy ? "blur(2px)" : "none",
+                opacity: glossy ? 0.95 : 1,
               }}
             />
           </div>
