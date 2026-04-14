@@ -17,15 +17,18 @@ export default function CreateInvoice() {
     status: "unpaid",
     items: [],
     proposal: "",
-    discount_amount: 0,
     additional_fee: 0,
     tax_amount: 0,
+    discount_amount: 0,
+    reference: "",
+    is_proforma: false,
   });
 
   const [clients, setClients] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [selectedProposalId, setSelectedProposalId] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [settings, setSettings] = useState(null);
 
   const router = useRouter();
   const API_BASE = API_BASE_URL;
@@ -46,6 +49,11 @@ export default function CreateInvoice() {
       .get(`${API_BASE}/proposal/clients/`)
       .then((res) => setClients(res.data))
       .catch((err) => console.error("Client Fetch Error:", err));
+
+    // Fetch company settings with cache-busting
+    axios.get(`${API_BASE}/settings/?_=${Date.now()}`)
+      .then((res) => { if (res.data) setSettings(res.data); })
+      .catch((err) => console.error("Settings Fetch Error:", err));
   }, [API_BASE]);
 
   useEffect(() => {
@@ -58,18 +66,18 @@ export default function CreateInvoice() {
       return sum + base + gstAmount;
     }, 0);
 
-    const discount = parseFloat(invoice.discount_amount || 0);
     const fee = parseFloat(invoice.additional_fee || 0);
     const tax = parseFloat(invoice.tax_amount || 0);
+    const disc = parseFloat(invoice.discount_amount || 0);
 
-    const total = subtotal - discount + fee + tax;
+    const total = subtotal + fee + tax - disc;
 
     setInvoice((prev) => ({
       ...prev,
       total_amount: total.toFixed(2),
       total_in_words: toWords.convert(total > 0 ? total : 0),
     }));
-  }, [invoice.items, invoice.discount_amount, invoice.additional_fee, invoice.tax_amount]);
+  }, [invoice.items, invoice.additional_fee, invoice.tax_amount, invoice.discount_amount]);
 
   // Add new item row
   const addItem = () => {
@@ -162,11 +170,11 @@ export default function CreateInvoice() {
     }));
   };
 
-  // Fetch Next Invoice Number
+  // Fetch Next Invoice Number with cache-busting
   useEffect(() => {
     const fetchNextInvoiceNumber = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/invoice/next-number/`);
+        const response = await axios.get(`${API_BASE_URL}/invoice/next-number/?is_proforma=false&_=${Date.now()}`);
         if (response.data && response.data.next_invoice_number) {
           setInvoice((prev) => ({ ...prev, invoice_no: response.data.next_invoice_number }));
         }
@@ -241,7 +249,9 @@ export default function CreateInvoice() {
 
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
               <div>
-                <h2 className="text-3xl font-bold tracking-tight">Create Invoice</h2>
+                <h2 className="text-3xl font-bold tracking-tight">
+                  Create Invoice
+                </h2>
                 <p className="text-slate-400 mt-1 text-sm font-light">
                   Adstra Digital &bull; The Sole of premium Digital Marketing Brand
                 </p>
@@ -255,12 +265,12 @@ export default function CreateInvoice() {
 
           <div className="p-8">
             <form onSubmit={handleSubmit}>
-              {/* Top Row: Invoice No & Client */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              {/* Top Row: Invoice No, Reference & Client */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                 {/* Invoice No */}
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Invoice No
+                    {invoice.is_proforma ? "Proforma No" : "Invoice No"}
                   </label>
                   <div className="relative">
                     <input
@@ -271,6 +281,19 @@ export default function CreateInvoice() {
                       readOnly
                     />
                   </div>
+                </div>
+
+                {/* Reference */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Reference / PO No
+                  </label>
+                  <input
+                    className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all hover:border-indigo-300 font-medium"
+                    value={invoice.reference || ''}
+                    onChange={(e) => setInvoice({ ...invoice, reference: e.target.value })}
+                    placeholder="e.g. #REF-123 or PO-99"
+                  />
                 </div>
 
                 {/* Client Select */}
@@ -302,14 +325,14 @@ export default function CreateInvoice() {
               {/* Optional Proposal Select */}
               {proposals.length > 0 && (
                 <div className="mb-8 p-4 bg-indigo-50 rounded-lg border border-indigo-100 animate-fade-in-down">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div className="md:w-1/2">
                       <h4 className="text-sm font-semibold text-indigo-900">Import from Proposal</h4>
                       <p className="text-xs text-indigo-700 mt-1">Select a proposal to auto-fill items.</p>
                     </div>
                     <div className="w-full md:w-1/2 relative">
                       <select
-                        className="w-full bg-white border border-indigo-200 text-indigo-900 text-sm rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm"
+                        className="w-full bg-white border border-indigo-200 text-indigo-900 text-sm rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm transition-all"
                         value={selectedProposalId}
                         onChange={handleProposalChange}
                       >
@@ -401,7 +424,7 @@ export default function CreateInvoice() {
                         <th className="px-6 py-4 font-semibold">Description</th>
                         <th className="px-3 py-4 font-semibold w-32 text-center">Qty</th>
                         <th className="px-3 py-4 font-semibold w-40 text-center">Rate</th>
-                        <th className="px-3 py-4 font-semibold w-32 text-center">GST %</th>
+                        {!invoice.is_proforma && <th className="px-3 py-4 font-semibold w-32 text-center">GST %</th>}
                         <th className="px-6 py-4 font-semibold text-center w-40">Amount</th>
                         <th className="px-2 py-4 font-semibold w-16 text-center"></th>
                       </tr>
@@ -448,17 +471,19 @@ export default function CreateInvoice() {
                                   onChange={(e) => updateItem(i, "rate", e.target.value)}
                                 />
                               </td>
-                              <td className="px-2 py-3">
-                                <input
-                                  type="number"
-                                  className={`w-full bg-slate-50 border border-slate-200 rounded text-center text-slate-700 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${!item.isNew && 'bg-slate-100 cursor-not-allowed text-slate-400'}`}
-                                  value={item.gst}
-                                  readOnly={!item.isNew}
-                                  onChange={(e) => {
-                                    if (item.isNew) updateItem(i, "gst", e.target.value);
-                                  }}
-                                />
-                              </td>
+                              {!invoice.is_proforma && (
+                                <td className="px-2 py-3">
+                                  <input
+                                    type="number"
+                                    className={`w-full bg-slate-50 border border-slate-200 rounded text-center text-slate-700 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${!item.isNew && 'bg-slate-100 cursor-not-allowed text-slate-400'}`}
+                                    value={item.gst}
+                                    readOnly={!item.isNew}
+                                    onChange={(e) => {
+                                      if (item.isNew) updateItem(i, "gst", e.target.value);
+                                    }}
+                                  />
+                                </td>
+                              )}
                               <td className="px-6 py-3 text-center font-medium text-slate-900">
                                 &#8377;{total.toFixed(2)}
                               </td>
@@ -487,18 +512,6 @@ export default function CreateInvoice() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Discount Amount (-)
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
-                    value={invoice.discount_amount}
-                    onChange={(e) => setInvoice({ ...invoice, discount_amount: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                     Additional Fee (+)
                   </label>
                   <input
@@ -511,16 +524,30 @@ export default function CreateInvoice() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Other Taxes / Adjustments (+)
+                    Discount Amount (-)
                   </label>
                   <input
                     type="number"
                     className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
-                    value={invoice.tax_amount}
-                    onChange={(e) => setInvoice({ ...invoice, tax_amount: e.target.value })}
+                    value={invoice.discount_amount}
+                    onChange={(e) => setInvoice({ ...invoice, discount_amount: e.target.value })}
                     placeholder="0.00"
                   />
                 </div>
+                {!invoice.is_proforma && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                      Other Taxes / Adjustments (+)
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
+                      value={invoice.tax_amount}
+                      onChange={(e) => setInvoice({ ...invoice, tax_amount: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Footer / Total */}
@@ -533,22 +560,22 @@ export default function CreateInvoice() {
                       return sum + base + (base * (item.gst || 0) / 100);
                     }, 0)).toFixed(2)}</span>
                   </div>
-                  {Number(invoice.discount_amount) > 0 && (
-                    <div className="flex justify-between w-48 text-red-500">
-                      <span>Discount:</span>
-                      <span>- &#8377; {Number(invoice.discount_amount).toFixed(2)}</span>
-                    </div>
-                  )}
                   {Number(invoice.additional_fee) > 0 && (
                     <div className="flex justify-between w-48 text-indigo-600">
                       <span>Fee:</span>
                       <span>+ &#8377; {Number(invoice.additional_fee).toFixed(2)}</span>
                     </div>
                   )}
-                  {Number(invoice.tax_amount) > 0 && (
+                  {Number(invoice.tax_amount) > 0 && !invoice.is_proforma && (
                     <div className="flex justify-between w-48 text-indigo-600">
                       <span>Tax/Adj:</span>
                       <span>+ &#8377; {Number(invoice.tax_amount).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {Number(invoice.discount_amount) > 0 && (
+                    <div className="flex justify-between w-48 text-red-600">
+                      <span>Discount:</span>
+                      <span>- &#8377; {Number(invoice.discount_amount).toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -575,251 +602,205 @@ export default function CreateInvoice() {
             <div className="preview-header">
               <h5 className="flex items-center gap-2">
                 <span className="bg-indigo-100 text-indigo-700 p-1.5 rounded text-xs font-bold uppercase tracking-wider">Preview</span>
-                Invoice
+                {invoice.is_proforma ? "Proforma Invoice" : "Invoice"}
               </h5>
               <button className="close-btn hover:rotate-90 transition-transform duration-300" onClick={() => setShowPreview(false)}>
-                &#10005;
+                &times;
               </button>
             </div>
 
-            {/* Modal Scrollable Body */}
-            <div className="preview-body bg-slate-50/50">
-
-              <div className="bg-white p-8 shadow-sm border border-slate-200 min-h-[800px] relative">
-                {/* Company Banner with Logo — matches invoice view page */}
-                <div style={{
-                  backgroundColor: "#136270",
-                  color: "white",
-                  fontWeight: "bold",
-                  fontSize: "20px",
-                  padding: "12px 16px",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  position: "relative",
-                  marginBottom: "16px",
-                }}>
-                  <span>ADSTRA DIGITAL</span>
-                  {/* Logo box — absolutely positioned so it overflows the banner */}
-                  <div className="rounded shadow-md" style={{
-                    position: "absolute",
-                    right: "16px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: "80px",
-                    height: "80px",
-                    backgroundColor: "white",
-                    padding: "5px",
-                    border: "1px solid black",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
-                    <img
-                      src="/assets/logo_gellery.png"
-                      alt="Adstra Logo"
-                      style={{ height: "100%", width: "100%", objectFit: "contain" }}
-                    />
+            <div className="preview-body">
+              <div className="invoice-container p-4 bg-white border shadow-sm rounded mx-auto" style={{ maxWidth: "720px" }}>
+                <div style={{ border: '2px solid black', fontFamily: 'Arial, sans-serif', color: 'black' }}>
+                  {/* Top Bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid black', fontSize: '10px', fontWeight: 'bold' }}>
+                    <span>Page No. 1 of 1</span>
+                    <span style={{ fontSize: '22px', letterSpacing: '4px', fontWeight: '900' }}>
+                      {invoice.is_proforma ? "PROFORMA INVOICE" : "INVOICE"}
+                    </span>
+                    <span>Original Copy</span>
                   </div>
-                </div>
 
-                {/* INVOICE Title */}
-                <div style={{ textAlign: "right", fontSize: "2rem", fontWeight: "bold", marginBottom: "24px", color: "#cbd5e1", letterSpacing: "0.1em" }}>
-                  INVOICE
-                </div>
-
-                {/* Client Info + Invoice Meta */}
-                <div className="row px-1 mb-3">
-                  <div className="col-md-5">
-                    <h6 className="fw-bold text-uppercase text-xs text-slate-500 mb-2 tracking-wider">Bill To</h6>
-                    <p style={{ fontSize: "14px", lineHeight: "1.8" }} className="text-slate-800">
-                      {selectedClient?.name || <span className="text-slate-400 italic">Select a client</span>}<br />
-                      {selectedClient?.company_name && <>{selectedClient.company_name}<br /></>}
-                      {selectedClient?.address && <>{selectedClient.address}<br /></>}
-                      {selectedClient?.contact && <>&#128222; {selectedClient.contact}<br /></>}
-                      {selectedClient?.email && <>&#9993;&#65039; {selectedClient.email}<br /></>}
-                      {selectedClient?.gstin && <>GSTIN: {selectedClient.gstin}<br /></>}
-                      {selectedClient?.lut && <>LUT: {selectedClient.lut}<br /></>}
-                    </p>
+                  {/* Row 1: Logo and Invoice Details */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid black' }}>
+                    <div style={{ padding: '12px', borderRight: '1px solid black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img
+                        src="/assets/logo_new-01.png"
+                        alt="Adstra Logo"
+                        style={{ maxWidth: '220px', height: 'auto' }}
+                      />
+                    </div>
+                    <div style={{ padding: '8px', fontSize: '11px' }}>
+                      <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '8px' }}>Invoice Details:</div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '2px 0', color: '#666' }}>{invoice.is_proforma ? "Proforma No" : "Invoice No"}</td>
+                            <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{invoice.invoice_no || (invoice.is_proforma ? "PI-..." : "PROVISIONAL")}</span></td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '2px 0', color: '#666' }}>Date</td>
+                            <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span></td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '2px 0', color: '#666' }}>Due Date</td>
+                            <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>Upon Delivery</span></td>
+                          </tr>
+                          {invoice.reference && (
+                            <tr>
+                              <td style={{ padding: '2px 0', color: '#666' }}>Reference</td>
+                              <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{invoice.reference}</span></td>
+                            </tr>
+                          )}
+                          <tr>
+                            <td style={{ padding: '2px 0', color: '#666' }}>Place</td>
+                            <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>Kerala</span></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <div className="col-md-7">
-                    <table className="table table-sm table-borderless">
+
+                  {/* Row 2: From & To */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid black' }}>
+                    <div style={{ padding: '8px', borderRight: '1px solid black', fontSize: '11px' }}>
+                      <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>From:</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{settings?.name || "Adstra Digital"}</div>
+                      <div style={{ fontSize: '9px', color: '#666', marginBottom: '2px' }}>ISO 9001:2015 & IAF Certified</div>
+                      <div>{settings?.address || "Husna Complex, 1st Floor, Nadakkavu, Kozhikode, Kerala - 673011"}</div>
+                      <div style={{ marginTop: '2px' }}>GSTIN: {settings?.gstin || "32CMJPK3035L1Z2"}{settings?.lut_no ? ` | LUT: ${settings.lut_no}` : " | LUT: AD320224004945V"}</div>
+                      <div>Mobile: {settings?.mobile || "+91 974 477 9574 | 956 756 8185"}</div>
+                      <div>Email: {settings?.email || "info.adstradigital@gmail.com"}</div>
+                    </div>
+                    <div style={{ padding: '8px', fontSize: '11px' }}>
+                      <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>To:</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{selectedClient?.company_name || selectedClient?.name || "N/A"}</div>
+                      <div>{selectedClient?.address || "N/A"}</div>
+                      <div style={{ marginTop: '2px' }}>GSTIN: {selectedClient?.gstin || "-"} | Mobile: {selectedClient?.contact || "-"}</div>
+                      <div>Email: {selectedClient?.email || "-"}</div>
+                    </div>
+                  </div>
+                  {/* Items Table */}
+                  <div style={{ minHeight: '300px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid black', backgroundColor: '#f9fafb' }}>
+                          <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '40px' }}>Sr.</th>
+                          <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'left' }}>Item Description</th>
+                          <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '60px' }}>Qty</th>
+                          <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', width: '100px' }}>Rate (Rs)</th>
+                          {!invoice.is_proforma && <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '90px' }}>Tax (Amt/%)</th>}
+                          <th style={{ padding: '6px', textAlign: 'right', width: '100px' }}>Amount (Rs)</th>
+                        </tr>
+                      </thead>
                       <tbody>
-                        <tr>
-                          <th className="text-end text-slate-500 text-sm font-semibold pr-3">Invoice No:</th>
-                          <td style={{ fontSize: "0.85rem" }} className="text-end font-semibold text-slate-800">
-                            {invoice.invoice_no || <span className="text-slate-400 italic">Auto-Generated</span>}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th className="text-end text-slate-500 text-sm font-semibold pr-3">Date:</th>
-                          <td className="text-end font-semibold text-slate-800">
-                            {new Date().toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th className="text-end text-slate-500 text-sm font-semibold pr-3">Due Date:</th>
-                          <td className="text-end font-semibold text-slate-800">Upon Delivery</td>
-                        </tr>
-                        <tr>
-                          <th className="text-end text-slate-500 text-sm font-semibold pr-3">Payment status:</th>
-                          <td className="text-capitalize text-end font-semibold">
-                            <span className={`px-2 py-0.5 rounded text-xs ${invoice.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {invoice.status?.replace("_", " ") || "Unpaid"}
-                            </span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <div className="mt-8">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 border-y border-slate-200">
-                        <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
-                        <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 uppercase w-16">Qty</th>
-                        <th className="py-2 px-3 text-end text-xs font-semibold text-slate-600 uppercase w-24">Rate</th>
-                        <th className="py-2 px-3 text-end text-xs font-semibold text-slate-600 uppercase w-24">GST</th>
-                        <th className="py-2 px-3 text-end text-xs font-semibold text-slate-600 uppercase w-24">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoice.items.length === 0 ? (
-                        <tr><td colSpan="5" className="text-center py-4 text-slate-400 italic text-sm">No items.</td></tr>
-                      ) : (
-                        invoice.items.map((item, i) => {
+                        {invoice.items.map((item, i) => {
                           const rate = Number(item.rate) || 0;
                           const qty = Number(item.quantity) || 0;
-                          const gst = Number(item.gst) || 0;
+                          const gst = invoice.is_proforma ? 0 : (Number(item.gst) || 0);
                           const base = rate * qty;
                           const gstAmt = (base * gst) / 100;
                           const total = base + gstAmt;
                           return (
-                            <tr key={i} className="border-b border-slate-100">
-                              <td className="py-3 px-3 text-sm text-slate-700">{item.description}</td>
-                              <td className="py-3 px-3 text-sm text-slate-700 text-center">{qty}</td>
-                              <td className="py-3 px-3 text-sm text-slate-700 text-end">&#8377;{rate.toFixed(2)}</td>
-                              <td className="py-3 px-3 text-sm text-slate-700 text-end">
-                                &#8377;{gstAmt.toFixed(2)}{" "}
-                              </td>
-                              <td className="py-3 px-3 text-sm text-slate-900 font-medium text-end">&#8377;{total.toFixed(2)}</td>
+                            <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
+                              <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{i + 1}</td>
+                              <td style={{ borderRight: '1px solid black', padding: '6px' }}>{item.description}</td>
+                              <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{qty.toFixed(2)}</td>
+                              <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>{rate.toFixed(2)}</td>
+                              {!invoice.is_proforma && <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', fontSize: '10px' }}>{gstAmt.toFixed(2)} ({gst}%)</td>}
+                              <td style={{ padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>{total.toFixed(2)}</td>
                             </tr>
                           );
-                        })
-                      )}
-
-                      {/* Subtotal Row */}
-                      <tr>
-                        <td colSpan="4" className="pt-4 text-end text-xs font-semibold text-slate-500 uppercase">Subtotal</td>
-                        <td className="pt-4 text-end text-sm font-semibold text-slate-800 tracking-wide">
-                          &#8377;{(invoice.items.reduce((sum, item) => {
-                            const base = (item.rate || 0) * (item.quantity || 0);
-                            return sum + base + (base * (item.gst || 0) / 100);
-                          }, 0)).toFixed(2)}
-                        </td>
-                      </tr>
-
-                      {/* Discount Row */}
-                      {Number(invoice.discount_amount) > 0 && (
-                        <tr>
-                          <td colSpan="4" className="py-1 text-end text-xs font-semibold text-slate-500 uppercase">Discount (-)</td>
-                          <td className="py-1 text-end text-sm font-semibold text-red-600 tracking-wide">
-                            - &#8377;{Number(invoice.discount_amount).toFixed(2)}
+                        })}
+                      </tbody>
+                      <tfoot>
+                        {/* Financial Breakdown */}
+                        <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                          <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Sub Total</td>
+                          <td style={{ padding: '6px', textAlign: 'right' }}>
+                            {invoice.items.reduce((sum, item) => sum + (Number(item.rate || 0) * Number(item.quantity || 0)), 0).toFixed(2)}
                           </td>
                         </tr>
-                      )}
-
-                      {/* Fee Row */}
-                      {Number(invoice.additional_fee) > 0 && (
-                        <tr>
-                          <td colSpan="4" className="py-1 text-end text-xs font-semibold text-slate-500 uppercase">Additional Fee (+)</td>
-                          <td className="py-1 text-end text-sm font-semibold text-slate-800 tracking-wide">
-                            + &#8377;{Number(invoice.additional_fee).toFixed(2)}
-                          </td>
+                        {!invoice.is_proforma && (
+                          <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                            <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Total Tax (GST)</td>
+                            <td style={{ padding: '6px', textAlign: 'right' }}>
+                              {invoice.items.reduce((sum, item) => sum + ((Number(item.rate || 0) * Number(item.quantity || 0) * Number(item.gst || 0)) / 100), 0).toFixed(2)}
+                            </td>
+                          </tr>
+                        )}
+                        {Number(invoice.discount_amount || 0) > 0 && (
+                          <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                            <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Discount</td>
+                            <td style={{ padding: '6px', textAlign: 'right', color: 'red' }}>- {Number(invoice.discount_amount).toFixed(2)}</td>
+                          </tr>
+                        )}
+                        {Number(invoice.additional_fee || 0) > 0 && (
+                          <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                            <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Additional Fees</td>
+                            <td style={{ padding: '6px', textAlign: 'right' }}>{Number(invoice.additional_fee).toFixed(2)}</td>
+                          </tr>
+                        )}
+                        <tr style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>
+                          <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Total</td>
+                          <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px' }}>{Number(invoice.total_amount).toFixed(2)}</td>
                         </tr>
-                      )}
-
-                      {/* Tax Row */}
-                      {Number(invoice.tax_amount) > 0 && (
-                        <tr>
-                          <td colSpan="4" className="py-1 text-end text-xs font-semibold text-slate-500 uppercase">Tax / Adjustments (+)</td>
-                          <td className="py-1 text-end text-sm font-semibold text-slate-800 tracking-wide">
-                            + &#8377;{Number(invoice.tax_amount).toFixed(2)}
-                          </td>
-                        </tr>
-                      )}
-
-                      {/* Final Total Row */}
-                      <tr>
-                        <td colSpan="4" className="pt-2 text-end text-sm font-bold text-indigo-900 uppercase tracking-wider">Grand Total</td>
-                        <td className="pt-2 text-end text-lg font-bold text-slate-900 border-t-2 border-slate-800">
-                          &#8377;{Number(invoice.total_amount).toFixed(2)}
-                        </td>
-                      </tr>
-                      {invoice.total_in_words && (
-                        <tr>
-                          <td colSpan="5" className="pt-1 text-end text-[10px] text-slate-500 italic font-medium">
-                            (In Words): {invoice.total_in_words}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Bank Details */}
-                <div className="mt-8 bg-slate-50 p-4 rounded border border-slate-200 text-start">
-                  <b className="fw-bold text-sm text-slate-800 block mb-1">Bank Details</b>
-                  <p className="mb-0 text-xs text-slate-600">HDFC Bank, Sulthan Bathery Branch, Wayanad, Kerala</p>
-                  <p className="mb-0 text-xs text-slate-600">Account Number: 50200091927202</p>
-                  <p className="mb-0 text-xs text-slate-600">IFSC Code: HDFC0001595</p>
-                </div>
-
-                {/* Terms & Conditions */}
-                <div
-                  className="mt-3 p-3 border border-slate-300 rounded bg-white"
-                  style={{ fontSize: "10px", lineHeight: "1.4", fontWeight: "500" }}
-                >
-                  <strong className="text-slate-800">Terms &amp; Conditions:</strong>
-                  <ul className="mb-0 mt-1 pl-4 list-disc text-slate-600">
-                    <li>Advance Payment: 40% of the total project value is payable in advance to initiate work.</li>
-                    <li>Balance Payment: Remaining 60% is due upon final delivery of the agreed scope.</li>
-                    <li>Taxes: Applicable taxes (GST or others) will be charged extra, as per prevailing rates.</li>
-                    <li>Disclaimer: Errors and omissions may be expected; any discrepancies will be addressed promptly upon notification.</li>
-                  </ul>
-                </div>
-
-                {/* Company Footer */}
-                <div className="row mt-8 pt-4 border-t border-slate-100">
-                  <div className="col-md-6 text-start">
-                    <p className="fw-bold mb-1 text-sm text-slate-800">Adstra Digital</p>
-                    <p className="text-slate-500" style={{ fontSize: "11px" }}>
-                      Husna Complex, 1st Floor<br />Nadakkavu, Kozhikode 673011
-                    </p>
-                    <p className="text-slate-600 mt-2" style={{ fontSize: "11px", fontWeight: "bold" }}>
-                      Elevating brands. Humanizing technology.
-                    </p>
+                      </tfoot>
+                    </table>
                   </div>
-                  <div className="col-md-6 text-end">
-                    <p className="fw-bold mb-1 text-xs text-slate-700">
-                      <span className="text-slate-400 font-normal">GSTIN:</span> 32CMJPK3035L1Z2
-                    </p>
-                    <p className="fw-bold text-xs text-slate-700">
-                      <span className="text-slate-400 font-normal">LUT No:</span> AD320625010204R
-                    </p>
-                  </div>
-                </div>
 
-                <div className="text-slate-300 text-center mt-6 uppercase tracking-widest" style={{ fontSize: "10px" }}>
-                  Computer Generated Invoice
+                  {/* Amount in words */}
+                  <div style={{ padding: '8px', borderTop: '1px solid black', borderBottom: '1px solid black', fontSize: '11px' }}>
+                    <strong>Rs.</strong> {invoice.total_in_words}
+                  </div>
+
+                  {/* Footer Section */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', fontSize: '10px' }}>
+                    <div style={{ padding: '8px', borderRight: '1px solid black' }}>
+                      <strong style={{ textDecoration: 'underline' }}>Terms and Conditions</strong>
+                      <ul style={{ paddingLeft: '18px', margin: '4px 0', listStyleType: 'disc', fontSize: '9px' }}>
+                        {settings?.terms_conditions ? (
+                          settings.terms_conditions.split('\n').filter(t => t.trim()).map((term, idx) => (
+                            <li key={idx} style={{ marginBottom: '2px' }}>{term.trim()}</li>
+                          ))
+                        ) : (
+                          <>
+                            <li>Payment should be made within the due date mentioned</li>
+                            <li>Please quote invoice number in all communications</li>
+                            <li>Taxes and charges as per applicable govt laws</li>
+                            <li>For any discrepancy, kindly contact our accounts team immediately</li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+                    <div style={{ padding: '8px', borderRight: '1px solid black' }}>
+                      <strong style={{ textDecoration: 'underline' }}>Bank Details</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        Acc No: {settings?.account_no || "50200091927202"}<br />
+                        Bank: {settings?.bank_name || "HDFC Bank"}<br />
+                        IFSC: {settings?.ifsc || "HDFC0001595"}<br />
+                        Branch: {settings?.branch || "Sulthan Bathery"}
+                      </div>
+                    </div>
+                    <div style={{ padding: '8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', minHeight: '120px' }}>
+                      <strong>For {settings?.name || "Adstra Digital"}</strong>
+                      <div style={{ marginTop: 'auto' }}>
+                        <img
+                          src="/assets/seal.png"
+                          alt="Seal"
+                          style={{ width: '100px', height: '100px', marginBottom: '-15px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
+                        />
+                        <div style={{ borderTop: '1px solid black', display: 'inline-block', width: '140px', paddingTop: '4px' }}>
+                          Authorized Signatory
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Invoice Created By */}
+                  <div style={{ padding: '4px', borderTop: '1px solid black', textAlign: 'center', fontSize: '9px', color: '#666' }}>
+                    Invoice Created by Adstra Digital
+                  </div>
                 </div>
               </div>
             </div>

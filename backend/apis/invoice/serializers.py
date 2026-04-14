@@ -7,13 +7,28 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvoiceItem
         exclude = ['invoice']
+        extra_kwargs = {
+            'amount': {'read_only': True}
+        }
 
 class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True)
 
     class Meta:
         model = Invoice
-        fields = '__all__'
+        fields = [
+            'id', 'invoice_no', 'proposal', 'client', 'date', 'due_date',
+            'total_amount', 'balance_due', 'total_in_words', 'reference', 'notes',
+            'status', 'razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature',
+            'paid_at', 'is_deleted', 'discount_amount', 'additional_fee',
+            'tax_amount', 'is_proforma', 'created_by', 'items'
+        ]
+        extra_kwargs = {
+            'discount_amount': {'required': False},
+            'additional_fee': {'required': False},
+            'tax_amount': {'required': False},
+            'balance_due': {'read_only': True},
+        }
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
@@ -42,12 +57,20 @@ class ViewInvoiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Invoice
-        fields = '__all__'
+        fields = [
+            'id', 'invoice_no', 'proposal', 'client', 'date', 'due_date',
+            'total_amount', 'balance_due', 'total_in_words', 'reference', 'notes',
+            'status', 'razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature',
+            'paid_at', 'is_deleted', 'discount_amount', 'additional_fee',
+            'tax_amount', 'is_proforma', 'created_by', 'items'
+        ]
+        read_only_fields = ['balance_due']
 
 
 
 class CreateInvoiceFromProposalSerializer(serializers.Serializer):
     proposal_id = serializers.IntegerField()
+    is_proforma = serializers.BooleanField(required=False, default=False)
 
     def validate_proposal_id(self, value):
         try:
@@ -60,7 +83,8 @@ class CreateInvoiceFromProposalSerializer(serializers.Serializer):
         proposal = Proposal.objects.get(id=validated_data['proposal_id'])
 
         invoice = Invoice.objects.create(
-            invoice_no=Invoice.generate_invoice_number(),
+            invoice_no=Invoice.generate_invoice_number(is_proforma=validated_data.get('is_proforma', False)),
+            is_proforma=validated_data.get('is_proforma', False),
             proposal=proposal,
             client=proposal.client,
             total_amount=proposal.total_amount,

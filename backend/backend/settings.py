@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'apis.proposal',
     'apis.invoice',
     'apis.transactions',
+    'apis.settings',
 ]
 
 MIDDLEWARE = [

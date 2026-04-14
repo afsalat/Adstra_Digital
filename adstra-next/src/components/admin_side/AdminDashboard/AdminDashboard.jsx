@@ -20,6 +20,9 @@ import {
   ArrowRight,
   LogOut
 } from "lucide-react";
+import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
+import SettingsPanel from "@/components/common/SettingsPanel";
 
 const AdminDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
@@ -303,7 +306,7 @@ const AdminDashboard = () => {
                   <div className="icon-wrapper">
                     <Receipt size={28} />
                   </div>
-                  <h4>Invoices</h4>
+                  <h4>Tax Invoices</h4>
                   <p>Track and manage client invoices.</p>
                   <span className="action-link">View Invoices <ArrowRight size={16} /></span>
                 </div>
@@ -313,7 +316,29 @@ const AdminDashboard = () => {
                 <div className="icon-wrapper">
                   <Receipt size={28} />
                 </div>
-                <h4>Invoices</h4>
+                <h4>Tax Invoices</h4>
+                <p>Access denied</p>
+              </div>
+            )}
+
+            {/* Proforma Invoices */}
+            {isAdmin ? (
+              <Link href="/invoices/proforma/" className="link">
+                <div className="dashboard-box emerald">
+                  <div className="icon-wrapper">
+                    <FileText size={28} />
+                  </div>
+                  <h4>Proforma Invoices</h4>
+                  <p>Manage estimates and proforma bills.</p>
+                  <span className="action-link">View Proforma <ArrowRight size={16} /></span>
+                </div>
+              </Link>
+            ) : (
+              <div className="dashboard-box no-hover">
+                <div className="icon-wrapper">
+                  <FileText size={28} />
+                </div>
+                <h4>Proforma Invoices</h4>
                 <p>Access denied</p>
               </div>
             )}
@@ -342,9 +367,15 @@ const AdminDashboard = () => {
           </>
         )}
 
+        {/* SETTINGS MENU ITEMS */}
+        {activeMenu === "Settings" && (
+          <SettingsPanel API_BASE={API_BASE_URL} />
+        )}
       </section>
     </div>
   );
 };
+
+ 
 
 export default AdminDashboard;

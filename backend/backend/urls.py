@@ -21,6 +21,7 @@ urlpatterns = [
     path('proposal/', include('apis.proposal.urls')),
     path('invoice/', include('apis.invoice.urls')),
     path('transactions/', include('apis.transactions.urls')),
+    path('settings/', include('apis.settings.urls')),
     path('robots.txt', robots_txt, name='robots_txt'),
 ]
 

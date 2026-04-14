@@ -12,6 +12,7 @@ class Invoice(models.Model):
     due_date = models.DateField(null=True, blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     total_in_words = models.TextField(null=True, blank=True)
+    reference = models.CharField(max_length=255, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
@@ -29,33 +30,57 @@ class Invoice(models.Model):
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     additional_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    is_proforma = models.BooleanField(default=False)
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.invoice_no:
-            self.invoice_no = self.generate_invoice_number()
+            self.invoice_no = self.generate_invoice_number(self.is_proforma)
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Invoice #{self.invoice_no} - {self.client.name}"
+        return f"{'Proforma' if self.is_proforma else 'Invoice'} #{self.invoice_no} - {self.client.name if self.client else 'N/A'}"
+
+    @property
+    def balance_due(self):
+        # Calculate total paid from non-deleted transactions
+        from apis.transactions.models import Transaction
+        from decimal import Decimal
+        total_paid = Transaction.objects.filter(
+            invoice=self, 
+            is_deleted=False
+        ).aggregate(models.Sum('amount'))['amount__sum'] or Decimal('0.00')
+        
+        # Ensure total_amount is also Decimal
+        total = Decimal(str(self.total_amount or '0.00'))
+        return max(Decimal('0.00'), total - total_paid)
 
     @classmethod
-    def generate_invoice_number(cls):
-        current_year = datetime.datetime.now().year
-        prefix = f"INV-AD-{current_year}-"
+    def generate_invoice_number(cls, is_proforma=False):
+        from apis.settings.models import CompanySettings
+        settings_obj = CompanySettings.objects.first()
+
+        # Get prefix and next number from settings
+        if is_proforma:
+            base_prefix = (settings_obj.proforma_prefix if settings_obj and settings_obj.proforma_prefix else "PI-AD-2026")
+            min_number = settings_obj.proforma_next_number if settings_obj else 1
+        else:
+            base_prefix = (settings_obj.invoice_prefix if settings_obj and settings_obj.invoice_prefix else "INV-AD-2026")
+            min_number = settings_obj.invoice_next_number if settings_obj else 1
+
+        prefix = f"{base_prefix}-"
         last_invoice = cls.objects.filter(invoice_no__startswith=prefix).order_by('-id').first()
 
         if last_invoice and last_invoice.invoice_no:
             try:
-                # Extract the last part (sequence number)
                 parts = last_invoice.invoice_no.split('-')
                 last_number = int(parts[-1])
-                new_number = last_number + 1
+                new_number = max(last_number + 1, min_number)
             except (IndexError, ValueError):
-                new_number = 1
+                new_number = min_number
         else:
-            new_number = 1
+            new_number = min_number
 
         return f"{prefix}{str(new_number).zfill(4)}"
 

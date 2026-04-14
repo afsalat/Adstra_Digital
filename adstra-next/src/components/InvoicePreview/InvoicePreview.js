@@ -14,6 +14,7 @@ export default function InvoicePreview() {
 
   const [invoice, setInvoice] = useState(null);
   const [items, setItems] = useState([]);
+  const [settings, setSettings] = useState(null);
 
   const API_BASE = API_BASE_URL;
 
@@ -21,9 +22,13 @@ export default function InvoicePreview() {
     if (!invoiceId) return;
     axios.get(`${API_BASE}/invoice/view/${invoiceId}/?_=${Date.now()}`).then((res) => {
       setInvoice(res.data);
-      console.log("DEBUG: Fetched invoice:", res.data);
       setItems(res.data.items);
     });
+
+    // Fetch Company Settings with cache busting
+    axios.get(`${API_BASE}/settings/?_=${Date.now()}`).then((res) => {
+      setSettings(res.data);
+    }).catch(err => console.error("Settings Fetch Error:", err));
   }, [invoiceId, API_BASE]);
 
   const handlePrint = () => window.print();
@@ -36,7 +41,7 @@ export default function InvoicePreview() {
 
     const opt = {
       margin: 0,
-      filename: "invoice.pdf",
+      filename: `invoice_${invoiceId}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -45,12 +50,24 @@ export default function InvoicePreview() {
     html2pdf().set(opt).from(element).save();
   };
 
-  const goToCreate = () => router.push("/invoices/create/");
-  const goToList = () => router.push("/invoices/");
+  const goToCreate = () => {
+    if (invoice?.is_proforma) {
+      router.push("/invoices/proforma/create/");
+    } else {
+      router.push("/invoices/create/");
+    }
+  };
+  
+  const goToList = () => {
+    if (invoice?.is_proforma) {
+      router.push("/invoices/proforma/");
+    } else {
+      router.push("/invoices/");
+    }
+  };
 
   return (
     <>
-      {/* Buttons */}
       {/* Action Buttons */}
       <div className="flex justify-end gap-3 p-6 no-print bg-slate-50/50">
         <button
@@ -79,7 +96,7 @@ export default function InvoicePreview() {
           onClick={goToList}
         >
           <LayoutList size={18} />
-          Invoice List
+          Go to List
         </button>
       </div>
 
@@ -89,316 +106,200 @@ export default function InvoicePreview() {
         ref={invoiceRef}
         style={{ maxWidth: "720px" }}
       >
-        {/* Header */}
-        <div
-          className="px-3 py-2 mb-1 d-flex align-items-center rounded"
-          style={{
-            backgroundColor: "#136270ff",
-            color: "white",
-            fontWeight: "bold",
-            fontSize: "20px",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Left Side: Brand Name */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginRight: "10%",
-            }}
-          >
-            <span>ADSTRA DIGITAL</span>
+        {/* Boxed GST Style Invoice Content - Combined First Row */}
+        <div style={{ border: '2px solid black', fontFamily: 'Arial, sans-serif', color: 'black', background: 'white' }}>
+          {/* Top Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid black', fontSize: '10px', fontWeight: 'bold' }}>
+            <span>Page No. 1 of 1</span>
+            <span style={{ fontSize: '22px', letterSpacing: '4px', fontWeight: '900' }}>
+              {invoice?.is_proforma ? "PROFORMA INVOICE" : "INVOICE"}
+            </span>
+            <span>Original Copy</span>
           </div>
 
-          {/* Right Side: Logo in larger white box */}
-          <div
-            className="rounded"
-            style={{
-              display: "flex",
-              position: "absolute",
-              justifyContent: "start",
-              alignItems: "center",
-              width: "80px",
-              height: "80px",
-              backgroundColor: "white",
-              padding: "5px",
-              marginLeft: "500px",
-              border: "1px black solid",
-            }}
-          >
-            <img
-              src="/assets/logo_gellery.png"
-              alt="Logo"
-              style={{
-                height: "100%", // taller than container
-                width: "100%",
-                objectFit: "contain",
-              }}
-            />
-          </div>
-        </div>
-
-        <div
-          className="text-end"
-          style={{
-            fontSize: "2rem",
-            marginRight: "50px",
-            marginTop: "30px",
-            marginBottom: "30px",
-            fontWeight: "bold",
-          }}
-        >
-          INVOICE
-        </div>
-
-        {/* Client Info */}
-        <div className="row px-3">
-          <div className="col-md-5">
-            <h6 className="fw-bold">Bill To</h6>
-            <p style={{ fontSize: "14px" }}>
-              {invoice?.client?.name || "N/A"}
-              <br />
-              {invoice?.client?.company_name &&
-                `${invoice.client.company_name}\n`}
-              {invoice?.client?.address}
-              <br />
-              {invoice?.client?.contact && `📞 ${invoice.client.contact}`}
-              <br />
-              {invoice?.client?.email && `✉️ ${invoice.client.email}`}
-              <br />
-              {invoice?.client?.gstin && `GSTIN: ${invoice.client.gstin}`}
-              <br />
-              {invoice?.client?.lut && `LUT: ${invoice.client.lut}`}
-            </p>
+          {/* Row 1: Logo and Invoice Details */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid black' }}>
+            <div style={{ padding: '12px', borderRight: '1px solid black', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src="/assets/logo_new-01.png"
+                alt="Adstra Logo"
+                style={{ maxWidth: '220px', height: 'auto' }}
+              />
+            </div>
+            <div style={{ padding: '8px', fontSize: '11px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '8px' }}>Invoice Details:</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '2px 0', color: '#666' }}>{invoice?.is_proforma ? "Proforma No" : "Invoice No"}</td>
+                    <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{invoice?.invoice_no}</span></td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '2px 0', color: '#666' }}>Date</td>
+                    <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{invoice?.date ? new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : "—"}</span></td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '2px 0', color: '#666' }}>Due Date</td>
+                    <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{invoice?.due_date ? new Date(invoice.due_date).toLocaleDateString('en-IN') : "Upon Delivery"}</span></td>
+                  </tr>
+                  {invoice?.reference && (
+                    <tr>
+                      <td style={{ padding: '2px 0', color: '#666' }}>Reference</td>
+                      <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{invoice.reference}</span></td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td style={{ padding: '2px 0', color: '#666' }}>Place</td>
+                    <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>Kerala</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="col-md-7">
-            <table className="table table-sm table-borderless">
+          {/* Row 2: From & To */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid black' }}>
+            <div style={{ padding: '8px', borderRight: '1px solid black', fontSize: '10px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>From:</div>
+              <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{settings?.name || "Company Name not set"}</div>
+              <div style={{ fontSize: '9px', color: '#666', marginBottom: '2px' }}>ISO 9001:2015 & IAF Certified</div>
+              <div>{settings?.address || "Address not set"}</div>
+              <div style={{ marginTop: '2px' }}>
+                GSTIN: {settings?.gstin || "N/A"} 
+                {settings?.lut_no && ` | LUT: ${settings.lut_no}`}
+              </div>
+              <div>Mobile: {settings?.mobile || "N/A"}</div>
+              <div>Email: {settings?.email || "N/A"}</div>
+            </div>
+            <div style={{ padding: '8px', fontSize: '11px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>To:</div>
+              <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{invoice?.client?.company_name || invoice?.client?.name || "N/A"}</div>
+              <div>{invoice?.client?.address || "N/A"}</div>
+              <div style={{ marginTop: '2px' }}>GSTIN: {invoice?.client?.gstin || "-"} | Mobile: {invoice?.client?.contact || "-"}</div>
+              <div>Email: {invoice?.client?.email || "-"}</div>
+            </div>
+          </div>
+          {/* Items Table Section */}
+          <div style={{ minHeight: '300px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid black', backgroundColor: '#f9fafb' }}>
+                  <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '40px' }}>Sr.</th>
+                  <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'left' }}>Item Description</th>
+                  <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '60px' }}>Qty</th>
+                  <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', width: '100px' }}>Rate (Rs)</th>
+                  {!invoice?.is_proforma && <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '90px' }}>Tax (Amt/%)</th>}
+                  <th style={{ padding: '6px', textAlign: 'right', width: '100px' }}>Amount (Rs)</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr>
-                  <th>Invoice No:</th>
-                  <td style={{ fontSize: "0.8rem" }}>{invoice?.invoice_no}</td>
-                </tr>
-                <tr>
-                  <th>Date:</th>
-                  <td>
-                    {invoice?.date
-                      ? new Date(invoice.date).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })
-                      : "—"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Due Date:</th>
-                  <td>
-                    {invoice?.due_date
-                      ? new Date(invoice.due_date).toLocaleDateString("en-IN")
-                      : "Upon Delivery"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Payment status:</th>
-                  <td>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${invoice?.status === 'paid' ? 'bg-green-100 text-green-700' :
-                      invoice?.status === 'partially_paid' ? 'bg-blue-100 text-blue-700' :
-                        invoice?.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
-                          'bg-red-100 text-red-700'
-                      }`}>
-                      {invoice?.status ? invoice.status.replace("_", " ").toUpperCase() : "UNPAID"}
-                    </span>
-                  </td>
-                </tr>
+                {(invoice?.items || []).map((item, i) => {
+                  const rate = Number(item.rate) || 0;
+                  const qty = Number(item.quantity) || 0;
+                  const gst = invoice?.is_proforma ? 0 : (Number(item.gst) || 0);
+                  const base = rate * qty;
+                  const gstAmt = (base * gst) / 100;
+                  const total = base + gstAmt;
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{i + 1}</td>
+                      <td style={{ borderRight: '1px solid black', padding: '6px' }}>{item.description}</td>
+                      <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{qty.toFixed(2)}</td>
+                      <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>{rate.toFixed(2)}</td>
+                      {!invoice?.is_proforma && <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', fontSize: '10px' }}>{gstAmt.toFixed(2)} ({gst}%)</td>}
+                      <td style={{ padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>{total.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
+              <tfoot>
+                {/* Financial Breakdown */}
+                <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                  <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Sub Total</td>
+                  <td style={{ padding: '6px', textAlign: 'right' }}>
+                    {invoice?.items?.reduce((sum, item) => sum + (Number(item.rate || 0) * Number(item.quantity || 0)), 0).toFixed(2)}
+                  </td>
+                </tr>
+                {(!invoice?.is_proforma) && (
+                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                    <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Total Tax (GST)</td>
+                    <td style={{ padding: '6px', textAlign: 'right' }}>
+                      {invoice?.items?.reduce((sum, item) => sum + ((Number(item.rate || 0) * Number(item.quantity || 0) * Number(item.gst || 0)) / 100), 0).toFixed(2)}
+                    </td>
+                  </tr>
+                )}
+                {Number(invoice?.tax_amount || 0) > 0 && !invoice?.is_proforma && (
+                   <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                    <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Other Taxes / Adjustments</td>
+                    <td style={{ padding: '6px', textAlign: 'right' }}>{Number(invoice.tax_amount).toFixed(2)}</td>
+                  </tr>
+                )}
+                {Number(invoice?.additional_fee || 0) > 0 && (
+                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                    <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Additional Fee (+)</td>
+                    <td style={{ padding: '6px', textAlign: 'right' }}>{Number(invoice.additional_fee).toFixed(2)}</td>
+                  </tr>
+                )}
+                 {Number(invoice?.discount_amount || 0) > 0 && (
+                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                    <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Discount (-)</td>
+                    <td style={{ padding: '6px', textAlign: 'right', color: 'red' }}>- {Number(invoice.discount_amount).toFixed(2)}</td>
+                  </tr>
+                )}
+                <tr style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>
+                  <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', fontSize: '13px' }}>Grand Total (Rs)</td>
+                  <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px' }}>{Number(invoice?.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
-        </div>
 
-        {/* Items Table */}
-        <div className="mt-3 px-3">
-          <table className="table table-bordered table-sm">
-            <thead className="table-dark">
-              <tr>
-                <th className="text-center">Description</th>
-                <th className="text-center">Qty</th>
-                <th className="text-center">Rate</th>
-                <th className="text-center">GST</th>
-                <th className="text-center">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice?.items?.map((item, i) => {
-                const rate = Number(item.rate) || 0;
-                const quantity = Number(item.quantity) || 0;
-                const gstPercent = Number(item.gst) || 0;
-                const base = rate * quantity;
-                const gstAmount = (base * gstPercent) / 100;
-                const total = base + gstAmount;
-
-                return (
-                  <tr key={i}>
-                    <td>{item.description}</td>
-                    <td>{quantity}</td>
-                    <td className="text-end">₹{rate.toFixed(2)}</td>
-                    <td className="text-end">
-                      ₹{gstAmount.toFixed(2)}{" "}
-                      <small className="text-muted">({gstPercent}%)</small>
-                    </td>
-                    <td className="text-end">₹{total.toFixed(2)}</td>
-                  </tr>
-                );
-              })}
-              {/* Subtotal Row */}
-              <tr>
-                <td colSpan="4" className="text-end text-muted" style={{ fontSize: "12px" }}>
-                  Subtotal
-                </td>
-                <td className="text-end" style={{ fontSize: "12px" }}>
-                  ₹{(invoice?.items?.reduce((sum, item) => {
-                    const base = (Number(item.rate) || 0) * (Number(item.quantity) || 0);
-                    const gst = (base * (Number(item.gst) || 0)) / 100;
-                    return sum + base + gst;
-                  }, 0) || 0).toFixed(2)}
-                </td>
-              </tr>
-
-              {/* Discount Row */}
-              {Number(invoice?.discount_amount) > 0 && (
-                <tr>
-                  <td colSpan="4" className="text-end text-danger" style={{ fontSize: "12px" }}>
-                    Discount (-)
-                  </td>
-                  <td className="text-end text-danger" style={{ fontSize: "12px" }}>
-                    - ₹{Number(invoice.discount_amount).toFixed(2)}
-                  </td>
-                </tr>
-              )}
-
-              {/* Fee Row */}
-              {Number(invoice?.additional_fee) > 0 && (
-                <tr>
-                  <td colSpan="4" className="text-end text-muted" style={{ fontSize: "12px" }}>
-                    Additional Fee (+)
-                  </td>
-                  <td className="text-end" style={{ fontSize: "12px" }}>
-                    + ₹{Number(invoice.additional_fee).toFixed(2)}
-                  </td>
-                </tr>
-              )}
-
-              {/* Tax Row */}
-              {Number(invoice?.tax_amount) > 0 && (
-                <tr>
-                  <td colSpan="4" className="text-end text-muted" style={{ fontSize: "12px" }}>
-                    Taxes / Adjustments (+)
-                  </td>
-                  <td className="text-end" style={{ fontSize: "12px" }}>
-                    + ₹{Number(invoice.tax_amount).toFixed(2)}
-                  </td>
-                </tr>
-              )}
-
-              {/* Grand Total Row */}
-              <tr>
-                <td colSpan="4" className="text-end fw-bold">
-                  Grand Total
-                </td>
-                <td className="text-end fw-bold text-primary">
-                  ₹
-                  {invoice?.total_amount
-                    ? Number(invoice.total_amount).toFixed(2)
-                    : "0.00"}
-                </td>
-              </tr>
-              {invoice?.total_in_words && (
-                <tr>
-                  <td colSpan="5" className="fst-italic text-end text-muted" style={{ fontSize: "11px" }}>
-                    (In Words): {invoice.total_in_words}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Bank Info */}
-        <div className="px-3 mt-4 text-start">
-          <b className="fw-bold">Bank Details</b>
-          <p className="mb-0">
-            HDFC Bank, Sulthan Bathery Branch, Wayanad, Kerala
-          </p>
-          <p className="mb-0">Account Number: 50200091927202</p>
-          <p className="mb-0">IFSC Code: HDFC0001595</p>
-        </div>
-
-        <div
-          className="mt-3 p-3 border border-dark rounded bg-light"
-          style={{
-            fontSize: "10px",
-            lineHeight: "1.3",
-            fontWeight: "500",
-            boxShadow: "0 0 5px rgba(0,0,0,0.1)",
-          }}
-        >
-          <strong>Terms & Conditions:</strong>
-          <ul className="mb-0 mt-2">
-            <li>
-              Advance Payment: 40% of the total project value is payable in
-              advance to initiate work.
-            </li>
-            <li>
-              Balance Payment: Remaining 60% is due upon final delivery of the
-              agreed scope.
-            </li>
-            <li>
-              Taxes: Applicable taxes (GST or others) will be charged extra, as
-              per prevailing rates.
-            </li>
-            <li>
-              Disclaimer: Errors and omissions may be expected in the invoice;
-              any discrepancies will be addressed promptly upon notification.
-            </li>
-          </ul>
-        </div>
-
-        {/* Footer */}
-        <div className="row mt-5">
-          {/* Company Info */}
-          <div className="col-md-6 text-start">
-            <p className="fw-bold mb-1">Adstra Digital</p>
-            <p className="text-muted" style={{ fontSize: "13px" }}>
-              Husna Complex, 1st Floor
-              <br />
-              Nadakkavu, Kozhikode 673011
-            </p>
-            <p
-              className="text-muted"
-              style={{ fontSize: "13px", fontWeight: "bold" }}
-            >
-              Elevating brands. Humanizing technology.
-            </p>
+          {/* Amount in words */}
+          <div style={{ padding: '8px', borderTop: '1px solid black', borderBottom: '1px solid black', fontSize: '11px' }}>
+            <span style={{ fontWeight: 'bold' }}>Rs.</span> {invoice?.total_in_words}
           </div>
 
-          {/* GST & LUT */}
-          <div className="col-md-6 text-end">
-            <p className="fw-bold mb-1" style={{ fontSize: "13px" }}>
-              <span className="text-muted">GSTIN:</span> 32CMJPK3035L1Z2
-            </p>
-            <p className="fw-bold" style={{ fontSize: "13px" }}>
-              <span className="text-muted">LUT No:</span> AD320625010204R
-            </p>
+          {/* Footer Section */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', fontSize: '10px' }}>
+            <div style={{ padding: '8px', borderRight: '1px solid black' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>Terms and Conditions:</div>
+              <ul style={{ paddingLeft: '15px', margin: '0', listStyleType: 'disc', fontSize: '9px' }}>
+                {settings?.terms_conditions ? (
+                  settings.terms_conditions.split(/\n|\/\//).filter(t => t.trim()).map((term, idx) => (
+                    <li key={idx} style={{ marginBottom: '2px' }}>{term.trim()}</li>
+                  ))
+                ) : (
+                  <>
+                    <li>Payment should be made within the due date mentioned</li>
+                    <li>Please quote invoice number in all communications</li>
+                    <li>Taxes and charges as per applicable govt laws</li>
+                  </>
+                )}
+              </ul>
+            </div>
+            <div style={{ padding: '8px', borderRight: '1px solid black' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>Official Bank Details:</div>
+              <div style={{ fontSize: '9px', lineHeight: '1.4' }}>
+                Acc No: <span style={{ fontWeight: 'bold' }}>{settings?.account_no || "N/A"}</span><br />
+                Bank: <span style={{ fontWeight: 'bold' }}>{settings?.bank_name || "N/A"}</span><br />
+                IFSC: <span style={{ fontWeight: 'bold' }}>{settings?.ifsc || "N/A"}</span><br />
+                Branch: <span style={{ fontWeight: 'bold' }}>{settings?.branch || "N/A"}</span>
+              </div>
+            </div>
+            <div style={{ padding: '8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', minHeight: '100px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>For {settings?.name || "Adstra Digital"}</div>
+              <img
+                src="/assets/seal.png"
+                alt="Company Seal"
+                style={{ width: '80px', height: 'auto', marginBottom: '4px', opacity: 0.85 }}
+              />
+              <div style={{ borderTop: '1px solid black', width: '80%', padding: '4px 0', fontWeight: 'bold' }}>Authorised Signatory</div>
+            </div>
           </div>
-        </div>
 
-        {/* Final Message */}
-        <div
-          className="text-muted text-center mt-4"
-          style={{ fontStyle: "italic", fontSize: "13px" }}
-        >
-          This is a computer-generated invoice. No signature is required.
+          <div style={{ padding: '4px', borderTop: '1px solid black', textAlign: 'center', fontSize: '9px', color: '#666' }}>
+            This is a computer-generated invoice. No signature is required.
+          </div>
         </div>
       </div>
 

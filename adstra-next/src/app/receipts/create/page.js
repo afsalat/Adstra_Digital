@@ -1,8 +1,10 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
+import ReceiptTemplate from "@/components/ReceiptDetail/ReceiptTemplate";
+import "./create.css";
 
 export default function CreateTransaction() {
   const router = useRouter();
@@ -10,11 +12,12 @@ export default function CreateTransaction() {
   const [invoices, setInvoices] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [settings, setSettings] = useState(null);
 
   const [form, setForm] = useState({
     client: "",
     invoice: "",
-    date: "",
     amount: "",
     purpose: "",
     payment_mode: "",
@@ -25,17 +28,21 @@ export default function CreateTransaction() {
 
   const API_URL = API_BASE_URL;
 
+  /* fetch clients and settings */
   useEffect(() => {
-    axios
-      .get(`${API_URL}/proposal/clients/`)
-      .then((res) => setClients(res.data))
-      .catch(console.error);
+    axios.get(`${API_URL}/proposal/clients/`).then((res) => setClients(res.data)).catch(console.error);
+    
+    // Fetch company settings with cache-busting
+    axios.get(`${API_URL}/settings/?_=${Date.now()}`)
+      .then((res) => setSettings(res.data))
+      .catch(err => console.error("Settings Fetch Error:", err));
   }, [API_URL]);
 
+  /* fetch invoices when client changes */
   useEffect(() => {
     if (form.client) {
-      axios
-        .get(`${API_URL}/invoice/invoice_list/${form.client}/`)
+      // Fetch invoices with cache-busting
+      axios.get(`${API_URL}/invoice/invoice_list/${form.client}/?_=${Date.now()}`)
         .then((res) => setInvoices(res.data))
         .catch(console.error);
     } else {
@@ -46,17 +53,16 @@ export default function CreateTransaction() {
     }
   }, [form.client, API_URL]);
 
+  /* update balance when invoice changes */
   useEffect(() => {
     if (form.invoice) {
-      const invoice = invoices.find((inv) => inv.id === Number(form.invoice));
-      if (invoice) {
-        setSelectedInvoice(invoice);
-        setTotalAmount(Number(invoice.total_amount));
-        setForm((prev) => ({
-          ...prev,
-          amount: "",
-          balanceAmount: Number(invoice.total_amount).toFixed(2),
-        }));
+      const inv = invoices.find((i) => i.id === Number(form.invoice));
+      if (inv) {
+        setSelectedInvoice(inv);
+        // Use balance_due if available, else fallback to total_amount
+        const initialRem = inv.balance_due !== undefined ? Number(inv.balance_due) : Number(inv.total_amount);
+        setTotalAmount(initialRem);
+        setForm((prev) => ({ ...prev, amount: "", balanceAmount: initialRem.toFixed(2) }));
       }
     } else {
       setSelectedInvoice(null);
@@ -65,20 +71,18 @@ export default function CreateTransaction() {
     }
   }, [form.invoice, invoices]);
 
+  /* update balance when amount changes */
   useEffect(() => {
-    const amountPaid = parseFloat(form.amount) || 0;
-    const balance = totalAmount - amountPaid;
-    setForm((prev) => ({
-      ...prev,
-      balanceAmount: balance >= 0 ? balance.toFixed(2) : "0.00",
-    }));
+    const paid = parseFloat(form.amount) || 0;
+    const balance = totalAmount - paid;
+    setForm((prev) => ({ ...prev, balanceAmount: balance >= 0 ? balance.toFixed(2) : "0.00" }));
   }, [form.amount, totalAmount]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "amount") {
       if (value === "" || /^\d*\.?\d*$/.test(value)) {
-        if (parseFloat(value) > totalAmount) return;
+        if (parseFloat(value) > totalAmount && totalAmount > 0) return;
       } else return;
     }
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -86,174 +90,188 @@ export default function CreateTransaction() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    
+    // Prepare payload with correct types
+    const payload = {
+      ...form,
+      amount: parseFloat(form.amount) || 0,
+      balanceAmount: parseFloat(form.balanceAmount) || 0,
+      invoice: form.invoice ? Number(form.invoice) : null,
+      client: Number(form.client)
+    };
+
     try {
-      await axios.post(`${API_URL}/transactions/list-create/`, form);
+      await axios.post(`${API_URL}/transactions/list-create/`, payload);
+      alert("Receipt saved successfully!");
       router.push("/receipts/");
-    } catch (error) {
-      console.error("Failed to save transaction:", error);
-      alert("Error saving transaction");
+    } catch (err) {
+      console.error("Failed to save transaction:", err);
+      alert("Error saving transaction. Please check all fields.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  /* derive client name for preview */
+  const selectedClientObj = useMemo(() => {
+    if (!form.client) return null;
+    return clients.find((c) => c.id === Number(form.client)) || null;
+  }, [form.client, clients]);
+
+  const clientName = selectedClientObj?.name || "";
+
+  /* today's date for preview */
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  /* ─── render ─── */
   return (
-    <div className="container py-5">
-      <h2 className="mb-4">Create Transaction</h2>
-      <div
-        style={{
-          display: "flex",
-          gap: "40px",
-          flexWrap: "wrap",
-          alignItems: "flex-start",
-        }}
-      >
-        {/* LEFT: Invoice Details */}
-        <div
-          style={{
-            flex: "1 1 350px",
-            border: "1px solid #ddd",
-            padding: "20px",
-            borderRadius: "8px",
-            backgroundColor: "#f9f9f9",
-          }}
-        >
-          <h4>Invoice Details</h4>
-          {!selectedInvoice ? (
-            <p style={{ color: "#777" }}>Select an invoice to see details</p>
-          ) : (
-            <div>
-              <p>
-                <strong>Invoice No:</strong> {selectedInvoice.invoice_no}
-              </p>
-              <p>
-                <strong>Date:</strong> {selectedInvoice.date}
-              </p>
-              <p>
-                <strong>Total Amount:</strong> ₹
-                {Number(selectedInvoice.total_amount).toLocaleString("en-IN")}
-              </p>
-              <p>
-                <strong>Client:</strong>{" "}
-                {clients.find((c) => c.id === selectedInvoice.client)?.name ||
-                  "N/A"}
-              </p>
+    <div className="ct-page">
+      <div className="ct-inner">
+        <button className="ct-back-btn" onClick={() => router.push("/admindashboard/")}>← Back</button>
+        <h2 className="ct-title">Create Transaction</h2>
+
+        <div className="ct-layout">
+          {/* ── LEFT: Form ── */}
+          <form className="ct-form" onSubmit={handleSubmit}>
+
+            {/* Client */}
+            <div className="ct-field">
+              <label className="ct-label" htmlFor="ct-client">Client <span className="ct-required">*</span></label>
+              <select id="ct-client" name="client" className="ct-select" value={form.client} onChange={handleChange} required>
+                <option value="">— Select Client —</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
-          )}
+
+            {/* Invoice */}
+            <div className="ct-field">
+              <label className="ct-label" htmlFor="ct-invoice">Invoice <span className="ct-optional">(optional)</span></label>
+              <select id="ct-invoice" name="invoice" className="ct-select" value={form.invoice} onChange={handleChange} disabled={!form.client}>
+                <option value="">— Select Invoice —</option>
+                {invoices.map((inv) => {
+                  const balance = inv.balance_due !== undefined ? inv.balance_due : inv.total_amount;
+                  const isClosed = Number(balance) <= 0;
+                  return (
+                    <option key={inv.id} value={inv.id} disabled={isClosed}>
+                      {inv.invoice_no} — {isClosed ? "[FULLY PAID]" : `Remaining: ₹${Number(balance).toLocaleString("en-IN")}`}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Balance Amount (read-only) */}
+            {form.balanceAmount !== "" && (
+              <div className="ct-field">
+                <label className="ct-label">Balance Amount</label>
+                {Number(form.balanceAmount) <= 0 ? (
+                  <div className="ct-closed-badge">CLOSED / FULLY PAID</div>
+                ) : (
+                  <div className="ct-readonly-amount">
+                    <span className="ct-rupee">₹</span>
+                    {Number(form.balanceAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Paying Amount */}
+            <div className="ct-field">
+              <label className="ct-label" htmlFor="ct-amount">Paying Amount <span className="ct-required">*</span></label>
+              <div className="ct-input-prefix-wrapper">
+                <span className="ct-prefix">₹</span>
+                <input
+                  id="ct-amount"
+                  type="text"
+                  inputMode="decimal"
+                  name="amount"
+                  className="ct-input ct-input-has-prefix"
+                  placeholder="0.00"
+                  value={form.amount}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Purpose */}
+            <div className="ct-field">
+              <label className="ct-label" htmlFor="ct-purpose">Purpose</label>
+              <textarea id="ct-purpose" name="purpose" className="ct-textarea" rows={3} placeholder="Describe the purpose of payment…" value={form.purpose} onChange={handleChange} />
+            </div>
+
+            {/* Payment Mode */}
+            <div className="ct-field">
+              <label className="ct-label" htmlFor="ct-mode">Payment Mode <span className="ct-required">*</span></label>
+              <select id="ct-mode" name="payment_mode" className="ct-select" value={form.payment_mode} onChange={handleChange} required>
+                <option value="">— Select Payment Mode —</option>
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="upi">UPI</option>
+                <option value="cheque">Cheque</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Reference No */}
+            <div className="ct-field">
+              <label className="ct-label" htmlFor="ct-ref">Reference No <span className="ct-optional">(optional)</span></label>
+              <input id="ct-ref" type="text" name="reference_no" className="ct-input" placeholder="UTR / Cheque No / Transaction ID…" value={form.reference_no} onChange={handleChange} />
+            </div>
+
+            {/* Notes */}
+            <div className="ct-field">
+              <label className="ct-label" htmlFor="ct-notes">Notes <span className="ct-optional">(optional)</span></label>
+              <textarea id="ct-notes" name="notes" className="ct-textarea" rows={3} placeholder="Additional notes…" value={form.notes} onChange={handleChange} />
+            </div>
+
+            {/* Submit */}
+            <button 
+              type="submit" 
+              className="ct-submit-btn" 
+              disabled={submitting || !form.amount || parseFloat(form.amount) <= 0}
+            >
+              {submitting ? (
+                <><span className="ct-btn-spinner" /> Saving…</>
+              ) : (
+                "Save Transaction"
+              )}
+            </button>
+          </form>
+
+          {/* ── RIGHT: Live Receipt Preview ── */}
+          <div className="ct-preview-panel">
+            <div className="ct-preview-label">
+              <span className="ct-preview-dot" />
+              Live Receipt Preview
+            </div>
+            <div className="ct-preview-scroll">
+              <div className="ct-preview-scaler">
+                <ReceiptTemplate
+                  clientName={clientName}
+                  clientAddress={selectedClientObj?.address}
+                  clientEmail={selectedClientObj?.email}
+                  clientPhone={selectedClientObj?.phone}
+                  invoiceNo={selectedInvoice?.invoice_no || ""}
+                  date={todayISO}
+                  purpose={form.purpose}
+                  amount={parseFloat(form.amount) || 0}
+                  paymentMode={form.payment_mode}
+                  referenceNo={form.reference_no}
+                  notes={form.notes}
+                  invoiceTotal={selectedInvoice?.total_amount || 0}
+                  discountAmount={selectedInvoice?.discount_amount || 0}
+                  taxAmount={selectedInvoice?.tax_amount || 0}
+                  additionalFee={selectedInvoice?.additional_fee || 0}
+                  balanceDue={form.balanceAmount}
+                  isPreview={true}
+                  companySettings={settings}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* RIGHT: Transaction Form */}
-        <form
-          onSubmit={handleSubmit}
-          style={{ flex: "1 1 450px", minWidth: 320 }}
-        >
-          {/* Client */}
-          <div className="mb-3">
-            <label>Client</label>
-            <select
-              name="client"
-              className="form-control"
-              value={form.client}
-              onChange={handleChange}
-              required
-            >
-              <option value="">-- Select Client --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Invoice */}
-          <div className="mb-3">
-            <label>Invoice (optional)</label>
-            <select
-              name="invoice"
-              className="form-control"
-              value={form.invoice}
-              onChange={handleChange}
-              disabled={!form.client}
-            >
-              <option value="">-- Select Invoice --</option>
-              {invoices.map((inv) => (
-                <option key={inv.id} value={inv.id}>
-                  {inv.invoice_no} - ₹{inv.total_amount}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Balance Amount */}
-          <input
-            type="number"
-            className="form-control mb-2"
-            placeholder="Balance Amount"
-            name="balanceAmount"
-            value={form.balanceAmount}
-            readOnly
-          />
-
-          {/* Paying Amount */}
-          <div className="mb-3">
-            <label>Paying Amount</label>
-            <input
-              type="number"
-              name="amount"
-              className="form-control"
-              value={form.amount}
-              onChange={handleChange}
-              required
-              min="0"
-              step="0.01"
-              max={totalAmount}
-            />
-          </div>
-
-          {/* Purpose */}
-          <div className="mb-3">
-            <label>Purpose</label>
-            <textarea
-              name="purpose"
-              className="form-control"
-              value={form.purpose}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* Payment Mode */}
-          <div className="mb-3">
-            <label>Payment Mode</label>
-            <select
-              name="payment_mode"
-              className="form-control"
-              value={form.payment_mode}
-              onChange={handleChange}
-              required
-            >
-              <option value="">-- Select Payment Mode --</option>
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="upi">UPI</option>
-              <option value="cheque">Cheque</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          {/* Notes */}
-          <div className="mb-3">
-            <label>Notes</label>
-            <textarea
-              name="notes"
-              className="form-control"
-              value={form.notes}
-              onChange={handleChange}
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary">
-            Save Transaction
-          </button>
-        </form>
       </div>
     </div>
   );

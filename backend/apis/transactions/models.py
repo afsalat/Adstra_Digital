@@ -36,6 +36,20 @@ class Transaction(models.Model):
         help_text="User who received or paid"
     )
     notes = models.TextField(null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        # Auto-update invoice status if linked
+        if is_new and self.invoice:
+            remaining = self.balance_amount if self.balance_amount is not None else (self.invoice.total_amount - self.amount)
+            if remaining <= 0:
+                self.invoice.status = 'paid'
+            else:
+                self.invoice.status = 'partially_paid'
+            self.invoice.save()
 
     def __str__(self):
         return f"{self.get_transaction_type_display()} ₹{self.amount} for {self.client.name}"

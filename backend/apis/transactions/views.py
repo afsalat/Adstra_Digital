@@ -4,19 +4,22 @@ from rest_framework.permissions import AllowAny
 from rest_framework import status
 from apis.transactions.serializers import TransactionSerializer
 from apis.transactions.models import Transaction
+from django.views.decorators.cache import never_cache
 
 # Create your views here.
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
+@never_cache
 def transaction_list_create(request):
     if request.method == 'GET':
-        transactions = Transaction.objects.all()
+        transactions = Transaction.objects.filter(is_deleted=False).order_by('-id')
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
 
     elif request.method == 'POST':
         data = request.data.copy()
-        data['user'] = request.user.id
+        # Fallback to anonymous if not authenticated for simple dev
+        data['user'] = request.user.id if request.user.is_authenticated else None
         serializer = TransactionSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -26,6 +29,7 @@ def transaction_list_create(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@never_cache
 def transaction_detail(request, pk):
     try:
         transaction = Transaction.objects.get(pk=pk)
@@ -33,5 +37,34 @@ def transaction_detail(request, pk):
         return Response({'detail': 'Transaction not found'}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = TransactionSerializer(transaction)
-    print(serializer.data)
     return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@never_cache
+def transaction_trash_list(request):
+    transactions = Transaction.objects.filter(is_deleted=True).order_by('-id')
+    serializer = TransactionSerializer(transactions, many=True)
+    return Response(serializer.data)
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def transaction_delete(request, pk):
+    try:
+        transaction = Transaction.objects.get(pk=pk)
+        transaction.is_deleted = True
+        transaction.save()
+        return Response({'message': 'Moved to trash'}, status=status.HTTP_200_OK)
+    except Transaction.DoesNotExist:
+        return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PATCH'])
+@permission_classes([AllowAny])
+def transaction_restore(request, pk):
+    try:
+        transaction = Transaction.objects.get(pk=pk)
+        transaction.is_deleted = False
+        transaction.save()
+        return Response({'message': 'Restored'}, status=status.HTTP_200_OK)
+    except Transaction.DoesNotExist:
+        return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)

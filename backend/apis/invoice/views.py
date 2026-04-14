@@ -14,7 +14,13 @@ from django.views.decorators.cache import never_cache
 @permission_classes([AllowAny])
 @never_cache
 def list_invoices(request):
-    invoices = Invoice.objects.filter(is_deleted=False)
+    is_proforma = request.query_params.get('is_proforma')
+    invoices = Invoice.objects.filter(is_deleted=False).order_by('-id')
+    
+    if is_proforma is not None:
+        is_proforma_bool = is_proforma.lower() == 'true'
+        invoices = invoices.filter(is_proforma=is_proforma_bool)
+        
     serializer = ViewInvoiceSerializer(invoices, many=True)
     return Response(serializer.data)
 
@@ -155,6 +161,7 @@ def view_invoice_detail(request, invoiceID):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@never_cache
 def invoice_list(request, client_id):
     # client_id = request.GET.get('client_id')
     qs = Invoice.objects.all()
@@ -297,7 +304,9 @@ def get_payment_status(request, invoice_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@never_cache
 def get_next_invoice_number(request):
     """Generate and return the next invoice number."""
-    next_num = Invoice.generate_invoice_number()
+    is_proforma = request.GET.get('is_proforma', 'false').lower() == 'true'
+    next_num = Invoice.generate_invoice_number(is_proforma=is_proforma)
     return Response({'next_invoice_number': next_num})

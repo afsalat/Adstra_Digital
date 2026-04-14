@@ -5,7 +5,7 @@ import ReceiptDetail from "../../../components/ReceiptDetail/ReceiptDetail";
 
 export default function ReceiptResultContent() {
   const searchParams = useSearchParams();
-  const id = searchParams.get("id");
+  const id = searchParams.get("id")?.replace(/\/+$/, "");
 
   if (!id) {
     return <div>No receipt ID provided</div>;
