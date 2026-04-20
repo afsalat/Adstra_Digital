@@ -94,7 +94,11 @@ def delete_user(request, user_id):
 @never_cache
 def listusers(request):
     try:
-        users = CustomUser.objects.all()
+        # Optimization: Filter by active users only and fetch only the fields defined in UserSerializer
+        users = CustomUser.objects.filter(is_active=True).only(
+            'id', 'username', 'joining_date', 'phone', 'email', 'address', 'designation', 'fullname', 'is_active'
+        ).order_by('fullname')
+        
         serializer = UserSerializer(users, many=True)
         return Response({"users": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:

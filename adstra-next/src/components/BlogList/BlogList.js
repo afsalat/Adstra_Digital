@@ -46,6 +46,7 @@ function getTopicSummary(posts) {
   const counts = new Map();
 
   posts.forEach((post) => {
+    if (!post) return;
     (post.tags || []).forEach((tag) => {
       counts.set(tag, (counts.get(tag) || 0) + 1);
     });

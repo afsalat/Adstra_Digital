@@ -2,7 +2,7 @@
 
 import { Info } from "lucide-react";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import "./Attendance.css";
@@ -70,12 +70,44 @@ export default function AttendanceDashboard() {
   const [showLogModal, setShowLogModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
+  // Pre-load libraries when modal is about to open
+  useEffect(() => {
+    if (showExportModal && !excelLib.current) {
+      const loadLibs = async () => {
+        try {
+          const [excel, saver] = await Promise.all([
+            import('exceljs'),
+            import('file-saver')
+          ]);
+          excelLib.current = excel.default || excel;
+          saverLib.current = saver.default || saver;
+        } catch (e) {
+          console.error("Failed to pre-load export libraries:", e);
+        }
+      };
+      loadLibs();
+    }
+  }, [showExportModal]);
+
   // Log Form State - Array for multiple tasks
   const [logEntries, setLogEntries] = useState([{ project: "", description: "" }]);
   const [activeRowId, setActiveRowId] = useState(null); // This is user_id for work report, but for loop we use item.user
   const [selectedAttendance, setSelectedAttendance] = useState(null);
   const [modalAddress, setModalAddress] = useState(null);
   const [exportDates, setExportDates] = useState({ start: "", end: "" });
+  const [exportStatus, setExportStatus] = useState("idle");
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportMessage, setExportMessage] = useState("");
+  const [exportError, setExportError] = useState("");
+  const isExportCancelled = useRef(false);
+  const [employees, setEmployees] = useState([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [exportEmployeeId, setExportEmployeeId] = useState("all");
+  const [skipGeocoding, setSkipGeocoding] = useState(false); // New state for fast export
+  const searchContainerRef = useRef(null);
+  const excelLib = useRef(null); // Cache for library
+  const saverLib = useRef(null); // Cache for library
+
 
   // Custom Alert State
   const [alert, setAlert] = useState({ show: false, title: "", message: "", type: "info" });
@@ -95,6 +127,47 @@ export default function AttendanceDashboard() {
     const token = localStorage.getItem("authToken");
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/user/user-list/`, {
+        headers: getAuthHeaders()
+      });
+      setEmployees(response.data.users || []);
+    } catch (err) {
+      console.error("Error fetching employees:", err);
+    }
+  }, []);
+
+  const handlePresetRange = (months) => {
+    const end = new Date();
+    const start = new Date();
+
+    if (months === 'monthly') {
+      start.setDate(1); // 1st of current month
+    } else if (typeof months === 'number') {
+      start.setMonth(start.getMonth() - months);
+    }
+
+    setExportDates({
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    });
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (selectedAttendance) {
@@ -133,16 +206,6 @@ export default function AttendanceDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // The API returns { users: [...] } locally based on provided views.py
-      // We map it to our frontend structure if needed, or use as is.
-      // The serializer fields: id, user(id), fullname, date, checkin, checkout, location, status, work_report, validation
-      // We need to ensure avatar is derived or present. The serializer doesn't send avatar, so we'll derive from fullname.
-
-      // Log response for debugging
-      console.log("Attendance API Response:", response.data);
-
-      // Handle pagination structure: response.data.results?.users 
-      // OR direct structure (if export or custom): response.data.users
       const rawUsers = response.data.results?.users || response.data.users || [];
 
       const mappedData = rawUsers.map(item => ({
@@ -155,7 +218,7 @@ export default function AttendanceDashboard() {
       console.error("Error fetching attendance:", err);
       setError(err.response?.data?.error || err.message || "Failed to fetch attendance.");
       if (err.response?.status === 401) {
-        router.push("/admin/login"); // Redirect to login if unauthorized
+        router.push("/admin/login");
       }
     } finally {
       setLoading(false);
@@ -165,6 +228,10 @@ export default function AttendanceDashboard() {
   useEffect(() => {
     fetchAttendance();
   }, [fetchAttendance]);
+
+  const activeEmployees = useMemo(() => {
+    return employees.filter(emp => emp.is_active !== false); // Handle true or undefined (if backend doesn't send it for some reason)
+  }, [employees]);
 
   const stats = useMemo(() => {
     return {
@@ -176,14 +243,16 @@ export default function AttendanceDashboard() {
   }, [data]);
 
   const filtered = useMemo(() => data.filter(item => {
-    const matchesSearch = (item.fullname || "").toLowerCase().includes(search.toLowerCase());
+    const query = search.toLowerCase();
+    const matchesSearch = 
+      (item.fullname || "").toLowerCase().includes(query) || 
+      (item.designation || "").toLowerCase().includes(query);
     const matchesFilter = activeFilter === "All" || item.status === activeFilter;
     return matchesSearch && matchesFilter;
   }), [data, search, activeFilter]);
 
   const toggleValidation = async (id) => {
     try {
-      // Find the item to get its current validation status to toggle
       const item = data.find(d => d.id === id);
       if (!item) return;
 
@@ -194,7 +263,6 @@ export default function AttendanceDashboard() {
         { headers: getAuthHeaders() }
       );
 
-      // Update local state
       setData(prev => prev.map(d => d.id === id ? { ...d, validation: newValidationStatus } : d));
     } catch (err) {
       showAlert("Error", "Failed to update validation: " + (err.response?.data?.error || err.message), "error");
@@ -202,7 +270,7 @@ export default function AttendanceDashboard() {
   };
 
   const handleOpenLogModal = (userId) => {
-    setActiveRowId(userId); // We need user_id for the work_report endpoint
+    setActiveRowId(userId);
     setLogEntries([{ project: "", description: "" }]);
     setShowLogModal(true);
   };
@@ -231,7 +299,7 @@ export default function AttendanceDashboard() {
       });
 
       showAlert("Success", response.data.message, "success");
-      fetchAttendance(); // Refresh list to show checkout time
+      fetchAttendance();
     } catch (err) {
       const errMsg = err.response?.data?.error || err.message;
       if (errMsg.includes("Work report not submitted")) {
@@ -276,12 +344,6 @@ export default function AttendanceDashboard() {
     }
 
     try {
-      // Format as stringified JSON as expected by backend model/view
-      // The current backend seems to append or replace. The view 'update_work_report' just saves what we send.
-      // So we should probably fetch existing reports if we want to append, or just send validEntries as the day's report.
-      // For simplicity and based on `update_work_report` view: `attendance.work_report = work_report` (replaces).
-      // If we want to append, we'd need to fetch first. For now, let's treat this as "Submitting the day's report".
-
       const reportString = JSON.stringify(validEntries.map(entry => ({
         category: entry.project || "General",
         description: entry.description
@@ -294,11 +356,28 @@ export default function AttendanceDashboard() {
 
       showAlert("Success", "Work report submitted successfully!", "success");
       setShowLogModal(false);
-      fetchAttendance(); // Refresh to show new logs
+      fetchAttendance();
     } catch (err) {
       console.error(err);
       showAlert("Error", "Failed to save work report: " + (err.response?.data?.error || err.message), "error");
     }
+  };
+
+  const resetExport = () => {
+    isExportCancelled.current = false;
+    setExportStatus("idle");
+    setExportProgress(0);
+    setExportMessage("");
+    setExportError("");
+  };
+
+  const cancelExport = () => {
+    isExportCancelled.current = true;
+    setExportStatus("idle");
+    setExportProgress(0);
+    setExportMessage("");
+    setShowExportModal(false);
+    showAlert("Info", "Attendance export has been cancelled.", "info");
   };
 
   const handleExport = async () => {
@@ -306,6 +385,12 @@ export default function AttendanceDashboard() {
       showAlert("Warning", "Please select both start and end dates.", "warning");
       return;
     }
+
+    setExportStatus("preparing");
+    isExportCancelled.current = false;
+    setExportProgress(10);
+    setExportMessage("Fetching attendance data...");
+    setExportError("");
 
     try {
       const response = await axios.get(`${BASE_URL}/attendance/list-attendance/`, {
@@ -319,20 +404,36 @@ export default function AttendanceDashboard() {
 
       const data = response.data.users || response.data.results?.users || [];
 
-      if (!data.length) {
-        showAlert("Info", "No attendance records found for the selected range.", "info");
+      const filteredData = exportEmployeeId === "all"
+        ? data
+        : data.filter(u => String(u.user) === String(exportEmployeeId) || String(u.id) === String(exportEmployeeId));
+
+      if (!filteredData.length) {
+        setExportStatus("idle");
+        showAlert("Info", "No attendance records found for the selected range/employee.", "info");
         return;
       }
 
-      // Dynamic import
-      const ExcelJS = (await import('exceljs')).default;
-      const FileSaver = await import('file-saver');
-      const saveAs = FileSaver.saveAs || FileSaver.default;
+      setExportProgress(20);
+      setExportMessage("Initializing workbook...");
+
+      // Use pre-loaded libraries
+      if (!excelLib.current || !saverLib.current) {
+        setExportMessage("Loading libraries (delayed)...");
+        const [excel, saver] = await Promise.all([
+          import('exceljs'),
+          import('file-saver')
+        ]);
+        excelLib.current = excel.default || excel;
+        saverLib.current = saver.default || saver;
+      }
+
+      const ExcelJS = excelLib.current;
+      const saveAs = saverLib.current.saveAs || saverLib.current;
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Attendance Report');
 
-      // Define Columns
       worksheet.columns = [
         { header: 'ID', key: 'id', width: 10 },
         { header: 'Full Name', key: 'fullname', width: 25 },
@@ -345,66 +446,108 @@ export default function AttendanceDashboard() {
         { header: 'Work Report', key: 'work_report', width: 50 },
       ];
 
-      // Style Header Row
       const headerRow = worksheet.getRow(1);
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF1E293B' } // Dark Slate Blue background
+        fgColor: { argb: 'FF1E293B' }
       };
       headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
       headerRow.height = 30;
 
-      // Add Data
-      for (const row of data) {
-        // Format Work Report
-        let formattedReport = "No logs";
-        try {
-          let r = [];
-          if (row.work_report) {
-            const p = JSON.parse(row.work_report);
-            if (Array.isArray(p)) r = p;
-            else if (p) r = [p];
-          }
-
-          if (r.length > 0) {
-            // Join with line breaks
-            formattedReport = r.map(item => {
-              const cat = (item.category && item.category !== 'General') ? `[${item.category}] ` : '';
-              return `${cat}${item.description}`;
-            }).join('\n');
-          } else if (row.work_report && typeof row.work_report === 'string' && !row.work_report.startsWith('[')) {
-            formattedReport = row.work_report;
-          }
-        } catch (e) { formattedReport = row.work_report || ""; }
-
-        // Format Location
-        let formattedLoc = "No data";
-        try {
-          let loc = row.location;
-          let coords = null;
-          if (typeof loc === 'string' && (loc.startsWith('{') || loc.includes('latitude'))) {
-            try { coords = JSON.parse(loc.replace(/'/g, '"')); } catch { }
-          } else if (typeof loc === 'object') { coords = loc; }
-
-          if (coords && coords.latitude) {
-            // Fetch Address
+      setExportStatus("geocoding");
+      const locationCache = {};
+      
+      // PHASE 1: Optimized Geocoding (Unique locations only)
+      if (!skipGeocoding) {
+        setExportMessage("Analyzing lookup locations...");
+        const uniqueLocs = new Set();
+        filteredData.forEach(row => {
+          if (row.location) {
             try {
-              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}`, {
+              let loc = row.location;
+              let coords = null;
+              if (typeof loc === 'string' && (loc.startsWith('{') || loc.includes('latitude'))) {
+                 coords = JSON.parse(loc.replace(/'/g, '"'));
+              } else if (typeof loc === 'object') coords = loc;
+              
+              if (coords && coords.latitude && coords.longitude) {
+                uniqueLocs.add(`${coords.latitude},${coords.longitude}`);
+              }
+            } catch(e) {}
+          }
+        });
+        
+        if (uniqueLocs.size > 0) {
+          const uniqueArray = Array.from(uniqueLocs);
+          for (let j = 0; j < uniqueArray.length; j++) {
+            if (isExportCancelled.current) return;
+            const geoProgress = Math.floor(25 + ((j / uniqueArray.length) * 40));
+            setExportProgress(geoProgress);
+            setExportMessage(`Address lookup ${j + 1} of ${uniqueArray.length}...`);
+
+            // Safe delay for Nominatim lookup
+            if (j > 0) await new Promise(resolve => setTimeout(resolve, 800));
+
+            const [lat, lon] = uniqueArray[j].split(',');
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
                 headers: { 'User-Agent': 'Adstra_Dashboard/1.0' }
               });
               const addr = await res.json();
-              formattedLoc = addr.display_name || `Lat: ${coords.latitude}\nLon: ${coords.longitude}`;
-              // Delay to respect API limits
-              await new Promise(resolve => setTimeout(resolve, 200));
-            } catch (err) {
-              formattedLoc = `Lat: ${coords.latitude}\nLon: ${coords.longitude}`;
+              locationCache[uniqueArray[j]] = addr.display_name || `Lat: ${lat}, Lon: ${lon}`;
+            } catch(err) {
+              locationCache[uniqueArray[j]] = `Lat: ${lat}, Lon: ${lon}`;
             }
-          } else if (loc) {
-            formattedLoc = loc;
           }
-        } catch (e) { formattedLoc = row.location || ""; }
+        }
+      }
+
+      // PHASE 2: Fast Row Generation
+      setExportStatus("processing");
+      setExportMessage("Building spreadsheet rows...");
+      
+      for (let i = 0; i < filteredData.length; i++) {
+        if (isExportCancelled.current) return;
+        const row = filteredData[i];
+        const currentProgress = Math.floor(65 + ((i / filteredData.length) * 30));
+        setExportProgress(currentProgress);
+
+        let formattedReport = "No logs";
+        try {
+          if (row.work_report) {
+            const p = JSON.parse(row.work_report);
+            const r = Array.isArray(p) ? p : [p];
+            if (r.length > 0) {
+              formattedReport = r.map(item => {
+                const cat = (item.category && item.category !== 'General') ? `[${item.category}] ` : '';
+                return `${cat}${item.description}`;
+              }).join('\n');
+            } else {
+              formattedReport = row.work_report;
+            }
+          }
+        } catch (e) { formattedReport = row.work_report || ""; }
+
+        let formattedLoc = "No data";
+        if (skipGeocoding) {
+          formattedLoc = row.location || "Omitted";
+        } else {
+          try {
+            let loc = row.location;
+            let coords = null;
+            if (typeof loc === 'string' && (loc.startsWith('{') || loc.includes('latitude'))) {
+              coords = JSON.parse(loc.replace(/'/g, '"'));
+            } else if (typeof loc === 'object') coords = loc;
+
+            if (coords?.latitude && coords?.longitude) {
+              formattedLoc = locationCache[`${coords.latitude},${coords.longitude}`] || `Lat: ${coords.latitude}, Lon: ${coords.longitude}`;
+            } else if (loc) {
+              formattedLoc = String(loc);
+            }
+          } catch (e) { formattedLoc = String(row.location || "Error"); }
+        }
 
         const newRow = worksheet.addRow({
           id: row.id,
@@ -418,37 +561,41 @@ export default function AttendanceDashboard() {
           work_report: formattedReport
         });
 
-        // Center align most columns except Name, Work Report, Location
         ['id', 'date', 'status', 'checkin', 'checkout', 'validation'].forEach(key => {
           newRow.getCell(key).alignment = { vertical: 'top', horizontal: 'center' };
         });
 
-        // Wrap text for long columns
         ['fullname', 'location', 'work_report'].forEach(key => {
           newRow.getCell(key).alignment = { vertical: 'top', wrapText: true };
         });
       }
 
-      // Alternating Row Colors
+      setExportStatus("generating");
+      setExportProgress(95);
+      setExportMessage("Finalizing Excel file...");
+
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber > 1) {
           if (rowNumber % 2 === 0) {
-            row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }; // Light gray/blue tint
+            row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
           } else {
-            row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }; // White
+            row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
           }
         }
       });
 
-      // Generate Buffer
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       saveAs(blob, `Attendance_Report_${exportDates.start}_to_${exportDates.end}.xlsx`);
 
+      setExportStatus("idle");
+      setExportProgress(100);
       setShowExportModal(false);
       setExportDates({ start: "", end: "" });
     } catch (err) {
-      showAlert("Error", "Export failed: " + (err.response?.data?.error || err.message), "error");
+      console.error("Export Error:", err);
+      setExportStatus("error");
+      setExportError(err.response?.data?.error || err.message || "An unexpected error occurred during export.");
     }
   };
 
@@ -720,12 +867,10 @@ export default function AttendanceDashboard() {
         onClose={closeAlert}
       />
 
-      {/* Top Nav Row */}
       <div className="top-nav">
         <button className="back-btn" onClick={handleBack} title="Go Back">←</button>
       </div>
 
-      {/* Header */}
       <div className="header">
         <div>
           <h1 className="title">Attendance</h1>
@@ -748,7 +893,6 @@ export default function AttendanceDashboard() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="stats-grid">
         <StatCard label="Total Employees" value={stats.total} color="#0F172A" />
         <StatCard label="Present" value={stats.present} color="#16A34A" />
@@ -756,9 +900,7 @@ export default function AttendanceDashboard() {
         <StatCard label="On Leave" value={stats.leave} color="#D97706" />
       </div>
 
-      {/* Main Table Card */}
       <div className="content-card">
-        {/* Toolbar */}
         <div className="toolbar">
           <div className="filter-tabs">
             {["All", "Present", "Absent", "Leave"].map(filter => (
@@ -771,17 +913,52 @@ export default function AttendanceDashboard() {
               </button>
             ))}
           </div>
-          <div className="search-box">
-            <input
-              className="search-input"
-              placeholder="Search by name or role..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <div className="search-box" ref={searchContainerRef}>
+              <input
+                className="search-input"
+                placeholder="Search by name or role..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+              />
+              {isSearchFocused && (
+                <div className="search-dropdown-list">
+                  <div
+                    className="search-dropdown-item all-option"
+                    onClick={() => {
+                      setSearch("");
+                      setIsSearchFocused(false);
+                    }}
+                  >
+                    All Employees
+                  </div>
+                  {activeEmployees
+                    .filter(emp =>
+                      emp.fullname.toLowerCase().includes(search.toLowerCase()) ||
+                      (emp.designation && emp.designation.toLowerCase().includes(search.toLowerCase()))
+                    )
+                    .map(emp => (
+                      <div
+                        key={emp.id}
+                        className="search-dropdown-item"
+                        onClick={() => {
+                          setSearch(emp.fullname);
+                          setIsSearchFocused(false);
+                        }}
+                      >
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontWeight: "600" }}>{emp.fullname}</span>
+                          {emp.designation && <span className="item-role">{emp.designation}</span>}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Table */}
         <div className="table-responsive">
           <table>
             <thead>
@@ -797,11 +974,11 @@ export default function AttendanceDashboard() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="6" style={{ textAlign: "center", padding: "60px", color: "#94A3B8" }}>Loading attendance data...</td></tr>
+                <tr><td colSpan="7" style={{ textAlign: "center", padding: "60px", color: "#94A3B8" }}>Loading attendance data...</td></tr>
               ) : error ? (
-                <tr><td colSpan="6" style={{ textAlign: "center", padding: "60px", color: "#EF4444" }}>{error}</td></tr>
+                <tr><td colSpan="7" style={{ textAlign: "center", padding: "60px", color: "#EF4444" }}>{error}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: "center", padding: "60px", color: "#94A3B8" }}>No records found for {displayDate}.</td></tr>
+                <tr><td colSpan="7" style={{ textAlign: "center", padding: "60px", color: "#94A3B8" }}>No records found for {displayDate}.</td></tr>
               ) : filtered.map(item => (
                 <tr key={item.id}>
                   <td>
@@ -809,7 +986,6 @@ export default function AttendanceDashboard() {
                       <Avatar initials={item.avatar} />
                       <div className="user-info">
                         <span className="fullname">{item.fullname}</span>
-
                       </div>
                     </div>
                   </td>
@@ -828,15 +1004,11 @@ export default function AttendanceDashboard() {
                       let loc = item.location;
                       let coords = null;
 
-                      // Try to parse if it's a string looking like an object
                       if (typeof loc === 'string' && (loc.startsWith('{') || loc.includes('latitude'))) {
                         try {
-                          // Handle Python-style string representation (single quotes)
                           const jsonString = loc.replace(/'/g, '"');
                           coords = JSON.parse(jsonString);
-                        } catch (e) {
-                          console.log("Failed to parse location:", loc);
-                        }
+                        } catch (e) {}
                       } else if (typeof loc === 'object') {
                         coords = loc;
                       }
@@ -854,7 +1026,7 @@ export default function AttendanceDashboard() {
                         );
                       }
 
-                      return loc; // Fallback to string if parsing fails or no coords
+                      return loc;
                     })()}
                   </td>
                   <td>
@@ -865,10 +1037,9 @@ export default function AttendanceDashboard() {
                           try {
                             const parsed = JSON.parse(item.work_report);
                             if (Array.isArray(parsed)) r = parsed;
-                            else if (parsed) r = [parsed]; // Handle if parsed is object but not array
+                            else if (parsed) r = [parsed];
                           } catch { }
 
-                          // Fallback to simple description if not parsed as array but string exists
                           if (!r.length && item.work_report && typeof item.work_report === 'string' && !item.work_report.startsWith('[')) {
                             r = [{ description: item.work_report }];
                           }
@@ -881,7 +1052,6 @@ export default function AttendanceDashboard() {
                           )) : <span style={{ color: "#CBD5E1", fontStyle: "italic" }}>No logs</span>
                         })()}
                       </div>
-
                     </div>
                   </td>
                   <td>
@@ -894,7 +1064,7 @@ export default function AttendanceDashboard() {
                     </button>
                   </td>
                   <td>
-                    <button className="btn-icon" onClick={() => setSelectedAttendance(item)} title="View Details">
+                    <button className="btn-icon" onClick={() => setSelectedAttendance(item)} title="View Details" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
                       <Info size={20} />
                     </button>
                   </td>
@@ -905,12 +1075,10 @@ export default function AttendanceDashboard() {
         </div>
       </div>
 
-      {/* Log Work Modal - Updated for Multiple Entries */}
       {showLogModal && (
         <div className="modal-overlay" onClick={() => setShowLogModal(false)}>
           <div className="custom-modal" onClick={e => e.stopPropagation()}>
             <h2 style={{ marginTop: 0, marginBottom: 20, fontSize: 20 }}>Log Daily Work</h2>
-
             <div style={{ maxHeight: "60vh", overflowY: "auto", marginBottom: 16 }}>
               {logEntries.map((entry, index) => (
                 <div key={index} className="log-entry-row">
@@ -939,9 +1107,7 @@ export default function AttendanceDashboard() {
                 </div>
               ))}
             </div>
-
             <button className="add-row-btn" onClick={handleAddLogEntry}>+ Add Another Task</button>
-
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
               <button className="btn btn-secondary" onClick={() => setShowLogModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSaveLog}>Save All</button>
@@ -950,38 +1116,110 @@ export default function AttendanceDashboard() {
         </div>
       )}
 
-      {/* Export Report Modal */}
       {showExportModal && (
-        <div className="modal-overlay" onClick={() => setShowExportModal(false)}>
+        <div className="modal-overlay" onClick={() => exportStatus === "idle" && setShowExportModal(false)}>
           <div className="custom-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: "400px" }}>
             <h2 style={{ marginTop: 0, marginBottom: 24, fontSize: 20 }}>Export Attendance</h2>
-            <div className="form-group">
-              <label className="form-label">Start Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={exportDates.start}
-                onChange={e => setExportDates({ ...exportDates, start: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">End Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={exportDates.end}
-                onChange={e => setExportDates({ ...exportDates, end: e.target.value })}
-              />
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-              <button className="btn btn-secondary" onClick={() => setShowExportModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleExport}>Download Report</button>
-            </div>
+            
+            {exportStatus === "idle" ? (
+              <>
+                <div className="quick-ranges-container">
+                  <span className="quick-ranges-label">Quick Date Ranges</span>
+                  <div className="quick-ranges-buttons">
+                    <button className="preset-btn" onClick={() => handlePresetRange('monthly')}>Monthly</button>
+                    <button className="preset-btn" onClick={() => handlePresetRange(3)}>3 Months</button>
+                    <button className="preset-btn" onClick={() => handlePresetRange(6)}>6 Months</button>
+                    <button className="preset-btn" onClick={() => handlePresetRange(12)}>1 Year</button>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Employee</label>
+                  <select
+                    className="form-control"
+                    value={exportEmployeeId}
+                    onChange={e => setExportEmployeeId(e.target.value)}
+                  >
+                    <option value="all">All Employees</option>
+                    {activeEmployees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.fullname}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ marginBottom: "15px", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <input
+                    type="checkbox"
+                    id="skip-geo"
+                    checked={skipGeocoding}
+                    onChange={(e) => setSkipGeocoding(e.target.checked)}
+                    style={{ width: "auto", cursor: "pointer" }}
+                  />
+                  <label htmlFor="skip-geo" style={{ fontSize: "14px", fontWeight: "500", color: "#475569", cursor: "pointer", margin: 0 }}>
+                    Fast Export (Exclude address lookups)
+                  </label>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={exportDates.start}
+                    onChange={e => setExportDates({ ...exportDates, start: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={exportDates.end}
+                    onChange={e => setExportDates({ ...exportDates, end: e.target.value })}
+                  />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+                  <button className="btn btn-secondary" onClick={() => setShowExportModal(false)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleExport}>Download Report</button>
+                </div>
+              </>
+            ) : exportStatus === "error" ? (
+              <div className="export-error-view">
+                <div className="export-error-container">
+                  <div className="export-error-header">
+                    <span>⚠️</span> Export Failed
+                  </div>
+                  <div className="export-error-details">{exportError}</div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 20 }}>
+                  <button className="btn btn-secondary" onClick={resetExport}>Back</button>
+                  <button className="btn btn-primary" onClick={handleExport}>Retry</button>
+                </div>
+              </div>
+            ) : (
+              <div className="export-progress-view" style={{ padding: "10px 0" }}>
+                <div className="export-progress-group" style={{ textAlign: 'center' }}>
+                  <div className="progress-bar-container" style={{ width: '100%', height: '12px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', marginBottom: '15px' }}>
+                    <div 
+                      className="progress-bar-fill" 
+                      style={{ width: `${exportProgress}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)', transition: 'width 0.3s ease' }}
+                    ></div>
+                  </div>
+                  <div className="status-pulse" style={{ fontWeight: 500, color: '#475569' }}>
+                    {exportMessage}
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#94A3B8" }}>
+                    {exportProgress}% Complete
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
+                  <button className="btn btn-secondary" onClick={cancelExport} style={{ padding: "8px 24px", borderRadius: "10px" }}>
+                    Cancel Export
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Details Modal */}
       {selectedAttendance && (
         <div className="modal-overlay" onClick={() => setSelectedAttendance(null)}>
           <div className="custom-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: "600px" }}>
@@ -1012,7 +1250,7 @@ export default function AttendanceDashboard() {
               </div>
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#94A3B8", marginBottom: 4, textTransform: "uppercase" }}>Timings</label>
-                <div style={{ fontSize: 15, fontWeight: 500, whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 15, fontWeight: 500 }}>
                   <span style={{ color: "#16A34A" }}>IN: {fmtTime(selectedAttendance.checkin)}</span>
                   <span style={{ margin: "0 8px", color: "#CBD5E1" }}>|</span>
                   <span style={{ color: "#DC2626" }}>OUT: {fmtTime(selectedAttendance.checkout)}</span>
@@ -1042,7 +1280,7 @@ export default function AttendanceDashboard() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-secondary"
-                          style={{ padding: "8px 16px", fontSize: 13, textDecoration: "none", whiteSpace: "nowrap" }}
+                          style={{ padding: "8px 16px", fontSize: 13, textDecoration: "none" }}
                         >
                           View Map
                         </a>
@@ -1085,7 +1323,6 @@ export default function AttendanceDashboard() {
             <div style={{ marginTop: 24, textAlign: "right" }}>
               <button className="btn btn-secondary" onClick={() => setSelectedAttendance(null)}>Close</button>
             </div>
-
           </div>
         </div>
       )}

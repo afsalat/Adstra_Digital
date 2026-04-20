@@ -1,17 +1,14 @@
 from utils.pagination import StandardResultsSetPagination
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from .models import Attendance
-from apis.attendance.models import Attendance
 from django.utils import timezone
 from .serializers import AttendanceSerializer
 from django.views.decorators.cache import never_cache
-from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 import traceback
 from django.utils.timezone import localdate
-
 
 
 @api_view(["GET"])
@@ -25,21 +22,21 @@ def listAttendance(request):
         start_date = request.query_params.get("start_date", None)
         end_date = request.query_params.get("end_date", None)
 
+        # Optimization: Use select_related to fetch user data in a single query if serializer needs it
+        # and filter only necessary fields if possible.
+        base_queryset = Attendance.objects.select_related('user').all()
+
         if start_date and end_date:
-            # Filter by date range if both provided
-            queryset = Attendance.objects.filter(
+            queryset = base_queryset.filter(
                 date__gte=start_date, 
                 date__lte=end_date
             ).order_by("-date", "-id")
         elif filter_date:
-            # Filter by specific date if provided
-            queryset = Attendance.objects.filter(date=filter_date).order_by("-id")
+            queryset = base_queryset.filter(date=filter_date).order_by("-id")
         elif page == "1":
-            # Page 1: only today's attendance
-            queryset = Attendance.objects.filter(date=today).order_by("-id")
+            queryset = base_queryset.filter(date=today).order_by("-id")
         else:
-            # From page 2 onwards: exclude today
-            queryset = Attendance.objects.exclude(date=today).order_by("-date", "-id")
+            queryset = base_queryset.exclude(date=today).order_by("-date", "-id")
 
         # Check for export flag
         if request.query_params.get("export") == "true":
