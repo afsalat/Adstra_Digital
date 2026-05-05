@@ -358,6 +358,17 @@
     color: #c53030;
 }
 
+.btn-action--edit {
+    color: #3182ce;
+    border-color: #bee3f8;
+}
+
+.btn-action--edit:hover {
+    background-color: #ebf8ff;
+    border-color: #90cdf4;
+    color: #2b6cb0;
+}
+
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;

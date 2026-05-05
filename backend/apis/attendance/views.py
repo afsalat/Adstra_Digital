@@ -26,6 +26,10 @@ def listAttendance(request):
         # and filter only necessary fields if possible.
         base_queryset = Attendance.objects.select_related('user').all()
 
+        user_id = request.query_params.get("user_id", None)
+        if user_id:
+            base_queryset = base_queryset.filter(user_id=user_id)
+
         if start_date and end_date:
             queryset = base_queryset.filter(
                 date__gte=start_date, 
@@ -83,5 +87,21 @@ def validation(request, uid):
             return Response({"message": "successfully completed"}, status=status.HTTP_200_OK)
     except Exception as e:
 
+        print(traceback.format_exc())
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(["PUT"])
+@permission_classes([AllowAny])
+def updateAttendance(request, uid):
+    try:
+        record = Attendance.objects.get(id=uid)
+        serializer = AttendanceSerializer(record, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Attendance.DoesNotExist:
+        return Response({"error": "Attendance record not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
         print(traceback.format_exc())
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

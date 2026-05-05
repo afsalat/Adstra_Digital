@@ -84,6 +84,18 @@ def delete_invoice(request, pk):
     return Response({'message': 'Invoice moved to trash'}, status=status.HTTP_200_OK)
 
 
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def hard_delete_invoice(request, pk):
+    """Permanently delete an invoice."""
+    try:
+        invoice = Invoice.objects.get(pk=pk)
+    except Invoice.DoesNotExist:
+        return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+    invoice.delete()
+    return Response({'message': 'Invoice permanently deleted'}, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @never_cache
@@ -114,10 +126,8 @@ def restore_invoice(request, pk):
 def get_proposals_for_client(request, client_id):
     proposals = Proposal.objects.select_related('client').filter(client_id=client_id).all()
 
-    print(" ---- ", proposals)
-
     if not proposals.exists():
-        return Response({'detail': 'No proposals found for this client.'}, status=404)
+        return Response([])
 
     serializer = ProposalSerializer(proposals, many=True)
     return Response(serializer.data)

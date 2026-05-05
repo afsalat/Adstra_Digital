@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./UserManagement.css";
-import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X } from "lucide-react";
+import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
 
@@ -18,6 +18,7 @@ const UserList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatedPassword, setGeneratedPassword] = useState(null);
+  const [resetPasswordData, setResetPasswordData] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
 
   const router = useRouter();
@@ -62,6 +63,25 @@ const UserList = () => {
     } catch (error) {
       alert("Failed to delete user.");
       console.error(error);
+    }
+  };
+
+  const handleResetPassword = async (user) => {
+    const confirm = window.confirm(`Reset password for ${user.fullname}? A new password will be generated and emailed to ${user.email}.`);
+    if (!confirm) return;
+
+    try {
+      const res = await axios.post(`${BASE_URL}/user/reset-password/${user.id}/`);
+      if (res.data?.generated_password) {
+        setResetPasswordData({
+          fullname: user.fullname,
+          email: user.email,
+          password: res.data.generated_password,
+        });
+      }
+    } catch (err) {
+      alert("Failed to reset password.");
+      console.error(err);
     }
   };
 
@@ -166,6 +186,12 @@ const UserList = () => {
                     <ShieldOff size={16} color="red" />
                   </button>
                   <button
+                    onClick={() => handleResetPassword(user)}
+                    title="Reset Password"
+                  >
+                    <KeyRound size={16} color="#2563eb" />
+                  </button>
+                  <button
                     onClick={() => handleDelete(user)}
                     title="Delete"
                     disabled={deactivating}
@@ -244,6 +270,23 @@ const UserList = () => {
             <p><strong>Generated Password:</strong></p>
             <div className="password-box">{generatedPassword}</div>
             <p>successfully sent password through email!</p>
+          </div>
+        </div>
+      )}
+
+      {resetPasswordData && (
+        <div className="popup-overlay" onClick={() => setResetPasswordData(null)}>
+          <div className="popup" onClick={(e) => e.stopPropagation()}>
+            <button className="close-popup" onClick={() => setResetPasswordData(null)}>
+              <X size={18} />
+            </button>
+            <h3>🔑 Password Reset</h3>
+            <p><strong>User:</strong> {resetPasswordData.fullname}</p>
+            <p><strong>New Password:</strong></p>
+            <div className="password-box">{resetPasswordData.password}</div>
+            <p style={{ marginTop: '10px', fontSize: '13px', color: '#666' }}>
+              Password has been sent to <strong>{resetPasswordData.email}</strong>
+            </p>
           </div>
         </div>
       )}

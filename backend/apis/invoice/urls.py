@@ -3,7 +3,7 @@ from .views import (
     generate_invoice_from_proposal, invoice_list, get_proposals_for_client,
     list_invoices, create_invoice, update_invoice, view_invoice_detail,
     update_invoice_status, delete_invoice, list_trash, restore_invoice,
-    get_next_invoice_number,
+    get_next_invoice_number, hard_delete_invoice
 )
 
 urlpatterns = [
@@ -13,6 +13,7 @@ urlpatterns = [
     path('update/<int:pk>/', update_invoice, name='update-invoice'),
     path('status/<int:pk>/', update_invoice_status, name='update-invoice-status'),
     path('delete/<int:pk>/', delete_invoice, name='delete-invoice'),
+    path('hard-delete/<int:pk>/', hard_delete_invoice, name='hard-delete-invoice'),
     path('trash/', list_trash, name='list-trash'),
     path('restore/<int:pk>/', restore_invoice, name='restore-invoice'),
     path('latests/<int:client_id>/', get_proposals_for_client, name='get_proposals_for_client'),

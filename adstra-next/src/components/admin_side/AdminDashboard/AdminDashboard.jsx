@@ -23,6 +23,8 @@ import {
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import SettingsPanel from "@/components/common/SettingsPanel";
+import ProfilePanel from "@/components/admin_side/ProfilePanel/ProfilePanel";
+import TeamPanel from "@/components/admin_side/TeamPanel/TeamPanel";
 
 const AdminDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
@@ -84,7 +86,11 @@ const AdminDashboard = () => {
         }
 
         setIsAdmin(
-          decoded?.is_admin || decoded?.is_staff || decoded?.user_id === 9
+          decoded?.is_admin || 
+          decoded?.is_staff || 
+          decoded?.user_id === 9 || 
+          user?.is_staff || 
+          user?.is_superuser
         );
       } catch (e) {
         console.error("Invalid token:", e);
@@ -98,14 +104,19 @@ const AdminDashboard = () => {
     }
   }, []);
 
-  const menuItems = [
+  const baseMenuItems = [
     "Home",
     "Finance",
     "Profile",
     "Assigned Projects",
     "Team",
-    "Settings",
   ];
+
+  const isWilson = user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson";
+
+  const menuItems = isWilson 
+    ? [...baseMenuItems, "Settings"] 
+    : baseMenuItems;
 
   return (
     <div className="admin-dashboard">
@@ -146,10 +157,11 @@ const AdminDashboard = () => {
         </ul>
       </nav>
 
-      {/* Dashboard Grid */}
-      <section className="dashboard-grid">
+      {/* Dashboard Grid for Grid-based Views */}
+      {["Home", "Finance"].includes(activeMenu) && (
+        <section className="dashboard-grid">
 
-        {/* HOME MENU ITEMS */}
+          {/* HOME MENU ITEMS */}
         {activeMenu === "Home" && (
           <>
             {/* Attendance */}
@@ -366,12 +378,23 @@ const AdminDashboard = () => {
             )}
           </>
         )}
+        </section>
+      )}
 
-        {/* SETTINGS MENU ITEMS */}
-        {activeMenu === "Settings" && (
-          <SettingsPanel API_BASE={API_BASE_URL} />
-        )}
-      </section>
+      {/* SETTINGS MENU ITEMS */}
+      {activeMenu === "Settings" && isWilson && (
+        <SettingsPanel API_BASE={API_BASE_URL} />
+      )}
+
+      {/* PROFILE MENU ITEMS */}
+      {activeMenu === "Profile" && (
+        <ProfilePanel user={user} API_BASE={API_BASE_URL} />
+      )}
+
+      {/* TEAM MENU ITEMS */}
+      {activeMenu === "Team" && (
+        <TeamPanel />
+      )}
     </div>
   );
 };

@@ -95,7 +95,7 @@ def delete_user(request, user_id):
 def listusers(request):
     try:
         # Optimization: Filter by active users only and fetch only the fields defined in UserSerializer
-        users = CustomUser.objects.filter(is_active=True).only(
+        users = CustomUser.objects.all().only(
             'id', 'username', 'joining_date', 'phone', 'email', 'address', 'designation', 'fullname', 'is_active'
         ).order_by('fullname')
         
@@ -277,3 +277,51 @@ def update_work_report(request, user_id):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_password(request, user_id):
+    try:
+        user = CustomUser.objects.get(id=user_id)
+
+        # Generate a new random password
+        characters = string.ascii_letters + string.digits + string.punctuation
+        new_password = ''.join(secrets.choice(characters) for _ in range(10))
+
+        user.password = make_password(new_password)
+        user.save()
+
+        # Send the new password via email in background
+        email = user.email
+        if email:
+            def send_reset_email():
+                try:
+                    send_mail(
+                        subject="Your Adstra Digital Password Has Been Reset",
+                        message=(
+                            f"Hello {user.fullname},\n\n"
+                            f"Your password has been reset by an administrator.\n\n"
+                            f"Username: {user.username}\n"
+                            f"New Password: {new_password}\n\n"
+                            f"Please change your password after logging in."
+                        ),
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                except Exception as mail_err:
+                    print(f"Password reset email failed: {mail_err}")
+
+            import threading
+            threading.Thread(target=send_reset_email).start()
+
+        return Response({
+            "message": "Password reset successfully",
+            "generated_password": new_password,
+        }, status=status.HTTP_200_OK)
+
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(traceback.format_exc())
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ToWords } from "to-words";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import API_BASE_URL from "@/utils/apiBase";
 import SearchableClientSelect from "@/components/common/SearchableClientSelect";
 import "./CreateInvoice.css";
 
-export default function CreateInvoice() {
+import { Suspense } from "react";
+
+function EditInvoice() {
   const [invoice, setInvoice] = useState({
     invoice_no: "",
     client: "",
@@ -37,6 +39,8 @@ export default function CreateInvoice() {
   const [isEmergencyMode, setIsEmergencyMode] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const invoiceId = searchParams.get("id");
   const API_BASE = API_BASE_URL;
 
   const toWords = new ToWords({
@@ -60,7 +64,39 @@ export default function CreateInvoice() {
     axios.get(`${API_BASE}/settings/?_=${Date.now()}`)
       .then((res) => { if (res.data) setSettings(res.data); })
       .catch((err) => console.error("Settings Fetch Error:", err));
-  }, [API_BASE]);
+
+    if (invoiceId) {
+      axios.get(`${API_BASE}/invoice/view/${invoiceId}/`)
+        .then((res) => {
+          const data = res.data;
+          setInvoice({
+            invoice_no: data.invoice_no || "",
+            client: data.client?.id || data.client || "",
+            total_amount: data.total_amount || "",
+            total_in_words: data.total_in_words || "",
+            status: data.status || "unpaid",
+            items: data.items || [],
+            proposal: data.proposal?.id || data.proposal || "",
+            additional_fee: data.additional_fee || 0,
+            additional_charges: data.additional_charges || [{ label: "", amount: 0, charge_type: "amount" }],
+            tax_amount: data.tax_amount || 0,
+            discount_amount: data.discount_amount || 0,
+            discount_label: data.discount_label || "Discount",
+            advance_amount: data.advance_amount || 0,
+            reference: data.reference || "",
+            is_proforma: data.is_proforma || false,
+            date: data.date || new Date().toISOString().split('T')[0],
+          });
+          if (data.proposal) {
+            setSelectedProposalId(data.proposal.id || data.proposal);
+          }
+        })
+        .catch((err) => {
+          console.error("Invoice Fetch Error:", err);
+          alert("Failed to load invoice data");
+        });
+    }
+  }, [API_BASE, invoiceId]);
 
   useEffect(() => {
     const subtotal = invoice.items.reduce((sum, item) => {
@@ -164,7 +200,8 @@ export default function CreateInvoice() {
     };
 
     try {
-      const res = await axios.post(`${API_BASE}/invoice/create/`, formattedInvoice);
+      const updateData = { ...formattedInvoice };
+      const res = await axios.put(`${API_BASE}/invoice/update/${invoiceId}/`, updateData);
       const newInvoiceNo = res.data.invoice_no;
       const encoded = encodeURIComponent(newInvoiceNo);
       router.push(`/invoices/result/?invoiceID=${encoded}`);
@@ -216,20 +253,10 @@ export default function CreateInvoice() {
     }));
   };
 
-  // Fetch Next Invoice Number with cache-busting
-  useEffect(() => {
-    const fetchNextInvoiceNumber = async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/invoice/next-number/?is_proforma=false&_=${Date.now()}`);
-        if (response.data && response.data.next_invoice_number) {
-          setInvoice((prev) => ({ ...prev, invoice_no: response.data.next_invoice_number }));
-        }
-      } catch (error) {
-        console.error("Error fetching next invoice number:", error);
-      }
-    };
-    fetchNextInvoiceNumber();
-  }, []);
+  // Fetch Next Invoice Number with cache-busting (skip for edit)
+  // useEffect(() => {
+  //   const fetchNextInvoiceNumber = async () => { ... }
+  // }, []);
 
   return (
     <div className="invoice-create-wrapper min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-10 pt-28 px-4 sm:px-6 lg:px-8 font-sans">
@@ -237,7 +264,7 @@ export default function CreateInvoice() {
       <div className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex justify-between items-center gap-4">
           <button
-            onClick={() => router.push("/invoices/")}
+            onClick={() => router.push(invoice.is_proforma ? "/invoices/proforma/" : "/invoices/")}
             className="flex items-center text-slate-500 hover:text-indigo-600 transition-colors font-medium px-4 py-2 hover:bg-slate-50/50 rounded-xl"
           >
             <svg
@@ -274,7 +301,7 @@ export default function CreateInvoice() {
               className="group relative px-8 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold shadow-lg shadow-indigo-200 hover:shadow-indigo-400/40 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300"
             >
               <span className="relative z-10 flex items-center">
-                Create Invoice
+                Update Invoice
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
@@ -296,7 +323,7 @@ export default function CreateInvoice() {
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
               <div>
                 <h2 className="text-3xl font-bold tracking-tight">
-                  {isEmergencyMode ? "Create Emergency Invoice" : "Create Invoice"}
+                  {isEmergencyMode ? "Edit Emergency Invoice" : "Edit Invoice"}
                 </h2>
                 <p className="text-slate-400 mt-1 text-sm font-light">
                   Adstra Digital &bull; The Sole of premium Digital Marketing Brand
@@ -885,6 +912,7 @@ export default function CreateInvoice() {
                           const gst = invoice.is_proforma ? 0 : (Number(item.gst) || 0);
                           const base = rate * qty;
                           const gstAmt = (base * gst) / 100;
+                          const total = base + gstAmt;
                           return (
                             <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                               <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{i + 1}</td>
@@ -1030,5 +1058,13 @@ export default function CreateInvoice() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EditInvoicePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <EditInvoice />
+    </Suspense>
   );
 }
