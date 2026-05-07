@@ -123,7 +123,7 @@ const AdminLogin = () => {
       if (response.data?.token) {
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("authToken", response.data.token);
-        login(); // call login from context
+        login(response.data.token); // call login from context
         setShowLoader(true); // Show the loading animation
       } else {
         setError("Login failed: Invalid response.");

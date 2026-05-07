@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
+import SearchableClientSelect from "@/components/common/SearchableClientSelect";
 import ReceiptTemplate from "@/components/ReceiptDetail/ReceiptTemplate";
 import "./create.css";
 
@@ -138,10 +139,12 @@ export default function CreateTransaction() {
             {/* Client */}
             <div className="ct-field">
               <label className="ct-label" htmlFor="ct-client">Client <span className="ct-required">*</span></label>
-              <select id="ct-client" name="client" className="ct-select" value={form.client} onChange={handleChange} required>
-                <option value="">— Select Client —</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableClientSelect
+                clients={clients}
+                value={form.client}
+                onChange={(e) => handleChange({ target: { name: "client", value: e.target.value } })}
+                placeholder="Select a Client..."
+              />
             </div>
 
             {/* Invoice */}

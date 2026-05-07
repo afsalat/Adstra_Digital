@@ -1,3 +1,5 @@
+import os
+
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -10,12 +12,16 @@ def health_check(_request):
 
 
 def robots_txt(_request):
-    return HttpResponse("User-agent: *\nAllow: /\n", content_type="text/plain")
+    return HttpResponse(
+        "User-agent: *\nDisallow: /admin/\nDisallow: /user/\nDisallow: /attendance/\n"
+        "Disallow: /proposal/\nDisallow: /invoice/\nDisallow: /transactions/\nDisallow: /settings/\n",
+        content_type="text/plain",
+    )
 
 
 urlpatterns = [
     path('', health_check, name='health_check'),
-    path('admin/', admin.site.urls),
+    path(os.getenv('DJANGO_ADMIN_PATH', 'admin/'), admin.site.urls),
     path('user/', include('apis.user.urls')),
     path('attendance/', include('apis.attendance.urls')),
     path('proposal/', include('apis.proposal.urls')),

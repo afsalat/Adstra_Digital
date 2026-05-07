@@ -44,6 +44,28 @@ function createCardTexture(card) {
   context.lineWidth = 10;
   context.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
+  // Icon mapping for canvas rendering
+  const iconMap = {
+    Compass: "🧭",
+    Monitor: "💻",
+    Zap: "⚡",
+    Share2: "📱",
+    PenTool: "🎨",
+    Search: "🔍",
+    Activity: "📈",
+    Filter: "🎯",
+    Cpu: "⚙️",
+    Video: "🎥",
+  };
+
+  // Render Icon
+  if (card.icon) {
+    context.font = "64px Arial";
+    context.textAlign = "right";
+    context.fillText(iconMap[card.icon] || "✨", canvas.width - 64, 88);
+    context.textAlign = "left"; // Reset
+  }
+
   context.fillStyle = "rgba(139, 215, 255, 0.95)";
   context.font = "700 38px Arial";
   context.fillText(card.id.replace("service-", "Card ").toUpperCase(), 64, 88);

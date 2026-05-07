@@ -4,21 +4,40 @@ import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
+const isTokenValid = (token) => {
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("auth_login");
-    setIsAuthenticated(!!isLoggedIn);
+    const token = localStorage.getItem("authToken");
+    const valid = isTokenValid(token);
+
+    if (!valid) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+    }
+
+    setIsAuthenticated(valid);
   }, []);
 
-  const login = () => {
-    localStorage.setItem("auth_login", "true");
-    setIsAuthenticated(true);
+  const login = (token) => {
+    const authToken = token || localStorage.getItem("authToken");
+    setIsAuthenticated(isTokenValid(authToken));
   };
 
   const logout = () => {
-    localStorage.removeItem("auth_login");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
     setIsAuthenticated(false);
   };
 

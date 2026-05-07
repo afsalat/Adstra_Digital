@@ -76,7 +76,7 @@ export default function Career() {
           <div className="career-page__hero-panel" data-aos="fade-left" data-aos-delay="140">
             <div className="career-page__image-frame">
               <img
-                src="https://adstradigital.com/media/team/carrer-office.jpg"
+                src="http://localhost:8000/media/team/carrer-office.jpg"
                 alt="Career at Adstra Digital"
                 className="career-page__image"
               />

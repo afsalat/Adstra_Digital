@@ -26,3 +26,6 @@ __pycache__/
 
 # Ignore Passenger logs (GoDaddy)
 passenger.log
+
+# Ignore SQLite databases
+*.sqlite3

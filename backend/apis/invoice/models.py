@@ -8,7 +8,7 @@ class Invoice(models.Model):
     invoice_no = models.CharField(max_length=100, unique=True, null=True, blank=True)
     proposal = models.ForeignKey(Proposal, on_delete=models.SET_NULL, null=True, blank=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(default=datetime.date.today)
     due_date = models.DateField(null=True, blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     total_in_words = models.TextField(null=True, blank=True)
@@ -28,8 +28,10 @@ class Invoice(models.Model):
     
     # Financial breakdown fields
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    discount_label = models.CharField(max_length=255, null=True, blank=True, default="Discount")
     additional_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    advance_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     is_proforma = models.BooleanField(default=False)
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -54,7 +56,8 @@ class Invoice(models.Model):
         
         # Ensure total_amount is also Decimal
         total = Decimal(str(self.total_amount or '0.00'))
-        return max(Decimal('0.00'), total - total_paid)
+        advance = Decimal(str(self.advance_amount or '0.00'))
+        return max(Decimal('0.00'), total - total_paid - advance)
 
     @classmethod
     def generate_invoice_number(cls, is_proforma=False):
@@ -99,6 +102,19 @@ class InvoiceItem(models.Model):
         super().save(*args, **kwargs)
 
 
+
+class InvoiceAdditionalCharge(models.Model):
+    invoice = models.ForeignKey(Invoice, related_name='additional_charges', on_delete=models.CASCADE)
+    label = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=12, decimal_places=2) # This stores either the fixed amount or the percentage value
+    charge_type = models.CharField(
+        max_length=20,
+        choices=[('amount', 'Amount'), ('percentage', 'Percentage')],
+        default='amount'
+    )
+
+    def __str__(self):
+        return f"{self.label}: {self.amount} ({self.charge_type})"
 
 def create_invoice_from_proposal(proposal):
     invoice = Invoice.objects.create(

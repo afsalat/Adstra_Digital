@@ -6,6 +6,7 @@ import { ToWords } from "to-words";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import API_BASE_URL from "@/utils/apiBase";
+import SearchableClientSelect from "@/components/common/SearchableClientSelect";
 import "./CreateInvoice.css";
 
 export default function CreateInvoice() {
@@ -18,10 +19,14 @@ export default function CreateInvoice() {
     items: [],
     proposal: "",
     additional_fee: 0,
+    additional_charges: [{ label: "", amount: 0, charge_type: "amount" }],
     tax_amount: 0,
     discount_amount: 0,
+    discount_label: "Discount",
+    advance_amount: 0,
     reference: "",
     is_proforma: false,
+    date: new Date().toISOString().split('T')[0],
   });
 
   const [clients, setClients] = useState([]);
@@ -29,6 +34,7 @@ export default function CreateInvoice() {
   const [selectedProposalId, setSelectedProposalId] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [settings, setSettings] = useState(null);
+  const [isEmergencyMode, setIsEmergencyMode] = useState(false);
 
   const router = useRouter();
   const API_BASE = API_BASE_URL;
@@ -66,18 +72,26 @@ export default function CreateInvoice() {
       return sum + base + gstAmount;
     }, 0);
 
-    const fee = parseFloat(invoice.additional_fee || 0);
+    const charges_total = (invoice.additional_charges || []).reduce((sum, c) => {
+      const val = parseFloat(c.amount || 0);
+      if (c.charge_type === 'percentage') {
+        return sum + (subtotal * (val / 100));
+      }
+      return sum + val;
+    }, 0);
+
     const tax = parseFloat(invoice.tax_amount || 0);
     const disc = parseFloat(invoice.discount_amount || 0);
 
-    const total = subtotal + fee + tax - disc;
+    const total = subtotal + charges_total + tax - disc;
 
     setInvoice((prev) => ({
       ...prev,
+      additional_fee: charges_total,
       total_amount: total.toFixed(2),
       total_in_words: toWords.convert(total > 0 ? total : 0),
     }));
-  }, [invoice.items, invoice.additional_fee, invoice.tax_amount, invoice.discount_amount]);
+  }, [invoice.items, invoice.additional_charges, invoice.tax_amount, invoice.discount_amount, invoice.advance_amount]);
 
   // Add new item row
   const addItem = () => {
@@ -97,6 +111,30 @@ export default function CreateInvoice() {
     setInvoice({ ...invoice, items });
   };
 
+  // Add additional charge
+  const addAdditionalCharge = () => {
+    setInvoice({
+      ...invoice,
+      additional_charges: [
+        ...invoice.additional_charges,
+        { label: "", amount: 0, charge_type: "amount" },
+      ],
+    });
+  };
+
+  // Update additional charge
+  const updateAdditionalCharge = (index, field, value) => {
+    const charges = [...invoice.additional_charges];
+    charges[index][field] = value;
+    setInvoice({ ...invoice, additional_charges: charges });
+  };
+
+  // Remove additional charge
+  const removeAdditionalCharge = (index) => {
+    const charges = invoice.additional_charges.filter((_, i) => i !== index);
+    setInvoice({ ...invoice, additional_charges: charges });
+  };
+
   // Remove item
   const removeItem = (index) => {
     const items = invoice.items.filter((_, i) => i !== index);
@@ -112,8 +150,14 @@ export default function CreateInvoice() {
       return;
     }
 
+    // Filter out empty/unused additional charges before submitting
+    const validCharges = (invoice.additional_charges || []).filter(
+      (c) => c.label && c.label.trim() !== "" && parseFloat(c.amount || 0) !== 0
+    );
+
     const formattedInvoice = {
       ...invoice,
+      additional_charges: validCharges,
       due_date: invoice.due_date
         ? new Date(invoice.due_date).toISOString().split("T")[0]
         : null,
@@ -136,6 +180,8 @@ export default function CreateInvoice() {
     setInvoice((prev) => ({ ...prev, client: clientId }));
     setSelectedProposalId("");
     setProposals([]);
+
+    if (!clientId) return;
 
     try {
       const res = await axios.get(`${API_BASE}/invoice/latests/${clientId}/`);
@@ -250,15 +296,66 @@ export default function CreateInvoice() {
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
               <div>
                 <h2 className="text-3xl font-bold tracking-tight">
-                  Create Invoice
+                  {isEmergencyMode ? "Create Emergency Invoice" : "Create Invoice"}
                 </h2>
                 <p className="text-slate-400 mt-1 text-sm font-light">
                   Adstra Digital &bull; The Sole of premium Digital Marketing Brand
                 </p>
               </div>
-              <div className="mt-4 md:mt-0 px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 block mb-1">Date</span>
-                <span className="text-lg font-medium">{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              <div className="mt-4 md:mt-0 flex items-center gap-4">
+                <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-inner transition-all duration-500">
+                  <div className="flex flex-col items-end">
+                    <span className={`text-xs font-extrabold uppercase tracking-widest transition-colors duration-300 ${isEmergencyMode ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]' : 'text-slate-400'}`}>
+                      Emergency Mode
+                    </span>
+                    <span className={`text-[10px] font-medium transition-colors duration-300 ${isEmergencyMode ? 'text-red-300/80' : 'text-slate-500'}`}>
+                      {isEmergencyMode ? 'Bypassing Proposal' : 'Standard Flow'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{ borderRadius: '9999px' }}
+                    onClick={() => {
+                      const newMode = !isEmergencyMode;
+                      setIsEmergencyMode(newMode);
+                      if (newMode) {
+                        setInvoice((prev) => ({ ...prev, proposal: "" }));
+                        setSelectedProposalId("");
+                      }
+                    }}
+                    className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer !rounded-full border-2 border-transparent transition-all duration-500 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+                      isEmergencyMode 
+                        ? 'bg-gradient-to-r from-red-600 to-rose-500 shadow-[0_0_20px_rgba(225,29,72,0.4)]' 
+                        : 'bg-slate-700 hover:bg-slate-600'
+                    }`}
+                  >
+                    <span className="sr-only">Toggle Emergency Mode</span>
+                    <span
+                      style={{ borderRadius: '9999px' }}
+                      className={`pointer-events-none relative inline-block h-7 w-7 transform !rounded-full bg-white shadow-md ring-0 transition-transform duration-500 ease-in-out ${
+                        isEmergencyMode ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    >
+                      <span className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isEmergencyMode ? 'opacity-100' : 'opacity-0'}`}>
+                        <span className="w-2.5 h-2.5 bg-red-500 !rounded-full shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse" style={{ borderRadius: '9999px' }}></span>
+                      </span>
+                    </span>
+                  </button>
+                </div>
+                <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10 min-w-[150px] text-center flex flex-col items-center">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-300 block mb-1">Date</span>
+                  <input 
+                    type="date"
+                    value={invoice.date}
+                    onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
+                    className="bg-transparent text-white border-none focus:ring-0 text-lg font-medium px-2 cursor-pointer w-full text-center outline-none appearance-none"
+                    style={{ 
+                      colorScheme: 'dark',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none'
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -301,56 +398,55 @@ export default function CreateInvoice() {
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                     Client <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <select
-                      className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 pr-10 appearance-none shadow-sm transition-all hover:border-indigo-300"
-                      value={invoice.client}
-                      onChange={handleClientChange}
-                      required
-                    >
-                      <option value="">Select a Client...</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.company_name ? `${c.company_name} (${c.name})` : c.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </div>
-                  </div>
+                  <SearchableClientSelect
+                    clients={clients}
+                    value={invoice.client}
+                    onChange={handleClientChange}
+                    placeholder="Select a Client..."
+                  />
                 </div>
               </div>
 
               {/* Optional Proposal Select */}
-              {proposals.length > 0 && (
-                <div className="mb-8 p-4 bg-indigo-50 rounded-lg border border-indigo-100 animate-fade-in-down">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                    <div className="md:w-1/2">
-                      <h4 className="text-sm font-semibold text-indigo-900">Import from Proposal</h4>
-                      <p className="text-xs text-indigo-700 mt-1">Select a proposal to auto-fill items.</p>
-                    </div>
-                    <div className="w-full md:w-1/2 relative">
-                      <select
-                        className="w-full bg-white border border-indigo-200 text-indigo-900 text-sm rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm transition-all"
-                        value={selectedProposalId}
-                        onChange={handleProposalChange}
-                      >
-                        <option value="">-- Choose Proposal --</option>
-                        {proposals.map((p) => {
-                          const company = p.company_name || (p.client && p.client.company_name) || "No Company";
-                          const clientName = p.client ? p.client.name : "No Client";
-                          const price = p.total_amount ? Number(p.total_amount).toLocaleString("en-IN", { style: "currency", currency: "INR" }) : "₹0.00";
-                          return (
-                            <option key={p.id} value={p.id}>
-                              {`${company} - ${clientName} (#${p.id}) - ${price}`}
-                            </option>
-                          );
-                        })}
-                      </select>
+              {!isEmergencyMode && invoice.client && (
+                proposals.length > 0 ? (
+                  <div className="mb-8 p-4 bg-indigo-50 rounded-lg border border-indigo-100 animate-fade-in-down">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                      <div className="md:w-1/2">
+                        <h4 className="text-sm font-semibold text-indigo-900">Import from Proposal</h4>
+                        <p className="text-xs text-indigo-700 mt-1">Select a proposal to auto-fill items.</p>
+                      </div>
+                      <div className="w-full md:w-1/2 relative">
+                        <select
+                          className="w-full bg-white border border-indigo-200 text-indigo-900 text-sm rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm transition-all"
+                          value={selectedProposalId}
+                          onChange={handleProposalChange}
+                        >
+                          <option value="">-- Choose Proposal --</option>
+                          {proposals.map((p) => {
+                            const company = p.company_name || (p.client && p.client.company_name) || "No Company";
+                            const clientName = p.client ? p.client.name : "No Client";
+                            const price = p.total_amount ? Number(p.total_amount).toLocaleString("en-IN", { style: "currency", currency: "INR" }) : "₹0.00";
+                            return (
+                              <option key={p.id} value={p.id}>
+                                {`${company} - ${clientName} (#${p.id}) - ${price}`}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="mb-8 p-4 bg-amber-50 rounded-lg border border-amber-100 text-amber-700 text-sm animate-fade-in">
+                    <div className="flex items-center gap-2 font-medium">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                      </svg>
+                      No proposals found for this client. You can still create a direct invoice below.
+                    </div>
+                  </div>
+                )
               )}
 
               {/* Middle Row: Status & Words */}
@@ -448,11 +544,16 @@ export default function CreateInvoice() {
                           return (
                             <tr key={i} className="hover:bg-slate-50 transition-colors group">
                               <td className="px-4 py-3">
-                                <input
-                                  className="w-full bg-transparent border-0 border-b border-transparent focus:border-indigo-500 focus:ring-0 text-slate-900 placeholder-slate-400 transition-all font-medium"
+                                <textarea
+                                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 transition-all font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none overflow-hidden min-h-[45px]"
                                   value={item.description}
                                   placeholder="Item description"
-                                  onChange={(e) => updateItem(i, "description", e.target.value)}
+                                  rows={1}
+                                  onChange={(e) => {
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = (e.target.scrollHeight) + 'px';
+                                    updateItem(i, "description", e.target.value);
+                                  }}
                                 />
                               </td>
                               <td className="px-2 py-3">
@@ -510,29 +611,77 @@ export default function CreateInvoice() {
 
               {/* Financial Adjustments Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Additional Fee (+)
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
-                    value={invoice.additional_fee}
-                    onChange={(e) => setInvoice({ ...invoice, additional_fee: e.target.value })}
-                    placeholder="0.00"
-                  />
+                <div className="md:col-span-2 space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                      Additional Charges (+)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addAdditionalCharge}
+                      className="text-[10px] px-2 py-1 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100 font-bold transition-colors"
+                    >
+                      + ADD CHARGE
+                    </button>
+                  </div>
+                  
+                  {invoice.additional_charges.map((charge, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-3 items-center animate-fade-in">
+                      <input
+                        className="col-span-5 sm:col-span-5 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm transition-all"
+                        value={charge.label}
+                        onChange={(e) => updateAdditionalCharge(idx, "label", e.target.value)}
+                        placeholder="Label (e.g. Shipping)"
+                      />
+                      <select
+                        className="col-span-4 sm:col-span-3 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm transition-all"
+                        value={charge.charge_type || 'amount'}
+                        onChange={(e) => updateAdditionalCharge(idx, "charge_type", e.target.value)}
+                      >
+                        <option value="amount">₹ Amount</option>
+                        <option value="percentage">% Percent</option>
+                      </select>
+                      <input
+                        type="number"
+                        className="col-span-3 sm:col-span-3 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 shadow-sm transition-all"
+                        value={charge.amount}
+                        onChange={(e) => updateAdditionalCharge(idx, "amount", e.target.value)}
+                        placeholder={charge.charge_type === 'percentage' ? "0%" : "0.00"}
+                      />
+                      {invoice.additional_charges.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAdditionalCharge(idx)}
+                          className="col-span-12 sm:col-span-1 flex justify-center text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                     Discount Amount (-)
                   </label>
-                  <input
-                    type="number"
-                    className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
-                    value={invoice.discount_amount}
-                    onChange={(e) => setInvoice({ ...invoice, discount_amount: e.target.value })}
-                    placeholder="0.00"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="w-1/2 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
+                      value={invoice.discount_label}
+                      onChange={(e) => setInvoice({ ...invoice, discount_label: e.target.value })}
+                      placeholder="Discount Label"
+                    />
+                    <input
+                      type="number"
+                      className="w-1/2 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
+                      value={invoice.discount_amount}
+                      onChange={(e) => setInvoice({ ...invoice, discount_amount: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
                 {!invoice.is_proforma && (
                   <div className="space-y-2">
@@ -548,33 +697,55 @@ export default function CreateInvoice() {
                     />
                   </div>
                 )}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Advance Payment (-)
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm transition-all"
+                    value={invoice.advance_amount || ""}
+                    onChange={(e) => setInvoice({ ...invoice, advance_amount: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
 
               {/* Footer / Total */}
               <div className="flex flex-col items-end gap-2 border-t border-slate-100 pt-6">
                 <div className="flex flex-col items-end gap-1 text-sm text-slate-500 mb-2">
-                  <div className="flex justify-between w-48">
+                  <div className="flex justify-between w-64">
                     <span>Subtotal:</span>
                     <span>&#8377; {(invoice.items.reduce((sum, item) => {
                       const base = (item.rate || 0) * (item.quantity || 0);
                       return sum + base + (base * (item.gst || 0) / 100);
                     }, 0)).toFixed(2)}</span>
                   </div>
-                  {Number(invoice.additional_fee) > 0 && (
-                    <div className="flex justify-between w-48 text-indigo-600">
-                      <span>Fee:</span>
-                      <span>+ &#8377; {Number(invoice.additional_fee).toFixed(2)}</span>
-                    </div>
-                  )}
+                  {invoice.additional_charges.map((charge, idx) => {
+                    const subtotal = invoice.items.reduce((sum, item) => {
+                      const base = (item.rate || 0) * (item.quantity || 0);
+                      return sum + base + (base * (item.gst || 0) / 100);
+                    }, 0);
+                    const chargeAmt = charge.charge_type === 'percentage'
+                      ? (subtotal * (parseFloat(charge.amount || 0) / 100))
+                      : parseFloat(charge.amount || 0);
+                    
+                    return charge.amount > 0 && (
+                      <div key={idx} className="flex justify-between w-64 text-indigo-600">
+                        <span>{charge.label || 'Additional Charge'} {charge.charge_type === 'percentage' ? `(${charge.amount}%)` : ''}:</span>
+                        <span>+ &#8377; {chargeAmt.toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
                   {Number(invoice.tax_amount) > 0 && !invoice.is_proforma && (
-                    <div className="flex justify-between w-48 text-indigo-600">
+                    <div className="flex justify-between w-64 text-indigo-600">
                       <span>Tax/Adj:</span>
                       <span>+ &#8377; {Number(invoice.tax_amount).toFixed(2)}</span>
                     </div>
                   )}
                   {Number(invoice.discount_amount) > 0 && (
-                    <div className="flex justify-between w-48 text-red-600">
-                      <span>Discount:</span>
+                    <div className="flex justify-between w-64 text-red-600">
+                      <span>{invoice.discount_label || "Discount"}:</span>
                       <span>- &#8377; {Number(invoice.discount_amount).toFixed(2)}</span>
                     </div>
                   )}
@@ -583,6 +754,18 @@ export default function CreateInvoice() {
                 <div className="text-4xl font-extrabold text-slate-900 tracking-tight">
                   &#8377; {Number(invoice.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
+                {Number(invoice.advance_amount) > 0 && (
+                  <div className="flex flex-col items-end mt-2 pt-2 border-t border-slate-100 w-64">
+                    <div className="flex justify-between w-full text-sm text-slate-500">
+                      <span>Advance Paid:</span>
+                      <span>- &#8377; {Number(invoice.advance_amount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between w-full text-lg font-bold text-indigo-600 mt-1">
+                      <span>Balance Due:</span>
+                      <span>&#8377; {(Number(invoice.total_amount) - Number(invoice.advance_amount)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-8 pt-6 border-t border-slate-100 italic text-slate-400 text-xs text-center no-print">
@@ -640,7 +823,7 @@ export default function CreateInvoice() {
                           </tr>
                           <tr>
                             <td style={{ padding: '2px 0', color: '#666' }}>Date</td>
-                            <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span></td>
+                            <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{invoice?.date ? new Date(invoice.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span></td>
                           </tr>
                           <tr>
                             <td style={{ padding: '2px 0', color: '#666' }}>Due Date</td>
@@ -666,18 +849,20 @@ export default function CreateInvoice() {
                     <div style={{ padding: '8px', borderRight: '1px solid black', fontSize: '11px' }}>
                       <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>From:</div>
                       <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{settings?.name || "Adstra Digital"}</div>
-                      <div style={{ fontSize: '9px', color: '#666', marginBottom: '2px' }}>ISO 9001:2015 & IAF Certified</div>
-                      <div>{settings?.address || "Husna Complex, 1st Floor, Nadakkavu, Kozhikode, Kerala - 673011"}</div>
-                      <div style={{ marginTop: '2px' }}>GSTIN: {settings?.gstin || "32CMJPK3035L1Z2"}{settings?.lut_no ? ` | LUT: ${settings.lut_no}` : " | LUT: AD320224004945V"}</div>
-                      <div>Mobile: {settings?.mobile || "+91 974 477 9574 | 956 756 8185"}</div>
-                      <div>Email: {settings?.email || "info.adstradigital@gmail.com"}</div>
+                      <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px' }}>ISO 9001:2015 & IAF Certified</div>
+                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                        {(settings?.address || "Husna Complex, 1st Floor, Nadakkavu, Kozhikode, Kerala - 673011").replace(', Kozhikode', ',\nKozhikode')}
+                      </div>
+                      <div style={{ marginTop: '2px', wordBreak: 'break-word' }}>GSTIN: {settings?.gstin || "32CMJPK3035L1Z2"}{settings?.lut_no ? ` | LUT: ${settings.lut_no}` : " | LUT: AD320224004945V"}</div>
+                      <div style={{ wordBreak: 'break-word' }}>Mobile: {settings?.mobile || "+91 974 477 9574 | 956 756 8185"}</div>
+                      <div style={{ wordBreak: 'break-word' }}>Email: {settings?.email || "info.adstradigital@gmail.com"}</div>
                     </div>
                     <div style={{ padding: '8px', fontSize: '11px' }}>
                       <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>To:</div>
-                      <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{selectedClient?.company_name || selectedClient?.name || "N/A"}</div>
-                      <div>{selectedClient?.address || "N/A"}</div>
-                      <div style={{ marginTop: '2px' }}>GSTIN: {selectedClient?.gstin || "-"} | Mobile: {selectedClient?.contact || "-"}</div>
-                      <div>Email: {selectedClient?.email || "-"}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>{selectedClient?.company_name || selectedClient?.name || "N/A"}</div>
+                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>{selectedClient?.address || "N/A"}</div>
+                      <div style={{ marginTop: '2px', wordBreak: 'break-word' }}>GSTIN: {selectedClient?.gstin || "-"} | Mobile: {selectedClient?.contact || "-"}</div>
+                      <div style={{ wordBreak: 'break-word' }}>Email: {selectedClient?.email || "-"}</div>
                     </div>
                   </div>
                   {/* Items Table */}
@@ -700,15 +885,14 @@ export default function CreateInvoice() {
                           const gst = invoice.is_proforma ? 0 : (Number(item.gst) || 0);
                           const base = rate * qty;
                           const gstAmt = (base * gst) / 100;
-                          const total = base + gstAmt;
                           return (
                             <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                               <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{i + 1}</td>
-                              <td style={{ borderRight: '1px solid black', padding: '6px' }}>{item.description}</td>
+                              <td style={{ borderRight: '1px solid black', padding: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.description}</td>
                               <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{qty.toFixed(2)}</td>
                               <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>{rate.toFixed(2)}</td>
                               {!invoice.is_proforma && <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', fontSize: '10px' }}>{gstAmt.toFixed(2)} ({gst}%)</td>}
-                              <td style={{ padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>{total.toFixed(2)}</td>
+                              <td style={{ padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>{base.toFixed(2)}</td>
                             </tr>
                           );
                         })}
@@ -731,20 +915,41 @@ export default function CreateInvoice() {
                         )}
                         {Number(invoice.discount_amount || 0) > 0 && (
                           <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
-                            <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Discount</td>
+                            <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>{invoice.discount_label || 'Discount'}</td>
                             <td style={{ padding: '6px', textAlign: 'right', color: 'red' }}>- {Number(invoice.discount_amount).toFixed(2)}</td>
                           </tr>
                         )}
-                        {Number(invoice.additional_fee || 0) > 0 && (
-                          <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
-                            <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Additional Fees</td>
-                            <td style={{ padding: '6px', textAlign: 'right' }}>{Number(invoice.additional_fee).toFixed(2)}</td>
-                          </tr>
-                        )}
+                        {invoice.additional_charges.map((charge, idx) => {
+                          const subtotal = invoice.items.reduce((sum, item) => sum + (Number(item.rate || 0) * Number(item.quantity || 0)), 0);
+                          const chargeAmt = charge.charge_type === 'percentage'
+                            ? (subtotal * (parseFloat(charge.amount || 0) / 100))
+                            : parseFloat(charge.amount || 0);
+                          
+                          return charge.amount > 0 && (
+                            <tr key={`charge-${idx}`} style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                              <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>
+                                {charge.label || 'Additional Charge'} {charge.charge_type === 'percentage' ? `(${charge.amount}%)` : ''}
+                              </td>
+                              <td style={{ padding: '6px', textAlign: 'right' }}>{chargeAmt.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
                         <tr style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>
                           <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Total</td>
                           <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px' }}>{Number(invoice.total_amount).toFixed(2)}</td>
                         </tr>
+                        {Number(invoice.advance_amount || 0) > 0 && (
+                          <>
+                            <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                              <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Advance Paid (-)</td>
+                              <td style={{ padding: '6px', textAlign: 'right' }}>- {Number(invoice.advance_amount).toFixed(2)}</td>
+                            </tr>
+                            <tr style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#eef2ff' }}>
+                              <td colSpan={invoice.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', fontSize: '13px', color: '#4f46e5' }}>Balance Due</td>
+                              <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px', color: '#4f46e5' }}>{(Number(invoice.total_amount) - Number(invoice.advance_amount)).toFixed(2)}</td>
+                            </tr>
+                          </>
+                        )}
                       </tfoot>
                     </table>
                   </div>
@@ -797,9 +1002,15 @@ export default function CreateInvoice() {
                     </div>
                   </div>
 
+                  {invoice?.is_proforma && (
+                    <div style={{ padding: '4px 12px', borderTop: '1px solid black', textAlign: 'center', fontSize: '8px', color: '#666', fontStyle: 'italic' }}>
+                      This is a proforma invoice issued for reference and documentation purposes only. It is not a demand for payment but a preliminary statement of charges.
+                    </div>
+                  )}
+
                   {/* Invoice Created By */}
                   <div style={{ padding: '4px', borderTop: '1px solid black', textAlign: 'center', fontSize: '9px', color: '#666' }}>
-                    Invoice Created by Adstra Digital
+                    This is a computer-generated {invoice?.is_proforma ? "proforma invoice" : "invoice"}. No signature is required.
                   </div>
                 </div>
               </div>

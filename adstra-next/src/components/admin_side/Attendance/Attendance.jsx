@@ -69,6 +69,9 @@ export default function AttendanceDashboard() {
   // Modals state
   const [showLogModal, setShowLogModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showEntryModal, setShowEntryModal] = useState(false);
+  const [entryForm, setEntryForm] = useState({ id: null, user: "", date: "", status: "Present", checkin: "", checkout: "", locationMode: "text", locationText: "", locationLat: "", locationLng: "", work_report: [{ category: "", description: "" }] });
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Pre-load libraries when modal is about to open
   useEffect(() => {
@@ -157,6 +160,15 @@ export default function AttendanceDashboard() {
 
   useEffect(() => {
     fetchEmployees();
+    
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error("Error parsing user:", e);
+      }
+    }
   }, [fetchEmployees]);
 
   useEffect(() => {
@@ -360,6 +372,123 @@ export default function AttendanceDashboard() {
     } catch (err) {
       console.error(err);
       showAlert("Error", "Failed to save work report: " + (err.response?.data?.error || err.message), "error");
+    }
+  };
+
+  const handleOpenEntryModal = (record = null) => {
+    if (record) {
+      let r = [];
+      try {
+        const p = JSON.parse(record.work_report);
+        if (Array.isArray(p)) r = p;
+        else if (p) r = [p];
+      } catch { }
+
+      if (!r.length && record.work_report && typeof record.work_report === 'string' && !record.work_report.startsWith('[')) {
+        r = [{ category: "General", description: record.work_report }];
+      }
+
+      let locText = "";
+      let locLat = "";
+      let locLng = "";
+      let locMode = "text";
+      
+      if (record.location) {
+        let parsedLoc = record.location;
+        if (typeof parsedLoc === 'string') {
+          try {
+            parsedLoc = JSON.parse(parsedLoc.replace(/'/g, '"'));
+          } catch (e) { }
+        }
+        if (parsedLoc && parsedLoc.latitude && parsedLoc.longitude) {
+          locMode = "coordinates";
+          locLat = parsedLoc.latitude;
+          locLng = parsedLoc.longitude;
+        } else {
+          locText = typeof parsedLoc === 'string' ? parsedLoc : JSON.stringify(parsedLoc);
+        }
+      }
+
+      setEntryForm({
+        id: record.id,
+        user: record.user || record.user_id || "",
+        date: record.date || new Date().toISOString().split('T')[0],
+        status: record.status || "Present",
+        checkin: record.checkin ? new Date(record.checkin).toISOString().slice(0, 16) : "",
+        checkout: record.checkout ? new Date(record.checkout).toISOString().slice(0, 16) : "",
+        locationMode: locMode,
+        locationText: locText,
+        locationLat: locLat,
+        locationLng: locLng,
+        work_report: r.length ? r : [{ category: "", description: "" }]
+      });
+    } else {
+      setEntryForm({
+        id: null,
+        user: "",
+        date: selectedDate || new Date().toISOString().split('T')[0],
+        status: "Present",
+        checkin: "",
+        checkout: "",
+        locationMode: "text",
+        locationText: "",
+        locationLat: "",
+        locationLng: "",
+        work_report: [{ category: "", description: "" }]
+      });
+    }
+    setShowEntryModal(true);
+  };
+
+  const handleSaveEntry = async () => {
+    if (!entryForm.user) {
+      showAlert("Warning", "Please select an employee.", "warning");
+      return;
+    }
+    
+    const validEntries = entryForm.work_report.filter(e => e.description && e.description.trim() !== "");
+    let finalReport = "";
+    if (validEntries.length > 0) {
+      finalReport = JSON.stringify(validEntries.map(entry => ({
+        category: entry.category || "General",
+        description: entry.description
+      })));
+    }
+    
+    const payload = { ...entryForm, work_report: finalReport };
+    
+    if (payload.locationMode === "coordinates") {
+      if (payload.locationLat && payload.locationLng) {
+        payload.location = `{'latitude': ${payload.locationLat}, 'longitude': ${payload.locationLng}}`;
+      } else {
+        payload.location = "";
+      }
+    } else {
+      payload.location = payload.locationText;
+    }
+    delete payload.locationMode;
+    delete payload.locationText;
+    delete payload.locationLat;
+    delete payload.locationLng;
+    
+    if (!payload.checkin) delete payload.checkin;
+    else payload.checkin = new Date(payload.checkin).toISOString();
+    
+    if (!payload.checkout) delete payload.checkout;
+    else payload.checkout = new Date(payload.checkout).toISOString();
+
+    try {
+      if (payload.id) {
+        await axios.put(`${BASE_URL}/attendance/edit/${payload.id}/`, payload, { headers: getAuthHeaders() });
+        showAlert("Success", "Attendance record updated successfully.", "success");
+      } else {
+        await axios.post(`${BASE_URL}/attendance/add-attendance/`, payload, { headers: getAuthHeaders() });
+        showAlert("Success", "Attendance record added successfully.", "success");
+      }
+      setShowEntryModal(false);
+      fetchAttendance();
+    } catch (err) {
+      showAlert("Error", "Failed to save record: " + (err.response?.data?.error || JSON.stringify(err.response?.data) || err.message), "error");
     }
   };
 
@@ -876,14 +1005,50 @@ export default function AttendanceDashboard() {
           <h1 className="title">Attendance</h1>
           <div className="date-navigator">
             <button className="nav-btn" onClick={() => handleDateChange(-1)}>←</button>
-            <span className="current-date">{displayDate}</span>
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <span className="current-date" style={{ display: "inline-block", padding: "0 10px", cursor: "pointer" }}>{displayDate}</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedDate(e.target.value);
+                  }
+                }}
+                onClick={(e) => {
+                  try {
+                    e.target.showPicker();
+                  } catch (err) {
+                    // Fallback if showPicker is not supported
+                  }
+                }}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  opacity: 0,
+                  cursor: "pointer",
+                  zIndex: 10
+                }}
+                title="Select Date"
+              />
+            </div>
             <button className="nav-btn" onClick={() => handleDateChange(1)}>→</button>
           </div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-secondary" onClick={() => setShowExportModal(true)}>
-            Export Report
-          </button>
+          {(currentUser?.username?.toLowerCase() === "wilson" || currentUser?.fullname?.toLowerCase() === "wilson" || currentUser?.is_staff || currentUser?.is_superuser) && (
+            <>
+              <button className="btn btn-primary" onClick={() => handleOpenEntryModal()} style={{ background: '#10B981', color: 'white', borderColor: '#10B981' }}>
+                + Manual Entry
+              </button>
+              <button className="btn btn-secondary" onClick={() => setShowExportModal(true)}>
+                Export Report
+              </button>
+            </>
+          )}
           <button className="btn btn-primary" onClick={handleCurrentUserWorkReport}>
             My Work Report
           </button>
@@ -1064,9 +1229,16 @@ export default function AttendanceDashboard() {
                     </button>
                   </td>
                   <td>
-                    <button className="btn-icon" onClick={() => setSelectedAttendance(item)} title="View Details" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                      <Info size={20} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="btn-icon" onClick={() => setSelectedAttendance(item)} title="View Details" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                        <Info size={20} />
+                      </button>
+                      {(currentUser?.username?.toLowerCase() === "wilson" || currentUser?.fullname?.toLowerCase() === "wilson" || currentUser?.is_staff || currentUser?.is_superuser) && (
+                        <button className="btn-icon" onClick={() => handleOpenEntryModal(item)} title="Edit Record" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3B82F6', fontSize: '18px' }}>
+                          ✎
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1322,6 +1494,115 @@ export default function AttendanceDashboard() {
 
             <div style={{ marginTop: 24, textAlign: "right" }}>
               <button className="btn btn-secondary" onClick={() => setSelectedAttendance(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEntryModal && (
+        <div className="modal-overlay" onClick={() => setShowEntryModal(false)}>
+          <div className="custom-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: "500px" }}>
+            <h2 style={{ marginTop: 0, marginBottom: 20, fontSize: 20 }}>{entryForm.id ? "Edit Attendance" : "Manual Attendance Entry"}</h2>
+            <div className="form-group">
+              <label className="form-label">Employee</label>
+              <select className="form-control" value={entryForm.user} onChange={e => setEntryForm({...entryForm, user: e.target.value})} disabled={!!entryForm.id}>
+                <option value="">Select Employee</option>
+                {activeEmployees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.fullname}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Date</label>
+                <input type="date" className="form-control" value={entryForm.date} onChange={e => setEntryForm({...entryForm, date: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select className="form-control" value={entryForm.status} onChange={e => setEntryForm({...entryForm, status: e.target.value})}>
+                  <option value="Present">Present</option>
+                  <option value="Absent">Absent</option>
+                  <option value="Leave">Leave</option>
+                  <option value="Half Day">Half Day</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Check In (Optional)</label>
+                <input type="datetime-local" className="form-control" value={entryForm.checkin} onChange={e => setEntryForm({...entryForm, checkin: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Check Out (Optional)</label>
+                <input type="datetime-local" className="form-control" value={entryForm.checkout} onChange={e => setEntryForm({...entryForm, checkout: e.target.value})} />
+              </div>
+            </div>
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>Location (Optional)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748B' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                    <input type="radio" checked={entryForm.locationMode === 'text'} onChange={() => setEntryForm({...entryForm, locationMode: 'text'})} style={{ cursor: 'pointer' }} />
+                    Text
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                    <input type="radio" checked={entryForm.locationMode === 'coordinates'} onChange={() => setEntryForm({...entryForm, locationMode: 'coordinates'})} style={{ cursor: 'pointer' }} />
+                    Coordinates
+                  </label>
+                </div>
+              </div>
+              {entryForm.locationMode === 'text' ? (
+                <input type="text" className="form-control" placeholder="e.g. Office, Home, or Client Site" value={entryForm.locationText} onChange={e => setEntryForm({...entryForm, locationText: e.target.value})} />
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#94A3B8', display: 'block', marginBottom: '2px' }}>Latitude</label>
+                    <input type="number" step="any" className="form-control" placeholder="e.g. 11.267" value={entryForm.locationLat} onChange={e => setEntryForm({...entryForm, locationLat: e.target.value})} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#94A3B8', display: 'block', marginBottom: '2px' }}>Longitude</label>
+                    <input type="number" step="any" className="form-control" placeholder="e.g. 75.776" value={entryForm.locationLng} onChange={e => setEntryForm({...entryForm, locationLng: e.target.value})} />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Work Report (Optional)</label>
+              <div style={{ maxHeight: "250px", overflowY: "auto", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", background: "#F8FAFC" }}>
+                {entryForm.work_report.map((entry, index) => (
+                  <div key={index} style={{ padding: "12px", marginBottom: "12px", position: "relative", background: "#fff", border: "1px solid #E2E8F0", borderRadius: "8px" }}>
+                    {entryForm.work_report.length > 1 && (
+                      <button style={{ position: "absolute", top: "8px", right: "8px", background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: "16px", padding: "0 4px" }} onClick={() => {
+                        const newEntries = entryForm.work_report.filter((_, i) => i !== index);
+                        setEntryForm({...entryForm, work_report: newEntries});
+                      }}>×</button>
+                    )}
+                    <div className="form-group" style={{ marginBottom: "8px" }}>
+                      <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "4px", display: "block" }}>Project / Category</label>
+                      <input className="form-control" style={{ padding: "8px", fontSize: "13px" }} placeholder="e.g. Design, Meeting" value={entry.category || ""} onChange={e => {
+                        const newEntries = [...entryForm.work_report];
+                        newEntries[index].category = e.target.value;
+                        setEntryForm({...entryForm, work_report: newEntries});
+                      }} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748B", marginBottom: "4px", display: "block" }}>Task Description</label>
+                      <textarea className="form-control" rows="2" style={{ padding: "8px", fontSize: "13px" }} placeholder="Task details..." value={entry.description || ""} onChange={e => {
+                        const newEntries = [...entryForm.work_report];
+                        newEntries[index].description = e.target.value;
+                        setEntryForm({...entryForm, work_report: newEntries});
+                      }}></textarea>
+                    </div>
+                  </div>
+                ))}
+                <button className="btn btn-secondary" style={{ fontSize: "13px", padding: "6px 12px", width: "100%", background: "#E2E8F0", border: "none", color: "#475569", borderRadius: "6px" }} onClick={() => {
+                  setEntryForm({...entryForm, work_report: [...entryForm.work_report, { category: "", description: "" }]});
+                }}>+ Add Another Task</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+              <button className="btn btn-secondary" onClick={() => setShowEntryModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveEntry}>Save Record</button>
             </div>
           </div>
         </div>

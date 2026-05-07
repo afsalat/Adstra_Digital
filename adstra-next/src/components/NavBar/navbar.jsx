@@ -18,7 +18,16 @@ const normalizeHashPath = (pathname, hash = "") =>
 function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activePath, setActivePath] = useState("");
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const updateActivePath = () => {
@@ -83,7 +92,7 @@ function NavBar() {
   ];
 
   return (
-    <nav className="navbar fixed-top shadow-sm py-2">
+    <nav className={`navbar fixed-top py-2 ${isScrolled ? "scrolled shadow-sm" : ""}`}>
       <div className="container d-flex flex-column">
         <div className="navbar-row d-flex align-items-center w-100">
           <Link href="/">

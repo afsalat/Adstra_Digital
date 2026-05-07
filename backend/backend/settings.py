@@ -1,10 +1,29 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
+
+# Load environment variables
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-5xb$b*wa25*=u4&e81_5*9ioj8*ok-lzrv!v(v@6rmw+3tz^1c'
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
+SECRET_KEY = os.getenv('SECRET_KEY')
+JWT_SECRET = os.getenv('JWT_SECRET')
+
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'dev-only-insecure-secret-key'
+    else:
+        raise ImproperlyConfigured('SECRET_KEY environment variable is required when DEBUG is False.')
+
+if not JWT_SECRET:
+    if DEBUG:
+        JWT_SECRET = 'dev-only-insecure-jwt-secret'
+    else:
+        raise ImproperlyConfigured('JWT_SECRET environment variable is required when DEBUG is False.')
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'adstradigital.com', 'www.adstradigital.com']
 
@@ -78,11 +97,20 @@ AUTH_USER_MODEL = 'user.CustomUser'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'utils.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv('DRF_ANON_THROTTLE_RATE', '60/minute'),
+        'user': os.getenv('DRF_USER_THROTTLE_RATE', '1000/day'),
+        'login': os.getenv('DRF_LOGIN_THROTTLE_RATE', '5/minute'),
+    },
 }
 
 LANGUAGE_CODE = 'en-us'
@@ -99,9 +127,18 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 APPEND_SLASH = False
-CORS_ALLOW_ALL_ORIGINS = True 
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', str(not DEBUG)) == 'True'
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', str(not DEBUG)) == 'True'
+SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', str(not DEBUG)) == 'True'
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', str(not DEBUG)) == 'True'
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', str(not DEBUG)) == 'True'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
 
 
 MEDIA_URL = '/media/'
@@ -114,11 +151,10 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'info.adstradigital@gmail.com'
-EMAIL_HOST_PASSWORD = 'aofbpwroussfozcv'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-VV = "Z0d!acleo#007"
 
 # Razorpay Configuration
-RAZORPAY_KEY_ID = 'rzp_live_S1IlVSTMXlrAkz'
-RAZORPAY_KEY_SECRET = 'nCyE7pNVj7yJ0HfnuGUGC8aJ'
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')

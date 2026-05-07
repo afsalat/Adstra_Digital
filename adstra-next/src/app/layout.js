@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://adstradigital.com"),
+  metadataBase: new URL("http://localhost:3000"),
   title: "Digital Marketing Company in Kozhikode | AdstraDigital",
   description:
     "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
@@ -34,13 +34,13 @@ export const metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://adstradigital.com/",
+    url: "http://localhost:3000/",
     title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
     description:
       "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
     images: [
       {
-        url: "https://adstradigital.com/static/media/logo_icon.jpeg",
+        url: "http://localhost:3000/static/media/logo_icon.jpeg",
         width: 512,
         height: 512,
       },
@@ -54,14 +54,14 @@ export const metadata = {
     title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
     description:
       "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
-    images: ["https://adstradigital.com/static/media/logo_icon.jpeg"],
+    images: ["http://localhost:3000/static/media/logo_icon.jpeg"],
   },
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",
   },
   alternates: {
-    canonical: "https://adstradigital.com/",
+    canonical: "http://localhost:3000/",
   },
   verification: {
     google: "8i-QRA6BvD2XQbq9CBVT_7TJlc6fiWS3EWRwUhYB0VY",
@@ -93,7 +93,7 @@ export default function RootLayout({ children }) {
         <link
           rel="preload"
           as="image"
-          href="https://adstradigital.com/static/media/logo_icon.jpeg"
+          href="http://localhost:3000/static/media/logo_icon.jpeg"
         />
 
         <link
@@ -141,8 +141,8 @@ export default function RootLayout({ children }) {
             "@context": "https://schema.org",
             "@type": "LocalBusiness",
             name: "AdstraDigital",
-            url: "https://adstradigital.com",
-            logo: "https://adstradigital.com/static/media/logo_icon.jpeg",
+            url: "http://localhost:3000",
+            logo: "http://localhost:3000/static/media/logo_icon.jpeg",
             description:
               "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
             telephone: "+91 9744779574",

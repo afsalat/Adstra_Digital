@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
-import { Printer, FileDown, ArrowLeft, LayoutList } from "lucide-react";
+import { Printer, FileDown, ArrowLeft, LayoutList, Edit } from "lucide-react";
 import API_BASE_URL from "@/utils/apiBase";
 
 export default function InvoicePreview() {
@@ -15,14 +15,28 @@ export default function InvoicePreview() {
   const [invoice, setInvoice] = useState(null);
   const [items, setItems] = useState([]);
   const [settings, setSettings] = useState(null);
+  const [user, setUser] = useState(null);
 
   const API_BASE = API_BASE_URL;
+
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) setUser(JSON.parse(storedUser));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   useEffect(() => {
     if (!invoiceId) return;
     axios.get(`${API_BASE}/invoice/view/${invoiceId}/?_=${Date.now()}`).then((res) => {
       setInvoice(res.data);
       setItems(res.data.items);
+      // Update document title for professional printing
+      const clientName = res.data?.client?.company_name || res.data?.client?.name || "";
+      const sanitizedName = clientName.replace(/[^a-z0-9]/gi, '_').toUpperCase();
+      document.title = sanitizedName ? `invoice_${invoiceId}_${sanitizedName}` : `invoice_${invoiceId}`;
     });
 
     // Fetch Company Settings with cache busting
@@ -38,10 +52,14 @@ export default function InvoicePreview() {
     if (!element) return;
 
     const html2pdf = (await import("html2pdf.js")).default;
+    
+    const clientName = invoice?.client?.company_name || invoice?.client?.name || "";
+    const sanitizedName = clientName.replace(/[^a-z0-9]/gi, '_').toUpperCase();
+    const pdfFileName = sanitizedName ? `invoice_${invoiceId}_${sanitizedName}.pdf` : `invoice_${invoiceId}.pdf`;
 
     const opt = {
       margin: 0,
-      filename: `invoice_${invoiceId}.pdf`,
+      filename: pdfFileName,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -66,10 +84,16 @@ export default function InvoicePreview() {
     }
   };
 
+  const handleEdit = () => {
+    if (invoice?.id) {
+      router.push(`/invoices/edit/?id=${invoice.id}`);
+    }
+  };
+
   return (
     <>
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 p-6 no-print bg-slate-50/50">
+      <div className="flex justify-end gap-3 p-6 no-print bg-slate-50/50 flex-wrap">
         <button
           className="flex items-center gap-2 px-4 py-2 bg-[#0B2545] text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 text-sm font-semibold"
           onClick={handlePrint}
@@ -84,6 +108,15 @@ export default function InvoicePreview() {
           <FileDown size={18} />
           Download PDF
         </button>
+        {(user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson" || user?.is_staff || user?.is_superuser) && (
+          <button
+            className="flex items-center gap-2 px-4 py-2 bg-[#3182ce] text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 text-sm font-semibold"
+            onClick={handleEdit}
+          >
+            <Edit size={18} />
+            Edit
+          </button>
+        )}
         <button
           className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-all duration-300 hover:scale-105 active:scale-95 text-sm font-semibold"
           onClick={goToCreate}
@@ -162,20 +195,21 @@ export default function InvoicePreview() {
             <div style={{ padding: '8px', borderRight: '1px solid black', fontSize: '10px' }}>
               <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>From:</div>
               <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{settings?.name || "Company Name not set"}</div>
-              <div style={{ fontSize: '9px', color: '#666', marginBottom: '2px' }}>ISO 9001:2015 & IAF Certified</div>
-              <div>{settings?.address || "Address not set"}</div>
-              <div style={{ marginTop: '2px' }}>
+              <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px' }}>ISO 9001:2015 & IAF Certified</div>
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                {(settings?.address || "Husna Complex, 1st Floor, Nadakkavu, Kozhikode, Kerala - 673011").replace(', Kozhikode', ',\nKozhikode')}
+              </div>
+              <div style={{ marginTop: '2px', wordBreak: 'break-word' }}>
                 GSTIN: {settings?.gstin || "N/A"} 
                 {settings?.lut_no && ` | LUT: ${settings.lut_no}`}
               </div>
-              <div>Mobile: {settings?.mobile || "N/A"}</div>
-              <div>Email: {settings?.email || "N/A"}</div>
+              <div style={{ wordBreak: 'break-word' }}>Mobile: {settings?.mobile || "N/A"}</div>
+              <div style={{ wordBreak: 'break-word' }}>Email: {settings?.email || "N/A"}</div>
             </div>
             <div style={{ padding: '8px', fontSize: '11px' }}>
               <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>To:</div>
-              <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{invoice?.client?.company_name || invoice?.client?.name || "N/A"}</div>
-              <div>{invoice?.client?.address || "N/A"}</div>
-              <div style={{ marginTop: '2px' }}>GSTIN: {invoice?.client?.gstin || "-"} | Mobile: {invoice?.client?.contact || "-"}</div>
+              <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>{invoice?.client?.company_name || invoice?.client?.name || "N/A"}</div>
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>{invoice?.client?.address || "N/A"}</div>
               <div>Email: {invoice?.client?.email || "-"}</div>
             </div>
           </div>
@@ -203,11 +237,11 @@ export default function InvoicePreview() {
                   return (
                     <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                       <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{i + 1}</td>
-                      <td style={{ borderRight: '1px solid black', padding: '6px' }}>{item.description}</td>
+                      <td style={{ borderRight: '1px solid black', padding: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.description}</td>
                       <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{qty.toFixed(2)}</td>
                       <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>{rate.toFixed(2)}</td>
                       {!invoice?.is_proforma && <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', fontSize: '10px' }}>{gstAmt.toFixed(2)} ({gst}%)</td>}
-                      <td style={{ padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>{total.toFixed(2)}</td>
+                      <td style={{ padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>{base.toFixed(2)}</td>
                     </tr>
                   );
                 })}
@@ -234,15 +268,33 @@ export default function InvoicePreview() {
                     <td style={{ padding: '6px', textAlign: 'right' }}>{Number(invoice.tax_amount).toFixed(2)}</td>
                   </tr>
                 )}
-                {Number(invoice?.additional_fee || 0) > 0 && (
-                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
-                    <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Additional Fee (+)</td>
-                    <td style={{ padding: '6px', textAlign: 'right' }}>{Number(invoice.additional_fee).toFixed(2)}</td>
-                  </tr>
+                {invoice?.additional_charges && invoice.additional_charges.length > 0 ? (
+                  invoice.additional_charges.map((charge, idx) => {
+                    const subtotal = invoice.items?.reduce((sum, item) => sum + (Number(item.rate || 0) * Number(item.quantity || 0)), 0) || 0;
+                    const chargeAmt = charge.charge_type === 'percentage'
+                      ? (subtotal * (Number(charge.amount || 0) / 100))
+                      : Number(charge.amount || 0);
+
+                    return charge.amount > 0 && (
+                      <tr key={`charge-${idx}`} style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                        <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>
+                          {charge.label || 'Additional Fee'} {charge.charge_type === 'percentage' ? `(${charge.amount}%)` : ''} (+)
+                        </td>
+                        <td style={{ padding: '6px', textAlign: 'right' }}>{chargeAmt.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  Number(invoice?.additional_fee || 0) > 0 && (
+                    <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                      <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Additional Fee (+)</td>
+                      <td style={{ padding: '6px', textAlign: 'right' }}>{Number(invoice.additional_fee).toFixed(2)}</td>
+                    </tr>
+                  )
                 )}
                  {Number(invoice?.discount_amount || 0) > 0 && (
                   <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
-                    <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Discount (-)</td>
+                    <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>{invoice?.discount_label || 'Discount'} (-)</td>
                     <td style={{ padding: '6px', textAlign: 'right', color: 'red' }}>- {Number(invoice.discount_amount).toFixed(2)}</td>
                   </tr>
                 )}
@@ -250,6 +302,18 @@ export default function InvoicePreview() {
                   <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', fontSize: '13px' }}>Grand Total (Rs)</td>
                   <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px' }}>{Number(invoice?.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                 </tr>
+                {Number(invoice?.advance_amount || 0) > 0 && (
+                  <>
+                    <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                      <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Advance Paid (-)</td>
+                      <td style={{ padding: '6px', textAlign: 'right' }}>- {Number(invoice.advance_amount).toFixed(2)}</td>
+                    </tr>
+                    <tr style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#eef2ff' }}>
+                      <td colSpan={invoice?.is_proforma ? "4" : "5"} style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', fontSize: '13px', color: '#4f46e5' }}>Balance Due (Rs)</td>
+                      <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px', color: '#4f46e5' }}>{(Number(invoice.total_amount) - Number(invoice.advance_amount)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  </>
+                )}
               </tfoot>
             </table>
           </div>
@@ -297,8 +361,14 @@ export default function InvoicePreview() {
             </div>
           </div>
 
+          {invoice?.is_proforma && (
+            <div style={{ padding: '4px 12px', borderTop: '1px solid black', textAlign: 'center', fontSize: '8px', color: '#666', fontStyle: 'italic' }}>
+              This is a proforma invoice issued for reference and documentation purposes only. It is not a demand for payment but a preliminary statement of charges.
+            </div>
+          )}
+
           <div style={{ padding: '4px', borderTop: '1px solid black', textAlign: 'center', fontSize: '9px', color: '#666' }}>
-            This is a computer-generated invoice. No signature is required.
+            This is a computer-generated {invoice?.is_proforma ? "proforma invoice" : "invoice"}. No signature is required.
           </div>
         </div>
       </div>

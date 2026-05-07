@@ -22,14 +22,25 @@ export default function ProformaInvoiceList() {
   const [updatingStatus, setUpdatingStatus] = useState({});
   const [showTrash, setShowTrash] = useState(false);
   const [trashInvoices, setTrashInvoices] = useState([]);
+  const [trashSearchTerm, setTrashSearchTerm] = useState("");
+  const [trashStartDate, setTrashStartDate] = useState("");
   const [trashEndDate, setTrashEndDate] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [user, setUser] = useState(null);
   const router = useRouter();
 
   const API_BASE = API_BASE_URL;
 
   useEffect(() => {
     fetchInvoices();
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (e) {
+      console.error("Error loading user:", e);
+    }
   }, []);
 
   useEffect(() => {
@@ -112,6 +123,19 @@ export default function ProformaInvoiceList() {
       .catch((err) => {
         console.error("Failed to restore proforma:", err);
         alert("Could not restore.");
+      });
+  };
+
+  const handleHardDeleteInvoice = (invoiceId, invoiceNo) => {
+    if (!window.confirm(`Are you sure you want to permanently delete proforma ${invoiceNo}? This action cannot be undone.`)) return;
+    axios
+      .delete(`${API_BASE}/invoice/hard-delete/${invoiceId}/`)
+      .then(() => {
+        setTrashInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+      })
+      .catch((err) => {
+        console.error("Failed to permanently delete invoice:", err);
+        alert("Could not delete invoice permanently.");
       });
   };
 
@@ -299,13 +323,15 @@ export default function ProformaInvoiceList() {
           </div>
 
           <div className="divider" style={{ marginTop: "auto" }}></div>
-          <button className="btn-settings full-width" onClick={() => setShowSettings(true)}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-            Settings
-          </button>
+          {(user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson" || user?.is_staff || user?.is_superuser) && (
+            <button className="btn-settings full-width" onClick={() => setShowSettings(true)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              Settings
+            </button>
+          )}
           <button className="btn-trash full-width" onClick={fetchTrashInvoices}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
@@ -387,8 +413,13 @@ export default function ProformaInvoiceList() {
                         </select>
                       </td>
                       <td style={{ display: "flex", gap: "6px" }}>
-                        <button className="btn-action" onClick={() => router.push(`/invoices/result/?invoiceID=${inv.invoice_no}`)}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
-                        <button className="btn-action btn-action--danger" onClick={() => handleDeleteInvoice(inv.id, inv.invoice_no)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>
+                        <button className="btn-action" onClick={() => router.push(`/invoices/result/?invoiceID=${inv.invoice_no}`)} title="View"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                        {(user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson" || user?.is_staff || user?.is_superuser) && (
+                          <button className="btn-action btn-action--edit" onClick={() => router.push(`/invoices/edit/?id=${inv.id}`)} title="Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                          </button>
+                        )}
+                        <button className="btn-action btn-action--danger" onClick={() => handleDeleteInvoice(inv.id, inv.invoice_no)} title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>
                       </td>
                     </motion.tr>
                   ))
@@ -412,7 +443,14 @@ export default function ProformaInvoiceList() {
                     <thead><tr><th>No</th><th>Client</th><th>Action</th></tr></thead>
                     <tbody>
                       {trashInvoices.map((inv) => (
-                        <tr key={inv.id}><td>{inv.invoice_no}</td><td>{inv.client?.name}</td><td><button className="btn btn-sm btn-success" onClick={() => handleRestoreInvoice(inv.id)}>Restore</button></td></tr>
+                        <tr key={inv.id}>
+                          <td>{inv.invoice_no}</td>
+                          <td>{inv.client?.name}</td>
+                          <td style={{ display: "flex", gap: "8px" }}>
+                            <button className="btn btn-sm btn-success" onClick={() => handleRestoreInvoice(inv.id)}>Restore</button>
+                            <button className="btn btn-sm btn-danger" onClick={() => handleHardDeleteInvoice(inv.id, inv.invoice_no)}>Delete</button>
+                          </td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -423,7 +461,7 @@ export default function ProformaInvoiceList() {
         </div>
       )}
 
-      {showSettings && (
+      {showSettings && (user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson" || user?.is_staff || user?.is_superuser) && (
         <div className="status-modal-overlay" onClick={() => setShowSettings(false)} style={{ zIndex: 2000 }}>
           <div className="status-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '95%' }}>
             <div className="status-modal-header">

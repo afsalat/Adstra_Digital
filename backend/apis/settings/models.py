@@ -31,3 +31,18 @@ class CompanySettings(models.Model):
     class Meta:
         verbose_name = "Company Settings"
         verbose_name_plural = "Company Settings"
+
+class AuditLog(models.Model):
+    user = models.ForeignKey('user.CustomUser', on_delete=models.SET_NULL, null=True, blank=True)
+    action = models.CharField(max_length=255)
+    details = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "Audit Log"
+        verbose_name_plural = "Audit Logs"
+
+    def __str__(self):
+        return f"{self.user} - {self.action} at {self.timestamp}"

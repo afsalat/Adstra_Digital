@@ -5,15 +5,23 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   BarChart3,
-  Bot,
   ChevronLeft,
   ChevronRight,
+  LineChart,
   Lock,
+  Mail,
   Megaphone,
+  MessageSquare,
+  Palette,
   RotateCw,
+  Settings,
+  Sparkles,
+  Target,
+  Workflow,
 } from "lucide-react";
 import BlobCursor from "../BlobCursor/BlobCursor";
 import CardSwap, { Card } from "../CardSwap/CardSwap";
+import FloatingSocials from "../FloatingSocials/FloatingSocials";
 import "./Banner.css";
 
 function Banner() {
@@ -55,7 +63,7 @@ function Banner() {
     },
     {
       index: "02",
-      icon: Bot,
+      icon: Workflow,
       label: "Client project",
       kicker: "Workflows",
       title: "Follow-ups and CRM actions without manual bottlenecks.",
@@ -89,7 +97,7 @@ function Banner() {
     },
     {
       index: "04",
-      icon: Megaphone,
+      icon: Palette,
       label: "Our Product",
       kicker: "Creative",
       title: "Ad concepts, hooks, and testing lanes built for volume.",
@@ -106,7 +114,7 @@ function Banner() {
     },
     {
       index: "05",
-      icon: Megaphone,
+      icon: Sparkles,
       label: "Client project",
       kicker: "Creative",
       title: "Ad concepts, hooks, and testing lanes built for volume.",
@@ -123,7 +131,7 @@ function Banner() {
     },
     {
       index: "06",
-      icon: Bot,
+      icon: Settings,
       label: "Our Product",
       kicker: "Operations",
       title: "Lead routing, statuses, and handoffs that never drift out of sync.",
@@ -142,7 +150,7 @@ function Banner() {
     },
     {
       index: "07",
-      icon: Megaphone,
+      icon: Target,
       label: "Client project",
       kicker: "Conversion",
       title: "Offer pages designed to turn paid clicks into measurable action.",
@@ -159,7 +167,7 @@ function Banner() {
     },
     {
       index: "08",
-      icon: BarChart3,
+      icon: LineChart,
       label: "Our Product",
       kicker: "Insights",
       title: "Weekly reporting that turns numbers into decisions fast.",
@@ -174,7 +182,7 @@ function Banner() {
     },
     {
       index: "09",
-      icon: Bot,
+      icon: Mail,
       label: "Client project",
       kicker: "Lifecycle",
       title: "Email and follow-up flows that keep leads moving after first touch.",
@@ -193,7 +201,7 @@ function Banner() {
     },
     {
       index: "10",
-      icon: Megaphone,
+      icon: MessageSquare,
       label: "Client project",
       kicker: "Storytelling",
       title: "Memorable visuals and messaging tailored for distribution, not just display.",
@@ -227,13 +235,23 @@ function Banner() {
   ];
 
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % slides.length);
     }, 3500);
 
-    return () => window.clearInterval(intervalId);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 992);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("resize", checkMobile);
+    };
   }, [slides.length]);
 
   return (
@@ -250,6 +268,7 @@ function Banner() {
       </video>
 
       <div className="hero-overlay" aria-hidden="true" />
+      <FloatingSocials />
       <BlobCursor
         blobType="circle"
         fillColor="#f6dc47"
@@ -295,13 +314,13 @@ function Banner() {
           <div className="hero-visual" aria-hidden="true">
             <div className="hero-swap-shell">
               <CardSwap
-                width={500}
-                height={380}
-                cardDistance={85}
-                verticalDistance={120}
+                width={isMobile ? (typeof window !== 'undefined' ? Math.min(window.innerWidth - 40, 420) : 340) : 500}
+                height={isMobile ? 320 : 380}
+                cardDistance={isMobile ? 40 : 85}
+                verticalDistance={isMobile ? 60 : 120}
                 delay={3000}
                 pauseOnHover
-                skewAmount={12}
+                skewAmount={isMobile ? 6 : 12}
               >
                 {stackCards.map((card) => {
                   const Icon = card.icon;
