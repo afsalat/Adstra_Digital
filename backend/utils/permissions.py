@@ -1,7 +1,10 @@
+import logging
 from functools import wraps
 
 from rest_framework import status
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 PERMISSIONS = {
@@ -158,7 +161,7 @@ def permission_denied(permission_code):
 def require_permission(request, permission_code):
     if has_permission(request.user, permission_code):
         return None
-    print(f"DEBUG: Permission denied for user {request.user} on {permission_code}")
+    logger.warning("Permission denied for user '%s' on '%s'", request.user, permission_code)
     return permission_denied(permission_code)
 
 
