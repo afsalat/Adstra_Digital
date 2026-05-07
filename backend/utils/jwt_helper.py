@@ -1,15 +1,17 @@
 import jwt
-from datetime import datetime, timedelta
+from datetime import timedelta
+from django.conf import settings
+from django.utils import timezone
 
-SECRET_KEY = 'your_secret_key'
+SECRET_KEY = getattr(settings, 'JWT_SECRET', 'fallback-jwt-key')
 ALGORITHM = 'HS256'
-EXPIRATION_MINUTES = 60
+EXPIRATION_MINUTES = 60 * 24 # 24 hours
 
 def generate_jwt(user_id):
     payload = {
         'user_id': user_id,
-        'exp': datetime.utcnow() + timedelta(minutes=EXPIRATION_MINUTES),
-        'iat': datetime.utcnow()
+        'exp': timezone.now() + timedelta(minutes=EXPIRATION_MINUTES),
+        'iat': timezone.now()
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
