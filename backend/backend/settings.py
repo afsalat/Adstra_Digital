@@ -1,10 +1,15 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-5xb$b*wa25*=u4&e81_5*9ioj8*ok-lzrv!v(v@6rmw+3tz^1c'
-DEBUG = True
+SECRET_KEY = os.getenv('SECRET_KEY', 'change-me-if-not-set')
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+JWT_SECRET = os.getenv('JWT_SECRET', 'fallback-jwt-secret')
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'adstradigital.com', 'www.adstradigital.com']
 
@@ -79,6 +84,7 @@ AUTH_USER_MODEL = 'user.CustomUser'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -99,7 +105,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 APPEND_SLASH = False
-CORS_ALLOW_ALL_ORIGINS = True 
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -114,11 +120,10 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'info.adstradigital@gmail.com'
-EMAIL_HOST_PASSWORD = 'aofbpwroussfozcv'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-VV = "Z0d!acleo#007"
 
 # Razorpay Configuration
-RAZORPAY_KEY_ID = 'rzp_live_S1IlVSTMXlrAkz'
-RAZORPAY_KEY_SECRET = 'nCyE7pNVj7yJ0HfnuGUGC8aJ'
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')
