@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
+from utils.permissions import ROLE_CHOICES
 
 
 class CustomUserManager(BaseUserManager):
@@ -17,6 +18,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("role", "super_admin")
 
         return self.create_user(username, email, password, **extra_fields)
 
@@ -29,6 +31,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     address = models.TextField(blank=True, null=True)
     designation = models.CharField(max_length=100, blank=True, null=True)
     department = models.CharField(max_length=100, blank=True, null=True)
+    role = models.CharField(max_length=30, choices=ROLE_CHOICES, default="employee")
+    custom_permissions = models.JSONField(default=list, blank=True)
     is_team_lead = models.BooleanField(default=False)
     joining_date = models.DateTimeField(default=timezone.now)
     is_active = models.BooleanField(default=True)

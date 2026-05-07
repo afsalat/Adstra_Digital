@@ -22,8 +22,15 @@ const SettingsPanel = ({ API_BASE }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("authToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   useEffect(() => {
-    axios.get(`${API_BASE}/settings/`)
+    axios.get(`${API_BASE}/settings/`, {
+      headers: getAuthHeaders(),
+    })
       .then(res => {
         if (res.data) setSettings(res.data);
         setLoading(false);
@@ -42,7 +49,9 @@ const SettingsPanel = ({ API_BASE }) => {
     const { id, ...saveData } = settings;
     
     console.log("Saving settings:", saveData);
-    axios.put(`${API_BASE}/settings/`, saveData)
+    axios.put(`${API_BASE}/settings/`, saveData, {
+      headers: getAuthHeaders(),
+    })
       .then((res) => {
         alert("Settings updated successfully!");
         if (res.data) setSettings(res.data);
@@ -56,8 +65,29 @@ const SettingsPanel = ({ API_BASE }) => {
       });
   };
 
+  const downloadBackup = async (table = "full") => {
+    try {
+      const response = await axios.get(`${API_BASE}/settings/backup/export/`, {
+        headers: getAuthHeaders(),
+        params: { table },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `adstra_${table}_backup.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export Error:", err);
+      alert(err.response?.data?.error || "Failed to export backup.");
+    }
+  };
+
   const handleExport = () => {
-    window.location.href = `${API_BASE}/settings/backup/export/`;
+    downloadBackup("full");
   };
 
   const handleImport = async (e) => {
@@ -75,7 +105,7 @@ const SettingsPanel = ({ API_BASE }) => {
     try {
       setSaving(true);
       const res = await axios.post(`${API_BASE}/settings/backup/import/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" }
       });
       alert(res.data.message || "Backup restored successfully!");
       window.location.reload(); 
@@ -245,7 +275,7 @@ const SettingsPanel = ({ API_BASE }) => {
                       <button
                         key={btn.id}
                         type="button"
-                        onClick={() => window.location.href = `${API_BASE}/settings/backup/export/?table=${btn.id}`}
+                        onClick={() => downloadBackup(btn.id)}
                         style={{ 
                           padding: '0.5rem 1rem', 
                           borderRadius: '0.5rem', 

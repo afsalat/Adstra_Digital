@@ -1,8 +1,13 @@
 import os
 import django
 import random
+import logging
 from datetime import datetime, timedelta, time
 from django.utils import timezone
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
@@ -15,7 +20,7 @@ def create_dummy_data():
     # Ensure at least one user exists
     user = CustomUser.objects.first()
     if not user:
-        print("No users found. Creating 'testuser'...")
+        logger.info("No users found. Creating 'testuser'...")
         user = CustomUser.objects.create_user(
             username='testuser',
             email='testuser@example.com',
@@ -24,7 +29,7 @@ def create_dummy_data():
             designation='Developer'
         )
     else:
-        print(f"Using existing user: {user.username}")
+        logger.info(f"Using existing user: {user.username}")
 
     # Define date range: Jan 1, 2026 to Today
     end_date = timezone.now().date()
@@ -76,7 +81,7 @@ def create_dummy_data():
         created_count += 1
         current_date += timedelta(days=1)
 
-    print(f"Successfully created {created_count} attendance records for user '{user.username}' from {start_date} to {end_date}.")
+    logger.info(f"Successfully created {created_count} attendance records for user '{user.username}' from {start_date} to {end_date}.")
 
 if __name__ == '__main__':
     create_dummy_data()

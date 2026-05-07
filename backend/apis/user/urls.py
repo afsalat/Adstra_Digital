@@ -8,7 +8,9 @@ urlpatterns = [
     path('active-inactive/<int:user_id>', views.activeNinactive, name="active_inactive"),
     path('delete-user/<user_id>/',  views.delete_user, name="delete_user"),
     path('login/', views.login_view, name="login"),
+    path('me/', views.current_user, name="current_user"),
     path('logout/<int:user_id>/', views.logout_view, name="logout"),
     path('work_report/<int:user_id>/', views.update_work_report, name="work_report"),
     path('reset-password/<int:user_id>/', views.reset_password, name="reset_password"),
+    path('role-permissions/', views.role_permissions, name="role_permissions"),
 ]

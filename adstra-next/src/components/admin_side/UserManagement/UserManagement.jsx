@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
 
 const BASE_URL = API_BASE_URL;
+const FULL_ACCESS_ROLES = new Set(["admin", "super_admin"]);
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -20,12 +21,21 @@ const UserList = () => {
   const [generatedPassword, setGeneratedPassword] = useState(null);
   const [resetPasswordData, setResetPasswordData] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [roles, setRoles] = useState({});
+  const [permissions, setPermissions] = useState({});
 
   const router = useRouter();
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("authToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/user/user-list/`);
+      const response = await axios.get(`${BASE_URL}/user/user-list/`, {
+        headers: getAuthHeaders(),
+      });
       setUsers(response.data.users);
     } catch (err) {
       setError("Failed to load users.");
@@ -34,8 +44,22 @@ const UserList = () => {
     }
   };
 
+  const fetchRolePermissions = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/user/role-permissions/`, {
+        headers: getAuthHeaders(),
+      });
+      setRoles(response.data.roles || {});
+      setPermissions(response.data.permissions || {});
+    } catch {
+      setRoles({});
+      setPermissions({});
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRolePermissions();
   }, []);
 
   const handleAddUser = () => {
@@ -58,7 +82,9 @@ const UserList = () => {
     if (!confirm) return;
 
     try {
-      await axios.delete(`${BASE_URL}/user/delete-user/${user.id}/`);
+      await axios.delete(`${BASE_URL}/user/delete-user/${user.id}/`, {
+        headers: getAuthHeaders(),
+      });
       await fetchUsers();
     } catch (error) {
       alert("Failed to delete user.");
@@ -71,7 +97,9 @@ const UserList = () => {
     if (!confirm) return;
 
     try {
-      const res = await axios.post(`${BASE_URL}/user/reset-password/${user.id}/`);
+      const res = await axios.post(`${BASE_URL}/user/reset-password/${user.id}/`, {}, {
+        headers: getAuthHeaders(),
+      });
       if (res.data?.generated_password) {
         setResetPasswordData({
           fullname: user.fullname,
@@ -94,6 +122,8 @@ const UserList = () => {
     try {
       await axios.put(`${BASE_URL}/user/active-inactive/${user.id}`, {
         is_active: !user.is_active,
+      }, {
+        headers: getAuthHeaders(),
       });
       await fetchUsers();
     } catch (err) {
@@ -133,77 +163,81 @@ const UserList = () => {
         </div>
       </div>
 
-      <table className="user-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Full Name</th>
-            <th>Email</th>
-            <th>Address</th>
-            <th>Phone</th>
-            <th>Joining Date</th>
-            <th>Designation</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.length === 0 ? (
+      <div className="table-responsive">
+        <table className="user-table">
+          <thead>
             <tr>
-              <td colSpan="10">No users found.</td>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Address</th>
+              <th>Phone</th>
+              <th>Joining Date</th>
+              <th>Role</th>
+              <th>Designation</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
-          ) : (
-            users.map((user, index) => (
-              <tr key={user.id}>
-                <td>{index + 1}</td>
-                <td>{user.username}</td>
-                <td>{user.fullname}</td>
-                <td>{user.email}</td>
-                <td>{user.address}</td>
-                <td>{user.phone || "—"}</td>
-                <td>{formatDate(user.joining_date)}</td>
-                <td>{user.designation || "—"}</td>
-                <td>
-                  <span
-                    className={`status-badge ${user.is_active ? "active" : "inactive"}`}
-                  >
-                    {user.is_active ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="actions">
-                  <button onClick={() => handleView(user)} title="View">
-                    <Eye size={16} />
-                  </button>
-                  <button onClick={() => handleEdit(user)} title="Edit">
-                    <Edit size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleToggleActive(user)}
-                    title="Deactivate"
-                    disabled={deactivating}
-                  >
-                    <ShieldOff size={16} color="red" />
-                  </button>
-                  <button
-                    onClick={() => handleResetPassword(user)}
-                    title="Reset Password"
-                  >
-                    <KeyRound size={16} color="#2563eb" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user)}
-                    title="Delete"
-                    disabled={deactivating}
-                  >
-                    <X size={16} color="crimson" />
-                  </button>
-                </td>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
+              <tr>
+                <td colSpan="11">No users found.</td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              users.map((user, index) => (
+                <tr key={user.id}>
+                  <td>{index + 1}</td>
+                  <td>{user.username}</td>
+                  <td>{user.fullname}</td>
+                  <td>{user.email}</td>
+                  <td>{user.address}</td>
+                  <td>{user.phone || "—"}</td>
+                  <td>{formatDate(user.joining_date)}</td>
+                  <td>{user.role?.replaceAll("_", " ") || "employee"}</td>
+                  <td>{user.designation || "—"}</td>
+                  <td>
+                    <span
+                      className={`status-badge ${user.is_active ? "active" : "inactive"}`}
+                    >
+                      {user.is_active ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                  <td className="actions">
+                    <button onClick={() => handleView(user)} title="View">
+                      <Eye size={16} />
+                    </button>
+                    <button onClick={() => handleEdit(user)} title="Edit">
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleToggleActive(user)}
+                      title="Deactivate"
+                      disabled={deactivating}
+                    >
+                      <ShieldOff size={16} color="red" />
+                    </button>
+                    <button
+                      onClick={() => handleResetPassword(user)}
+                      title="Reset Password"
+                    >
+                      <KeyRound size={16} color="#2563eb" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(user)}
+                      title="Delete"
+                      disabled={deactivating}
+                    >
+                      <X size={16} color="crimson" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {showForm && (
         <div className="popup-overlay" onClick={() => setShowForm(false)}>
@@ -223,14 +257,21 @@ const UserList = () => {
                   phone: form.phone.value,
                   address: form.address.value,
                   designation: form.designation.value,
+                  department: form.department.value,
+                  role: form.role.value,
+                  custom_permissions: Array.from(form.querySelectorAll("input[name='custom_permissions']:checked")).map((input) => input.value),
                   username: form.username.value,
                 };
 
                 try {
                   if (editUser) {
-                    await axios.put(`${BASE_URL}/user/update-user/${editUser.id}`, formData);
+                    await axios.put(`${BASE_URL}/user/update-user/${editUser.id}`, formData, {
+                      headers: getAuthHeaders(),
+                    });
                   } else {
-                    const res = await axios.post(`${BASE_URL}/user/add-user/`, formData);
+                    const res = await axios.post(`${BASE_URL}/user/add-user/`, formData, {
+                      headers: getAuthHeaders(),
+                    });
                     if (res.data?.generated_password) {
                       setGeneratedPassword(res.data.generated_password);
                     }
@@ -246,12 +287,62 @@ const UserList = () => {
                 }
               }}
             >
-              <input name="fullname" placeholder="Full Name" defaultValue={editUser?.fullname || ""} required />
-              <input name="email" type="email" placeholder="Email" defaultValue={editUser?.email || ""} required />
-              <input name="phone" placeholder="Phone" defaultValue={editUser?.phone || ""} required />
-              <input name="username" placeholder="Username" defaultValue={editUser?.username || ""} required />
-              <input name="address" placeholder="Address" defaultValue={editUser?.address || ""} />
-              <input name="designation" placeholder="Designation" defaultValue={editUser?.designation || ""} />
+              <div className="user-form-main">
+                <div className="user-details-panel">
+                  <input name="fullname" placeholder="Full Name" defaultValue={editUser?.fullname || ""} required />
+                  <input name="email" type="email" placeholder="Email" defaultValue={editUser?.email || ""} required />
+                  <input name="phone" placeholder="Phone" defaultValue={editUser?.phone || ""} required />
+                  <input name="username" placeholder="Username" defaultValue={editUser?.username || ""} required />
+                  <input name="address" placeholder="Address" defaultValue={editUser?.address || ""} />
+                  <input name="designation" placeholder="Designation" defaultValue={editUser?.designation || ""} />
+                  <input name="department" placeholder="Department" defaultValue={editUser?.department || ""} />
+                  <label className="field-label">Role</label>
+                  <select
+                    name="role"
+                    defaultValue={editUser?.role || "employee"}
+                    onChange={(e) => {
+                      const shouldCheckAll = FULL_ACCESS_ROLES.has(e.target.value);
+                      const permissionInputs = e.currentTarget
+                        .closest("form")
+                        ?.querySelectorAll("input[name='custom_permissions']");
+                      permissionInputs?.forEach((input) => {
+                        input.checked = shouldCheckAll;
+                      });
+                    }}
+                  >
+                    {Object.keys(roles).length > 0 ? (
+                      Object.keys(roles).map((role) => (
+                        <option key={role} value={role}>{role.replaceAll("_", " ")}</option>
+                      ))
+                    ) : (
+                      <option value="employee">employee</option>
+                    )}
+                  </select>
+                </div>
+
+                <div className="permissions-panel">
+                  <label className="field-label">Permissions</label>
+                  {Object.keys(permissions).length > 0 && (
+                    <div className="permissions-grid">
+                      {Object.entries(permissions).map(([code, label]) => (
+                        <label key={code} className="permission-option">
+                          <input
+                            type="checkbox"
+                          name="custom_permissions"
+                          value={code}
+                          defaultChecked={
+                            FULL_ACCESS_ROLES.has(editUser?.role) ||
+                            (editUser?.effective_permissions || []).includes("*") ||
+                            (editUser?.custom_permissions || []).includes(code)
+                          }
+                        />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
               <button type="submit" className="submit-btn">
                 {editUser ? "Update User" : "Create User"}
               </button>
@@ -305,6 +396,9 @@ const UserList = () => {
               <p><strong>Phone:</strong> {selectedUser.phone || "—"}</p>
               <p><strong>Address:</strong> {selectedUser.address || "—"}</p>
               <p><strong>Designation:</strong> {selectedUser.designation || "—"}</p>
+              <p><strong>Department:</strong> {selectedUser.department || "â€”"}</p>
+              <p><strong>Role:</strong> {selectedUser.role?.replaceAll("_", " ") || "employee"}</p>
+              <p><strong>Permissions:</strong> {(selectedUser.effective_permissions || []).join(", ") || "â€”"}</p>
               <p><strong>Joining Date:</strong> {formatDate(selectedUser.joining_date)}</p>
               <p>
                 <strong>Status:</strong>

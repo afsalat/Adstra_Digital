@@ -11,6 +11,11 @@ export default function HeaderEditor({ data, onChange }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("authToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   useEffect(() => {
     fetchClients();
     fetchReferences();
@@ -32,7 +37,9 @@ export default function HeaderEditor({ data, onChange }) {
 
   const fetchNextProposalNo = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/proposal/next-number/?t=${Date.now()}`);
+      const res = await fetch(`${API_BASE_URL}/proposal/next-number/?t=${Date.now()}`, {
+        headers: getAuthHeaders(),
+      });
       const json = await res.json();
       if (json.proposal_no) {
         onChange((prev) => ({ ...prev, quotationNo: json.proposal_no }));
@@ -47,13 +54,15 @@ export default function HeaderEditor({ data, onChange }) {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/proposal/clients/?t=${Date.now()}`);
+      const res = await fetch(`${API_BASE_URL}/proposal/clients/?t=${Date.now()}`, {
+        headers: getAuthHeaders(),
+      });
       const contentType = res.headers.get("content-type");
 
       if (contentType && contentType.includes("application/json")) {
         const json = await res.json();
         console.log("✅ Clients Loaded:", json); // DEBUG
-        setClients(json);
+        setClients(Array.isArray(json) ? json : []);
       } else {
         const text = await res.text();
         console.error("❌ Expected JSON but got:", text);
@@ -65,7 +74,9 @@ export default function HeaderEditor({ data, onChange }) {
 
   const fetchReferences = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/user/user-list/`);
+      const res = await fetch(`${API_BASE_URL}/user/user-list/`, {
+        headers: getAuthHeaders(),
+      });
       const json = await res.json();
       setReferenceList(Array.isArray(json.users) ? json.users : []);
     } catch (error) {
@@ -78,7 +89,10 @@ export default function HeaderEditor({ data, onChange }) {
     try {
       const res = await fetch(`${API_BASE_URL}/proposal/clients/create/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
         body: JSON.stringify(newClient),
       });
 
@@ -117,8 +131,6 @@ export default function HeaderEditor({ data, onChange }) {
       (c.name?.toLowerCase() || "").includes(searchTerm.toLowerCase());
     return match;
   });
-
-  console.log("🔍 Search:", searchTerm, "| Clients:", clients.length, "| Matches:", filteredClients.length); // DEBUG
 
   return (
     <div className="mb-4">
@@ -169,7 +181,6 @@ export default function HeaderEditor({ data, onChange }) {
       />
 
       <div className="d-flex gap-2 mb-3">
-
         <div className="flex-grow-1 position-relative">
           <input
             className="form-control"

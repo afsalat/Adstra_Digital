@@ -1,18 +1,21 @@
-from utils.pagination import StandardResultsSetPagination
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from .models import Attendance
-from django.utils import timezone
-from .serializers import AttendanceSerializer
-from django.views.decorators.cache import never_cache
-from rest_framework.permissions import AllowAny
-import traceback
+import logging
 from django.utils.timezone import localdate
+from django.views.decorators.cache import never_cache
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+
+from .models import Attendance
+from .serializers import AttendanceSerializer
+from utils.pagination import StandardResultsSetPagination
+from utils.permissions import has_permission, require_permission
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 @never_cache
 def listAttendance(request):
     try:
@@ -27,6 +30,13 @@ def listAttendance(request):
         base_queryset = Attendance.objects.select_related('user').all()
 
         user_id = request.query_params.get("user_id", None)
+        if has_permission(request.user, "attendance.view_all"):
+            pass
+        elif has_permission(request.user, "attendance.self"):
+            user_id = request.user.id  # Regular users can only see their own records
+        else:
+            return require_permission(request, "attendance.view_all")
+            
         if user_id:
             base_queryset = base_queryset.filter(user_id=user_id)
 
@@ -44,6 +54,9 @@ def listAttendance(request):
 
         # Check for export flag
         if request.query_params.get("export") == "true":
+            denial = require_permission(request, "attendance.export")
+            if denial:
+                return denial
             serializer = AttendanceSerializer(queryset, many=True)
             return Response({"users": serializer.data})
 
@@ -53,48 +66,67 @@ def listAttendance(request):
 
         return paginator.get_paginated_response({"users": serializer.data})
 
-    except Exception as e:
-        print(traceback.format_exc())
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception("Error listing attendance")
+        return Response({"error": "Unable to list attendance."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def addAttendance(request):
+    if has_permission(request.user, "attendance.create_any"):
+        pass
+    elif has_permission(request.user, "attendance.self"):
+        # Check if user is trying to add attendance for themselves (though login usually handles this)
+        if str(request.data.get('user')) != str(request.user.id):
+            return Response({"error": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+    else:
+        return require_permission(request, "attendance.create_any")
+
     serializer = AttendanceSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    print(serializer.errors)
+    logger.warning(f"Add attendance validation failed: {serializer.errors}")
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
 @api_view(["PUT"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def validation(request, uid):
+    denial = require_permission(request, "attendance.validate")
+    if denial:
+        return denial
     try:
-        user = Attendance.objects.get(id=uid)
+        attendance_record = Attendance.objects.get(id=uid)
         data = request.data.copy()
-        print(data)
-        if not user:
-            return Response({"message": "user not founded"})
-        serializer = AttendanceSerializer(user, data=data, partial=True)
+        logger.debug(f"Validation update for record {uid}: {data}")
+        
+        serializer = AttendanceSerializer(attendance_record, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "successfully completed"}, status=status.HTTP_200_OK)
-    except Exception as e:
-
-        print(traceback.format_exc())
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Attendance.DoesNotExist:
+        return Response({"error": "Record not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception:
+        logger.exception(f"Error in attendance validation for record {uid}")
+        return Response({"error": "Unable to validate attendance."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(["PUT"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def updateAttendance(request, uid):
     try:
         record = Attendance.objects.get(id=uid)
+        if record.user_id == request.user.id:
+            denial = require_permission(request, "attendance.self")
+        else:
+            denial = require_permission(request, "attendance.update_any")
+        if denial:
+            return denial
         serializer = AttendanceSerializer(record, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -102,6 +134,6 @@ def updateAttendance(request, uid):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Attendance.DoesNotExist:
         return Response({"error": "Attendance record not found"}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        print(traceback.format_exc())
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception(f"Error updating attendance record {uid}")
+        return Response({"error": "Unable to update attendance."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

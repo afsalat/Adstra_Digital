@@ -20,11 +20,21 @@ const ClientList = () => {
 
     const router = useRouter();
 
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem("authToken");
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
     const fetchClients = async () => {
+        setLoading(true);
         try {
-            const response = await axios.get(`${BASE_URL}/proposal/clients/?t=${Date.now()}`);
+            const response = await axios.get(`${BASE_URL}/proposal/clients/?t=${Date.now()}`, {
+                headers: getAuthHeaders(),
+            });
             setClients(response.data);
+            setError("");
         } catch (err) {
+            console.error("Fetch clients error:", err);
             setError("Failed to load clients.");
         } finally {
             setLoading(false);
@@ -53,12 +63,14 @@ const ClientList = () => {
     const [deletingId, setDeletingId] = useState(null);
 
     const handleDelete = async (client) => {
-        const confirm = window.confirm(`Are you sure you want to DELETE ${client.company_name}?`);
+        const confirm = window.confirm(`Are you sure you want to DELETE ${client.company_name || client.name}?`);
         if (!confirm) return;
 
         setDeletingId(client.id);
         try {
-            await axios.delete(`${BASE_URL}/proposal/clients/delete/${client.id}/`);
+            await axios.delete(`${BASE_URL}/proposal/clients/delete/${client.id}/`, {
+                headers: getAuthHeaders(),
+            });
             await fetchClients();
         } catch (error) {
             const errMsg = error.response?.data?.error || "Failed to delete client.";
@@ -69,12 +81,15 @@ const ClientList = () => {
         }
     };
 
-
-
     const handleBack = () => router.push("/admindashboard/");
 
     if (loading) return <p className="loader">Loading clients...</p>;
-    if (error) return <p className="error">{error}</p>;
+    if (error) return (
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+            <p className="error">{error}</p>
+            <button onClick={fetchClients} className="add-btn" style={{ margin: '0 auto' }}>Retry</button>
+        </div>
+    );
 
     return (
         <div className="client-list-container">
@@ -90,53 +105,55 @@ const ClientList = () => {
                 </div>
             </div>
 
-            <table className="user-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Company Name</th>
-                        <th>Contact Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Address</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {clients.length === 0 ? (
+            <div className="table-responsive">
+                <table className="user-table">
+                    <thead>
                         <tr>
-                            <td colSpan="7">No clients found.</td>
+                            <th>ID</th>
+                            <th>Company Name</th>
+                            <th>Contact Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Actions</th>
                         </tr>
-                    ) : (
-                        clients.map((client, index) => (
-                            <tr key={client.id}>
-                                <td>{index + 1}</td>
-                                <td>{client.company_name || "—"}</td>
-                                <td>{client.name}</td>
-                                <td>{client.email || "—"}</td>
-                                <td>{client.contact || "—"}</td>
-                                <td>{client.address || "—"}</td>
-                                <td className="actions">
-                                    <button onClick={() => handleView(client)} title="View">
-                                        <Eye size={16} />
-                                    </button>
-                                    <button onClick={() => handleEdit(client)} title="Edit">
-                                        <Edit size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(client)}
-                                        title="Delete"
-                                        disabled={deletingId === client.id}
-                                        style={{ opacity: deletingId === client.id ? 0.5 : 1, cursor: deletingId === client.id ? 'not-allowed' : 'pointer' }}
-                                    >
-                                        <Trash2 size={16} color={deletingId === client.id ? "gray" : "crimson"} />
-                                    </button>
-                                </td>
+                    </thead>
+                    <tbody>
+                        {clients.length === 0 ? (
+                            <tr>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No clients found.</td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+                        ) : (
+                            clients.map((client, index) => (
+                                <tr key={client.id}>
+                                    <td>{index + 1}</td>
+                                    <td>{client.company_name || "—"}</td>
+                                    <td>{client.name}</td>
+                                    <td>{client.email || "—"}</td>
+                                    <td>{client.contact || "—"}</td>
+                                    <td>{client.address || "—"}</td>
+                                    <td className="actions">
+                                        <button onClick={() => handleView(client)} title="View">
+                                            <Eye size={16} />
+                                        </button>
+                                        <button onClick={() => handleEdit(client)} title="Edit">
+                                            <Edit size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(client)}
+                                            title="Delete"
+                                            disabled={deletingId === client.id}
+                                            style={{ opacity: deletingId === client.id ? 0.5 : 1, cursor: deletingId === client.id ? 'not-allowed' : 'pointer' }}
+                                        >
+                                            <Trash2 size={16} color={deletingId === client.id ? "gray" : "crimson"} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             {showForm && (
                 <div className="popup-overlay" onClick={() => setShowForm(false)}>
@@ -162,13 +179,16 @@ const ClientList = () => {
 
                                 try {
                                     if (editClient) {
-                                        const response = await axios.put(`${BASE_URL}/proposal/clients/update/${editClient.id}/`, formData);
+                                        const response = await axios.put(`${BASE_URL}/proposal/clients/update/${editClient.id}/`, formData, {
+                                            headers: getAuthHeaders(),
+                                        });
                                         setClients(prev => prev.map(c => c.id === editClient.id ? response.data : c));
                                     } else {
-                                        const response = await axios.post(`${BASE_URL}/proposal/clients/create/`, formData);
+                                        const response = await axios.post(`${BASE_URL}/proposal/clients/create/`, formData, {
+                                            headers: getAuthHeaders(),
+                                        });
                                         setClients(prev => [...prev, response.data]);
                                     }
-                                    // await fetchClients(); // Skipped to prevent stale cache overwrite
                                     setShowForm(false);
                                 } catch (err) {
                                     alert("Failed to save client.");

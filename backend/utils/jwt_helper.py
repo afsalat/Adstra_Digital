@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
-SECRET_KEY = getattr(settings, 'JWT_SECRET', 'fallback-jwt-key')
+SECRET_KEY = settings.JWT_SECRET
 ALGORITHM = 'HS256'
 EXPIRATION_MINUTES = 60 * 24 # 24 hours
 

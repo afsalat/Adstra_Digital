@@ -8,10 +8,18 @@ export default function RecentProposalsModal({ show, onClose, onAction }) {
     const [search, setSearch] = useState("");
     const [error, setError] = useState("");
 
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem("authToken");
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
     const fetchProposals = async () => {
         setLoading(true);
+        setError("");
         try {
-            const res = await fetch(`${API_BASE_URL}/proposal/list/?t=${Date.now()}`);
+            const res = await fetch(`${API_BASE_URL}/proposal/list/?t=${Date.now()}`, {
+                headers: getAuthHeaders(),
+            });
             if (!res.ok) throw new Error("Failed to fetch proposals");
             const data = await res.json();
             setProposals(data);
@@ -33,6 +41,7 @@ export default function RecentProposalsModal({ show, onClose, onAction }) {
         try {
             const res = await fetch(`${API_BASE_URL}/proposal/delete/${id}/`, {
                 method: "DELETE",
+                headers: getAuthHeaders(),
             });
             if (res.ok) {
                 setProposals((prev) => prev.filter((p) => String(p.id) !== String(id)));

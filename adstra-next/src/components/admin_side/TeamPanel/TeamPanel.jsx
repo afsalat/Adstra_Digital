@@ -63,12 +63,17 @@ const TeamPanel = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const dataToSend = { ...formData };
+      if (editingUser && !dataToSend.password) {
+        delete dataToSend.password;
+      }
+
       if (editingUser) {
-        await axios.put(`${API_BASE_URL}/user/update-user/${editingUser.id}`, formData, {
+        await axios.put(`${API_BASE_URL}/user/update-user/${editingUser.id}`, dataToSend, {
           headers: getAuthHeaders()
         });
       } else {
-        await axios.post(`${API_BASE_URL}/user/add-user/`, formData, {
+        await axios.post(`${API_BASE_URL}/user/add-user/`, dataToSend, {
           headers: getAuthHeaders()
         });
       }
@@ -78,7 +83,16 @@ const TeamPanel = () => {
       fetchUsers();
     } catch (err) {
       console.error("Error saving user:", err);
-      alert(err.response?.data?.message || "Failed to save user details.");
+      const errors = err.response?.data?.errors;
+      let errorMessage = err.response?.data?.message || "Failed to save user details.";
+      
+      if (errors) {
+        errorMessage = Object.entries(errors)
+          .map(([key, messages]) => `${key}: ${Array.isArray(messages) ? messages.join(", ") : messages}`)
+          .join("\n");
+      }
+      
+      alert(errorMessage);
     }
   };
 

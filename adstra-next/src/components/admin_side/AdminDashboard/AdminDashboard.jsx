@@ -25,27 +25,43 @@ import API_BASE_URL from "@/utils/apiBase";
 import SettingsPanel from "@/components/common/SettingsPanel";
 import ProfilePanel from "@/components/admin_side/ProfilePanel/ProfilePanel";
 import TeamPanel from "@/components/admin_side/TeamPanel/TeamPanel";
+import SystemLog from "@/components/admin_side/SystemLog/SystemLog";
 
 const AdminDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("Home");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const { logout } = useAuth();
   const router = useRouter();
   const [user, setUser] = useState({});
 
-  // Load user from localStorage
-  useEffect(() => {
-    try {
-      const user = localStorage.getItem("user");
-      if (user) {
-        const parsedUser = JSON.parse(user);
-        setUser(parsedUser);
-      }
-    } catch (e) {
-      console.error("Error parsing user data:", e);
-    }
-  }, []);
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("authToken");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const isSuperUser = Boolean(user?.is_superuser || user?.effective_permissions?.includes("*"));
+  const hasPermission = (permission) => {
+    if (isSuperUser) return true;
+    return Boolean(user?.effective_permissions?.includes(permission));
+  };
+
+  const hasAnyPermission = (permissions) => permissions.some((permission) => hasPermission(permission));
+
+  const renderFeatureCard = ({ permission, anyPermission, href, color, icon, title, description, action }) => {
+    const allowed = anyPermission ? hasAnyPermission(anyPermission) : hasPermission(permission);
+    const card = (
+      <div className={`dashboard-box ${allowed ? color : "no-hover"}`}>
+        <div className="icon-wrapper">
+          {icon}
+        </div>
+        <h4>{title}</h4>
+        <p>{allowed ? description : "Access denied"}</p>
+        {allowed && action && <span className="action-link">{action} <ArrowRight size={16} /></span>}
+      </div>
+    );
+
+    return allowed && href ? <Link href={href} className="link">{card}</Link> : card;
+  };
 
   // Logout handler with warnings
   const handleLogout = () => {
@@ -72,7 +88,7 @@ const AdminDashboard = () => {
     performLogout();
   };
 
-  // Decode token to check admin rights
+  // Decode token and refresh current user/permissions from backend.
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     if (token) {
@@ -85,13 +101,22 @@ const AdminDashboard = () => {
           return;
         }
 
-        setIsAdmin(
-          decoded?.is_admin || 
-          decoded?.is_staff || 
-          decoded?.user_id === 9 || 
-          user?.is_staff || 
-          user?.is_superuser
-        );
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+
+        axios.get(`${API_BASE_URL}/user/me/`, { headers: getAuthHeaders() })
+          .then((response) => {
+            const freshUser = response.data?.user || {};
+            setUser(freshUser);
+            localStorage.setItem("user", JSON.stringify(freshUser));
+          })
+          .catch((error) => {
+            if ([401, 403].includes(error.response?.status)) {
+              setIsSessionExpired(true);
+            }
+          });
       } catch (e) {
         console.error("Invalid token:", e);
         // Optional: clear invalid token
@@ -104,19 +129,15 @@ const AdminDashboard = () => {
     }
   }, []);
 
-  const baseMenuItems = [
+  const menuItems = [
     "Home",
-    "Finance",
+    ...(hasAnyPermission(["clients.view", "proposals.view", "invoices.view", "transactions.view"]) ? ["Finance"] : []),
     "Profile",
     "Assigned Projects",
-    "Team",
+    ...(hasPermission("users.view") ? ["Team"] : []),
+    ...(hasPermission("settings.view") ? ["Settings"] : []),
+    ...(hasPermission("settings.view") ? ["System Log"] : []),
   ];
-
-  const isWilson = user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson";
-
-  const menuItems = isWilson 
-    ? [...baseMenuItems, "Settings"] 
-    : baseMenuItems;
 
   return (
     <div className="admin-dashboard">
@@ -165,100 +186,56 @@ const AdminDashboard = () => {
         {activeMenu === "Home" && (
           <>
             {/* Attendance */}
-            <Link href="/attendance/" className="link">
-              <div className="dashboard-box indigo">
-                <div className="icon-wrapper">
-                  <CalendarCheck size={28} />
-                </div>
-                <h4>Attendance Sheet</h4>
-                <p>Track daily attendance and submit work reports.</p>
-                <span className="action-link">Open Sheet <ArrowRight size={16} /></span>
-              </div>
-            </Link>
+            {renderFeatureCard({
+              anyPermission: ["attendance.self", "attendance.view_all"],
+              href: "/attendance/",
+              color: "indigo",
+              icon: <CalendarCheck size={28} />,
+              title: "Attendance Sheet",
+              description: "Track daily attendance and submit work reports.",
+              action: "Open Sheet",
+            })}
 
             {/* Work Status */}
-            {isAdmin ? (
-              <div className="dashboard-box amber">
-                <div className="icon-wrapper">
-                  <BarChart3 size={28} />
-                </div>
-                <h4>Work Status</h4>
-                <p>Monitor ongoing projects and task progress.</p>
-                <span className="action-link">View Status <ArrowRight size={16} /></span>
-              </div>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <BarChart3 size={28} />
-                </div>
-                <h4>Work Status</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "attendance.view_all",
+              color: "amber",
+              icon: <BarChart3 size={28} />,
+              title: "Work Status",
+              description: "Monitor ongoing projects and task progress.",
+              action: "View Status",
+            })}
 
             {/* Blogs Creator */}
-            {isAdmin ? (
-              <Link href="" className="link">
-                <div className="dashboard-box rose">
-                  <div className="icon-wrapper">
-                    <PenTool size={28} />
-                  </div>
-                  <h4>Blogs Creator</h4>
-                  <p>Create and manage SEO-friendly blog content.</p>
-                  <span className="action-link">Create Blog <ArrowRight size={16} /></span>
-                </div>
-              </Link>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <PenTool size={28} />
-                </div>
-                <h4>Blogs Creator</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "settings.update",
+              color: "rose",
+              icon: <PenTool size={28} />,
+              title: "Blogs Creator",
+              description: "Create and manage SEO-friendly blog content.",
+              action: "Create Blog",
+            })}
 
             {/* Online Meetings */}
-            {isAdmin ? (
-              <div className="dashboard-box sky">
-                <div className="icon-wrapper">
-                  <Video size={28} />
-                </div>
-                <h4>Online Meetings</h4>
-                <p>Next: Team Sync @ 3:00 PM</p>
-                <span className="action-link">Join Meeting <ArrowRight size={16} /></span>
-              </div>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <Video size={28} />
-                </div>
-                <h4>Online Meetings</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "users.view",
+              color: "sky",
+              icon: <Video size={28} />,
+              title: "Online Meetings",
+              description: "Next: Team Sync @ 3:00 PM",
+              action: "Join Meeting",
+            })}
 
             {/* User Management */}
-            {isAdmin ? (
-              <Link href="/usermanagement/" className="link">
-                <div className="dashboard-box emerald">
-                  <div className="icon-wrapper">
-                    <Users size={28} />
-                  </div>
-                  <h4>User Management</h4>
-                  <p>Manage team members and permissions.</p>
-                  <span className="action-link">Manage Users <ArrowRight size={16} /></span>
-                </div>
-              </Link>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <Users size={28} />
-                </div>
-                <h4>User Management</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "users.view",
+              href: "/usermanagement/",
+              color: "emerald",
+              icon: <Users size={28} />,
+              title: "User Management",
+              description: "Manage team members and permissions.",
+              action: "Manage Users",
+            })}
 
 
           </>
@@ -268,121 +245,66 @@ const AdminDashboard = () => {
         {activeMenu === "Finance" && (
           <>
             {/* Client Companies */}
-            {isAdmin ? (
-              <Link href="/clientcompanies/" className="link">
-                <div className="dashboard-box indigo">
-                  <div className="icon-wrapper">
-                    <Building2 size={28} />
-                  </div>
-                  <h4>Client Companies</h4>
-                  <p>Manage client details and partnerships.</p>
-                  <span className="action-link">View Clients <ArrowRight size={16} /></span>
-                </div>
-              </Link>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <Building2 size={28} />
-                </div>
-                <h4>Client Companies</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "clients.view",
+              href: "/clientcompanies/",
+              color: "indigo",
+              icon: <Building2 size={28} />,
+              title: "Client Companies",
+              description: "Manage client details and partnerships.",
+              action: "View Clients",
+            })}
 
             {/* Proposals */}
-            {isAdmin ? (
-              <Link href="/proposal/" className="link">
-                <div className="dashboard-box amber">
-                  <div className="icon-wrapper">
-                    <FileText size={28} />
-                  </div>
-                  <h4>Proposals</h4>
-                  <p>Create and track business proposals.</p>
-                  <span className="action-link">View Proposals <ArrowRight size={16} /></span>
-                </div>
-              </Link>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <FileText size={28} />
-                </div>
-                <h4>Proposals</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "proposals.view",
+              href: "/proposal/",
+              color: "amber",
+              icon: <FileText size={28} />,
+              title: "Proposals",
+              description: "Create and track business proposals.",
+              action: "View Proposals",
+            })}
 
             {/* Invoices */}
-            {isAdmin ? (
-              <Link href="/invoices/" className="link">
-                <div className="dashboard-box rose">
-                  <div className="icon-wrapper">
-                    <Receipt size={28} />
-                  </div>
-                  <h4>Tax Invoices</h4>
-                  <p>Track and manage client invoices.</p>
-                  <span className="action-link">View Invoices <ArrowRight size={16} /></span>
-                </div>
-              </Link>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <Receipt size={28} />
-                </div>
-                <h4>Tax Invoices</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "invoices.view",
+              href: "/invoices/",
+              color: "rose",
+              icon: <Receipt size={28} />,
+              title: "Tax Invoices",
+              description: "Track and manage client invoices.",
+              action: "View Invoices",
+            })}
 
             {/* Proforma Invoices */}
-            {isAdmin ? (
-              <Link href="/invoices/proforma/" className="link">
-                <div className="dashboard-box emerald">
-                  <div className="icon-wrapper">
-                    <FileText size={28} />
-                  </div>
-                  <h4>Proforma Invoices</h4>
-                  <p>Manage estimates and proforma bills.</p>
-                  <span className="action-link">View Proforma <ArrowRight size={16} /></span>
-                </div>
-              </Link>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <FileText size={28} />
-                </div>
-                <h4>Proforma Invoices</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "invoices.view",
+              href: "/invoices/proforma/",
+              color: "emerald",
+              icon: <FileText size={28} />,
+              title: "Proforma Invoices",
+              description: "Manage estimates and proforma bills.",
+              action: "View Proforma",
+            })}
 
             {/* Receipts */}
-            {isAdmin ? (
-              <Link href="/receipts/" className="link">
-                <div className="dashboard-box sky">
-                  <div className="icon-wrapper">
-                    <Scroll size={28} />
-                  </div>
-                  <h4>Receipts</h4>
-                  <p>Track billing and payment receipts.</p>
-                  <span className="action-link">View Receipts <ArrowRight size={16} /></span>
-                </div>
-              </Link>
-            ) : (
-              <div className="dashboard-box no-hover">
-                <div className="icon-wrapper">
-                  <Scroll size={28} />
-                </div>
-                <h4>Receipts</h4>
-                <p>Access denied</p>
-              </div>
-            )}
+            {renderFeatureCard({
+              permission: "transactions.view",
+              href: "/receipts/",
+              color: "sky",
+              icon: <Scroll size={28} />,
+              title: "Receipts",
+              description: "Track billing and payment receipts.",
+              action: "View Receipts",
+            })}
           </>
         )}
         </section>
       )}
 
       {/* SETTINGS MENU ITEMS */}
-      {activeMenu === "Settings" && isWilson && (
+      {activeMenu === "Settings" && hasPermission("settings.view") && (
         <SettingsPanel API_BASE={API_BASE_URL} />
       )}
 
@@ -392,13 +314,16 @@ const AdminDashboard = () => {
       )}
 
       {/* TEAM MENU ITEMS */}
-      {activeMenu === "Team" && (
+      {activeMenu === "Team" && hasPermission("users.view") && (
         <TeamPanel />
+      )}
+
+      {/* SYSTEM LOG MENU ITEMS */}
+      {activeMenu === "System Log" && hasPermission("settings.view") && (
+        <SystemLog API_BASE={API_BASE_URL} />
       )}
     </div>
   );
 };
-
- 
 
 export default AdminDashboard;

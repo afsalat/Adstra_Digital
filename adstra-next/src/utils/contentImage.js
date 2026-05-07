@@ -1,4 +1,4 @@
-export const SITE_URL = "https://adstradigital.com";
+export const SITE_URL = "http://localhost:3000";
 export const DEFAULT_BLOG_IMAGE_PATH =
   "/media/blog_images/best-digital-marketing-agencies-india.png";
 

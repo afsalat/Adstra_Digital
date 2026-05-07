@@ -1,4 +1,5 @@
 import json
+import logging
 from django.core import serializers
 from django.http import HttpResponse
 from django.apps import apps
@@ -7,13 +8,16 @@ from django.views.decorators.cache import never_cache
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, JSONParser
-from .models import CompanySettings
-from .serializers import CompanySettingsSerializer
+from .models import CompanySettings, AuditLog
+from .serializers import CompanySettingsSerializer, AuditLogSerializer
+from utils.permissions import require_permission
+
+logger = logging.getLogger(__name__)
 
 @api_view(['GET', 'PUT'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 @never_cache
 def company_settings_view(request):
     settings_obj = CompanySettings.objects.first()
@@ -23,22 +27,34 @@ def company_settings_view(request):
         settings_obj = CompanySettings.objects.create()
 
     if request.method == 'GET':
+        denial = require_permission(request, "settings.view")
+        if denial:
+            return denial
         serializer = CompanySettingsSerializer(settings_obj)
         return Response(serializer.data)
 
     elif request.method == 'PUT':
-        print(f"DEBUG: Received settings update: {request.data}")
+        denial = require_permission(request, "settings.update")
+        if denial:
+            return denial
+        
+        logger.debug(f"Received settings update: {request.data}")
         serializer = CompanySettingsSerializer(settings_obj, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            print("DEBUG: Settings saved successfully")
+            from utils.logging_helper import log_action
+            log_action(request.user, "Settings Updated", "Updated company settings", request)
+            logger.info("Settings saved successfully")
             return Response(serializer.data)
-        print(f"DEBUG: Serializer errors: {serializer.errors}")
+        logger.warning(f"Settings serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def export_backup(request):
+    denial = require_permission(request, "backup.export")
+    if denial:
+        return denial
     table = request.query_params.get('table', 'full')
     
     mapping = {
@@ -109,7 +125,7 @@ def export_backup(request):
             data = serializers.serialize('json', queryset)
             backup_data.extend(json.loads(data))
         except Exception as e:
-            print(f"Error backing up {app_label}.{model_name}: {e}")
+            logger.error(f"Error backing up {app_label}.{model_name}: {e}")
             
     response = HttpResponse(json.dumps(backup_data, indent=2), content_type='application/json')
     filename = f"adstra_{table}_backup.json"
@@ -117,9 +133,12 @@ def export_backup(request):
     return response
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser])
 def import_backup(request):
+    denial = require_permission(request, "backup.import")
+    if denial:
+        return denial
     if 'file' not in request.FILES:
         return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -149,7 +168,7 @@ def import_backup(request):
                     model = apps.get_model(app_label, model_name)
                     model.objects.all().delete()
                 except Exception as e:
-                    print(f"Error clearing {app_label}.{model_name}: {e}")
+                    logger.error(f"Error clearing {app_label}.{model_name}: {e}")
 
             # Restore data using Django's deserializer
             for obj in serializers.deserialize('json', json.dumps(backup_data)):
@@ -159,6 +178,15 @@ def import_backup(request):
                 
         return Response({'message': 'Backup restored successfully'}, status=status.HTTP_200_OK)
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.exception("Restore failed")
         return Response({'error': f"Restore failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def audit_logs_view(request):
+    denial = require_permission(request, "settings.view")
+    if denial:
+        return denial
+    logs = AuditLog.objects.all().select_related('user').order_by('-timestamp')[:200]
+    serializer = AuditLogSerializer(logs, many=True)
+    return Response(serializer.data)

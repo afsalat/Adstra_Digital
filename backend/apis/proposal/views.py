@@ -1,16 +1,20 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Client, Proposal
 from .serializers import ClientSerializer, ProposalSerializer
+from utils.permissions import require_permission
 import logging
 from datetime import date
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def next_proposal_no(request):
+    denial = require_permission(request, "proposals.create")
+    if denial:
+        return denial
     """Return the next available proposal number as AD/YYYY/NNNN (guaranteed unique)."""
     year = date.today().year
     prefix = f"AD/{year}/"
@@ -35,8 +39,11 @@ def next_proposal_no(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list_clients(request):
+    denial = require_permission(request, "clients.view")
+    if denial:
+        return denial
     clients = Client.objects.all()
     serializer = ClientSerializer(clients, many=True)
     return Response(serializer.data)
@@ -44,8 +51,11 @@ def list_clients(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_client(request):
+    denial = require_permission(request, "clients.create")
+    if denial:
+        return denial
     serializer = ClientSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
@@ -55,18 +65,22 @@ def create_client(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list_proposals(request):
+    denial = require_permission(request, "proposals.view")
+    if denial:
+        return denial
     try:
         proposals = Proposal.objects.all().order_by('-id')
         serializer = ProposalSerializer(proposals, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception("Unable to list proposals")
+        return Response({'error': 'Unable to list proposals.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # @api_view(['GET'])
-# @permission_classes([AllowAny])
+# @permission_classes([IsAuthenticated])
 # def get_proposal(request, clientID):
 #     try:
 #         proposal = Proposal.objects.get(Client=clientID)
@@ -84,8 +98,11 @@ def list_proposals(request):
 logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_proposal(request):
+    denial = require_permission(request, "proposals.create")
+    if denial:
+        return denial
     try:
         serializer = ProposalSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -94,15 +111,18 @@ def create_proposal(request):
         else:
             logger.error("Proposal validation failed: %s", serializer.errors)
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error in create_proposal")
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": "Unable to create proposal."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
 @api_view(['PUT', 'PATCH'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def update_proposal(request, pk):
+    denial = require_permission(request, "proposals.update")
+    if denial:
+        return denial
     try:
         proposal = Proposal.objects.get(pk=pk)
         serializer = ProposalSerializer(proposal, data=request.data, partial=True)
@@ -112,13 +132,17 @@ def update_proposal(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Proposal.DoesNotExist:
         return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception(f"Unable to update proposal {pk}")
+        return Response({'error': 'Unable to update proposal.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['PUT'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def update_client(request, pk):
+    denial = require_permission(request, "clients.update")
+    if denial:
+        return denial
     try:
         client = Client.objects.get(pk=pk)
         serializer = ClientSerializer(client, data=request.data, partial=True)
@@ -128,13 +152,17 @@ def update_client(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Client.DoesNotExist:
         return Response({'error': 'Client not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception(f"Unable to update client {pk}")
+        return Response({'error': 'Unable to update client.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def delete_client(request, pk):
+    denial = require_permission(request, "clients.delete")
+    if denial:
+        return denial
     try:
         from django.db import transaction
         from apis.invoice.models import Invoice
@@ -166,21 +194,23 @@ def delete_client(request, pk):
         return Response({'message': 'Client deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except Client.DoesNotExist:
         return Response({'error': 'Client not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        import traceback
-        logger.error(f"Error deleting client {pk}: {str(e)}")
-        logger.error(traceback.format_exc())
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception(f"Error deleting client {pk}")
+        return Response({'error': 'Unable to delete client.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def delete_proposal(request, pk):
+    denial = require_permission(request, "proposals.delete")
+    if denial:
+        return denial
     try:
         proposal = Proposal.objects.get(pk=pk)
         proposal.delete()
         return Response({'message': 'Proposal deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except Proposal.DoesNotExist:
         return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception(f"Unable to delete proposal {pk}")
+        return Response({'error': 'Unable to delete proposal.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
