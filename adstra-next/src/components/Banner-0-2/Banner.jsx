@@ -227,13 +227,23 @@ function Banner() {
   ];
 
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % slides.length);
     }, 3500);
 
-    return () => window.clearInterval(intervalId);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 992);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("resize", checkMobile);
+    };
   }, [slides.length]);
 
   return (
@@ -295,13 +305,13 @@ function Banner() {
           <div className="hero-visual" aria-hidden="true">
             <div className="hero-swap-shell">
               <CardSwap
-                width={500}
-                height={380}
-                cardDistance={85}
-                verticalDistance={120}
+                width={isMobile ? (typeof window !== 'undefined' ? Math.min(window.innerWidth - 40, 420) : 340) : 500}
+                height={isMobile ? 320 : 380}
+                cardDistance={isMobile ? 40 : 85}
+                verticalDistance={isMobile ? 60 : 120}
                 delay={3000}
                 pauseOnHover
-                skewAmount={12}
+                skewAmount={isMobile ? 6 : 12}
               >
                 {stackCards.map((card) => {
                   const Icon = card.icon;

@@ -955,10 +955,7 @@
   border: 1px solid rgba(255, 215, 0, 0.1);
 }
 
-.adstra-edict-icon {
-  width: 16px;
-  height: 16px;
-}
+
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -997,6 +994,10 @@
   .adstra-victory-manifest {
     grid-template-columns: 1fr;
   }
+
+  .adstra-galaxy-links {
+    grid-template-columns: 1fr;
+  }
   
   .adstra-cta-portals {
     flex-direction: column;
@@ -1004,8 +1005,35 @@
   }
   
   .adstra-portal {
-    width: 250px;
+    width: 100%;
+    max-width: 320px;
     justify-content: center;
+  }
+
+  .adstra-victory-metrics {
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .adstra-terminal-brief__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .adstra-main-title {
+    font-size: 2rem;
+  }
+  
+  .adstra-nav-pill {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .adstra-navigator-track {
+    border-radius: 20px;
+    padding: 10px;
   }
 }
 
@@ -1213,3 +1241,4 @@
 .adstra-portal-imperial:hover {
   color: #ffffff;
 }
+

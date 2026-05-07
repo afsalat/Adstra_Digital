@@ -63,8 +63,7 @@ def adduser(request):
                 email_thread.start()
 
             return Response({
-                "message": "User created successfully",
-                "generated_password": generated_password,
+                "message": "User created successfully. Credentials sent to email.",
                 "user": serializer.data
             }, status=status.HTTP_201_CREATED)
         else:
@@ -77,7 +76,7 @@ def adduser(request):
 
 
 @api_view(['DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def delete_user(request, user_id):
     try:
         user = CustomUser.objects.get(pk=user_id)
@@ -90,7 +89,7 @@ def delete_user(request, user_id):
 
 # GET /listusers/ - list users
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 @never_cache
 def listusers(request):
     try:
@@ -316,8 +315,7 @@ def reset_password(request, user_id):
             threading.Thread(target=send_reset_email).start()
 
         return Response({
-            "message": "Password reset successfully",
-            "generated_password": new_password,
+            "message": "Password reset successfully. New credentials sent to email.",
         }, status=status.HTTP_200_OK)
 
     except CustomUser.DoesNotExist:

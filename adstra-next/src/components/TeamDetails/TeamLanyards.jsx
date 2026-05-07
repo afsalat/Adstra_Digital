@@ -762,10 +762,21 @@ function LanyardItem({
 }
 
 function Scene({ members, gravity }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const bandTexture = useMemo(() => createBandTexture(), []);
   const hangerY = 6.1;
   const floorY = -7.4;
-  const spacing = 3.25;
+  const spacing = isMobile ? 1.8 : 3.25;
   const startX = -((members.length - 1) * spacing) / 2;
   const lanyardLengths = [4.2, 5.9, 4.8, 6.45, 5.15, 6];
 
@@ -838,10 +849,23 @@ export default function TeamLanyards({
   fov = 20,
   transparent = true,
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const responsiveFov = isMobile ? 32 : fov;
+
   return (
     <div className="team-lanyards-wrapper">
       <Canvas
-        camera={{ position, fov }}
+        camera={{ position, fov: responsiveFov }}
         dpr={[1.25, 2.2]}
         gl={{ alpha: transparent, antialias: true }}
         onCreated={({ gl }) => {
@@ -856,3 +880,4 @@ export default function TeamLanyards({
     </div>
   );
 }
+
