@@ -11,7 +11,12 @@ import API_BASE_URL from "@/utils/apiBase";
 import SettingsPanel from "@/components/common/SettingsPanel";
 import "./InvoiceList.css";
 
+import { useAuth } from "@/Context/AuthContext";
+import { useModal } from "@/Context/ModalContext";
+
 export default function InvoiceList() {
+  const { user } = useAuth();
+  const { showAlert, showConfirm } = useModal();
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,21 +31,12 @@ export default function InvoiceList() {
   const [trashStartDate, setTrashStartDate] = useState("");
   const [trashEndDate, setTrashEndDate] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const [user, setUser] = useState(null);
   const router = useRouter();
 
   const API_BASE = API_BASE_URL;
 
   useEffect(() => {
     fetchInvoices();
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (e) {
-      console.error("Error loading user:", e);
-    }
   }, []);
 
   useEffect(() => {
@@ -57,7 +53,9 @@ export default function InvoiceList() {
         setIsLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to fetch invoices:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to fetch invoices:", err);
+        }
         setIsLoading(false);
       });
   };
@@ -73,10 +71,13 @@ export default function InvoiceList() {
             inv.id === invoiceId ? { ...inv, status: newStatus } : inv
           )
         );
+        showAlert("Status Updated", `Invoice status changed to ${newStatus.replace('_', ' ')}.`, "success");
       })
       .catch((err) => {
-        console.error("Failed to update status:", err);
-        alert("Could not update status. Please try again.");
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to update status:", err);
+        }
+        showAlert("Update Failed", "Could not update status. Please try again.", "error");
       })
       .finally(() => {
         setUpdatingStatus((prev) => ({ ...prev, [invoiceId]: false }));
@@ -84,16 +85,25 @@ export default function InvoiceList() {
   };
 
   const handleDeleteInvoice = (invoiceId, invoiceNo) => {
-    if (!window.confirm(`Move invoice ${invoiceNo} to trash?`)) return;
-    axios
-      .delete(`${API_BASE}/invoice/delete/${invoiceId}/`)
-      .then(() => {
-        setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
-      })
-      .catch((err) => {
-        console.error("Failed to delete invoice:", err);
-        alert("Could not move invoice to trash. Please try again.");
-      });
+    showConfirm(
+      "Move to Trash",
+      `Are you sure you want to move invoice ${invoiceNo} to trash?`,
+      () => {
+        axios
+          .delete(`${API_BASE}/invoice/delete/${invoiceId}/`)
+          .then(() => {
+            setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+            showAlert("Deleted", "Invoice moved to trash.", "success");
+          })
+          .catch((err) => {
+            if (process.env.NODE_ENV !== "production") {
+              console.error("Failed to delete invoice:", err);
+            }
+            showAlert("Error", "Could not move invoice to trash.", "error");
+          });
+      },
+      "warning"
+    );
   };
 
   const fetchTrashInvoices = () => {
@@ -109,8 +119,10 @@ export default function InvoiceList() {
         setShowTrash(true);
       })
       .catch((err) => {
-        console.error("Failed to fetch trash:", err);
-        alert("Could not load trash.");
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to fetch trash:", err);
+        }
+        showAlert("Error", "Could not load trash.", "error");
       });
   };
 
@@ -120,26 +132,37 @@ export default function InvoiceList() {
       .then(() => {
         setTrashInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
         fetchInvoices(); // Refresh main list to show restored invoice
+        showAlert("Restored", "Invoice has been restored successfully.", "success");
       })
       .catch((err) => {
-        console.error("Failed to restore invoice:", err);
-        alert("Could not restore invoice.");
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to restore invoice:", err);
+        }
+        showAlert("Error", "Could not restore invoice.", "error");
       });
   };
 
   const handleHardDeleteInvoice = (invoiceId, invoiceNo) => {
-    if (!window.confirm(`Are you sure you want to permanently delete invoice ${invoiceNo}? This action cannot be undone.`)) return;
-    axios
-      .delete(`${API_BASE}/invoice/hard-delete/${invoiceId}/`)
-      .then(() => {
-        setTrashInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
-      })
-      .catch((err) => {
-        console.error("Failed to permanently delete invoice:", err);
-        alert("Could not delete invoice permanently.");
-      });
+    showConfirm(
+      "Permanent Deletion",
+      `⚠️ Are you sure you want to PERMANENTLY delete invoice ${invoiceNo}? This action cannot be undone.`,
+      () => {
+        axios
+          .delete(`${API_BASE}/invoice/hard-delete/${invoiceId}/`)
+          .then(() => {
+            setTrashInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+            showAlert("Permanently Deleted", "Invoice has been removed from the system.", "success");
+          })
+          .catch((err) => {
+            if (process.env.NODE_ENV !== "production") {
+              console.error("Failed to permanently delete invoice:", err);
+            }
+            showAlert("Error", "Could not delete invoice permanently.", "error");
+          });
+      },
+      "danger"
+    );
   };
-
 
   const filterInvoices = () => {
     let result = invoices;

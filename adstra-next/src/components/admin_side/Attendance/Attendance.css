@@ -53,7 +53,7 @@
 .attendance-table th,
 .attendance-table td {
   padding: 14px 18px;
-  text-align: center;
+  text-align: left;
   border-bottom: 1px solid #e5e7eb;
   border-right: none;
   /* Avoid double borders with separate */

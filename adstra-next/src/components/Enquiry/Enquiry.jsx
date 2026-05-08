@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import emailjs from "@emailjs/browser";
 import "./Enquiry.css";
+import { useModal } from "@/Context/ModalContext";
 
 const serviceHighlights = [
   {
@@ -30,6 +31,7 @@ const deliveryPoints = [
 ];
 
 function Enquiry() {
+  const { showAlert } = useModal();
   const [formData, setFormData] = useState({
     fullName: "",
     company: "",
@@ -43,7 +45,8 @@ function Enquiry() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY);
+  // Note: Public key should ideally be initialized once, but for simplicity in this component:
+  // emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -68,7 +71,7 @@ function Enquiry() {
     e.preventDefault();
 
     if (!validateForm()) {
-      alert("Please fill all required fields with valid information.");
+      showAlert("Incomplete Form", "Please fill all required fields with valid information before submitting.", "warning");
       return;
     }
 
@@ -76,6 +79,7 @@ function Enquiry() {
 
     const serviceID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
     const templateID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
 
     const emailData = {
       ...formData,
@@ -85,7 +89,7 @@ function Enquiry() {
     };
 
     try {
-      await emailjs.send(serviceID, templateID, emailData);
+      await emailjs.send(serviceID, templateID, emailData, publicKey);
       setSubmitted(true);
       setFormData({
         fullName: "",
@@ -98,8 +102,10 @@ function Enquiry() {
       });
       setTimeout(() => setSubmitted(false), 4000);
     } catch (error) {
-      console.error("EmailJS Error:", error);
-      alert("Submission failed. Please try again.");
+      if (process.env.NODE_ENV !== "production") {
+        console.error("EmailJS Error:", error);
+      }
+      showAlert("Submission Failed", "There was an error sending your enquiry. Please check your connection and try again.", "error");
     } finally {
       setLoading(false);
     }

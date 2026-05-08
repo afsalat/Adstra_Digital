@@ -1,8 +1,10 @@
 /* RecentProposalsModal.js */
 import React, { useState, useEffect } from "react";
 import API_BASE_URL from "@/utils/apiBase";
+import { useModal } from "@/Context/ModalContext";
 
 export default function RecentProposalsModal({ show, onClose, onAction }) {
+    const { showAlert, showConfirm } = useModal();
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
@@ -37,21 +39,30 @@ export default function RecentProposalsModal({ show, onClose, onAction }) {
     }, [show]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this proposal?")) return;
-        try {
-            const res = await fetch(`${API_BASE_URL}/proposal/delete/${id}/`, {
-                method: "DELETE",
-                headers: getAuthHeaders(),
-            });
-            if (res.ok) {
-                setProposals((prev) => prev.filter((p) => String(p.id) !== String(id)));
-            } else {
-                alert("Failed to delete proposal");
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Error deleting proposal");
-        }
+        showConfirm(
+            "Delete Proposal",
+            "Are you sure you want to permanently delete this proposal? This action cannot be undone.",
+            async () => {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/proposal/delete/${id}/`, {
+                        method: "DELETE",
+                        headers: getAuthHeaders(),
+                    });
+                    if (res.ok) {
+                        setProposals((prev) => prev.filter((p) => String(p.id) !== String(id)));
+                        showAlert("Deleted", "Proposal has been removed successfully.", "success");
+                    } else {
+                        showAlert("Error", "Failed to delete proposal. Please try again.", "error");
+                    }
+                } catch (err) {
+                    if (process.env.NODE_ENV !== "production") {
+                      console.error(err);
+                    }
+                    showAlert("Error", "A network error occurred while deleting the proposal.", "error");
+                }
+            },
+            "danger"
+        );
     };
 
     const filteredProposals = proposals.filter((p) => {

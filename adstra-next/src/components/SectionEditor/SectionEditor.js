@@ -32,14 +32,20 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(section.content || "");
-    alert("Copied to clipboard!");
+    showAlert("Copied", "Content copied to clipboard successfully.", "success");
   };
 
   const handleClearHistory = () => {
-    if (confirm("Clear all saved sections?")) {
-      setHistory([]);
-      localStorage.removeItem("proposalSections");
-    }
+    showConfirm(
+      "Clear History",
+      "Are you sure you want to clear all saved proposal sections from history? This cannot be undone.",
+      () => {
+        setHistory([]);
+        localStorage.removeItem("proposalSections");
+        showAlert("Cleared", "History has been cleared.", "success");
+      },
+      "warning"
+    );
   };
 
   const startEdit = (idx) => {

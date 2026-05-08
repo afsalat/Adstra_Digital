@@ -22,10 +22,11 @@ const SystemLog = ({ API_BASE }) => {
       const response = await axios.get(`${API_BASE}/settings/logs/?t=${Date.now()}`, {
         headers: getAuthHeaders(),
       });
-      console.log("Fetched logs:", response.data);
       setLogs(response.data);
     } catch (err) {
-      console.error("Failed to fetch logs:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to fetch logs:", err);
+      }
       setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);

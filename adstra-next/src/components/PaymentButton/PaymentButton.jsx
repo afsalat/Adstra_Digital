@@ -3,6 +3,7 @@
 import { useState } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
+import { useModal } from "@/Context/ModalContext";
 import "./PaymentButton.css";
 
 const API_URL = API_BASE_URL;
@@ -21,6 +22,7 @@ export default function PaymentButton({
 }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const { showAlert } = useModal();
 
     const handlePayment = async () => {
         setLoading(true);
@@ -63,12 +65,14 @@ export default function PaymentButton({
                             if (onSuccess) {
                                 onSuccess(verifyData);
                             } else {
-                                alert("Payment successful! Invoice has been marked as paid.");
-                                window.location.reload();
+                                showAlert("Payment Successful", "Your payment has been received. The invoice has been marked as paid.", "success");
+                                setTimeout(() => window.location.reload(), 2000);
                             }
                         }
                     } catch (verifyError) {
-                        console.error("Payment verification failed:", verifyError);
+                        if (process.env.NODE_ENV !== "production") {
+                          console.error("Payment verification failed:", verifyError);
+                        }
                         setError("Payment verification failed. Please contact support.");
                         if (onFailure) {
                             onFailure(verifyError);
@@ -87,7 +91,9 @@ export default function PaymentButton({
             setLoading(false);
 
         } catch (err) {
-            console.error("Payment initialization failed:", err);
+            if (process.env.NODE_ENV !== "production") {
+              console.error("Payment initialization failed:", err);
+            }
             setError(err.response?.data?.error || "Failed to initiate payment");
             setLoading(false);
             if (onFailure) {

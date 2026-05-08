@@ -198,9 +198,17 @@ def view_invoice_detail(request, invoiceID):
     if denial:
         return denial
     try:
-        invoiceID = invoiceID.strip('/')
+        invoiceID = str(invoiceID).strip('/')
         logger.debug(f"view_invoice_detail called for ID: {invoiceID}")
-        invoice = Invoice.objects.get(invoice_no__iexact=invoiceID)
+        
+        try:
+            invoice = Invoice.objects.get(invoice_no__iexact=invoiceID)
+        except Invoice.DoesNotExist:
+            if invoiceID.isdigit():
+                invoice = Invoice.objects.get(pk=invoiceID)
+            else:
+                raise Invoice.DoesNotExist
+                
         logger.debug(f"Found invoice: {invoice.invoice_no}, Status: {invoice.status}")
     except Invoice.DoesNotExist:
         return Response({'error': 'Invoice not found'}, status=404)

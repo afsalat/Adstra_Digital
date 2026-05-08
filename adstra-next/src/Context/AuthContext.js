@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
 
 const AuthContext = createContext();
 
@@ -17,32 +18,89 @@ const isTokenValid = (token) => {
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
+    const storedUser = localStorage.getItem("user");
     const valid = isTokenValid(token);
 
-    if (!valid) {
+    if (valid) {
+      setIsAuthenticated(true);
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Failed to parse stored user", e);
+          }
+        }
+      }
+    } else {
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
+      setIsAuthenticated(false);
+      setUser(null);
     }
+    setLoading(false);
 
-    setIsAuthenticated(valid);
+    // Setup global axios interceptor
+    const requestInterceptor = axios.interceptors.request.use(
+      (config) => {
+        const currentToken = localStorage.getItem("authToken");
+        if (currentToken) {
+          config.headers.Authorization = `Bearer ${currentToken}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+    };
   }, []);
 
-  const login = (token) => {
-    const authToken = token || localStorage.getItem("authToken");
-    setIsAuthenticated(isTokenValid(authToken));
+  const hardReset = () => {
+    if (typeof window !== "undefined") {
+      localStorage.clear();
+      sessionStorage.clear();
+      // Clear all cookies
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+      }
+    }
+    setIsAuthenticated(false);
+    setUser(null);
+  };
+
+  const login = (token, userData) => {
+    // Clear any existing stale session first
+    hardReset();
+    
+    if (token) {
+      localStorage.setItem("authToken", token);
+      setIsAuthenticated(true);
+    }
+    
+    if (userData) {
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    setIsAuthenticated(false);
+    hardReset();
+    window.location.href = "/userlogin";
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, setUser, login, logout, hardReset, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import API_BASE_URL from "@/utils/apiBase";
 import SearchableClientSelect from "@/components/common/SearchableClientSelect";
+import { useModal } from "@/Context/ModalContext";
 import "./CreateInvoice.css";
 
 export default function CreateInvoice() {
+  const { showAlert } = useModal();
   const [invoice, setInvoice] = useState({
     invoice_no: "",
     client: "",
@@ -146,7 +148,7 @@ export default function CreateInvoice() {
     e?.preventDefault();
 
     if (invoice.items.length === 0) {
-      alert("Please add at least one item before submitting.");
+      showAlert("Missing Items", "Please add at least one item before submitting the invoice.", "warning");
       return;
     }
 

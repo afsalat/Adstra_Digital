@@ -30,7 +30,7 @@
 //
 //     return NextResponse.json({ content });
 //   } catch (error) {
-//     console.error("🔴 API Error:", error);
+//     // console.error("API Error:", error);
 //     return NextResponse.json(
 //       { error: error.message || "Something went wrong on the server." },
 //       { status: 500 }

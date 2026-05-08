@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import "./Career.css";
+import { BASE_URL } from "@/utils/apiBase";
 
 const perks = [
   "Work on digital projects that blend strategy, creative, and technology.",
@@ -76,7 +76,7 @@ export default function Career() {
           <div className="career-page__hero-panel" data-aos="fade-left" data-aos-delay="140">
             <div className="career-page__image-frame">
               <img
-                src="http://localhost:8000/media/team/carrer-office.jpg"
+                src={`${BASE_URL}/media/team/carrer-office.jpg`}
                 alt="Career at Adstra Digital"
                 className="career-page__image"
               />

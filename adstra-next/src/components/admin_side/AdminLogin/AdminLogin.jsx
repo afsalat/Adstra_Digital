@@ -121,21 +121,23 @@ const AdminLogin = () => {
       });
 
       if (response.data?.token) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        localStorage.setItem("authToken", response.data.token);
-        login(response.data.token); // call login from context
+        // Update AuthContext (which now handles both token, user, and hard clearing)
+        login(response.data.token, response.data.user);
+
         setShowLoader(true); // Show the loading animation
       } else {
         setError("Login failed: Invalid response.");
       }
     } catch (err) {
       setError(err.response?.data?.error || "An error occurred during login");
-      console.error(err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error(err);
+      }
     }
   };
 
   const handleLoadingComplete = () => {
-    router.push("/admindashboard/"); // redirect to dashboard after animation completes
+    window.location.href = "/admindashboard"; // force full page reload
   };
 
   if (showLoader) {

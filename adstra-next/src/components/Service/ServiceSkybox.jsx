@@ -236,7 +236,6 @@ function handleCardInteraction(event, renderer, camera, raycaster, cardEntries, 
 
   if (!selected) return;
 
-  console.log(`Clicked ${selected.title} (${selected.id})`);
   onCardSelect?.(selected);
 }
 
@@ -349,7 +348,9 @@ export default function ServiceSkybox({ imageUrl, cards, onCardSelect }) {
       },
       undefined,
       (error) => {
-        console.error("Failed to load service EXR environment:", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to load service EXR environment:", error);
+        }
       }
     );
 

@@ -1,4 +1,9 @@
-export const SITE_URL = "http://localhost:3000";
+export const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://adstradigital.com"
+    : "http://localhost:3000")
+).replace(/\/+$/, "");
 export const DEFAULT_BLOG_IMAGE_PATH =
   "/media/blog_images/best-digital-marketing-agencies-india.png";
 

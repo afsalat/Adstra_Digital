@@ -172,7 +172,9 @@ export default function ProposalBuilder() {
         showModal("error", "Save Failed", `❌ ${parseErrors(data)}`);
       }
     } catch (error) {
-      console.error("Error saving proposal:", error);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error saving proposal:", error);
+      }
       showModal("error", "Error", "❌ An unexpected error occurred while saving.");
     }
   };

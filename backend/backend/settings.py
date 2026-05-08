@@ -121,13 +121,19 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://adstradigital.com",
-]
+CORS_ALLOWED_ORIGINS = []
+_frontend_origins = os.getenv('FRONTEND_ORIGINS', '').strip()
+if _frontend_origins:
+    CORS_ALLOWED_ORIGINS = [o.strip().rstrip('/') for o in _frontend_origins.split(',') if o.strip()]
+else:
+    # Default: allow localhost in development, production domain in prod.
+    CORS_ALLOWED_ORIGINS = ["https://adstradigital.com"]
+    if DEBUG:
+        CORS_ALLOWED_ORIGINS.append("http://localhost:3000")
 
 APPEND_SLASH = False
-CORS_ALLOW_ALL_ORIGINS = True
+# In production, don't allow all origins by default.
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True' if DEBUG else 'False') == 'True'
 CORS_ALLOW_CREDENTIALS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

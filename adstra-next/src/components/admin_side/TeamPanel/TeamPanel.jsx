@@ -7,12 +7,14 @@ import {
 } from "lucide-react";
 import "./TeamPanel.css";
 import API_BASE_URL from "@/utils/apiBase";
+import { useModal } from "@/Context/ModalContext";
 
 const TeamPanel = () => {
+  const { showAlert, showConfirm } = useModal();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [viewMode, setViewMode] = useState("table"); // 'table' or 'department'
   const [selectedDept, setSelectedDept] = useState("All");
@@ -47,7 +49,9 @@ const TeamPanel = () => {
       setUsers(data);
       setLoading(false);
     } catch (err) {
-      console.error("Failed to fetch users:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to fetch users:", err);
+      }
       setLoading(false);
     }
   };
@@ -72,17 +76,34 @@ const TeamPanel = () => {
         await axios.put(`${API_BASE_URL}/user/update-user/${editingUser.id}`, dataToSend, {
           headers: getAuthHeaders()
         });
+        showAlert("Success", "Team member details updated.", "success");
       } else {
-        await axios.post(`${API_BASE_URL}/user/add-user/`, dataToSend, {
+        const res = await axios.post(`${API_BASE_URL}/user/add-user/?show_password=1`, dataToSend, {
           headers: getAuthHeaders()
         });
+        const pass = res.data?.generated_password;
+        showAlert(
+          "Success", 
+          <div>
+            <p>New team member added successfully.</p>
+            {pass && (
+              <>
+                <span className="modal-credential-label">Temporary Password:</span>
+                <div className="modal-password-box">{pass}</div>
+              </>
+            )}
+          </div>,
+          "success"
+        );
       }
-      setShowModal(false);
+      setShowFormModal(false);
       setEditingUser(null);
       setFormData({ username: "", email: "", fullname: "", phone: "", designation: "", department: "", is_team_lead: false, password: "" });
       fetchUsers();
     } catch (err) {
-      console.error("Error saving user:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error saving user:", err);
+      }
       const errors = err.response?.data?.errors;
       let errorMessage = err.response?.data?.message || "Failed to save user details.";
       
@@ -92,7 +113,7 @@ const TeamPanel = () => {
           .join("\n");
       }
       
-      alert(errorMessage);
+      showAlert("Error Saving Member", errorMessage, "error");
     }
   };
 
@@ -103,20 +124,32 @@ const TeamPanel = () => {
       });
       fetchUsers();
     } catch (err) {
-      console.error("Error toggling status:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error toggling status:", err);
+      }
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to remove this team member?")) return;
-    try {
-      await axios.delete(`${API_BASE_URL}/user/delete-user/${id}/`, {
-        headers: getAuthHeaders()
-      });
-      fetchUsers();
-    } catch (err) {
-      console.error("Error deleting user:", err);
-    }
+    showConfirm(
+      "Remove Team Member",
+      "Are you sure you want to remove this team member? This will revoke their access to the system.",
+      async () => {
+        try {
+          await axios.delete(`${API_BASE_URL}/user/delete-user/${id}/`, {
+            headers: getAuthHeaders()
+          });
+          showAlert("Member Removed", "The team member has been successfully removed.", "success");
+          fetchUsers();
+        } catch (err) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Error deleting user:", err);
+          }
+          showAlert("Deletion Failed", "Could not remove team member. Please try again.", "error");
+        }
+      },
+      "danger"
+    );
   };
 
   const filteredUsers = users.filter(user => {
@@ -143,7 +176,7 @@ const TeamPanel = () => {
           <h1>Team Management</h1>
           <p>Organize your departments, leads, and professional teams.</p>
         </div>
-        <button className="add-btn" onClick={() => { setEditingUser(null); setShowModal(true); }}>
+        <button className="add-btn" onClick={() => { setEditingUser(null); setShowFormModal(true); }}>
           <UserPlus size={18} /> Add New Member
         </button>
       </div>
@@ -272,7 +305,7 @@ const TeamPanel = () => {
                             is_team_lead: user.is_team_lead || false,
                             password: ""
                           });
-                          setShowModal(true);
+                          setShowFormModal(true);
                         }}>
                           <Edit2 size={16} />
                         </button>
@@ -311,13 +344,13 @@ const TeamPanel = () => {
         </div>
       )}
 
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content large">
-            <div className="modal-header">
-              <h2>{editingUser ? "Edit Team Member" : "Add New Member"}</h2>
-              <button className="close-btn" onClick={() => setShowModal(false)}><XCircle /></button>
-            </div>
+        {showFormModal && (
+          <div className="modal-overlay">
+            <div className="modal-content large">
+              <div className="modal-header">
+                <h2>{editingUser ? "Edit Team Member" : "Add New Member"}</h2>
+                <button className="close-btn" onClick={() => setShowFormModal(false)}><XCircle /></button>
+              </div>
             <form onSubmit={handleSubmit} className="team-form">
               <div className="form-grid">
                 <div className="form-group">
@@ -358,7 +391,7 @@ const TeamPanel = () => {
                 )}
               </div>
               <div className="form-actions">
-                <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => setShowFormModal(false)}>Cancel</button>
                 <button type="submit" className="submit-btn">{editingUser ? "Update Member" : "Create Member"}</button>
               </div>
             </form>

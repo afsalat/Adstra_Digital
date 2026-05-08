@@ -23,7 +23,11 @@ export default function ReceiptDetail({ id }) {
     // Fetch company settings with cache-busting
     axios.get(`${API_BASE_URL}/settings/?_=${Date.now()}`)
       .then((res) => setSettings(res.data))
-      .catch(err => console.error("Settings Fetch Error:", err));
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Settings Fetch Error:", err);
+        }
+      });
   }, [id]);
 
   const handlePrint = () => window.print();

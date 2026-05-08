@@ -6,6 +6,7 @@ import "./UserManagement.css";
 import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
+import { useModal } from "@/Context/ModalContext";
 
 const BASE_URL = API_BASE_URL;
 const FULL_ACCESS_ROLES = new Set(["admin", "super_admin"]);
@@ -13,17 +14,14 @@ const FULL_ACCESS_ROLES = new Set(["admin", "super_admin"]);
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [editUser, setEditUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [generatedPassword, setGeneratedPassword] = useState(null);
-  const [resetPasswordData, setResetPasswordData] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
   const [roles, setRoles] = useState({});
   const [permissions, setPermissions] = useState({});
-
+  
+  const { showAlert, showConfirm } = useModal();
   const router = useRouter();
 
   const getAuthHeaders = () => {
@@ -36,7 +34,7 @@ const UserList = () => {
       const response = await axios.get(`${BASE_URL}/user/user-list/`, {
         headers: getAuthHeaders(),
       });
-      setUsers(response.data.users);
+      setUsers(response.data.users || []);
     } catch (err) {
       setError("Failed to load users.");
     } finally {
@@ -73,65 +71,98 @@ const UserList = () => {
   };
 
   const handleView = (user) => {
-    setSelectedUser(user);
-    setShowDetails(true);
+    showAlert(
+      "User Details",
+      <div className="details-content">
+        <p><strong>Full Name:</strong> {user.fullname}</p>
+        <p><strong>Username:</strong> {user.username}</p>
+        <p><strong>Email:</strong> {user.email}</p>
+        <p><strong>Phone:</strong> {user.phone || "—"}</p>
+        <p><strong>Address:</strong> {user.address || "—"}</p>
+        <p><strong>Designation:</strong> {user.designation || "—"}</p>
+        <p><strong>Department:</strong> {user.department || "—"}</p>
+        <p><strong>Role:</strong> {user.role?.replaceAll("_", " ") || "employee"}</p>
+        <p><strong>Permissions:</strong> {(user.effective_permissions || []).join(", ") || "—"}</p>
+        <p><strong>Joining Date:</strong> {formatDate(user.joining_date)}</p>
+        <p>
+          <strong>Status:</strong>
+          <span className={`status-badge ${user.is_active ? "active" : "inactive"}`} style={{ marginLeft: "8px" }}>
+            {user.is_active ? "Active" : "Inactive"}
+          </span>
+        </p>
+      </div>,
+      "info"
+    );
   };
 
-  const handleDelete = async (user) => {
-    const confirm = window.confirm(`Are you sure you want to DELETE ${user.fullname}?`);
-    if (!confirm) return;
-
-    try {
-      await axios.delete(`${BASE_URL}/user/delete-user/${user.id}/`, {
-        headers: getAuthHeaders(),
-      });
-      await fetchUsers();
-    } catch (error) {
-      alert("Failed to delete user.");
-      console.error(error);
-    }
+  const handleDelete = (user) => {
+    showConfirm(
+      "Confirm Deletion",
+      `Are you sure you want to permanently DELETE ${user.fullname}? This action cannot be undone.`,
+      async () => {
+        try {
+          await axios.delete(`${BASE_URL}/user/delete-user/${user.id}/`, {
+            headers: getAuthHeaders(),
+          });
+          await fetchUsers();
+          showAlert("Deleted", "User has been successfully deleted.", "success");
+        } catch (error) {
+          showAlert("Delete Failed", "Failed to delete user.", "error");
+        }
+      },
+      "error"
+    );
   };
 
-  const handleResetPassword = async (user) => {
-    const confirm = window.confirm(`Reset password for ${user.fullname}? A new password will be generated and emailed to ${user.email}.`);
-    if (!confirm) return;
-
-    try {
-      const res = await axios.post(`${BASE_URL}/user/reset-password/${user.id}/`, {}, {
-        headers: getAuthHeaders(),
-      });
-      if (res.data?.generated_password) {
-        setResetPasswordData({
-          fullname: user.fullname,
-          email: user.email,
-          password: res.data.generated_password,
-        });
+  const handleResetPassword = (user) => {
+    showConfirm(
+      "Reset Password",
+      `Are you sure you want to reset the password for ${user.fullname}? A new password will be generated and displayed.`,
+      async () => {
+        try {
+          const res = await axios.post(`${BASE_URL}/user/reset-password/${user.id}/?show_password=1`, {}, {
+            headers: getAuthHeaders(),
+          });
+          const newPass = res.data?.generated_password;
+          showAlert(
+            "Password Reset Success",
+            <div>
+              <p>The password for <strong>{user.fullname}</strong> has been reset.</p>
+              <span className="modal-credential-label">New Password:</span>
+              <div className="modal-password-box">{newPass || "Check email"}</div>
+              <p style={{ fontSize: '13px', color: '#64748b' }}>This credential has also been sent to {user.email}</p>
+            </div>,
+            "success"
+          );
+        } catch (err) {
+          showAlert("Reset Failed", "Failed to reset password.", "error");
+        }
       }
-    } catch (err) {
-      alert("Failed to reset password.");
-      console.error(err);
-    }
+    );
   };
 
-  const handleToggleActive = async (user) => {
+  const handleToggleActive = (user) => {
     const action = user.is_active ? "Deactivate" : "Activate";
-    const confirm = window.confirm(`${action} ${user.fullname}?`);
-    if (!confirm) return;
-
-    setDeactivating(true);
-    try {
-      await axios.put(`${BASE_URL}/user/active-inactive/${user.id}`, {
-        is_active: !user.is_active,
-      }, {
-        headers: getAuthHeaders(),
-      });
-      await fetchUsers();
-    } catch (err) {
-      alert(`Error updating status.`);
-      console.error(err);
-    } finally {
-      setDeactivating(false);
-    }
+    showConfirm(
+      `${action} User`,
+      `Are you sure you want to ${action.toLowerCase()} ${user.fullname}?`,
+      async () => {
+        setDeactivating(true);
+        try {
+          await axios.put(`${BASE_URL}/user/active-inactive/${user.id}`, {
+            is_active: !user.is_active,
+          }, {
+            headers: getAuthHeaders(),
+          });
+          await fetchUsers();
+          showAlert("Status Updated", `${user.fullname} has been ${action.toLowerCase()}d.`, "success");
+        } catch (err) {
+          showAlert("Update Failed", "Error updating status.", "error");
+        } finally {
+          setDeactivating(false);
+        }
+      }
+    );
   };
 
   const formatDate = (datetime) => {
@@ -268,13 +299,25 @@ const UserList = () => {
                     await axios.put(`${BASE_URL}/user/update-user/${editUser.id}`, formData, {
                       headers: getAuthHeaders(),
                     });
+                    showAlert("Success", "User details updated successfully.", "success");
                   } else {
-                    const res = await axios.post(`${BASE_URL}/user/add-user/`, formData, {
+                    const res = await axios.post(`${BASE_URL}/user/add-user/?show_password=1`, formData, {
                       headers: getAuthHeaders(),
                     });
-                    if (res.data?.generated_password) {
-                      setGeneratedPassword(res.data.generated_password);
-                    }
+                    const pass = res.data?.generated_password;
+                    showAlert(
+                      "🆕 User Created",
+                      <div>
+                        <p>Credentials have been emailed to <strong>{formData.email}</strong>.</p>
+                        {pass && (
+                          <>
+                            <span className="modal-credential-label">Generated Password:</span>
+                            <div className="modal-password-box">{pass}</div>
+                          </>
+                        )}
+                      </div>,
+                      "success"
+                    );
                   }
                   await fetchUsers();
                   setShowForm(false);
@@ -282,8 +325,7 @@ const UserList = () => {
                   const errorMsg = err.response?.data?.errors
                     ? Object.entries(err.response.data.errors).map(([key, val]) => `${key}: ${val}`).join("\n")
                     : "Failed to save user.";
-                  alert(errorMsg);
-                  console.error(err);
+                  showAlert("Save Failed", errorMsg, "error");
                 }
               }}
             >
@@ -347,66 +389,6 @@ const UserList = () => {
                 {editUser ? "Update User" : "Create User"}
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {generatedPassword && (
-        <div className="popup-overlay" onClick={() => setGeneratedPassword(null)}>
-          <div className="popup" onClick={(e) => e.stopPropagation()}>
-            <button className="close-popup" onClick={() => setGeneratedPassword(null)}>
-              <X size={18} />
-            </button>
-            <h3>🆕 User Created</h3>
-            <p><strong>Generated Password:</strong></p>
-            <div className="password-box">{generatedPassword}</div>
-            <p>successfully sent password through email!</p>
-          </div>
-        </div>
-      )}
-
-      {resetPasswordData && (
-        <div className="popup-overlay" onClick={() => setResetPasswordData(null)}>
-          <div className="popup" onClick={(e) => e.stopPropagation()}>
-            <button className="close-popup" onClick={() => setResetPasswordData(null)}>
-              <X size={18} />
-            </button>
-            <h3>🔑 Password Reset</h3>
-            <p><strong>User:</strong> {resetPasswordData.fullname}</p>
-            <p><strong>New Password:</strong></p>
-            <div className="password-box">{resetPasswordData.password}</div>
-            <p style={{ marginTop: '10px', fontSize: '13px', color: '#666' }}>
-              Password has been sent to <strong>{resetPasswordData.email}</strong>
-            </p>
-          </div>
-        </div>
-      )}
-
-      {showDetails && selectedUser && (
-        <div className="popup-overlay" onClick={() => setShowDetails(false)}>
-          <div className="popup user-details-popup" onClick={(e) => e.stopPropagation()}>
-            <button className="close-popup" onClick={() => setShowDetails(false)}>
-              <X size={18} />
-            </button>
-            <h3>👤 User Details</h3>
-            <div className="details-content">
-              <p><strong>Full Name:</strong> {selectedUser.fullname}</p>
-              <p><strong>Username:</strong> {selectedUser.username}</p>
-              <p><strong>Email:</strong> {selectedUser.email}</p>
-              <p><strong>Phone:</strong> {selectedUser.phone || "—"}</p>
-              <p><strong>Address:</strong> {selectedUser.address || "—"}</p>
-              <p><strong>Designation:</strong> {selectedUser.designation || "—"}</p>
-              <p><strong>Department:</strong> {selectedUser.department || "â€”"}</p>
-              <p><strong>Role:</strong> {selectedUser.role?.replaceAll("_", " ") || "employee"}</p>
-              <p><strong>Permissions:</strong> {(selectedUser.effective_permissions || []).join(", ") || "â€”"}</p>
-              <p><strong>Joining Date:</strong> {formatDate(selectedUser.joining_date)}</p>
-              <p>
-                <strong>Status:</strong>
-                <span className={`status-badge ${selectedUser.is_active ? "active" : "inactive"}`} style={{ marginLeft: "8px" }}>
-                  {selectedUser.is_active ? "Active" : "Inactive"}
-                </span>
-              </p>
-            </div>
           </div>
         </div>
       )}
