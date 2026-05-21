@@ -1,6 +1,7 @@
 import os
 import django
 import json
+import logging
 from datetime import datetime, time
 from django.utils import timezone
 
@@ -11,14 +12,16 @@ django.setup()
 from apis.attendance.models import Attendance
 from apis.user.models import CustomUser
 
+logger = logging.getLogger(__name__)
+
 def populate_afsal_data():
     # Find user Afsal
     user = CustomUser.objects.filter(fullname__icontains='afsal').first()
     if not user:
-        print("User 'Afsal' not found. Please check the fullname in CustomUser.")
+        logger.warning("User 'Afsal' not found. Please check the fullname in CustomUser.")
         return
 
-    print(f"Updating attendance records for user: {user.fullname} ({user.username})")
+    logger.info("Updating attendance records for user: %s (%s)", user.fullname, user.username)
 
     data = [
         # December 2025
@@ -146,11 +149,12 @@ def populate_afsal_data():
         )
         if created:
             count += 1
-            print(f"Created record for {entry['date']}")
+            logger.info("Created record for %s", entry["date"])
         else:
-            print(f"Updated record for {entry['date']}")
+            logger.info("Updated record for %s", entry["date"])
 
-    print(f"Finished. Created {count} new records and updated others for user '{user.fullname}'.")
+    logger.info("Finished. Created %s new records and updated others for user '%s'.", count, user.fullname)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     populate_afsal_data()

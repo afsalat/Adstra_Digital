@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useModal } from "@/Context/ModalContext";
 
 const SettingsPanel = ({ API_BASE }) => {
+  const { showAlert, showConfirm } = useModal();
   const [settings, setSettings] = useState({
     name: "",
     address: "",
@@ -36,7 +38,9 @@ const SettingsPanel = ({ API_BASE }) => {
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to fetch settings:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to fetch settings:", err);
+        }
         setLoading(false);
       });
   }, [API_BASE]);
@@ -47,20 +51,21 @@ const SettingsPanel = ({ API_BASE }) => {
     
     // Create a clean data object without read-only ID
     const { id, ...saveData } = settings;
-    
-    console.log("Saving settings:", saveData);
+
     axios.put(`${API_BASE}/settings/`, saveData, {
       headers: getAuthHeaders(),
     })
       .then((res) => {
-        alert("Settings updated successfully!");
+        showAlert("Success", "Settings updated successfully!", "success");
         if (res.data) setSettings(res.data);
         setSaving(false);
       })
       .catch(err => {
-        console.error("Save Error:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Save Error:", err);
+        }
         const errorMsg = err.response?.data ? Object.entries(err.response.data).map(([k, v]) => `${k}: ${v}`).join(", ") : "Failed to save settings.";
-        alert(errorMsg);
+        showAlert("Save Failed", errorMsg, "error");
         setSaving(false);
       });
   };
@@ -81,8 +86,10 @@ const SettingsPanel = ({ API_BASE }) => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Export Error:", err);
-      alert(err.response?.data?.error || "Failed to export backup.");
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Export Error:", err);
+      }
+      showAlert("Export Failed", err.response?.data?.error || "Failed to export backup.", "error");
     }
   };
 
@@ -94,28 +101,32 @@ const SettingsPanel = ({ API_BASE }) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!window.confirm("⚠️ WARNING: This will OVERWRITE all existing data with the data from the backup file. Are you sure you want to proceed?")) {
-      e.target.value = null;
-      return;
-    }
+    showConfirm(
+      "Warning: Data Overwrite",
+      "⚠️ WARNING: This will OVERWRITE all existing data with the data from the backup file. Are you sure you want to proceed?",
+      async () => {
+        const formData = new FormData();
+        formData.append("file", file);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      setSaving(true);
-      const res = await axios.post(`${API_BASE}/settings/backup/import/`, formData, {
-        headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" }
-      });
-      alert(res.data.message || "Backup restored successfully!");
-      window.location.reload(); 
-    } catch (err) {
-      console.error("Import Error:", err);
-      alert(err.response?.data?.error || "Failed to restore backup.");
-    } finally {
-      setSaving(false);
-      e.target.value = null;
-    }
+        try {
+          setSaving(true);
+          const res = await axios.post(`${API_BASE}/settings/backup/import/`, formData, {
+            headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" }
+          });
+          showAlert("Import Successful", res.data.message || "Backup restored successfully!", "success");
+          setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Import Error:", err);
+          }
+          showAlert("Import Failed", err.response?.data?.error || "Failed to restore backup.", "error");
+        } finally {
+          setSaving(false);
+          e.target.value = null;
+        }
+      },
+      "warning"
+    );
   };
 
   if (loading) return <div className="p-8">Loading settings...</div>;

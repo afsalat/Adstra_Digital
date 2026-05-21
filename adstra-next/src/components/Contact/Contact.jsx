@@ -39,10 +39,14 @@ function ContactUs() {
         if (docSnap.exists()) {
           setInfo(docSnap.data());
         } else {
-          console.error("No such document!");
+          if (process.env.NODE_ENV !== "production") {
+            console.error("No such document!");
+          }
         }
       } catch (error) {
-        console.error("Error fetching company info:", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error fetching company info:", error);
+        }
       } finally {
         setLoading(false);
         setIsVisible(true);

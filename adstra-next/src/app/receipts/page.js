@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import API_BASE_URL from "@/utils/apiBase";
+import { useModal } from "@/Context/ModalContext";
 import "./ReceiptList.css";
 
 /* ─────────────────── helpers ─────────────────── */
@@ -141,6 +142,7 @@ const IconTrash = () => (
 /* ─────────────────── component ──────────────── */
 export default function ReceiptManager() {
   const router = useRouter();
+  const { showAlert, showConfirm } = useModal();
   const [receipts, setReceipts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -172,7 +174,9 @@ export default function ReceiptManager() {
       const res = await axios.get(`${API_BASE_URL}/transactions/list-create/`);
       setReceipts(res.data);
     } catch (err) {
-      console.error("Error fetching receipts:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error fetching receipts:", err);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -192,31 +196,45 @@ export default function ReceiptManager() {
       setTrashEndDate("");
       setShowTrash(true);
     } catch (err) {
-      console.error("Error fetching trash:", err);
-      alert("Could not load trash.");
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error fetching trash:", err);
+      }
+      showAlert("Error", "Could not load trash.", "error");
     }
-  }, []);
+  }, [showAlert]);
 
   const handleRestoreReceipt = async (receiptId) => {
     try {
       await axios.patch(`${API_BASE_URL}/transactions/restore/${receiptId}/`);
       setTrashReceipts((prev) => prev.filter((r) => r.id !== receiptId));
       fetchReceipts();
+      showAlert("Restored", "Receipt has been restored successfully.", "success");
     } catch (err) {
-      console.error("Error restoring receipt:", err);
-      alert("Could not restore receipt.");
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error restoring receipt:", err);
+      }
+      showAlert("Error", "Could not restore receipt.", "error");
     }
   };
 
   const handleDeleteReceipt = async (receiptId, receiptNo) => {
-    if (!window.confirm(`Move receipt ${receiptNo || ""} to trash?`)) return;
-    try {
-      await axios.delete(`${API_BASE_URL}/transactions/delete/${receiptId}/`);
-      setReceipts((prev) => prev.filter((r) => r.id !== receiptId));
-    } catch (err) {
-      console.error("Error deleting receipt:", err);
-      alert("Could not move receipt to trash.");
-    }
+    showConfirm(
+      "Move to Trash",
+      `Are you sure you want to move receipt ${receiptNo || ""} to trash?`,
+      async () => {
+        try {
+          await axios.delete(`${API_BASE_URL}/transactions/delete/${receiptId}/`);
+          setReceipts((prev) => prev.filter((r) => r.id !== receiptId));
+          showAlert("Moved to Trash", "Receipt has been deleted and moved to trash.", "success");
+        } catch (err) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Error deleting receipt:", err);
+          }
+          showAlert("Error", "Could not move receipt to trash.", "error");
+        }
+      },
+      "warning"
+    );
   };
 
   /* filtered list — sorted newest first */

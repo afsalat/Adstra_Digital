@@ -912,7 +912,9 @@ export default function Ballpit({ className = "", followCursor = true, ...props 
       instanceRef.current = createBallpit(canvas, initialConfigRef.current);
     } catch (error) {
       canvas.style.display = "none";
-      console.warn("Ballpit disabled:", error);
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Ballpit disabled:", error);
+      }
       instanceRef.current = null;
     }
 

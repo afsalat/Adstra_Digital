@@ -6,7 +6,10 @@ import axios from "axios";
 import { Printer, FileDown, ArrowLeft, LayoutList, Edit } from "lucide-react";
 import API_BASE_URL from "@/utils/apiBase";
 
+import { useAuth } from "@/Context/AuthContext";
+
 export default function InvoicePreview() {
+  const { user } = useAuth();
   const invoiceRef = useRef();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -15,18 +18,8 @@ export default function InvoicePreview() {
   const [invoice, setInvoice] = useState(null);
   const [items, setItems] = useState([]);
   const [settings, setSettings] = useState(null);
-  const [user, setUser] = useState(null);
 
   const API_BASE = API_BASE_URL;
-
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) setUser(JSON.parse(storedUser));
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
 
   useEffect(() => {
     if (!invoiceId) return;
@@ -42,7 +35,11 @@ export default function InvoicePreview() {
     // Fetch Company Settings with cache busting
     axios.get(`${API_BASE}/settings/?_=${Date.now()}`).then((res) => {
       setSettings(res.data);
-    }).catch(err => console.error("Settings Fetch Error:", err));
+    }).catch((err) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Settings Fetch Error:", err);
+      }
+    });
   }, [invoiceId, API_BASE]);
 
   const handlePrint = () => window.print();

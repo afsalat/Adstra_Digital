@@ -6,10 +6,12 @@ import "./ClientList.css";
 import { Edit, Eye, Plus, ArrowLeft, X, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
+import { useModal } from "@/Context/ModalContext";
 
 const BASE_URL = API_BASE_URL;
 
 const ClientList = () => {
+    const { showAlert, showConfirm } = useModal();
     const [clients, setClients] = useState([]);
     const [showForm, setShowForm] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
@@ -34,7 +36,9 @@ const ClientList = () => {
             setClients(response.data);
             setError("");
         } catch (err) {
-            console.error("Fetch clients error:", err);
+            if (process.env.NODE_ENV !== "production") {
+                console.error("Fetch clients error:", err);
+            }
             setError("Failed to load clients.");
         } finally {
             setLoading(false);
@@ -63,22 +67,29 @@ const ClientList = () => {
     const [deletingId, setDeletingId] = useState(null);
 
     const handleDelete = async (client) => {
-        const confirm = window.confirm(`Are you sure you want to DELETE ${client.company_name || client.name}?`);
-        if (!confirm) return;
-
-        setDeletingId(client.id);
-        try {
-            await axios.delete(`${BASE_URL}/proposal/clients/delete/${client.id}/`, {
-                headers: getAuthHeaders(),
-            });
-            await fetchClients();
-        } catch (error) {
-            const errMsg = error.response?.data?.error || "Failed to delete client.";
-            alert("Error: " + errMsg);
-            console.error(error);
-        } finally {
-            setDeletingId(null);
-        }
+        showConfirm(
+            "Delete Client",
+            `Are you sure you want to permanently delete ${client.company_name || client.name}? This action cannot be undone.`,
+            async () => {
+                setDeletingId(client.id);
+                try {
+                    await axios.delete(`${BASE_URL}/proposal/clients/delete/${client.id}/`, {
+                        headers: getAuthHeaders(),
+                    });
+                    showAlert("Deleted", "Client has been removed successfully.", "success");
+                    await fetchClients();
+                } catch (error) {
+                    const errMsg = error.response?.data?.error || "Failed to delete client.";
+                    showAlert("Error", errMsg, "error");
+                    if (process.env.NODE_ENV !== "production") {
+                        console.error(error);
+                    }
+                } finally {
+                    setDeletingId(null);
+                }
+            },
+            "danger"
+        );
     };
 
     const handleBack = () => router.push("/admindashboard/");
@@ -183,16 +194,20 @@ const ClientList = () => {
                                             headers: getAuthHeaders(),
                                         });
                                         setClients(prev => prev.map(c => c.id === editClient.id ? response.data : c));
+                                        showAlert("Success", "Client updated successfully.", "success");
                                     } else {
                                         const response = await axios.post(`${BASE_URL}/proposal/clients/create/`, formData, {
                                             headers: getAuthHeaders(),
                                         });
                                         setClients(prev => [...prev, response.data]);
+                                        showAlert("Success", "New client added successfully.", "success");
                                     }
                                     setShowForm(false);
                                 } catch (err) {
-                                    alert("Failed to save client.");
-                                    console.error(err);
+                                    showAlert("Error", "Failed to save client. Please check the details and try again.", "error");
+                                    if (process.env.NODE_ENV !== "production") {
+                                        console.error(err);
+                                    }
                                 }
                             }}
                         >

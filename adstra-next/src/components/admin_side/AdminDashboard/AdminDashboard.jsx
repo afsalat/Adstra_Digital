@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/Context/AuthContext";
+import { useModal } from "@/Context/ModalContext";
 import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
 import SessionExpiredModal from "@/components/common/SessionExpiredModal";
@@ -28,11 +29,11 @@ import TeamPanel from "@/components/admin_side/TeamPanel/TeamPanel";
 import SystemLog from "@/components/admin_side/SystemLog/SystemLog";
 
 const AdminDashboard = () => {
+  const { showConfirm } = useModal();
   const [activeMenu, setActiveMenu] = useState("Home");
   const [isSessionExpired, setIsSessionExpired] = useState(false);
-  const { logout } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const router = useRouter();
-  const [user, setUser] = useState({});
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
@@ -65,23 +66,22 @@ const AdminDashboard = () => {
 
   // Logout handler with warnings
   const handleLogout = () => {
-    const confirmLogout = window.confirm(
-      `⚠️ Before logging out Warnings:
-      \n\n- Make sure you have submitted your **Work Report**.
-      \n- Don’t forget to press the **Checkout** button.
-      \n\nAre you sure you want to continue with logout?`
+    showConfirm(
+      "Confirm Logout",
+      `⚠️ Before logging out:
+      
+- Make sure you have submitted your Work Report.
+- Don't forget to press the Checkout button.
+
+Are you sure you want to continue with logout?`,
+      () => performLogout(),
+      "warning"
     );
-
-    if (!confirmLogout) return;
-
-    performLogout();
   };
 
   const performLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user"); // Clear user data too
     logout();
-    router.push("/userlogin/");
+    window.location.href = "/userlogin";
   };
 
   const handleSessionExpiredLogin = () => {
@@ -101,12 +101,8 @@ const AdminDashboard = () => {
           return;
         }
 
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-
-        axios.get(`${API_BASE_URL}/user/me/`, { headers: getAuthHeaders() })
+        // Fetch fresh user data to ensure permissions are up to date
+        axios.get(`${API_BASE_URL}/user/me/?_=${Date.now()}`, { headers: getAuthHeaders() })
           .then((response) => {
             const freshUser = response.data?.user || {};
             setUser(freshUser);
@@ -118,14 +114,15 @@ const AdminDashboard = () => {
             }
           });
       } catch (e) {
-        console.error("Invalid token:", e);
-        // Optional: clear invalid token
-        localStorage.removeItem("authToken");
-        router.push("/userlogin/");
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Invalid token:", e);
+        }
+        logout();
+        window.location.href = "/userlogin";
       }
     } else {
       // No token found, redirect to login
-      router.push("/userlogin/");
+      window.location.href = "/userlogin";
     }
   }, []);
 

@@ -19,10 +19,14 @@ const Footer = () => {
         if (docSnap.exists()) {
           setFooterData(docSnap.data());
         } else {
-          console.error("No footer data found.");
+          if (process.env.NODE_ENV !== "production") {
+            console.error("No footer data found.");
+          }
         }
       } catch (error) {
-        console.error("Error fetching footer data:", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error fetching footer data:", error);
+        }
       }
     };
 

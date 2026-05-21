@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/Context/AuthContext";
+import { ModalProvider } from "@/Context/ModalContext";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -15,8 +16,18 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://adstradigital.com"
+    : "http://localhost:3000")
+).replace(/\/+$/, "");
+
+const LOGO_PATH = "/static/media/logo_icon.jpeg";
+const LOGO_URL = `${SITE_URL}${LOGO_PATH}`;
+
 export const metadata = {
-  metadataBase: new URL("https://adstradigital.com"),
+  metadataBase: new URL(SITE_URL),
   title: "Digital Marketing Company in Kozhikode | AdstraDigital",
   description:
     "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
@@ -34,13 +45,13 @@ export const metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://adstradigital.com/",
+    url: `${SITE_URL}/`,
     title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
     description:
       "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
     images: [
       {
-        url: "https://adstradigital.com/assets/logo_new-01.png",
+        url: LOGO_URL,
         width: 512,
         height: 512,
       },
@@ -54,14 +65,14 @@ export const metadata = {
     title: "Digital Marketing Company in Kozhikode & Wayanad | AdstraDigital",
     description:
       "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
-    images: ["https://adstradigital.com/assets/logo_new-01.png"],
+    images: [LOGO_URL],
   },
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",
   },
   alternates: {
-    canonical: "https://adstradigital.com/",
+    canonical: `${SITE_URL}/`,
   },
   verification: {
     google: "8i-QRA6BvD2XQbq9CBVT_7TJlc6fiWS3EWRwUhYB0VY",
@@ -93,7 +104,7 @@ export default function RootLayout({ children }) {
         <link
           rel="preload"
           as="image"
-          href="https://adstradigital.com/assets/logo_new-01.png"
+          href={LOGO_URL}
         />
 
         <link
@@ -108,8 +119,12 @@ export default function RootLayout({ children }) {
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         />
       </head>
-      <body suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+      <body>
+        <AuthProvider>
+          <ModalProvider>
+            {children}
+          </ModalProvider>
+        </AuthProvider>
 
         <Script
           src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
@@ -141,8 +156,8 @@ export default function RootLayout({ children }) {
             "@context": "https://schema.org",
             "@type": "LocalBusiness",
             name: "AdstraDigital",
-            url: "https://adstradigital.com",
-            logo: "https://adstradigital.com/assets/logo_new-01.png",
+            url: SITE_URL,
+            logo: LOGO_URL,
             description:
               "Grow your business with AdstraDigital, a trusted digital marketing company. We offer expert SEO, paid advertising, website design, branding, and content marketing.",
             telephone: "+91 9744779574",

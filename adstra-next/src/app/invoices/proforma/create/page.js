@@ -54,12 +54,20 @@ export default function CreateProforma() {
     axios
       .get(`${API_BASE}/proposal/clients/`)
       .then((res) => setClients(res.data))
-      .catch((err) => console.error("Client Fetch Error:", err));
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Client Fetch Error:", err);
+        }
+      });
 
     // Fetch company settings with cache-busting
     axios.get(`${API_BASE}/settings/?_=${Date.now()}`)
       .then((res) => { if (res.data) setSettings(res.data); })
-      .catch((err) => console.error("Settings Fetch Error:", err));
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Settings Fetch Error:", err);
+        }
+      });
   }, [API_BASE]);
 
   useEffect(() => {
@@ -172,7 +180,9 @@ export default function CreateProforma() {
       const encoded = encodeURIComponent(newInvoiceNo);
       router.push(`/invoices/result/?invoiceID=${encoded}`);
     } catch (err) {
-      console.error("Proforma Submit Error:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Proforma Submit Error:", err);
+      }
     }
   };
 
@@ -189,7 +199,9 @@ export default function CreateProforma() {
       const res = await axios.get(`${API_BASE}/invoice/latests/${clientId}/`);
       setProposals(res.data);
     } catch (err) {
-      console.error("Proposals Fetch Error:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Proposals Fetch Error:", err);
+      }
     }
   };
 
@@ -225,7 +237,9 @@ export default function CreateProforma() {
           setInvoice((prev) => ({ ...prev, invoice_no: response.data.next_invoice_number }));
         }
       } catch (error) {
-        console.error("Error fetching next proforma number:", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error fetching next proforma number:", error);
+        }
       }
     };
     fetchNextInvoiceNumber();

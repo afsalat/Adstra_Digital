@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import API_BASE_URL from "@/utils/apiBase";
 import ClientFormModal from "../ClientFormModal/ClientFormModal";
+import { useModal } from "@/Context/ModalContext";
 
 export default function HeaderEditor({ data, onChange }) {
+  const { showAlert } = useModal();
   const [clients, setClients] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [referenceList, setReferenceList] = useState([]);
@@ -61,14 +63,17 @@ export default function HeaderEditor({ data, onChange }) {
 
       if (contentType && contentType.includes("application/json")) {
         const json = await res.json();
-        console.log("✅ Clients Loaded:", json); // DEBUG
         setClients(Array.isArray(json) ? json : []);
       } else {
         const text = await res.text();
-        console.error("❌ Expected JSON but got:", text);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("❌ Expected JSON but got:", text);
+        }
       }
     } catch (err) {
-      console.error("❌ Network error fetching clients:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("❌ Network error fetching clients:", err);
+      }
     }
   };
 
@@ -80,7 +85,9 @@ export default function HeaderEditor({ data, onChange }) {
       const json = await res.json();
       setReferenceList(Array.isArray(json.users) ? json.users : []);
     } catch (error) {
-      console.error("❌ Failed to fetch references", error);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("❌ Failed to fetch references", error);
+      }
       setReferenceList([]);
     }
   };
@@ -101,13 +108,18 @@ export default function HeaderEditor({ data, onChange }) {
         setClients((prev) => [...prev, created]);
         onChange({ ...data, billTo: created });
         setShowModal(false);
+        showAlert("Client Added", "The new client has been saved and selected successfully.", "success");
       } else {
-        alert("❌ Failed to save client");
-        console.error(created);
+        showAlert("Error", "Failed to save client. Please check the information and try again.", "error");
+        if (process.env.NODE_ENV !== "production") {
+          console.error(created);
+        }
       }
     } catch (error) {
-      alert("❌ Network error while saving client");
-      console.error(error);
+      showAlert("Network Error", "A network error occurred while saving the client. Please try again.", "error");
+      if (process.env.NODE_ENV !== "production") {
+        console.error(error);
+      }
     }
   };
 

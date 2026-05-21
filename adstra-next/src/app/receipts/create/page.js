@@ -5,9 +5,11 @@ import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import SearchableClientSelect from "@/components/common/SearchableClientSelect";
 import ReceiptTemplate from "@/components/ReceiptDetail/ReceiptTemplate";
+import { useModal } from "@/Context/ModalContext";
 import "./create.css";
 
 export default function CreateTransaction() {
+  const { showAlert } = useModal();
   const router = useRouter();
   const [clients, setClients] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -31,12 +33,22 @@ export default function CreateTransaction() {
 
   /* fetch clients and settings */
   useEffect(() => {
-    axios.get(`${API_URL}/proposal/clients/`).then((res) => setClients(res.data)).catch(console.error);
+    axios.get(`${API_URL}/proposal/clients/`)
+      .then((res) => setClients(res.data))
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Client Fetch Error:", err);
+        }
+      });
     
     // Fetch company settings with cache-busting
     axios.get(`${API_URL}/settings/?_=${Date.now()}`)
       .then((res) => setSettings(res.data))
-      .catch(err => console.error("Settings Fetch Error:", err));
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Settings Fetch Error:", err);
+        }
+      });
   }, [API_URL]);
 
   /* fetch invoices when client changes */
@@ -45,7 +57,11 @@ export default function CreateTransaction() {
       // Fetch invoices with cache-busting
       axios.get(`${API_URL}/invoice/invoice_list/${form.client}/?_=${Date.now()}`)
         .then((res) => setInvoices(res.data))
-        .catch(console.error);
+        .catch((err) => {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Invoice Fetch Error:", err);
+          }
+        });
     } else {
       setInvoices([]);
       setForm((prev) => ({ ...prev, invoice: "", balanceAmount: "" }));
@@ -104,11 +120,13 @@ export default function CreateTransaction() {
 
     try {
       await axios.post(`${API_URL}/transactions/list-create/`, payload);
-      alert("Receipt saved successfully!");
+      showAlert("Receipt Saved", "The transaction has been recorded successfully.", "success");
       router.push("/receipts/");
     } catch (err) {
-      console.error("Failed to save transaction:", err);
-      alert("Error saving transaction. Please check all fields.");
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to save transaction:", err);
+      }
+      showAlert("Save Failed", "There was an error saving the transaction. Please check all required fields and your connection.", "error");
     } finally {
       setSubmitting(false);
     }

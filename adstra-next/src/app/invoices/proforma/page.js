@@ -11,7 +11,10 @@ import API_BASE_URL from "@/utils/apiBase";
 import SettingsPanel from "@/components/common/SettingsPanel";
 import "../InvoiceList.css";
 
+import { useAuth } from "@/Context/AuthContext";
+
 export default function ProformaInvoiceList() {
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,21 +29,12 @@ export default function ProformaInvoiceList() {
   const [trashStartDate, setTrashStartDate] = useState("");
   const [trashEndDate, setTrashEndDate] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const [user, setUser] = useState(null);
   const router = useRouter();
 
   const API_BASE = API_BASE_URL;
 
   useEffect(() => {
     fetchInvoices();
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (e) {
-      console.error("Error loading user:", e);
-    }
   }, []);
 
   useEffect(() => {
@@ -57,7 +51,9 @@ export default function ProformaInvoiceList() {
         setIsLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to fetch proforma invoices:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to fetch proforma invoices:", err);
+        }
         setIsLoading(false);
       });
   };
@@ -74,7 +70,9 @@ export default function ProformaInvoiceList() {
         );
       })
       .catch((err) => {
-        console.error("Failed to update status:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to update status:", err);
+        }
         alert("Could not update status. Please try again.");
       })
       .finally(() => {
@@ -90,7 +88,9 @@ export default function ProformaInvoiceList() {
         setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
       })
       .catch((err) => {
-        console.error("Failed to delete proforma:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to delete proforma:", err);
+        }
         alert("Could not move to trash. Please try again.");
       });
   };
@@ -108,7 +108,9 @@ export default function ProformaInvoiceList() {
         setShowTrash(true);
       })
       .catch((err) => {
-        console.error("Failed to fetch trash:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to fetch trash:", err);
+        }
         alert("Could not load trash.");
       });
   };
@@ -121,7 +123,9 @@ export default function ProformaInvoiceList() {
         fetchInvoices();
       })
       .catch((err) => {
-        console.error("Failed to restore proforma:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to restore proforma:", err);
+        }
         alert("Could not restore.");
       });
   };
@@ -134,7 +138,9 @@ export default function ProformaInvoiceList() {
         setTrashInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
       })
       .catch((err) => {
-        console.error("Failed to permanently delete invoice:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to permanently delete invoice:", err);
+        }
         alert("Could not delete invoice permanently.");
       });
   };

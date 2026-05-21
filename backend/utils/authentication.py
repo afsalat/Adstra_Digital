@@ -24,15 +24,12 @@ class JWTAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed("Invalid authorization token.") from exc
 
         user_id = decode_jwt(token)
-        print(f"DEBUG [Auth]: Token decoded to user_id={user_id}")
         if not user_id:
             raise exceptions.AuthenticationFailed("Invalid or expired token.")
 
         try:
             user = CustomUser.objects.get(id=user_id, is_active=True)
-            print(f"DEBUG [Auth]: Authenticated {user.username} (ID: {user.id}, Super: {user.is_superuser})")
         except CustomUser.DoesNotExist as exc:
-            print(f"DEBUG [Auth]: User ID {user_id} not found or inactive.")
             raise exceptions.AuthenticationFailed("User not found.") from exc
 
         return (user, token)

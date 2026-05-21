@@ -6,8 +6,9 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import "./Attendance.css";
-import CustomAlert from "@/components/common/CustomAlert/CustomAlert";
 import API_BASE_URL from "@/utils/apiBase";
+import { useAuth } from "@/Context/AuthContext";
+import { useModal } from "@/Context/ModalContext";
 
 const BASE_URL = API_BASE_URL;
 
@@ -59,6 +60,8 @@ function StatusBadge({ status }) {
 }
 
 export default function AttendanceDashboard() {
+  const { user: currentUser } = useAuth();
+  const { showAlert, showConfirm } = useModal();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -71,7 +74,9 @@ export default function AttendanceDashboard() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [entryForm, setEntryForm] = useState({ id: null, user: "", date: "", status: "Present", checkin: "", checkout: "", locationMode: "text", locationText: "", locationLat: "", locationLng: "", work_report: [{ category: "", description: "" }] });
-  const [currentUser, setCurrentUser] = useState(null);
+
+  const excelLib = useRef(null); // Cache for library
+  const saverLib = useRef(null); // Cache for library
 
   // Pre-load libraries when modal is about to open
   useEffect(() => {
@@ -85,7 +90,9 @@ export default function AttendanceDashboard() {
           excelLib.current = excel.default || excel;
           saverLib.current = saver.default || saver;
         } catch (e) {
-          console.error("Failed to pre-load export libraries:", e);
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Failed to pre-load export libraries:", e);
+          }
         }
       };
       loadLibs();
@@ -108,20 +115,6 @@ export default function AttendanceDashboard() {
   const [exportEmployeeId, setExportEmployeeId] = useState("all");
   const [skipGeocoding, setSkipGeocoding] = useState(false); // New state for fast export
   const searchContainerRef = useRef(null);
-  const excelLib = useRef(null); // Cache for library
-  const saverLib = useRef(null); // Cache for library
-
-
-  // Custom Alert State
-  const [alert, setAlert] = useState({ show: false, title: "", message: "", type: "info" });
-
-  const showAlert = (title, message, type = "info") => {
-    setAlert({ show: true, title, message, type });
-  };
-
-  const closeAlert = () => {
-    setAlert(prev => ({ ...prev, show: false }));
-  };
 
   const router = useRouter();
 
@@ -138,7 +131,9 @@ export default function AttendanceDashboard() {
       });
       setEmployees(response.data.users || []);
     } catch (err) {
-      console.error("Error fetching employees:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error fetching employees:", err);
+      }
     }
   }, []);
 
@@ -160,15 +155,6 @@ export default function AttendanceDashboard() {
 
   useEffect(() => {
     fetchEmployees();
-    
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        setCurrentUser(JSON.parse(userStr));
-      } catch (e) {
-        console.error("Error parsing user:", e);
-      }
-    }
   }, [fetchEmployees]);
 
   useEffect(() => {
@@ -227,7 +213,9 @@ export default function AttendanceDashboard() {
 
       setData(mappedData);
     } catch (err) {
-      console.error("Error fetching attendance:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error fetching attendance:", err);
+      }
       setError(err.response?.data?.error || err.message || "Failed to fetch attendance.");
       if (err.response?.status === 401) {
         router.push("/admin/login");
@@ -370,7 +358,9 @@ export default function AttendanceDashboard() {
       setShowLogModal(false);
       fetchAttendance();
     } catch (err) {
-      console.error(err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error(err);
+      }
       showAlert("Error", "Failed to save work report: " + (err.response?.data?.error || err.message), "error");
     }
   };
@@ -722,7 +712,9 @@ export default function AttendanceDashboard() {
       setShowExportModal(false);
       setExportDates({ start: "", end: "" });
     } catch (err) {
-      console.error("Export Error:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Export Error:", err);
+      }
       setExportStatus("error");
       setExportError(err.response?.data?.error || err.message || "An unexpected error occurred during export.");
     }
@@ -881,6 +873,7 @@ export default function AttendanceDashboard() {
           padding: 10px 16px;
           width: 280px;
           display: flex; align-items: center;
+          position: relative;
         }
         .search-input { border: none; background: transparent; width: 100%; outline: none; font-size: 14px; font-weight: 500; color: var(--text-primary); }
         .search-input::placeholder { color: #94A3B8; }
@@ -942,6 +935,7 @@ export default function AttendanceDashboard() {
           background: white; padding: 32px; width: 500px;
           border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
           animation: slideUp 0.3s ease-out; max-height: 80vh; overflow-y: auto;
+          text-align: left;
         }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
@@ -970,6 +964,26 @@ export default function AttendanceDashboard() {
         }
         .add-row-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
 
+        .search-dropdown-list {
+          position: absolute; top: 100%; left: 0; width: 100%;
+          background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+          margin-top: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+          max-height: 300px; overflow-y: auto; z-index: 50;
+        }
+        .search-dropdown-item {
+          padding: 10px 16px; cursor: pointer; transition: background 0.2s;
+          border-bottom: 1px solid #F1F5F9;
+        }
+        .search-dropdown-item:hover { background: #F8FAFC; }
+        .search-dropdown-item:last-child { border-bottom: none; }
+        .item-role { font-size: 11px; color: #64748B; margin-top: 2px; }
+
+        .quick-ranges-container { margin-bottom: 20px; }
+        .quick-ranges-label { display: block; font-size: 12px; font-weight: 700; color: #94A3B8; margin-bottom: 10px; text-transform: uppercase; }
+        .quick-ranges-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .preset-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #E2E8F0; background: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .preset-btn:hover { background: #F8FAFC; border-color: #CBD5E1; }
+
         @media (max-width: 1024px) {
           .stats-grid { grid-template-columns: 1fr 1fr; }
           .toolbar { flex-direction: column; gap: 16px; align-items: stretch; }
@@ -988,13 +1002,6 @@ export default function AttendanceDashboard() {
           .btn { flex: 1; justify-content: center; padding: 10px; font-size: 13px; }
         }
       `}</style>
-      <CustomAlert
-        show={alert.show}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={closeAlert}
-      />
 
       <div className="top-nav">
         <button className="back-btn" onClick={handleBack} title="Go Back">←</button>
@@ -1595,9 +1602,7 @@ export default function AttendanceDashboard() {
                     </div>
                   </div>
                 ))}
-                <button className="btn btn-secondary" style={{ fontSize: "13px", padding: "6px 12px", width: "100%", background: "#E2E8F0", border: "none", color: "#475569", borderRadius: "6px" }} onClick={() => {
-                  setEntryForm({...entryForm, work_report: [...entryForm.work_report, { category: "", description: "" }]});
-                }}>+ Add Another Task</button>
+                <button type="button" className="add-row-btn" style={{ padding: "8px", fontSize: "12px" }} onClick={() => setEntryForm({...entryForm, work_report: [...entryForm.work_report, { category: "", description: "" }]})}>+ Add Another Task</button>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>

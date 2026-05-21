@@ -77,10 +77,15 @@ def adduser(request):
                 email_thread = threading.Thread(target=send_email_task)
                 email_thread.start()
 
-            return Response({
-                "message": "User created successfully. Credentials sent to email.",
-                "user": serializer.data
-            }, status=status.HTTP_201_CREATED)
+            payload = {
+                "message": "User created successfully. Credentials sent to email (if provided).",
+                "user": serializer.data,
+            }
+            # Optionally return the generated password for immediate display in the admin UI.
+            # Use `?show_password=1`. Access is already controlled by `users.create`.
+            if request.query_params.get("show_password") == "1":
+                payload["generated_password"] = generated_password
+            return Response(payload, status=status.HTTP_201_CREATED)
         else:
             logger.warning(f"User creation validation failed: {serializer.errors}")
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -97,16 +102,33 @@ def delete_user(request, user_id):
     if denial:
         return denial
     try:
-        user = CustomUser.objects.get(pk=user_id)
+        # Cast to int to be safe
+        uid = int(user_id)
+        user = CustomUser.objects.get(pk=uid)
+        
+        # Security checks
         if user.is_superuser and not request.user.is_superuser:
+            logger.warning(f"User {request.user.username} (not super) attempted to delete superuser {user.username}")
             return Response({"error": "Only superusers can delete superusers."}, status=status.HTTP_403_FORBIDDEN)
-        user.is_active = False
-        user.save(update_fields=['is_active'])
-        log_action(request.user, "User Deactivated", f"Deactivated user {user.username}", request)
-        return Response({"message": "User deactivated successfully."}, status=204)
+            
+        if user.id == request.user.id:
+            return Response({"error": "You cannot delete your own account."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        username = user.username
+        user.delete()
+        
+        logger.info(f"User {username} (ID: {uid}) was deleted by {request.user.username}")
+        log_action(request.user, "User Deleted", f"Permanently deleted user {username}", request)
+        
+        return Response({"message": f"User {username} deleted successfully."}, status=status.HTTP_200_OK)
+        
     except CustomUser.DoesNotExist:
-        return Response({"error": "User not found."}, status=404)
-
+        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+    except ValueError:
+        return Response({"error": "Invalid user ID."}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception(f"Unexpected error deleting user {user_id}: {e}")
+        return Response({"error": f"Unable to delete user: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # GET /listusers/ - list users
@@ -129,8 +151,6 @@ def listusers(request):
     except Exception:
         logger.exception("Unable to list users")
         return Response({"error": "Unable to list users."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 
 # PUT /updateuser/<id>/ - update user
@@ -170,7 +190,6 @@ def updateuser(request, user_id):
         return Response({"error": "Unable to update user."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
 # PUT /updateuser/<id>/ - update user (activate/deactivate or other fields)
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
@@ -201,8 +220,6 @@ def activeNinactive(request, user_id):
     except Exception:
         logger.exception(f"Error changing status for user {user_id}")
         return Response({"error": "Unable to change user status."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 
 # POST /login/ - user login & check-in
@@ -246,8 +263,6 @@ def login_view(request):
     except Exception:
         logger.exception("Login failed")
         return Response({"error": "Login failed"}, status=500)
-
-
 
 
 @api_view(["POST"])
@@ -305,8 +320,6 @@ def logout_view(request, user_id):
     except Exception:
         logger.exception(f"Logout failed for user {user_id}")
         return Response({"error": "Unable to logout."}, status=500)
-
-
 
 
 @api_view(["POST"])
@@ -379,7 +392,12 @@ def reset_password(request, user_id):
             email_thread = threading.Thread(target=send_reset_email)
             email_thread.start()
 
-        return Response({"message": "Password reset successfully. New password sent to email."}, status=200)
+        payload = {"message": "Password reset successfully. New password sent to email."}
+        # Optionally return the new password for immediate display in the admin UI.
+        # Use `?show_password=1`. Access is already controlled by `users.reset_password`.
+        if request.query_params.get("show_password") == "1":
+            payload["generated_password"] = new_password
+        return Response(payload, status=200)
 
     except CustomUser.DoesNotExist:
         return Response({"error": "User not found"}, status=404)
