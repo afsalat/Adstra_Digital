@@ -19,6 +19,7 @@
   background-color: #f8fafc;
   color: #1e293b;
   font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
 }
 
 /* Header Section */
@@ -433,6 +434,7 @@
   border: 1px solid rgba(0, 0, 0, 0.03);
   padding: 1.5rem;
   animation: slideInUp 0.4s ease-out;
+  min-width: 0;
 }
 
 .pane-header {

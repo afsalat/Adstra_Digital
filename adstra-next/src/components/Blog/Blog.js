@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Tilt from "react-parallax-tilt";
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -9,12 +9,29 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { blogPosts } from "../../data/services";
 import { getBlogImagePath } from "@/utils/contentImage";
+import API_BASE_URL from "@/utils/apiBase";
 
 const Blog = () => {
   const router = useRouter();
+  const [posts, setPosts] = useState(() => blogPosts);
 
   useEffect(() => {
     AOS.init({ duration: 1000 });
+
+    async function fetchBlogs() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/blogs/`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setPosts(data);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching blogs from API:", err);
+      }
+    }
+    fetchBlogs();
   }, []);
 
   const handleNavigation = (slug) => {
@@ -26,7 +43,7 @@ const Blog = () => {
       <h2 className="blog-heading">Latest Blog Posts</h2>
       <section className="blog-section">
         <div className="blog-card-grid">
-          {blogPosts.map((post, index) => (
+          {posts.map((post, index) => (
             <div className="blog-card-wrapper" key={index}>
               <Tilt
                 glareEnable={true}

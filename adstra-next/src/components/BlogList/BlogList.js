@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock3 } from "lucide-react";
 import { blogPosts } from "@/data/services";
 import { getBlogImagePath } from "@/utils/contentImage";
+import API_BASE_URL from "@/utils/apiBase";
 import NavBar from "../NavBar/Navbar";
 import Footer from "../Footer/Footer";
 import "./BlogList.css";
@@ -74,7 +76,25 @@ function BlogMeta({ post }) {
 }
 
 export default function AllBlogsPage() {
-  const posts = getSortedPosts();
+  const [posts, setPosts] = useState(() => getSortedPosts());
+
+  useEffect(() => {
+    async function fetchBlogs() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/blogs/`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setPosts(data);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching blogs from API:", err);
+      }
+    }
+    fetchBlogs();
+  }, []);
+
   const featuredPost = posts[0];
   const recentPosts = posts.slice(1, 5);
   const archivePosts = posts.slice(1);

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apis.invoice',
     'apis.transactions',
     'apis.settings',
+    'apis.blogs',
 ]
 
 MIDDLEWARE = [
@@ -129,7 +130,14 @@ else:
     # Default: allow localhost in development, production domain in prod.
     CORS_ALLOWED_ORIGINS = ["https://adstradigital.com"]
     if DEBUG:
-        CORS_ALLOWED_ORIGINS.append("http://localhost:3000")
+        CORS_ALLOWED_ORIGINS.extend([
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://127.0.0.1:3002",
+        ])
 
 APPEND_SLASH = False
 # In production, don't allow all origins by default.

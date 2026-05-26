@@ -3,9 +3,25 @@ import NavBar from "@/components/NavBar/Navbar";
 import Footer from "@/components/Footer/Footer";
 import BlogDetail from "@/components/BlogDetails/BlogDetails";
 import { getAbsoluteSiteUrl, getBlogImagePath } from "@/utils/contentImage";
+import API_BASE_URL from "@/utils/apiBase";
 
-// Static path generation - updated for GMB post
+// Static path generation - updated for dynamic flow
 export async function generateStaticParams() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/blogs/`);
+    if (res.ok) {
+      const posts = await res.json();
+      if (posts && posts.length > 0) {
+        return posts.map((post) => ({
+          label: post.slug,
+        }));
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch blog posts for static params:", err);
+  }
+
+  // Fallback to static data
   return blogPosts.map((post) => ({
     label: post.slug,
   }));
@@ -14,7 +30,21 @@ export async function generateStaticParams() {
 // SEO Metadata
 export async function generateMetadata({ params }) {
   const { label } = await params;
-  const blog = blogPosts.find((b) => b.slug === label);
+  
+  let blog = null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/blogs/${label}/`);
+    if (res.ok) {
+      blog = await res.json();
+    }
+  } catch (err) {
+    console.error("Error fetching blog metadata from API:", err);
+  }
+
+  // Fallback
+  if (!blog) {
+    blog = blogPosts.find((b) => b.slug === label);
+  }
 
   if (!blog) {
     return {
@@ -51,7 +81,21 @@ export async function generateMetadata({ params }) {
 // Blog Page Component
 export default async function BlogDetailPage({ params }) {
   const { label } = await params;
-  const blog = blogPosts.find((b) => b.slug === label);
+  
+  let blog = null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/blogs/${label}/`);
+    if (res.ok) {
+      blog = await res.json();
+    }
+  } catch (err) {
+    console.error("Error fetching blog details from API:", err);
+  }
+
+  // Fallback
+  if (!blog) {
+    blog = blogPosts.find((b) => b.slug === label);
+  }
 
   if (!blog) {
     return (
