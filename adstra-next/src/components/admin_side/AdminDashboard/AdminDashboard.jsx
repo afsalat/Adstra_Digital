@@ -206,6 +206,7 @@ Are you sure you want to continue with logout?`,
             {/* Blogs Creator */}
             {renderFeatureCard({
               permission: "settings.update",
+              href: "/blogcreator/",
               color: "rose",
               icon: <PenTool size={28} />,
               title: "Blogs Creator",
