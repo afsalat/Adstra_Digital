@@ -22,12 +22,25 @@ def robots_txt(_request):
 urlpatterns = [
     path('', health_check, name='health_check'),
     path(os.getenv('DJANGO_ADMIN_PATH', 'admin/'), admin.site.urls),
+    
+    # Standard paths
     path('user/', include('apis.user.urls')),
     path('attendance/', include('apis.attendance.urls')),
     path('proposal/', include('apis.proposal.urls')),
     path('invoice/', include('apis.invoice.urls')),
     path('transactions/', include('apis.transactions.urls')),
     path('settings/', include('apis.settings.urls')),
+    path('blogs/', include('apis.blogs.urls')),
+
+    # API-prefixed paths for frontend /api compatibility
+    path('api/user/', include('apis.user.urls')),
+    path('api/attendance/', include('apis.attendance.urls')),
+    path('api/proposal/', include('apis.proposal.urls')),
+    path('api/invoice/', include('apis.invoice.urls')),
+    path('api/transactions/', include('apis.transactions.urls')),
+    path('api/settings/', include('apis.settings.urls')),
+    path('api/blogs/', include('apis.blogs.urls')),
+
     path('robots.txt', robots_txt, name='robots_txt'),
 ]
 
