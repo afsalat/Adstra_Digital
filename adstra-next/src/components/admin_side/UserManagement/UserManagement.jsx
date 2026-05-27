@@ -20,7 +20,7 @@ const UserList = () => {
   const [deactivating, setDeactivating] = useState(false);
   const [roles, setRoles] = useState({});
   const [permissions, setPermissions] = useState({});
-  
+
   const { showAlert, showConfirm } = useModal();
   const router = useRouter();
 
