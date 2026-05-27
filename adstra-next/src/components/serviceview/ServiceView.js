@@ -8,14 +8,14 @@ import "aos/dist/aos.css";
 import "./ServiceView.css";
 import { serviceSections } from "@/data/services";
 import { getServiceCardArt } from "@/utils/serviceCardArt";
-import { hasImageSrc } from "@/utils/contentImage";
+import { hasImageSrc, getMediaUrl } from "@/utils/contentImage";
 
 export default function ServiceView({ service }) {
   const router = useRouter();
   const [imageFailed, setImageFailed] = useState(false);
   const heroImage =
     !imageFailed && hasImageSrc(service?.image)
-      ? service.image.trim()
+      ? getMediaUrl(service.image)
       : getServiceCardArt(service);
 
   useEffect(() => {

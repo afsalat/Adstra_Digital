@@ -65,6 +65,11 @@ function NavBar() {
       isActive: () => normalizePath(pathname).startsWith("/service"),
     },
     {
+      label: "Products",
+      href: "/#products",
+      isActive: () => normalizePath(pathname).startsWith("/products"),
+    },
+    {
       label: "Gallery",
       href: "/#gallery",
       isActive: () => activePath === "/#gallery",

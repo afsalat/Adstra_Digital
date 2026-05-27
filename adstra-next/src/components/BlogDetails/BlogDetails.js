@@ -2,172 +2,26 @@
 
 import parse from "html-react-parser";
 import { blogPosts } from "@/data/services";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { format } from "date-fns";
 import Link from "next/link";
 import { getBlogImagePath } from "@/utils/contentImage";
 import "./BlogDetails.css";
+import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 
-const keywordLinks = {
-  // Strategy & Services
-  AEO: "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
-  GEO: "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
-  PPC: "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
-  SEO: "/service/seo-website-optimization/",
-  "SEO Services": "/service/seo-website-optimization/",
-  "Google Ads": "/service/google-ads/",
-  "Google Business Management Services": "/service/google-ads/",
-  "Paid Advertising Services": "/service/google-ads/",
-  "Content Marketing": "/service/content-marketing/",
-  "Digital Marketing": "/service/content-marketing/",
-  "Marketing Strategies": "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
+import { keywordLinks } from "@/data/keywordLinks";
 
-  // Branding & Identity
-  Branding: "/service/branding/",
-  "brand voice": "/service/branding/",
-  "branding strategies": "/service/branding/",
-  "branding audit": "/service/branding/",
-  "branding strategy": "/service/branding/",
-  "responsive logo": "/blogs/branding-trends-2025-logo-design-marketing/",
-  "animated logos": "/blogs/branding-trends-2025-logo-design-marketing/",
-  "Logo Design": "/blogs/branding-trends-2025-logo-design-marketing/",
-
-  // Visual & Creative Services
-  Photography: "/blogs/in-house-video-photography/",
-  Video: "/blogs/in-house-video-photography/",
-  "video editing": "/service/video-production/",
-  "video production company": "/service/video-production/",
-  "corporate video shoot": "/service/video-production/",
-  "video shoot in Kerala": "/service/video-production/",
-  "visual storytelling": "/blogs/in-house-video-photography/",
-  "in-house video production": "/blogs/in-house-video-photography/",
-  "in-house photography": "/blogs/in-house-video-photography/",
-
-  // Creative Thought & Process
-  "Adstra Digital": "/about/",
-  "creative ideas": "/blogs/birth-of-creativity-ideas/",
-  "creative mindset": "/blogs/birth-of-creativity-ideas/",
-  "creative journey": "/blogs/birth-of-creativity-ideas/",
-  storytelling: "/blogs/birth-of-creativity-ideas/",
-  "creative process": "/blogs/birth-of-creativity-ideas/",
-  imagination: "/blogs/birth-of-creativity-ideas/",
-  "creative resources": "/blogs/all/",
-  "client feedback": "/blogs/ai-marketing-benefits-business-growth/",
-
-  // General Links
-  "Contact us": "https://adstradigital.com/#contact",
-  "contact page": "https://adstradigital.com/#contact",
-  "Marketing & Creativity Blogs": "/blogs/all/",
-  "content creation": "/service/content-marketing/",
-  CRM: "/service/content-marketing/",
-
-  // AI & Search topics (new internal blog links)
-  "AI Marketing": "/blogs/ai-marketing-benefits-business-growth/",
-  "automation tools": "/blogs/ai-marketing-benefits-business-growth/",
-  "predictive analytics": "/blogs/ai-marketing-benefits-business-growth/",
-  "smart ad targeting": "/blogs/ai-marketing-benefits-business-growth/",
-
-  // NEW: Google SGE & AI Search blog interlinks
-  "Google SGE": "/blogs/google-sge-ai-search-impact-2025/",
-  "AI-powered search": "/blogs/google-sge-ai-search-impact-2025/",
-  SGE: "/blogs/google-sge-ai-search-impact-2025/",
-  "Search Generative Experience": "/blogs/google-sge-ai-search-impact-2025/",
-  "E-A-T": "/blogs/google-sge-ai-search-impact-2025/",
-  EAT: "/blogs/google-sge-ai-search-impact-2025/",
-  "Core Web Vitals": "/blogs/google-sge-ai-search-impact-2025/",
-  "Local SEO": "/blogs/google-sge-ai-search-impact-2025/",
-  "conversational keywords": "/blogs/google-sge-ai-search-impact-2025/",
-  "structured data": "/blogs/google-sge-ai-search-impact-2025/",
-
-  // NEW: Performance Max 2.0 blog interlinks
-  PMax: "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  "asset groups": "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  "audience signals": "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  "search term insights":
-    "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  "first-party data": "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  "page feeds": "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  "creative insights/":
-    "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  "automated bidding":
-    "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  ROAS: "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-  GA4: "/blogs/performance-max-2-ai-driven-paid-marketing-guide/",
-
-  // Services cross-links still useful from those blogs
-  "Google Ads": "/service/google-ads/",
-  "Paid Advertising Services": "/service/google-ads/",
-  "digital marketing": "/service/content-marketing/",
-  "marketing strategies": "/blogs/seo-aeo-geo-ppc-2025-digital-strategy/",
-
-  // NEW: Social Media Strategy to Boost Your Conversion Rate
-  "Social Media Conversion":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Engagement Rate":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Shoppable Posts":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Retargeting Ads":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Customer Retention":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Conversion Optimization":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Mobile-Friendly Landing Pages":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Audience Segmentation":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Customer Journey Mapping":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-  "Calls to Action (CTAs)":
-    "/blogs/social-media-strategy-to-boost-your-conversion-rate/",
-
-  // eCommerce App Development
-  "eCommerce app": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Mobile shopping": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Payment gateway": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Shopping app": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Budget planning": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "App features": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Order tracking": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Product catalog": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Wishlist": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Cart": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Push notifications": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Admin panel": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "Multi-vendor": "/blogs/ecommerce-app-development-pricing-features-budget/",
-  "App maintenance": "/blogs/ecommerce-app-development-pricing-features-budget/",
-
-  // Conversational Search & AI Trends 2026
-  "Conversational Search": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
-  "AI Trends": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
-  "conversational SEO": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
-  "AI Overviews": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
-  "Generative Engine Optimization": "/blogs/conversational-search-ai-trends-digital-marketing-2026/",
-
-  // AI Social Media Tools 2026
-  "AI social media tools": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
-  "AI automation": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
-  "AI content marketing": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
-  "Smart scheduling": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
-  "AI chatbots": "/blogs/best-ai-social-media-tools-brands-creators-agencies-2026/",
-
-  // YouTube SEO Tips 2026
-  "YouTube SEO Tips": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
-  "YouTube video optimization": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
-  "YouTube ranking factors": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
-  "Video SEO strategy": "/blogs/25-practical-youtube-seo-tips-boost-video-rankings/",
-};
-
-const createInterlinker = () => {
+const createInterlinker = (activeKeywords) => {
   const keywordCounts = {};
   const maxPerKeyword = 3;
-  const keywords = Object.keys(keywordLinks).sort(
+  const keywords = Object.keys(activeKeywords || {}).sort(
     (a, b) => b.length - a.length
   );
-  const regex = new RegExp(`\\b(${keywords.join("|")})\\b`, "gi");
+  if (keywords.length === 0) return (text) => parse(text);
+  const regex = new RegExp(`\\b(${keywords.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join("|")})\\b`, "gi");
 
   return (text) => {
     // 1. Handle Markdown Bold: **text** -> <strong>text</strong>
@@ -176,13 +30,29 @@ const createInterlinker = () => {
     // 2. Handle Interlinking & Parse HTML
     return parse(
       formattedText.replace(regex, (match) => {
-        const link = keywordLinks[match];
-        if (!link) return match;
+        const matchedKey = keywords.find(k => k.toLowerCase() === match.toLowerCase()) || match;
+        const targetObj = activeKeywords[matchedKey];
+        if (!targetObj) return match;
 
-        keywordCounts[match] = (keywordCounts[match] || 0) + 1;
-        if (keywordCounts[match] > maxPerKeyword) return match;
+        let link = "";
+        let isInternal = true;
 
-        return `<a href="${link}" class="interlink" target="_blank" rel="noopener noreferrer">${match}</a>`;
+        if (typeof targetObj === "object") {
+          link = targetObj.link;
+          isInternal = targetObj.type ? (targetObj.type === "internal") : ((link || "").startsWith('/') || (link || "").includes('adstradigital.com'));
+        } else {
+          link = targetObj;
+          isInternal = (link || "").startsWith('/') || (link || "").includes('adstradigital.com') || (link || "").startsWith('http://localhost') || (link || "").startsWith('http://127.0.0.1');
+        }
+
+        keywordCounts[matchedKey] = (keywordCounts[matchedKey] || 0) + 1;
+        if (keywordCounts[matchedKey] > maxPerKeyword) return match;
+
+        if (isInternal) {
+          return `<a href="${link}" class="interlink">${match}</a>`;
+        } else {
+          return `<a href="${link}" class="interlink" target="_blank" rel="noopener noreferrer">${match}</a>`;
+        }
       })
     );
   };
@@ -190,11 +60,32 @@ const createInterlinker = () => {
 
 const BlogDetail = ({ blog }) => {
   const sidebarRef = React.useRef(null);
+  const [dbKeywordLinks, setDbKeywordLinks] = useState(null);
 
   useEffect(() => {
     AOS.init({ duration: 1000 });
     window.scrollTo(0, 0);
+
+    const fetchKeywords = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/blogs/keywords/`);
+        if (res.data && res.data.length > 0) {
+          const mapping = {};
+          res.data.forEach(item => {
+            mapping[item.keyword] = {
+              link: item.link,
+              type: item.link_type
+            };
+          });
+          setDbKeywordLinks(mapping);
+        }
+      } catch (err) {
+        console.error("Error fetching keywords from API:", err);
+      }
+    };
+    fetchKeywords();
   }, []);
+
 
   const scrollSidebar = (direction) => {
     if (sidebarRef.current) {
@@ -222,15 +113,35 @@ const BlogDetail = ({ blog }) => {
     })
     .filter(Boolean);
 
-  const interlinkText = createInterlinker();
+  const activeKeywords = dbKeywordLinks || keywordLinks;
+  const interlinkText = createInterlinker(activeKeywords);
 
   const formatSection = (para, index, allParas) => {
+    // Standard Markdown Headings (e.g. ## Heading or ### Heading)
+    if (/^##\s+(.+)$/.test(para)) {
+      const headingText = para.replace(/^##\s+/, "");
+      return (
+        <h2 className="blog-subheading" key={index}>
+          {interlinkText(headingText)}
+        </h2>
+      );
+    }
+
+    if (/^###\s+(.+)$/.test(para)) {
+      const headingText = para.replace(/^###\s+/, "");
+      return (
+        <h3 className="blog-subheading" style={{ fontSize: "1.2em", color: "var(--accent-strong)", marginTop: "1.5em", marginBottom: "0.8em" }} key={index}>
+          {interlinkText(headingText)}
+        </h3>
+      );
+    }
+
     // Headings - Only specific section names
     if (
       /^Introduction$/i.test(para) ||
       /^Consulion$/i.test(para) ||
       /^Final Thoughts$/i.test(para) ||
-      /^FAQs$/i.test(para) ||
+      /^FAQs?$/i.test(para) ||
       /^Conclusion$/i.test(para)
     ) {
       return (
@@ -240,15 +151,6 @@ const BlogDetail = ({ blog }) => {
       );
     }
 
-    // Section titles with "?" stay as paragraphs with styling (fun emphasis)
-    // Avoid matching if it looks like a numbered FAQ item (handled below)
-    if (para.includes("?") && para.length < 100 && !/^\s*\d+[\.)]\s+/.test(para)) {
-      return (
-        <p key={index} className="blog-section-title" style={{ fontSize: "1.2em", fontWeight: "600", color: "var(--accent-strong)", marginTop: "1.5em", marginBottom: "0.8em" }}>
-          {interlinkText(para)}
-        </p>
-      );
-    }
 
     // Numbered points (section headers like "A. Type of App")
     if (/^[A-Z]\.\s+/.test(para)) {

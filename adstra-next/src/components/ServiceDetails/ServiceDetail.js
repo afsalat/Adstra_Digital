@@ -8,7 +8,7 @@ import "./ServiceDetail.css";
 import { serviceSections } from "@/data/services";
 import ServiceSchema from "@/components/Schema/ServiceSchema";
 import { getServiceCardArt } from "@/utils/serviceCardArt";
-import { hasImageSrc } from "@/utils/contentImage";
+import { hasImageSrc, getMediaUrl } from "@/utils/contentImage";
 
 function ServiceCard({ service, index }) {
   const previewPoints = (service.points || service.services || []).slice(0, 3);
@@ -16,7 +16,7 @@ function ServiceCard({ service, index }) {
   const [imageFailed, setImageFailed] = useState(false);
   const cardImage =
     !imageFailed && hasImageSrc(service?.image)
-      ? service.image.trim()
+      ? getMediaUrl(service.image)
       : generatedArt;
 
   return (

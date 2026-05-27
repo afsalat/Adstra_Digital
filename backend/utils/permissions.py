@@ -44,6 +44,11 @@ PERMISSIONS = {
     "settings.update": "Update company settings",
     "backup.export": "Export backup",
     "backup.import": "Import backup",
+    "blogs.view": "View blog posts",
+    "blogs.create": "Create blog posts",
+    "blogs.update": "Update blog posts",
+    "blogs.delete": "Delete blog posts",
+    "blogs.keywords": "Manage blog interlinks",
 }
 
 
@@ -74,6 +79,11 @@ ROLE_PERMISSIONS = {
         "transactions.view",
         "transactions.create",
         "settings.view",
+        "blogs.view",
+        "blogs.create",
+        "blogs.update",
+        "blogs.delete",
+        "blogs.keywords",
     ],
     "accountant": [
         "users.update_self",

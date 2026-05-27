@@ -27,8 +27,14 @@ import {
   Tag,
   User,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Upload,
+  UploadCloud
 } from "lucide-react";
+import { getMediaUrl } from "@/utils/contentImage";
+import parse from "html-react-parser";
+import { keywordLinks } from "@/data/keywordLinks";
+import "../../BlogDetails/BlogDetails.css";
 import "./BlogCreator.css";
 
 export default function BlogCreator() {
@@ -39,6 +45,21 @@ export default function BlogCreator() {
 
   // View state: 'list' or 'edit' or 'create'
   const [viewState, setViewState] = useState("list");
+
+  // Overall engine section tab: 'articles' or 'keywords'
+  const [activeSection, setActiveSection] = useState("articles");
+
+  // Keyword interlinking manager states
+  const [dbKeywordLinks, setDbKeywordLinks] = useState({});
+  const [keywordList, setKeywordList] = useState([]);
+  const [keywordLoading, setKeywordLoading] = useState(false);
+  const [keywordSearch, setKeywordSearch] = useState("");
+  const [kwEditId, setKwEditId] = useState(null);
+  const [kwKeyword, setKwKeyword] = useState("");
+  const [kwLink, setKwLink] = useState("");
+  const [kwType, setKwType] = useState("internal");
+  const [kwFormActive, setKwFormActive] = useState(false);
+  const [keywordTypeFilter, setKeywordTypeFilter] = useState("all");
   
   // Blogs state
   const [blogs, setBlogs] = useState([]);
@@ -48,6 +69,7 @@ export default function BlogCreator() {
 
   // Form states
   const [editId, setEditId] = useState(null);
+  const [originalSlug, setOriginalSlug] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -60,18 +82,291 @@ export default function BlogCreator() {
   const [tagsInput, setTagsInput] = useState("");
   const [tags, setTags] = useState([]);
   const [content, setContent] = useState("");
-  const [focusKeyword, setFocusKeyword] = useState("");
+  const [selectedKeywords, setSelectedKeywords] = useState([]);
+  const [interlinkSearch, setInterlinkSearch] = useState("");
   
   // Tab states inside Editor
   const [editorTab, setEditorTab] = useState("edit"); // 'edit', 'preview', 'schema'
   const [seoPreviewTab, setSeoPreviewTab] = useState("google"); // 'google', 'facebook', 'twitter'
 
   const contentTextareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await axios.post(`${API_BASE_URL}/blogs/upload/`, formData, {
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      if (res.data && res.data.url) {
+        setImageUrl(res.data.url);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Error uploading image: " + (err.response?.data?.error || err.message));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleImageDelete = () => {
+    setImageUrl("");
+  };
+
+  const getFullImageUrl = (url) => {
+    return getMediaUrl(url);
+  };
+
+  const formatDate = (dateStr) => {
+    try {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const createInterlinker = (activeKeywords) => {
+    const keywordCounts = {};
+    const maxPerKeyword = 3;
+    const keywords = Object.keys(activeKeywords || {}).sort(
+      (a, b) => b.length - a.length
+    );
+    if (keywords.length === 0) return (text) => parse(text);
+    const regex = new RegExp(`\\b(${keywords.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join("|")})\\b`, "gi");
+
+    return (text) => {
+      const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong style="color: inherit; font-weight: 700;">$1</strong>');
+      return parse(
+        formattedText.replace(regex, (match) => {
+          const matchedKey = keywords.find(k => k.toLowerCase() === match.toLowerCase()) || match;
+          const targetObj = activeKeywords[matchedKey];
+          if (!targetObj) return match;
+          
+          let link = "";
+          let isInternal = true;
+          
+          if (typeof targetObj === "object") {
+            link = targetObj.link;
+            isInternal = targetObj.type ? (targetObj.type === "internal") : ((link || "").startsWith('/') || (link || "").includes('adstradigital.com'));
+          } else {
+            link = targetObj;
+            isInternal = (link || "").startsWith('/') || (link || "").includes('adstradigital.com') || (link || "").startsWith('http://localhost') || (link || "").startsWith('http://127.0.0.1');
+          }
+
+          keywordCounts[matchedKey] = (keywordCounts[matchedKey] || 0) + 1;
+          if (keywordCounts[matchedKey] > maxPerKeyword) return match;
+          
+          if (isInternal) {
+            return `<a href="${link}" class="interlink">${match}</a>`;
+          } else {
+            return `<a href="${link}" class="interlink" target="_blank" rel="noopener noreferrer">${match}</a>`;
+          }
+        })
+      );
+    };
+  };
+
+  const activeKeywords = Object.keys(dbKeywordLinks).length > 0 ? dbKeywordLinks : keywordLinks;
+
+  // Filter to apply only picked/selected keywords
+  const filteredActiveKeywords = {};
+  selectedKeywords.forEach(kw => {
+    if (activeKeywords[kw]) {
+      filteredActiveKeywords[kw] = activeKeywords[kw];
+    }
+  });
+
+  const interlinkText = createInterlinker(filteredActiveKeywords);
+
+  const formatSection = (para, index, allParas) => {
+    // Standard Markdown Headings (e.g. ## Heading or ### Heading)
+    if (/^##\s+(.+)$/.test(para)) {
+      const headingText = para.replace(/^##\s+/, "");
+      return (
+        <h2 className="blog-subheading" key={index}>
+          {interlinkText(headingText)}
+        </h2>
+      );
+    }
+
+    if (/^###\s+(.+)$/.test(para)) {
+      const headingText = para.replace(/^###\s+/, "");
+      return (
+        <h3 className="blog-subheading" style={{ fontSize: "1.2em", color: "var(--accent-strong)", marginTop: "1.5em", marginBottom: "0.8em" }} key={index}>
+          {interlinkText(headingText)}
+        </h3>
+      );
+    }
+
+    if (
+      /^Introduction$/i.test(para) ||
+      /^Consulion$/i.test(para) ||
+      /^Final Thoughts$/i.test(para) ||
+      /^FAQs?$/i.test(para) ||
+      /^Conclusion$/i.test(para)
+    ) {
+      return (
+        <h2 className="blog-subheading" key={index}>
+          {para}
+        </h2>
+      );
+    }
+
+    if (/^[A-Z]\.\s+/.test(para)) {
+      return (
+        <h3 className="blog-subheading" style={{ fontSize: "1.1em", fontWeight: "700", color: "var(--accent-strong)", marginTop: "1.2em" }} key={index}>
+          {interlinkText(para)}
+        </h3>
+      );
+    }
+
+    if (para.includes("|") && para.includes("---") && para.split("\n").length >= 3) {
+      const rows = para.trim().split("\n").map(row => row.trim()).filter(Boolean);
+      const tableRows = rows.map(row => {
+        const content = row.replace(/^\||\|$/g, '');
+        return content.split("|").map(cell => cell.trim());
+      });
+      const separatorIndex = tableRows.findIndex(row => row.some(cell => /^[-: ]+$/.test(cell)));
+      if (separatorIndex !== -1) {
+        const headerRow = tableRows[0];
+        const bodyRows = tableRows.filter((_, idx) => idx !== separatorIndex && idx !== 0);
+        return (
+          <div key={index} className="blog-table-container" style={{ overflowX: "auto", marginBottom: "2em" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", color: "var(--text-primary)", border: "1px solid rgba(28, 36, 48, 0.12)" }}>
+              <thead>
+                <tr>
+                  {headerRow.map((cell, idx) => (
+                    <th key={`th-${idx}`} style={{ border: "1px solid rgba(28, 36, 48, 0.12)", padding: "10px", backgroundColor: "var(--surface-alt)", fontWeight: "700" }}>
+                      {interlinkText(cell)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bodyRows.map((row, rIdx) => (
+                  <tr key={`tr-${rIdx}`}>
+                    {row.map((cell, cIdx) => (
+                      <td key={`td-${rIdx}-${cIdx}`} style={{ border: "1px solid rgba(28, 36, 48, 0.12)", padding: "10px" }}>
+                        {interlinkText(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+    }
+
+    if (/^\s*\d+[\.)]\s+/.test(para)) {
+      let sequentialCount = 0;
+      for (let i = index; i < allParas.length; i++) {
+        if (allParas[i] && /^\s*\d+[\.)]\s+/.test(allParas[i])) {
+          sequentialCount++;
+        } else {
+          break;
+        }
+      }
+      if (sequentialCount >= 3) {
+        const items = [];
+        for (let i = index; i < allParas.length; i++) {
+          const next = allParas[i];
+          if (next && /^\s*\d+[\.)]\s+/.test(next)) {
+            const cleanedText = next.replace(/^\s*\d+[\.)]\s+/, "");
+            items.push(
+              <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "var(--text-secondary)" }}>
+                {interlinkText(cleanedText)}
+              </li>
+            );
+            allParas[i] = null;
+          } else {
+            break;
+          }
+        }
+        return (
+          <ol key={`ol-${index}`} className="blog-numbered-list" style={{ marginLeft: "1.5em", marginBottom: "1em", color: "var(--text-secondary)" }}>
+            {items}
+          </ol>
+        );
+      } else {
+        return (
+          <h3 className="blog-subheading" style={{ fontSize: "1.2em", color: "var(--accent-strong)", marginBottom: "0.5em" }} key={index}>
+            {interlinkText(para)}
+          </h3>
+        );
+      }
+    }
+
+    if (/^[-•*✔]\s+/.test(para)) {
+      const items = [];
+      for (let i = index; i < allParas.length; i++) {
+        const next = allParas[i];
+        if (next && /^[-•*✔]\s+/.test(next)) {
+          const cleanedText = next.replace(/^[-•*✔]\s+/, "");
+          items.push(
+            <li key={i} style={{ marginBottom: "0.5em", lineHeight: "1.6", color: "var(--text-secondary)" }}>
+              {interlinkText(cleanedText)}
+            </li>
+          );
+          allParas[i] = null;
+        } else {
+          break;
+        }
+      }
+      return (
+        <ul key={`ul-${index}`} className="blog-bullet-list" style={{ marginLeft: "1.5em", marginBottom: "1em" }}>
+          {items}
+        </ul>
+      );
+    }
+
+    return <p key={index} style={{ lineHeight: "1.8", marginBottom: "1em", color: "var(--text-secondary)" }}>{interlinkText(para)}</p>;
+  };
+
+
 
   // Helper: Get token headers
   const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
     return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  // Fetch keyword links from DB
+  const fetchKeywords = async () => {
+    setKeywordLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/blogs/keywords/`);
+      setKeywordList(res.data || []);
+      const mapping = {};
+      (res.data || []).forEach(item => {
+        mapping[item.keyword] = {
+          link: item.link,
+          type: item.link_type
+        };
+      });
+      setDbKeywordLinks(mapping);
+    } catch (err) {
+      console.error("Error fetching keywords from API:", err);
+    } finally {
+      setKeywordLoading(false);
+    }
   };
 
   // Auth Protection and Initial Load
@@ -85,6 +380,7 @@ export default function BlogCreator() {
           return;
         }
         fetchBlogs();
+        fetchKeywords();
       } catch (e) {
         router.push("/userlogin");
       }
@@ -92,6 +388,104 @@ export default function BlogCreator() {
       router.push("/userlogin");
     }
   }, []);
+
+  // Save or Update Keyword Link
+  const handleSaveKeyword = async (e) => {
+    e.preventDefault();
+    if (!kwKeyword.trim() || !kwLink.trim()) {
+      alert("Please enter both Anchor Keyword and Target Link.");
+      return;
+    }
+    setKeywordLoading(true);
+    try {
+      let formattedLink = kwLink.trim();
+      if (kwType === "internal") {
+        if (!formattedLink.startsWith("/") && 
+            !formattedLink.startsWith("http://") && 
+            !formattedLink.startsWith("https://")) {
+          formattedLink = "/" + formattedLink;
+        }
+      }
+      const payload = {
+        keyword: kwKeyword.trim(),
+        link: formattedLink,
+        link_type: kwType
+      };
+      if (kwEditId) {
+        try {
+          await axios.put(`${API_BASE_URL}/blogs/keywords/${kwEditId}/`, payload, {
+            headers: getAuthHeaders(),
+          });
+        } catch (err) {
+          // If the edit ID doesn't exist in the database (e.g. server restarted / db reset in background),
+          // fallback to creating it as a new rule
+          if (err.response?.status === 404) {
+            await axios.post(`${API_BASE_URL}/blogs/keywords/`, payload, {
+              headers: getAuthHeaders(),
+            });
+          } else {
+            throw err;
+          }
+        }
+      } else {
+        await axios.post(`${API_BASE_URL}/blogs/keywords/`, payload, {
+          headers: getAuthHeaders(),
+        });
+      }
+      setKwKeyword("");
+      setKwLink("");
+      setKwType("internal");
+      setKwEditId(null);
+      setKwFormActive(false);
+      fetchKeywords();
+    } catch (err) {
+      console.error("Error saving keyword link:", err);
+      let errorMsg = err.message;
+      if (err.response?.data) {
+        if (typeof err.response.data === 'object') {
+          if (err.response.data.keyword) {
+            errorMsg = `The anchor keyword phrase "${kwKeyword.trim()}" is already registered. Each keyword mapping must have a unique anchor keyword.`;
+          } else {
+            errorMsg = Object.entries(err.response.data)
+              .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+              .join('\n');
+          }
+        } else {
+          errorMsg = String(err.response.data);
+        }
+      }
+      alert("Error saving keyword mapping:\n\n" + errorMsg);
+    } finally {
+      setKeywordLoading(false);
+    }
+  };
+
+  // Delete Keyword Link Mapping
+  const handleDeleteKeyword = (kwItem) => {
+    showConfirm(
+      "Delete Interlink Mapping",
+      `Are you sure you want to permanently delete the dynamic interlink mapping for keyword "${kwItem.keyword}"?`,
+      async () => {
+        setKeywordLoading(true);
+        try {
+          await axios.delete(`${API_BASE_URL}/blogs/keywords/${kwItem.id}/`, {
+            headers: getAuthHeaders(),
+          });
+          fetchKeywords();
+        } catch (err) {
+          if (err.response?.status === 404) {
+            // Already deleted or database reset, just refresh the list silently
+            fetchKeywords();
+          } else {
+            alert("Error deleting keyword mapping: " + (err.response?.data?.detail || err.message));
+          }
+        } finally {
+          setKeywordLoading(false);
+        }
+      },
+      "danger"
+    );
+  };
 
   // Fetch blogs from DB
   const fetchBlogs = async () => {
@@ -141,6 +535,7 @@ export default function BlogCreator() {
   // Reset form helper
   const resetForm = () => {
     setEditId(null);
+    setOriginalSlug("");
     setTitle("");
     setSlug("");
     setExcerpt("");
@@ -153,13 +548,15 @@ export default function BlogCreator() {
     setTagsInput("");
     setTags([]);
     setContent("");
-    setFocusKeyword("");
+    setSelectedKeywords([]);
+    setInterlinkSearch("");
     setEditorTab("edit");
   };
 
   // Enter edit mode
   const handleEditInit = (blog) => {
     setEditId(blog.id);
+    setOriginalSlug(blog.slug || "");
     setTitle(blog.title || "");
     setSlug(blog.slug || "");
     setExcerpt(blog.excerpt || "");
@@ -180,12 +577,15 @@ export default function BlogCreator() {
     
     setContent(blog.content || "");
     
-    // Focus Keyword fallback
-    if (blog.seo && blog.seo.focusKeyword) {
-      setFocusKeyword(blog.seo.focusKeyword);
+    // SEO picked interlinks fallback
+    if (blog.seo && Array.isArray(blog.seo.selectedKeywords)) {
+      setSelectedKeywords(blog.seo.selectedKeywords);
+    } else if (blog.seo && blog.seo.focusKeyword) {
+      setSelectedKeywords([blog.seo.focusKeyword]);
     } else {
-      setFocusKeyword("");
+      setSelectedKeywords([]);
     }
+    setInterlinkSearch("");
     
     setViewState("edit");
   };
@@ -202,7 +602,12 @@ export default function BlogCreator() {
           });
           fetchBlogs();
         } catch (err) {
-          alert("Error deleting blog: " + (err.response?.data?.detail || err.message));
+          if (err.response?.status === 404) {
+            // Already deleted silently refresh
+            fetchBlogs();
+          } else {
+            alert("Error deleting blog: " + (err.response?.data?.detail || err.message));
+          }
         }
       },
       "danger"
@@ -232,7 +637,8 @@ export default function BlogCreator() {
       tags,
       content,
       seo: {
-        focusKeyword,
+        focusKeyword: selectedKeywords[0] || "",
+        selectedKeywords: selectedKeywords,
         metaTitle: excerptTitle || title,
         metaDesc: metaDescription,
         score: seoAnalysis.score
@@ -245,16 +651,38 @@ export default function BlogCreator() {
           headers: getAuthHeaders(),
         });
       } else {
-        await axios.put(`${API_BASE_URL}/blogs/${slug}/`, payload, {
-          headers: getAuthHeaders(),
-        });
+        try {
+          await axios.put(`${API_BASE_URL}/blogs/${originalSlug || slug}/`, payload, {
+            headers: getAuthHeaders(),
+          });
+        } catch (err) {
+          // If the edited blog is missing from the database (e.g. database wipe/reset in background),
+          // fallback to creating it as a new blog post
+          if (err.response?.status === 404) {
+            await axios.post(`${API_BASE_URL}/blogs/`, payload, {
+              headers: getAuthHeaders(),
+            });
+          } else {
+            throw err;
+          }
+        }
       }
       resetForm();
       setViewState("list");
       fetchBlogs();
     } catch (err) {
       console.error("Save error:", err);
-      alert("Error saving blog post: " + JSON.stringify(err.response?.data || err.message));
+      let errorMsg = err.message;
+      if (err.response?.data) {
+        if (typeof err.response.data === 'object') {
+          errorMsg = Object.entries(err.response.data)
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+            .join('\n');
+        } else {
+          errorMsg = String(err.response.data);
+        }
+      }
+      alert("Error saving blog post:\n\n" + errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -263,138 +691,351 @@ export default function BlogCreator() {
   // Real-Time SEO Analyzer Engine
   const analyzeSEO = () => {
     const checklist = [];
-    let score = 0;
+    let pointsObtained = 0;
+    const totalPointsPossible = 150; // 100 base + 50 interlinking
 
     const lowerTitle = title.toLowerCase();
+    const lowerSnippetTitle = (excerptTitle || title).toLowerCase();
     const lowerContent = content.toLowerCase();
     const lowerSlug = slug.toLowerCase();
     const lowerMeta = metaDescription.toLowerCase();
-    const lowerKeyword = focusKeyword.trim().toLowerCase();
 
-    // 1. Keyword in Title
-    const keywordInTitle = lowerKeyword ? lowerTitle.includes(lowerKeyword) : false;
-    checklist.push({
-      label: "Focus Keyword in Title",
-      status: !lowerKeyword ? "warn" : keywordInTitle ? "pass" : "fail",
-      desc: !lowerKeyword ? "Set a Focus Keyword to enable checklist analysis." : keywordInTitle ? "Your focus keyword was found in the title!" : "The focus keyword does not appear in your blog title."
-    });
-    if (keywordInTitle) score += 15;
-
-    // 2. Keyword in Slug
-    const keywordInSlug = lowerKeyword ? lowerSlug.includes(slugify(lowerKeyword)) : false;
-    checklist.push({
-      label: "Focus Keyword in URL Slug",
-      status: !lowerKeyword ? "warn" : keywordInSlug ? "pass" : "fail",
-      desc: !lowerKeyword ? "Add focus keyword to check URL slug optimization." : keywordInSlug ? "Excellent! Keyword matches your clean URL structure." : "The URL slug should ideally include your focus keyword."
-    });
-    if (keywordInSlug) score += 10;
-
-    // 3. Keyword in First Paragraph (approx first 200 chars)
-    const firstParagraph = content.slice(0, 300).toLowerCase();
-    const keywordInFirst = lowerKeyword ? firstParagraph.includes(lowerKeyword) : false;
-    checklist.push({
-      label: "Focus Keyword in First Paragraph",
-      status: !lowerKeyword ? "warn" : keywordInFirst ? "pass" : "fail",
-      desc: !lowerKeyword ? "Awaiting focus keyword." : keywordInFirst ? "Your keyword appears right away in the first paragraph." : "Introduce your focus keyword early in the first 200 characters."
-    });
-    if (keywordInFirst) score += 15;
-
-    // 4. Keyword in Meta Description
-    const keywordInMeta = lowerKeyword ? lowerMeta.includes(lowerKeyword) : false;
-    checklist.push({
-      label: "Focus Keyword in Meta Description",
-      status: !lowerKeyword ? "warn" : keywordInMeta ? "pass" : "fail",
-      desc: !lowerKeyword ? "Awaiting focus keyword." : keywordInMeta ? "Great! Keyword found in search engines meta snippet." : "Try to include your focus keyword inside the meta description."
-    });
-    if (keywordInMeta) score += 10;
-
-    // 5. Keyword Density
-    let density = 0;
-    let densityStatus = "fail";
-    let densityDesc = "No keyword matches in body text.";
-    if (lowerKeyword && content.length > 50) {
-      const words = lowerContent.split(/\s+/).filter(w => w.length > 0);
-      // Clean up punctuation from words for density matches
-      const matches = words.filter(w => w.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"") === lowerKeyword).length;
-      density = parseFloat(((matches / Math.max(1, words.length)) * 100).toFixed(2));
-      
-      if (density >= 1.0 && density <= 2.5) {
-        densityStatus = "pass";
-        densityDesc = `Keyword density is ${density}% (optimal range is 1.0% - 2.5%).`;
-        score += 15;
-      } else if (density > 2.5) {
-        densityStatus = "warn";
-        densityDesc = `Keyword density is high at ${density}% (avoid keyword stuffing above 2.5%).`;
-        score += 8;
-      } else if (density > 0) {
-        densityStatus = "warn";
-        densityDesc = `Keyword density is low at ${density}% (aim for at least 1.0% to build search context).`;
-        score += 8;
-      } else {
-        densityDesc = "Focus keyword not found in any paragraph body.";
-      }
-    } else {
-      checklist.push({
-        label: "Keyword Density Check",
-        status: !lowerKeyword ? "warn" : "fail",
-        desc: !lowerKeyword ? "Add a focus keyword to verify content density." : "Content is too short or keyword has 0 occurrences."
-      });
-    }
-    if (lowerKeyword && content.length >= 50) {
-      checklist.push({
-        label: "Keyword Density Check",
-        status: densityStatus,
-        desc: densityDesc
-      });
-    }
-
-    // 6. Title Length Check
+    // --- 1. Article Title Length Check ---
     const titleLen = title.length;
-    const titleStatus = titleLen >= 40 && titleLen <= 60 ? "pass" : titleLen > 0 ? "warn" : "fail";
+    let titleStatus = "fail";
+    let titleDesc = "Please enter an Article Title to get started.";
+    let titlePoints = 0;
+
+    if (titleLen >= 40 && titleLen <= 70) {
+      titleStatus = "pass";
+      titleDesc = `Perfect! Title is ${titleLen} characters (recommended 40-70).`;
+      titlePoints = 10;
+    } else if (titleLen > 0) {
+      titleStatus = "warn";
+      titleDesc = `Title is ${titleLen} characters. Aim for 40-70 characters for best click rate.`;
+      titlePoints = 5;
+    }
     checklist.push({
-      label: "SEO Title Character Length",
+      label: "Article Title Length",
       status: titleStatus,
-      desc: titleLen === 0 
-        ? "Please enter a blog title."
-        : titleStatus === "pass" 
-          ? `Perfect! Title is ${titleLen} characters (recommended 40-60).` 
-          : `Title is ${titleLen} characters. Aim for 40-60 characters for best display on Google.`
+      desc: titleDesc
     });
-    if (titleStatus === "pass") score += 15;
-    else if (titleStatus === "warn") score += 8;
+    pointsObtained += titlePoints;
 
-    // 7. Meta Description Length Check
+    // --- 2. Title Power Hook Check ---
+    const powerWordRegex = /how|best|guide|top|essential|ultimate|strategy|secret|build|design|brand|seo|marketing|converting|growth|tutorial|checklist|tips/i;
+    const numberRegex = /\d+/;
+    let hookStatus = "fail";
+    let hookDesc = "Enter an Article Title to check for power words.";
+    let hookPoints = 0;
+
+    if (titleLen > 0) {
+      if (powerWordRegex.test(title) || numberRegex.test(title)) {
+        hookStatus = "pass";
+        hookDesc = "Awesome! Title contains a high-converting power hook or number.";
+        hookPoints = 10;
+      } else {
+        hookStatus = "warn";
+        hookDesc = "Add numbers (e.g. 2026) or a power word (e.g. 'How-to', 'Ultimate Guide', 'Best') to boost CTR.";
+        hookPoints = 4;
+      }
+    }
+    checklist.push({
+      label: "Article Title Hook / CTR",
+      status: hookStatus,
+      desc: hookDesc
+    });
+    pointsObtained += hookPoints;
+
+    // --- 3. Google Snippet Title Length Check ---
+    const snippetLen = (excerptTitle || title).length;
+    let snippetStatus = "fail";
+    let snippetDesc = "Snippet Title is missing. Enter a title to preview search results.";
+    let snippetPoints = 0;
+
+    if (snippetLen >= 40 && snippetLen <= 60) {
+      snippetStatus = "pass";
+      snippetDesc = `Perfect! Snippet Title is ${snippetLen} characters (recommended 40-60).`;
+      snippetPoints = 10;
+    } else if (snippetLen > 0) {
+      snippetStatus = "warn";
+      snippetDesc = `Snippet Title is ${snippetLen} characters. Aim for 40-60 characters for perfect search display.`;
+      snippetPoints = 5;
+    }
+    checklist.push({
+      label: "Google Snippet Title Length",
+      status: snippetStatus,
+      desc: snippetDesc
+    });
+    pointsObtained += snippetPoints;
+
+    // --- 4. Meta Description Length Check ---
     const metaLen = metaDescription.length;
-    const metaStatus = metaLen >= 120 && metaLen <= 160 ? "pass" : metaLen > 0 ? "warn" : "fail";
-    checklist.push({
-      label: "Meta Description Character Length",
-      status: metaStatus,
-      desc: metaLen === 0
-        ? "Add a meta description to prevent auto-generated search summaries."
-        : metaStatus === "pass"
-          ? `Perfect! Meta description is ${metaLen} characters (recommended 120-160).`
-          : `Description is ${metaLen} characters. Search engines truncate snippets over 160.`
-    });
-    if (metaStatus === "pass") score += 15;
-    else if (metaStatus === "warn") score += 8;
+    let metaStatus = "fail";
+    let metaDesc = "Add a Meta Description to prevent automated search summaries.";
+    let metaPoints = 0;
 
-    // 8. Word Count Check
-    const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-    const wordStatus = wordCount >= 600 ? "pass" : wordCount >= 300 ? "warn" : "fail";
+    if (metaLen >= 120 && metaLen <= 160) {
+      metaStatus = "pass";
+      metaDesc = `Perfect! Meta description is ${metaLen} characters (recommended 120-160).`;
+      metaPoints = 15;
+    } else if (metaLen > 0) {
+      metaStatus = "warn";
+      metaDesc = `Meta description is ${metaLen} characters. Keep between 120-160 to avoid search truncation.`;
+      metaPoints = 8;
+    }
     checklist.push({
-      label: "Blog Word Count",
-      status: wordStatus,
-      desc: wordCount === 0
-        ? "Blog content is empty."
-        : wordStatus === "pass"
-          ? `Excellent! Comprehensive article with ${wordCount} words (ideal length >600).`
-          : `Thin content: ${wordCount} words. Aim for at least 300-600 words for rank weight.`
+      label: "Meta Description Length",
+      status: metaStatus,
+      desc: metaDesc
     });
-    if (wordStatus === "pass") score += 5;
-    else if (wordStatus === "warn") score += 3;
+    pointsObtained += metaPoints;
+
+    // --- 5. URL Slug Optimization ---
+    const slugLen = slug.length;
+    let slugStatus = "fail";
+    let slugDesc = "A clean slug link is required.";
+    let slugPoints = 0;
+
+    if (slugLen > 0) {
+      const isFormatCorrect = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug);
+      if (!isFormatCorrect) {
+        slugStatus = "fail";
+        slugDesc = "Slug must contain only lowercase letters, numbers, and hyphens.";
+        slugPoints = 0;
+      } else if (slugLen >= 15 && slugLen <= 55) {
+        slugStatus = "pass";
+        slugDesc = `Excellent! Slug is optimized and ${slugLen} characters.`;
+        slugPoints = 10;
+      } else {
+        slugStatus = "warn";
+        slugDesc = `Slug is valid but length is ${slugLen} chars (ideal range is 15-55).`;
+        slugPoints = 6;
+      }
+    }
+    checklist.push({
+      label: "URL Slug Optimization",
+      status: slugStatus,
+      desc: slugDesc
+    });
+    pointsObtained += slugPoints;
+
+    // --- 6. Excerpt / Card Summary Check ---
+    const excerptLen = excerpt.length;
+    let excerptStatus = "fail";
+    let excerptDesc = "Card Summary is empty. Write a 1-2 sentence preview text.";
+    let excerptPoints = 0;
+
+    if (excerptLen >= 80 && excerptLen <= 160) {
+      excerptStatus = "pass";
+      excerptDesc = `Perfect! Excerpt is ${excerptLen} characters (optimal range 80-160).`;
+      excerptPoints = 10;
+    } else if (excerptLen > 0) {
+      excerptStatus = "warn";
+      excerptDesc = `Excerpt is ${excerptLen} characters. Keep it between 80-160 characters for perfect layouts.`;
+      excerptPoints = 5;
+    }
+    checklist.push({
+      label: "Excerpt & Card Summary",
+      status: excerptStatus,
+      desc: excerptDesc
+    });
+    pointsObtained += excerptPoints;
+
+    // --- 7. Word Count Check ---
+    const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+    let wordStatus = "fail";
+    let wordDesc = "Article Body is empty.";
+    let wordPoints = 0;
+
+    if (wordCount >= 600) {
+      wordStatus = "pass";
+      wordDesc = `Excellent! Rich comprehensive article with ${wordCount} words.`;
+      wordPoints = 15;
+    } else if (wordCount >= 300) {
+      wordStatus = "warn";
+      wordDesc = `Thin content: ${wordCount} words. Expand to at least 600 words for maximum rank strength.`;
+      wordPoints = 8;
+    } else if (wordCount > 0) {
+      wordStatus = "fail";
+      wordDesc = `Content is too short (${wordCount} words). Add depth to reach at least 300 words.`;
+      wordPoints = 3;
+    }
+    checklist.push({
+      label: "Article Word Count",
+      status: wordStatus,
+      desc: wordDesc
+    });
+    pointsObtained += wordPoints;
+
+    // --- 8. Headings Hierarchy Check ---
+    let headingsStatus = "fail";
+    let headingsDesc = "Content is empty.";
+    let headingsPoints = 0;
+
+    if (wordCount > 0) {
+      const hasHeadings = /^(##|###)\s+.+$/m.test(content);
+      if (hasHeadings) {
+        headingsStatus = "pass";
+        headingsDesc = "Perfect! Subheadings (H2 or H3) are used to organize the text hierarchy.";
+        headingsPoints = 10;
+      } else {
+        headingsStatus = "warn";
+        headingsDesc = "Add subheadings (e.g. ## Heading) to break down content and help indexation.";
+        headingsPoints = 4;
+      }
+    }
+    checklist.push({
+      label: "Content Headings Hierarchy",
+      status: headingsStatus,
+      desc: headingsDesc
+    });
+    pointsObtained += headingsPoints;
+
+    // --- 9. Cover Image Upload Check ---
+    let imgStatus = "fail";
+    let imgDesc = "No cover image specified. Upload one to build visual SEO.";
+    let imgPoints = 0;
+
+    if (imageUrl) {
+      imgStatus = "pass";
+      imgDesc = "Awesome! Premium cover image loaded for index cards and sharing.";
+      imgPoints = 5;
+    }
+    checklist.push({
+      label: "Cover Image Validation",
+      status: imgStatus,
+      desc: imgDesc
+    });
+    pointsObtained += imgPoints;
+
+    // --- 10. Article Taxonomy Tags Check ---
+    let tagsStatus = "fail";
+    let tagsDesc = "Add taxonomic tags to categorize the blog post.";
+    let tagsPoints = 0;
+
+    if (tags.length >= 2) {
+      tagsStatus = "pass";
+      tagsDesc = `Perfect! Categorized under ${tags.length} taxonomic tags.`;
+      tagsPoints = 5;
+    } else if (tags.length === 1) {
+      tagsStatus = "warn";
+      tagsDesc = "Add at least 2 relevant tags to build semantic categories.";
+      tagsPoints = 2;
+    }
+    checklist.push({
+      label: "Taxonomy & Tags",
+      status: tagsStatus,
+      desc: tagsDesc
+    });
+    pointsObtained += tagsPoints;
+
+    // --- 11. DYNAMIC PICKED INTERLINK INTEGRATION ---
+    const activeKeywords = Object.keys(dbKeywordLinks).length > 0 ? dbKeywordLinks : keywordLinks;
+    const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Filter selected keywords actually present in content
+    const foundKeywords = selectedKeywords.filter(kw => {
+      const regex = new RegExp(`\\b${escapeRegex(kw.toLowerCase())}\\b`, 'i');
+      return regex.test(lowerContent);
+    });
+
+    const foundInternal = [];
+    const foundExternal = [];
+
+    foundKeywords.forEach(kw => {
+      const val = activeKeywords[kw];
+      if (val) {
+        let isInternal = true;
+        if (typeof val === "object") {
+          isInternal = val.type ? (val.type === "internal") : ((val.link || "").startsWith('/') || (val.link || "").includes('adstradigital.com'));
+        } else {
+          isInternal = (val || "").startsWith('/') || (val || "").includes('adstradigital.com') || (val || "").startsWith('http://localhost') || (val || "").startsWith('http://127.0.0.1');
+        }
+        if (isInternal) {
+          foundInternal.push(kw);
+        } else {
+          foundExternal.push(kw);
+        }
+      }
+    });
+
+    const totalSelectedInternal = selectedKeywords.filter(kw => {
+      const val = activeKeywords[kw];
+      if (!val) return false;
+      if (typeof val === "object") return val.type ? (val.type === "internal") : ((val.link || "").startsWith('/') || (val.link || "").includes('adstradigital.com'));
+      return (val || "").startsWith('/') || (val || "").includes('adstradigital.com') || (val || "").startsWith('http://localhost') || (val || "").startsWith('http://127.0.0.1');
+    }).length;
+
+    const totalSelectedExternal = selectedKeywords.length - totalSelectedInternal;
+
+    // Internal Link checklist item
+    let internalStatus = "fail";
+    let internalDesc = "No internal links selected. Select some to spread search equity.";
+    let internalPoints = 0;
+
+    if (foundInternal.length >= 1) {
+      internalStatus = "pass";
+      internalDesc = `Perfect! ${foundInternal.length} selected internal links are active and linked in your blog body.`;
+      internalPoints = 15;
+    } else if (totalSelectedInternal >= 1) {
+      internalStatus = "warn";
+      internalDesc = `${totalSelectedInternal} internal links selected, but keywords were not found in the text. Add the phrases to your article body.`;
+      internalPoints = 8;
+    }
+    checklist.push({
+      label: "Internal Linking Integration",
+      status: internalStatus,
+      desc: internalDesc
+    });
+    pointsObtained += internalPoints;
+
+    // External Link checklist item
+    let externalStatus = "fail";
+    let externalDesc = "No external links selected. Select external sources for better trust validation.";
+    let externalPoints = 0;
+
+    if (foundExternal.length >= 1) {
+      externalStatus = "pass";
+      externalDesc = `Perfect! ${foundExternal.length} selected external links are active and linked in your blog body.`;
+      externalPoints = 15;
+    } else if (totalSelectedExternal >= 1) {
+      externalStatus = "warn";
+      externalDesc = `${totalSelectedExternal} external links selected, but keywords were not found in the text.`;
+      externalPoints = 8;
+    }
+    checklist.push({
+      label: "External Linking Integration",
+      status: externalStatus,
+      desc: externalDesc
+    });
+    pointsObtained += externalPoints;
+
+    // Link Density checklist item
+    let densityStatus = "fail";
+    let densityDesc = "No active interlinks found. Select registered keywords that are written in your content.";
+    let densityPoints = 0;
+
+    if (foundKeywords.length >= 1 && foundKeywords.length <= 6) {
+      densityStatus = "pass";
+      densityDesc = `${foundKeywords.length} active links is an optimal density for high-converting user experience.`;
+      densityPoints = 20;
+    } else if (foundKeywords.length > 6) {
+      densityStatus = "warn";
+      densityDesc = `High link density (${foundKeywords.length} active links). Avoid over-linking to keep reading experience natural.`;
+      densityPoints = 10;
+    }
+    checklist.push({
+      label: "Active Interlink Density Check",
+      status: densityStatus,
+      desc: densityDesc
+    });
+    pointsObtained += densityPoints;
+
+    const calculatedScore = Math.round((pointsObtained / totalPointsPossible) * 100);
 
     return {
-      score: Math.min(100, score),
+      score: Math.min(100, Math.max(0, calculatedScore)),
       checklist,
       wordCount
     };
@@ -462,6 +1103,36 @@ export default function BlogCreator() {
     (blog.slug || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Dynamic Keyword list and stats calculations
+  const totalKeywords = keywordList.length;
+  const internalKeywords = keywordList.filter(k => {
+    return k.link_type ? (k.link_type === "internal") : (
+      (k.link || "").startsWith('/') || 
+      (k.link || "").includes('adstradigital.com') || 
+      (k.link || "").startsWith('http://localhost') || 
+      (k.link || "").startsWith('http://127.0.0.1')
+    );
+  }).length;
+  const externalKeywords = totalKeywords - internalKeywords;
+
+  const filteredKeywords = keywordList.filter(kw => {
+    const matchesSearch = (kw.keyword || "").toLowerCase().includes(keywordSearch.toLowerCase()) ||
+      (kw.link || "").toLowerCase().includes(keywordSearch.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    const isInternal = kw.link_type ? (kw.link_type === "internal") : (
+      (kw.link || "").startsWith('/') || 
+      (kw.link || "").includes('adstradigital.com') || 
+      (kw.link || "").startsWith('http://localhost') || 
+      (kw.link || "").startsWith('http://127.0.0.1')
+    );
+
+    if (keywordTypeFilter === "internal") return isInternal;
+    if (keywordTypeFilter === "external") return !isInternal;
+    return true;
+  });
+
   return (
     <div className="blogcreator-page">
       {/* Top Header */}
@@ -477,7 +1148,7 @@ export default function BlogCreator() {
           </div>
         </div>
 
-        {viewState !== "list" && (
+        {viewState !== "list" && activeSection === "articles" && (
           <div className="header-actions">
             <button className="cancel-btn" onClick={() => { resetForm(); setViewState("list"); }}>
               Cancel
@@ -490,11 +1161,31 @@ export default function BlogCreator() {
         )}
       </header>
 
+      {/* Top Navigation Tabs */}
+      {viewState === "list" && (
+        <div className="blogcreator-nav-tabs">
+          <button 
+            className={`nav-tab ${activeSection === "articles" ? "active" : ""}`}
+            onClick={() => setActiveSection("articles")}
+          >
+            <BookOpen size={16} />
+            <span>Articles Manager</span>
+          </button>
+          <button 
+            className={`nav-tab ${activeSection === "keywords" ? "active" : ""}`}
+            onClick={() => setActiveSection("keywords")}
+          >
+            <Globe size={16} />
+            <span>SEO Interlinks Manager</span>
+          </button>
+        </div>
+      )}
+
       {/* Main Grid Content */}
       <main className="blogcreator-container">
         
         {/* LIST VIEW (DASHBOARD) */}
-        {viewState === "list" && (
+        {viewState === "list" && activeSection === "articles" && (
           <div className="blogcreator-list-view">
             <div className="list-toolbar">
               <div className="search-bar">
@@ -600,6 +1291,239 @@ export default function BlogCreator() {
           </div>
         )}
 
+        {/* SEO INTERLINKS MANAGER VIEW */}
+        {viewState === "list" && activeSection === "keywords" && (
+          <div className="seo-interlinks-view">
+            
+            {/* Quick Metrics Dashboard */}
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon yellow-accent">
+                  <Globe size={20} />
+                </div>
+                <div className="stat-info">
+                  <span className="stat-value">{totalKeywords}</span>
+                  <span className="stat-label">Active Keyword Rules</span>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon emerald">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div className="stat-info">
+                  <span className="stat-value">{internalKeywords}</span>
+                  <span className="stat-label">Internal Blog Interlinks</span>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon rose">
+                  <ExternalLink size={20} />
+                </div>
+                <div className="stat-info">
+                  <span className="stat-value">{externalKeywords}</span>
+                  <span className="stat-label">External Reference Links</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="interlinks-workspace">
+              {/* Left Side: Interlink Rules List Table */}
+              <div className="panel-card-full main-registry" style={{ flex: 1, width: "100%" }}>
+                <div className="registry-header-row">
+                  <h4>Active Interlink Registry</h4>
+                  <div className="registry-actions">
+                    <div className="search-bar">
+                      <Search size={16} />
+                      <input
+                        type="text"
+                        placeholder="Filter keyword mappings..."
+                        value={keywordSearch}
+                        onChange={(e) => setKeywordSearch(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      value={keywordTypeFilter}
+                      onChange={(e) => setKeywordTypeFilter(e.target.value)}
+                      className="registry-filter-select"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="internal">Internal Links</option>
+                      <option value="external">External Links</option>
+                    </select>
+                    <button className="add-rule-btn" onClick={() => {
+                      setKwEditId(null);
+                      setKwKeyword("");
+                      setKwLink("");
+                      setKwType("internal");
+                      setKwFormActive(true);
+                    }}>
+                      <Plus size={14} />
+                      <span>Add New Rule</span>
+                    </button>
+                  </div>
+                </div>
+
+                {keywordLoading && keywordList.length === 0 ? (
+                  <div className="loading-spinner">
+                    <RefreshCw size={24} className="spin" />
+                    <p>Fetching dynamic interlinks...</p>
+                  </div>
+                ) : filteredKeywords.length === 0 ? (
+                  <div className="empty-state">
+                    <Globe size={32} style={{ color: "var(--engine-accent-gold)", marginBottom: "1rem" }} />
+                    <h3>No Keyword Links Found</h3>
+                    <p>{keywordSearch ? "No active keyword rules match your search." : "Ready to add your first database-backed dynamic keyword link!"}</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="blogcreator-table">
+                      <thead>
+                        <tr>
+                          <th>Keyword Term</th>
+                          <th>Target Destination</th>
+                          <th>Type</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredKeywords.map((kw) => {
+                          const isInternal = kw.link_type ? (kw.link_type === 'internal') : ((kw.link || "").startsWith('/') || (kw.link || "").includes('adstradigital.com') || (kw.link || "").startsWith('http://localhost') || (kw.link || "").startsWith('http://127.0.0.1'));
+                          return (
+                            <tr key={kw.id}>
+                              <td style={{ fontWeight: '600', color: 'var(--engine-accent-gold-strong)' }}>
+                                {kw.keyword}
+                              </td>
+                              <td>
+                                <a href={kw.link} target="_blank" rel="noopener noreferrer" className="link-text-truncate">
+                                  <span>{kw.link}</span>
+                                  <ExternalLink size={12} style={{ opacity: 0.5, marginLeft: '0.25rem' }} />
+                                </a>
+                              </td>
+                              <td>
+                                <span className={`badge-link ${isInternal ? 'internal' : 'external'}`}>
+                                  {isInternal ? 'Internal' : 'External'}
+                                </span>
+                              </td>
+                              <td className="col-actions">
+                                <div className="actions-cell">
+                                  <button className="action-btn edit" onClick={() => {
+                                    setKwEditId(kw.id);
+                                    setKwKeyword(kw.keyword);
+                                    setKwLink(kw.link);
+                                    setKwType(kw.link_type || (isInternal ? 'internal' : 'external'));
+                                    setKwFormActive(true);
+                                  }} title="Edit Rule">
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button className="action-btn delete" onClick={() => handleDeleteKeyword(kw)} title="Delete Rule">
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Popup Overlay */}
+            {kwFormActive && (
+              <div className="seo-modal-overlay" onClick={() => {
+                setKwFormActive(false);
+                setKwEditId(null);
+                setKwKeyword("");
+                setKwLink("");
+              }}>
+                <div className="seo-modal-content" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header">
+                    <h4>
+                      <Sparkles size={18} style={{ color: 'var(--engine-accent-gold)', marginRight: '8px' }} />
+                      <span>{kwEditId ? "Modify Interlink Rule" : "Register Interlink Rule"}</span>
+                    </h4>
+                    <button className="close-modal-btn" onClick={() => {
+                      setKwFormActive(false);
+                      setKwEditId(null);
+                      setKwKeyword("");
+                      setKwLink("");
+                    }}>×</button>
+                  </div>
+
+                  <form onSubmit={handleSaveKeyword} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div className="form-field">
+                      <label>Anchor Keyword Term <span className="required">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="e.g. digital marketing"
+                        value={kwKeyword}
+                        onChange={(e) => setKwKeyword(e.target.value)}
+                        required
+                      />
+                      <span className="field-hint">Exact matching phrase to be hyperlinked.</span>
+                    </div>
+
+                    <div className="form-field">
+                      <label>Target Destination URL <span className="required">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="e.g. /blogs/digital-marketing/"
+                        value={kwLink}
+                        onChange={(e) => setKwLink(e.target.value)}
+                        required
+                      />
+                      <span className="field-hint">Full HTTP link or local router path.</span>
+                    </div>
+
+                    <div className="form-field">
+                      <label>Linking Type <span className="required">*</span></label>
+                      <div className="segmented-control">
+                        <button
+                          type="button"
+                          className={`control-segment ${kwType === "internal" ? "active" : ""}`}
+                          onClick={() => setKwType("internal")}
+                        >
+                          Internal Linking
+                        </button>
+                        <button
+                          type="button"
+                          className={`control-segment ${kwType === "external" ? "active" : ""}`}
+                          onClick={() => setKwType("external")}
+                        >
+                          External Linking
+                        </button>
+                      </div>
+                      <span className="field-hint">
+                        {kwType === "internal" 
+                          ? "Internal links point within your site and help spread PageRank." 
+                          : "External links point outside and are marked with target=\"_blank\" rel=\"noopener noreferrer\"."}
+                      </span>
+                    </div>
+
+                    <div className="form-actions-row">
+                      <button type="submit" className="save-btn" disabled={keywordLoading}>
+                        <Save size={14} />
+                        <span>{kwEditId ? "Update" : "Create"} Rule</span>
+                      </button>
+                      <button type="button" className="cancel-btn" onClick={() => {
+                        setKwFormActive(false);
+                        setKwEditId(null);
+                        setKwKeyword("");
+                        setKwLink("");
+                      }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
         {/* EDITOR & REAL-TIME ANALYZER VIEW */}
         {viewState !== "list" && (
           <div className="blogcreator-editor-grid">
@@ -688,16 +1612,61 @@ export default function BlogCreator() {
 
                   <div className="form-group-row">
                     <div className="form-field flex-2">
-                      <label htmlFor="blog-image">Cover Image Link</label>
-                      <div className="input-with-icon">
-                        <ImageIcon size={16} />
+                      <label>Cover Image</label>
+                      <div className="image-upload-wrapper">
+                        {/* Hidden File Input */}
                         <input
-                          id="blog-image"
-                          type="url"
-                          placeholder="https://images.unsplash.com/photo-..."
-                          value={imageUrl}
-                          onChange={(e) => setImageUrl(e.target.value)}
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImageUpload}
+                          style={{ display: "none" }}
+                          accept="image/*"
                         />
+
+                        {isUploading ? (
+                          <div className="upload-spinner-overlay">
+                            <RefreshCw size={24} className="spin" />
+                            <span>Uploading cover image...</span>
+                          </div>
+                        ) : imageUrl ? (
+                          <div className="image-preview-panel">
+                            <img 
+                              className="preview-thumb" 
+                              src={getFullImageUrl(imageUrl)} 
+                              alt="Cover Preview"
+                              onError={(e) => {
+                                console.error("Error loading preview image:", e.target.src);
+                              }}
+                            />
+                            <div className="preview-details">
+                              <span className="preview-name">{imageUrl.split("/").pop()}</span>
+                            </div>
+                            <div className="preview-actions">
+                              <button 
+                                type="button" 
+                                className="btn-upload-action update" 
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                <Upload size={14} />
+                                <span>Change</span>
+                              </button>
+                              <button 
+                                type="button" 
+                                className="btn-upload-action delete" 
+                                onClick={handleImageDelete}
+                              >
+                                <Trash2 size={14} />
+                                <span>Remove</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="image-dropzone" onClick={() => fileInputRef.current?.click()}>
+                            <UploadCloud className="dropzone-icon" size={32} />
+                            <p className="dropzone-text">Click or Drag to Upload Cover Image</p>
+                            <p className="dropzone-subtext">Supports PNG, JPG, WEBP (Max 5MB)</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="form-field flex-1">
@@ -758,48 +1727,78 @@ export default function BlogCreator() {
                 </form>
               )}
 
-              {editorTab === "preview" && (
-                <div className="editor-live-preview">
-                  {imageUrl ? (
-                    <div className="preview-hero-img" style={{ backgroundImage: `url(${imageUrl})` }} />
-                  ) : (
-                    <div className="preview-hero-placeholder">
-                      <ImageIcon size={32} />
-                      <span>No Cover Image Specified</span>
-                    </div>
-                  )}
+              {editorTab === "preview" && (() => {
+                const previewSections = content
+                  ? (content.trim().split(/\r?\n\s*\r?\n/) || []).flatMap((section) => {
+                      return section.split(/\r?\n(?=\s*(?:[-•*✔]|\d+[\.)])\s)/).map((s) => s.trim());
+                    }).filter(Boolean)
+                  : [];
 
-                  <h1 className="preview-title">{title || "Draft Article Title"}</h1>
-                  
-                  <div className="preview-metadata">
-                    <span className="meta-item"><User size={14} />By {author}</span>
-                    <span className="meta-item"><Clock size={14} />{readingTime}</span>
-                    <span className="meta-item"><Globe size={14} />{publishedDate}</span>
+                return (
+                  <div className="editor-live-preview">
+                    <article className="blog-blocks compact" style={{ padding: 0, border: "none", background: "transparent", boxShadow: "none" }}>
+                      <header style={{ width: "100%", overflow: "hidden" }}>
+                        {imageUrl ? (
+                          <div
+                            className="blog-image"
+                            style={{
+                              backgroundImage: `url(${getFullImageUrl(imageUrl)})`,
+                              height: "280px",
+                              marginBottom: "1.5rem"
+                            }}
+                            role="img"
+                            aria-label={title}
+                          />
+                        ) : (
+                          <div className="preview-hero-placeholder" style={{ marginBottom: "1.5rem" }}>
+                            <ImageIcon size={32} />
+                            <span>No Cover Image Specified</span>
+                          </div>
+                        )}
+                      </header>
+
+                      <section className="blog-content mt-4">
+                        <h1 className="preview-title" style={{ color: "#b1851f", fontSize: "1.8rem", fontWeight: "800", marginBottom: "1rem" }}>
+                          {title || "Draft Article Title"}
+                        </h1>
+                        
+                        <div className="blog-meta mb-3" style={{ display: "flex", gap: "1.25rem", fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
+                          <span className="meta-item" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                            <User size={14} />
+                            By <strong>{author || "AdstraDigital"}</strong>
+                          </span>
+                          <span className="meta-item" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                            <Clock size={14} />
+                            {readingTime}
+                          </span>
+                          <span className="meta-item" style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                            <Globe size={14} />
+                            {formatDate(publishedDate)}
+                          </span>
+                        </div>
+
+                        <div className="blog-tags" style={{ display: "flex", flexWrap: "wrap", gap: "10px", listStyle: "none", padding: 0, marginBottom: "1.5rem" }}>
+                          {tags.map((t, i) => (
+                            <span key={i} style={{ background: "var(--accent)", color: "var(--text-primary)", padding: "4px 10px", fontSize: "0.8rem", borderRadius: "20px", fontWeight: "600" }}>{t}</span>
+                          ))}
+                        </div>
+
+                        <hr className="preview-divider" style={{ border: "none", borderTop: "1px solid rgba(28, 36, 48, 0.12)", margin: "1.5rem 0" }} />
+
+                        <div className="preview-body" style={{ marginTop: "1rem" }}>
+                          {previewSections.length > 0 ? (
+                            previewSections
+                              .map((para, idx, all) => para && formatSection(para, idx, all))
+                              .filter(Boolean)
+                          ) : (
+                            <p className="text-muted">Draft content is currently empty...</p>
+                          )}
+                        </div>
+                      </section>
+                    </article>
                   </div>
-
-                  <div className="preview-tags">
-                    {tags.map((t, i) => (
-                      <span key={i} className="tag-pill">{t}</span>
-                    ))}
-                  </div>
-
-                  <hr className="preview-divider" />
-
-                  <div 
-                    className="preview-body"
-                    dangerouslySetInnerHTML={{ 
-                      __html: content 
-                        ? content
-                            .replace(/\n/g, "<br />")
-                            .replace(/## (.*?)(<br \/>|\n)/g, "<h2>$1</h2>")
-                            .replace(/### (.*?)(<br \/>|\n)/g, "<h3>$1</h3>")
-                            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                            .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                        : "<p className='text-muted'>Draft content is currently empty...</p>" 
-                    }}
-                  />
-                </div>
-              )}
+                );
+              })()}
 
               {editorTab === "schema" && (
                 <div className="editor-schema-preview">
@@ -855,28 +1854,13 @@ export default function BlogCreator() {
 
               {/* Keyword Settings */}
               <div className="panel-card keyword-settings">
-                <h5>SEO Targets</h5>
-                
-                <div className="form-field">
-                  <label htmlFor="focus-keyword">Focus Keyword</label>
-                  <div className="input-with-icon">
-                    <Sparkles size={16} />
-                    <input
-                      id="focus-keyword"
-                      type="text"
-                      placeholder="e.g. Kozhikode SEO Agency"
-                      value={focusKeyword}
-                      onChange={(e) => setFocusKeyword(e.target.value)}
-                    />
-                  </div>
-                  <span className="field-hint">The primary search term you want to rank for.</span>
-                </div>
+                <h5>SEO Targets & Snippets</h5>
 
                 <div className="form-field">
                   <div className="field-label-spaced">
                     <label htmlFor="seo-title">Google Snippet Title</label>
-                    <span className={`count ${title.length > 60 || title.length < 40 ? "text-warn" : "text-success"}`}>
-                      {title.length} / 60
+                    <span className={`count ${(excerptTitle || title).length > 60 || (excerptTitle || title).length < 40 ? "text-warn" : "text-success"}`}>
+                      {(excerptTitle || title).length} / 60
                     </span>
                   </div>
                   <input
@@ -902,6 +1886,130 @@ export default function BlogCreator() {
                     value={metaDescription}
                     onChange={(e) => setMetaDescription(e.target.value)}
                   />
+                </div>
+              </div>
+
+              {/* Dynamic Interlinks Selector */}
+              <div className="panel-card interlinks-selector-panel">
+                <div className="interlinks-header">
+                  <h5>Article Interlinks Manager</h5>
+                  <span className="selected-badge">
+                    {selectedKeywords.length} Active
+                  </span>
+                </div>
+                <p className="interlinks-subtitle">Search and pick the keyword links to dynamically render in your blog body.</p>
+
+                <div className="form-field">
+                  <div className="input-with-icon search-interlink-input-wrapper">
+                    <Search size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search registered keywords..."
+                      value={interlinkSearch}
+                      onChange={(e) => setInterlinkSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="interlink-actions">
+                  <button
+                    type="button"
+                    className="action-btn select-all"
+                    onClick={() => {
+                      const allKeys = Object.keys(activeKeywords);
+                      const filtered = allKeys.filter(k => 
+                        k.toLowerCase().includes(interlinkSearch.toLowerCase()) ||
+                        (typeof activeKeywords[k] === 'object' ? activeKeywords[k].link : activeKeywords[k]).toLowerCase().includes(interlinkSearch.toLowerCase())
+                      );
+                      const newSelected = Array.from(new Set([...selectedKeywords, ...filtered]));
+                      setSelectedKeywords(newSelected);
+                    }}
+                  >
+                    Select All Matches
+                  </button>
+                  <button
+                    type="button"
+                    className="action-btn clear-all"
+                    onClick={() => {
+                      if (interlinkSearch) {
+                        const allKeys = Object.keys(activeKeywords);
+                        const filtered = allKeys.filter(k => 
+                          k.toLowerCase().includes(interlinkSearch.toLowerCase()) ||
+                          (typeof activeKeywords[k] === 'object' ? activeKeywords[k].link : activeKeywords[k]).toLowerCase().includes(interlinkSearch.toLowerCase())
+                        );
+                        setSelectedKeywords(selectedKeywords.filter(k => !filtered.includes(k)));
+                      } else {
+                        setSelectedKeywords([]);
+                      }
+                    }}
+                  >
+                    Clear Matches
+                  </button>
+                </div>
+
+                <div className="interlink-scroll-container">
+                  {(() => {
+                    const allKeys = Object.keys(activeKeywords);
+                    const filtered = allKeys.filter(k => 
+                      k.toLowerCase().includes(interlinkSearch.toLowerCase()) ||
+                      (typeof activeKeywords[k] === 'object' ? activeKeywords[k].link : activeKeywords[k]).toLowerCase().includes(interlinkSearch.toLowerCase())
+                    ).sort((a, b) => b.length - a.length);
+
+                    if (filtered.length === 0) {
+                      return <div className="no-interlinks-found">No matching interlinks found in registry.</div>;
+                    }
+
+                    return filtered.map(kw => {
+                      const val = activeKeywords[kw];
+                      let link = "";
+                      let isInternal = true;
+                      if (typeof val === "object") {
+                        link = val.link;
+                        isInternal = val.type ? (val.type === "internal") : ((link || "").startsWith('/') || (link || "").includes('adstradigital.com'));
+                      } else {
+                        link = val;
+                        isInternal = (link || "").startsWith('/') || (link || "").includes('adstradigital.com') || (link || "").startsWith('http://localhost') || (link || "").startsWith('http://127.0.0.1');
+                      }
+
+                      // Check if keyword is found in text
+                      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                      const regex = new RegExp(`\\b${escapeRegex(kw.toLowerCase())}\\b`, "i");
+                      const matched = regex.test(content.toLowerCase());
+                      const isSelected = selectedKeywords.includes(kw);
+
+                      return (
+                        <div key={kw} className={`interlink-item-row ${isSelected ? 'active' : ''} ${matched ? 'matched-in-text' : ''}`} onClick={() => {
+                          if (isSelected) {
+                            setSelectedKeywords(selectedKeywords.filter(k => k !== kw));
+                          } else {
+                            setSelectedKeywords([...selectedKeywords, kw]);
+                          }
+                        }}>
+                          <div className="checkbox-col">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                            />
+                          </div>
+                          <div className="info-col">
+                            <span className="keyword-label">{kw}</span>
+                            <span className="link-path" title={link}>{link}</span>
+                          </div>
+                          <div className="badge-col">
+                            <span className={`link-type-badge ${isInternal ? 'internal' : 'external'}`}>
+                              {isInternal ? 'Internal' : 'External'}
+                            </span>
+                            {matched && (
+                              <span className="text-presence-badge">
+                                Found
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
 
@@ -940,9 +2048,6 @@ export default function BlogCreator() {
                     <button className={seoPreviewTab === "facebook" ? "active" : ""} onClick={() => setSeoPreviewTab("facebook")}>
                       Meta
                     </button>
-                    <button className={seoPreviewTab === "twitter" ? "active" : ""} onClick={() => setSeoPreviewTab("twitter")}>
-                      X / Twitter
-                    </button>
                   </div>
                 </div>
 
@@ -965,7 +2070,7 @@ export default function BlogCreator() {
 
                   {seoPreviewTab === "facebook" && (
                     <div className="meta-card-preview">
-                      <div className="card-image-box" style={{ backgroundImage: imageUrl ? `url(${imageUrl})` : "linear-gradient(135deg, #1e293b, #0f172a)" }}>
+                      <div className="card-image-box" style={{ backgroundImage: imageUrl ? `url(${getFullImageUrl(imageUrl)})` : "linear-gradient(135deg, #1e293b, #0f172a)" }}>
                         {!imageUrl && <ImageIcon size={24} />}
                       </div>
                       <div className="card-info">
@@ -976,18 +2081,7 @@ export default function BlogCreator() {
                     </div>
                   )}
 
-                  {seoPreviewTab === "twitter" && (
-                    <div className="twitter-card-preview">
-                      <div className="twitter-image" style={{ backgroundImage: imageUrl ? `url(${imageUrl})` : "linear-gradient(135deg, #1e293b, #0f172a)" }}>
-                        {!imageUrl && <ImageIcon size={24} />}
-                      </div>
-                      <div className="twitter-info">
-                        <span className="twitter-domain">adstradigital.com</span>
-                        <h4 className="twitter-title">{title || "Blog Post Title Placeholder"}</h4>
-                        <p className="twitter-desc">{excerpt || "Excerpt preview snippet details..."}</p>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </div>
 

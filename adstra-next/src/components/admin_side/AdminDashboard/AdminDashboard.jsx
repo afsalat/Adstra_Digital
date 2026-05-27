@@ -180,124 +180,124 @@ Are you sure you want to continue with logout?`,
         <section className="dashboard-grid">
 
           {/* HOME MENU ITEMS */}
-        {activeMenu === "Home" && (
-          <>
-            {/* Attendance */}
-            {renderFeatureCard({
-              anyPermission: ["attendance.self", "attendance.view_all"],
-              href: "/attendance/",
-              color: "indigo",
-              icon: <CalendarCheck size={28} />,
-              title: "Attendance Sheet",
-              description: "Track daily attendance and submit work reports.",
-              action: "Open Sheet",
-            })}
+          {activeMenu === "Home" && (
+            <>
+              {/* Attendance */}
+              {renderFeatureCard({
+                anyPermission: ["attendance.self", "attendance.view_all"],
+                href: "/attendance/",
+                color: "indigo",
+                icon: <CalendarCheck size={28} />,
+                title: "Attendance Sheet",
+                description: "Track daily attendance and submit work reports.",
+                action: "Open Sheet",
+              })}
 
-            {/* Work Status */}
-            {renderFeatureCard({
-              permission: "attendance.view_all",
-              color: "amber",
-              icon: <BarChart3 size={28} />,
-              title: "Work Status",
-              description: "Monitor ongoing projects and task progress.",
-              action: "View Status",
-            })}
+              {/* Work Status */}
+              {renderFeatureCard({
+                permission: "attendance.view_all",
+                color: "amber",
+                icon: <BarChart3 size={28} />,
+                title: "Work Status",
+                description: "Monitor ongoing projects and task progress.",
+                action: "View Status",
+              })}
 
-            {/* Blogs Creator */}
-            {renderFeatureCard({
-              permission: "settings.update",
-              href: "/blogcreator/",
-              color: "rose",
-              icon: <PenTool size={28} />,
-              title: "Blogs Creator",
-              description: "Create and manage SEO-friendly blog content.",
-              action: "Create Blog",
-            })}
+              {/* Blogs Creator */}
+              {renderFeatureCard({
+                permission: "settings.update",
+                href: "/blogcreator/",
+                color: "rose",
+                icon: <PenTool size={28} />,
+                title: "Blogs Creator",
+                description: "Create and manage SEO-friendly blog content.",
+                action: "Create Blog",
+              })}
 
-            {/* Online Meetings */}
-            {renderFeatureCard({
-              permission: "users.view",
-              color: "sky",
-              icon: <Video size={28} />,
-              title: "Online Meetings",
-              description: "Next: Team Sync @ 3:00 PM",
-              action: "Join Meeting",
-            })}
+              {/* Online Meetings */}
+              {renderFeatureCard({
+                permission: "users.view",
+                color: "sky",
+                icon: <Video size={28} />,
+                title: "Online Meetings",
+                description: "Next: Team Sync @ 3:00 PM",
+                action: "Join Meeting",
+              })}
 
-            {/* User Management */}
-            {renderFeatureCard({
-              permission: "users.view",
-              href: "/usermanagement/",
-              color: "emerald",
-              icon: <Users size={28} />,
-              title: "User Management",
-              description: "Manage team members and permissions.",
-              action: "Manage Users",
-            })}
+              {/* User Management */}
+              {renderFeatureCard({
+                permission: "users.view",
+                href: "/usermanagement/",
+                color: "emerald",
+                icon: <Users size={28} />,
+                title: "User Management",
+                description: "Manage team members and permissions.",
+                action: "Manage Users",
+              })}
 
 
-          </>
-        )}
+            </>
+          )}
 
-        {/* FINANCE MENU ITEMS */}
-        {activeMenu === "Finance" && (
-          <>
-            {/* Client Companies */}
-            {renderFeatureCard({
-              permission: "clients.view",
-              href: "/clientcompanies/",
-              color: "indigo",
-              icon: <Building2 size={28} />,
-              title: "Client Companies",
-              description: "Manage client details and partnerships.",
-              action: "View Clients",
-            })}
+          {/* FINANCE MENU ITEMS */}
+          {activeMenu === "Finance" && (
+            <>
+              {/* Client Companies */}
+              {renderFeatureCard({
+                permission: "clients.view",
+                href: "/clientcompanies/",
+                color: "indigo",
+                icon: <Building2 size={28} />,
+                title: "Client Companies",
+                description: "Manage client details and partnerships.",
+                action: "View Clients",
+              })}
 
-            {/* Proposals */}
-            {renderFeatureCard({
-              permission: "proposals.view",
-              href: "/proposal/",
-              color: "amber",
-              icon: <FileText size={28} />,
-              title: "Proposals",
-              description: "Create and track business proposals.",
-              action: "View Proposals",
-            })}
+              {/* Proposals */}
+              {renderFeatureCard({
+                permission: "proposals.view",
+                href: "/proposal/",
+                color: "amber",
+                icon: <FileText size={28} />,
+                title: "Proposals",
+                description: "Create and track business proposals.",
+                action: "View Proposals",
+              })}
 
-            {/* Invoices */}
-            {renderFeatureCard({
-              permission: "invoices.view",
-              href: "/invoices/",
-              color: "rose",
-              icon: <Receipt size={28} />,
-              title: "Tax Invoices",
-              description: "Track and manage client invoices.",
-              action: "View Invoices",
-            })}
+              {/* Invoices */}
+              {renderFeatureCard({
+                permission: "invoices.view",
+                href: "/invoices/",
+                color: "rose",
+                icon: <Receipt size={28} />,
+                title: "Tax Invoices",
+                description: "Track and manage client invoices.",
+                action: "View Invoices",
+              })}
 
-            {/* Proforma Invoices */}
-            {renderFeatureCard({
-              permission: "invoices.view",
-              href: "/invoices/proforma/",
-              color: "emerald",
-              icon: <FileText size={28} />,
-              title: "Proforma Invoices",
-              description: "Manage estimates and proforma bills.",
-              action: "View Proforma",
-            })}
+              {/* Proforma Invoices */}
+              {renderFeatureCard({
+                permission: "invoices.view",
+                href: "/invoices/proforma/",
+                color: "emerald",
+                icon: <FileText size={28} />,
+                title: "Proforma Invoices",
+                description: "Manage estimates and proforma bills.",
+                action: "View Proforma",
+              })}
 
-            {/* Receipts */}
-            {renderFeatureCard({
-              permission: "transactions.view",
-              href: "/receipts/",
-              color: "sky",
-              icon: <Scroll size={28} />,
-              title: "Receipts",
-              description: "Track billing and payment receipts.",
-              action: "View Receipts",
-            })}
-          </>
-        )}
+              {/* Receipts */}
+              {renderFeatureCard({
+                permission: "transactions.view",
+                href: "/receipts/",
+                color: "sky",
+                icon: <Scroll size={28} />,
+                title: "Receipts",
+                description: "Track billing and payment receipts.",
+                action: "View Receipts",
+              })}
+            </>
+          )}
         </section>
       )}
 

@@ -48,7 +48,7 @@ function buildSitemapXml(paths) {
   return `${lines.join("\n")}\n`;
 }
 
-function main() {
+async function main() {
   const projectRoot = path.resolve(__dirname, "..");
   const servicesFile = path.join(projectRoot, "src", "data", "services.js");
   const sitemapFile = path.join(projectRoot, "public", "sitemap.xml");
@@ -68,9 +68,30 @@ function main() {
     .replace(/^\s*\/\/.*$/gm, "");
 
   const serviceSlugs = uniq(extractSlugs(serviceBlock, /slug:\s*"([^"]+)"/g));
-  const blogSlugs = uniq(
+  let blogSlugs = uniq(
     extractSlugs(blogBlock, /(?:"slug"|slug)\s*:\s*"([^"]+)"/g)
   );
+
+  // Fetch dynamic blogs from the production API to include live database blogs in the sitemap automatically
+  try {
+    // We try to fetch from production API. If build is running locally, it fetches live production URLs.
+    const res = await fetch("https://adstradigital.com/api/blogs/");
+    if (res.ok) {
+      const apiBlogs = await res.json();
+      if (Array.isArray(apiBlogs)) {
+        const apiSlugs = apiBlogs.map((b) => b.slug).filter(Boolean);
+        const originalCount = blogSlugs.length;
+        blogSlugs = uniq([...blogSlugs, ...apiSlugs]);
+        const addedCount = blogSlugs.length - originalCount;
+        console.log(`Successfully fetched and merged ${addedCount} additional dynamic blog posts from production database.`);
+      }
+    }
+  } catch (err) {
+    console.warn(
+      `Could not fetch dynamic blogs from API during sitemap generation (using services.js fallback):`,
+      err.message
+    );
+  }
 
   const staticPaths = [
     "/",
@@ -78,6 +99,7 @@ function main() {
     "/career/",
     "/blogs/all/",
     "/service/all/",
+    "/products/campus-management-system/",
     "/privacypolicy/",
     "/TermsNconditions/",
     "/refundpolicy/",
@@ -98,4 +120,7 @@ function main() {
   );
 }
 
-main();
+main().catch((err) => {
+  console.error("Error generating sitemap:", err);
+  process.exit(1);
+});

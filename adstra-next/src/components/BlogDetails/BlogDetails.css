@@ -686,3 +686,15 @@
 .interlink:hover {
   color: var(--accent-strong);
 }
+
+/* Blog Content Heading Customizations */
+.blog-content h1,
+.blog-content h2,
+.blog-content h2.blog-subheading {
+  color: #b1851f !important;
+}
+
+.blog-content h3,
+.blog-content h3.blog-subheading {
+  color: #000000 !important;
+}

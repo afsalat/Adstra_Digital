@@ -246,6 +246,7 @@
   .nav-links.active li:nth-child(6) { animation-delay: 0.3s; }
   .nav-links.active li:nth-child(7) { animation-delay: 0.35s; }
   .nav-links.active li:nth-child(8) { animation-delay: 0.4s; }
+  .nav-links.active li:nth-child(9) { animation-delay: 0.45s; }
 
   @keyframes slideIn {
     from {
