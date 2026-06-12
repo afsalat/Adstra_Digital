@@ -1,16 +1,35 @@
 "use client";
 
 import { toWords } from "number-to-words";
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 import { serviceExtraDetails } from "@/data/clientData";
 
 export default function ProposalPreview({
   services = [],
   sections: propSections = [],
+  headerData = {},
 }) {
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/settings/?_=${Date.now()}`).then((res) => {
+      setSettings(res.data);
+    }).catch((err) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Settings Fetch Error:", err);
+      }
+    });
+  }, []);
+
   // Convert numbers to words
   function numberToWords(num) {
-    return toWords(num).replace(/\b\w/g, (c) => c.toUpperCase()) + " Only";
+    try {
+      return toWords(num).replace(/\b\w/g, (c) => c.toUpperCase()) + " Only";
+    } catch (e) {
+      return "";
+    }
   }
 
   // Group services by category
@@ -76,186 +95,329 @@ export default function ProposalPreview({
     ...dynamicSections.filter(sec => !existingTitles.has(sec.title)),
   ];
 
+  // Helper to split text into paragraphs/bullet points
+  const renderSectionContent = (content) => {
+    const lines = content?.split("\n").map((line) => line.trim()).filter(Boolean) || [];
+    const elements = [];
+    let currentList = [];
+
+    const flushList = () => {
+      if (currentList.length > 0) {
+        elements.push(
+          <ul key={`list-${elements.length}`} style={{ paddingLeft: '18px', margin: '4px 0 8px 0', listStyleType: 'disc' }}>
+            {currentList.map((item, idx) => (
+              <li key={idx} style={{ marginBottom: '4px', fontSize: '11px', lineHeight: '1.4' }}>
+                {item.title ? (
+                  <>
+                    <strong style={{ color: '#111' }}>{item.title}</strong>: {item.desc}
+                  </>
+                ) : (
+                  item.desc
+                )}
+              </li>
+            ))}
+          </ul>
+        );
+        currentList = [];
+      }
+    };
+
+    lines.forEach((line) => {
+      let isList = false;
+      let title = null;
+      let desc = line;
+
+      // 1. Starts with a bullet (- or *)
+      const bulletMatch = line.match(/^[-*]\s*(.*)/);
+      if (bulletMatch) {
+        isList = true;
+        const inner = bulletMatch[1].trim();
+        const boldMatch = inner.match(/^\*\*(.*?)\*\*:\s*(.*)/);
+        if (boldMatch) {
+          title = boldMatch[1].trim();
+          desc = boldMatch[2].trim();
+        } else {
+          const plainMatch = inner.match(/^([A-Za-z0-9\s&/()_-]{2,35}):\s*(.*)/);
+          if (plainMatch) {
+            title = plainMatch[1].trim();
+            desc = plainMatch[2].trim();
+          } else {
+            desc = inner;
+          }
+        }
+      } else {
+        // 2. No bullet prefix, but starts with bold title like **Backend**:
+        const boldMatch = line.match(/^\*\*(.*?)\*\*:\s*(.*)/);
+        if (boldMatch) {
+          isList = true;
+          title = boldMatch[1].trim();
+          desc = boldMatch[2].trim();
+        } else {
+          // 3. No bullet prefix, starts with a plain title followed by a colon
+          const plainMatch = line.match(/^([A-Za-z0-9\s&/()_-]{2,35}):\s*(.*)/);
+          if (plainMatch) {
+            isList = true;
+            title = plainMatch[1].trim();
+            desc = plainMatch[2].trim();
+          }
+        }
+      }
+
+      if (isList) {
+        currentList.push({ title, desc });
+      } else {
+        flushList();
+        elements.push(
+          <p key={`p-${elements.length}`} style={{ margin: '6px 0', fontSize: '11.5px', lineHeight: '1.4', color: '#222' }}>
+            {line}
+          </p>
+        );
+      }
+    });
+
+    flushList();
+    return elements;
+  };
+
+  // Intro sections (typically "Proposal by ADSTRA DIGITAL" or similar)
+  const introSections = sections.filter(sec => 
+    sec.title?.toLowerCase().includes("proposal by") || 
+    sec.title?.toLowerCase().includes("introduction") || 
+    sec.title?.toLowerCase().includes("intro")
+  );
+
+  // Body/Conclusion sections (everything else)
+  const otherSections = sections.filter(sec => 
+    !sec.title?.toLowerCase().includes("proposal by") && 
+    !sec.title?.toLowerCase().includes("introduction") && 
+    !sec.title?.toLowerCase().includes("intro")
+  );
+
   return (
-    <div className="proposal-preview-wrapper text-[15px] text-gray-800 leading-relaxed">
-      {/* --- Services Table --- */}
+    <div id="proposal-preview-pdf" className="proposal-preview-wrapper text-[15px] text-gray-800 leading-relaxed no-shadow">
       <div className="pdf-page">
+        {/* Boxed GST Style Proposal Content */}
+        <div style={{ border: '2px solid black', fontFamily: 'Arial, sans-serif', color: 'black', background: 'white' }}>
+          
+          {/* Top Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid black', fontSize: '10px', fontWeight: 'bold' }}>
+            <span>Page No. 1 of 1</span>
+            <span style={{ fontSize: '22px', letterSpacing: '4px', fontWeight: '900' }}>
+              PROPOSAL
+            </span>
+            <span>Original Copy</span>
+          </div>
 
-
-        {services.length > 0 && (
-          <div className="border-t pt-6" style={{ marginTop: "60px", paddingTop: "24px" }}>
-            <h4 className="text-xl font-bold text-indigo-800" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>
-              Services In Brief
-            </h4>
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-sm border border-gray-800 shadow-md rounded overflow-hidden">
-                <thead>
-                  <tr>
-                    {["Description", "Qty", "Rate", "GST", "Amount"].map(
-                      (col, i) => (
-                        <th
-                          key={i}
-                          style={{
-                            backgroundColor: "#29292fff",
-                            color: "#fff",
-                            padding: "12px",
-                            border: "1px solid #727276ff",
-                          }}
-                        >
-                          {col}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
+          {/* Row 1: Proposal Details and Logo */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid black' }}>
+            <div style={{ fontSize: '11px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '8px' }}>Quotation Details:</div>
+              <table style={{ borderCollapse: 'collapse' }}>
                 <tbody>
-                  {Object.entries(groupedServices).map(
-                    ([category, items], groupIdx) => (
-                      <React.Fragment key={category || groupIdx}>
-                        <tr
-                          className="bg-gray-200 text-gray-700"
-                          style={{ backgroundColor: "lightgrey" }}
-                        >
-                          <td
-                            colSpan={5}
-                            className="px-4 py-2 font-semibold border border-gray-300"
-                          >
-                            {category}
-                          </td>
-                        </tr>
-                        {items.map((item, idx) => {
-                          const qty = parseFloat(item.quantity || 1);
-                          const rate = parseFloat(item.rate || 0);
-                          const gstRate = parseFloat(item.gst || "18");
-                          const baseAmount = qty * rate;
-                          const gstAmount = (baseAmount * gstRate) / 100;
-                          const totalAmount = baseAmount + gstAmount;
-
-                          return (
-                            <tr
-                              key={`${category}-${idx}-${item.id ?? item.description
-                                }`}
-                              className={`${idx % 2 === 0 ? "bg-white" : "bg-indigo-50"
-                                } hover:bg-indigo-100 transition`}
-                            >
-                              <td className="px-4 py-2 border border-gray-200">
-                                {item.description}
-                              </td>
-                              <td className="px-4 py-2 border border-gray-200 text-center">
-                                {qty}
-                              </td>
-                              <td className="px-4 py-2 border border-gray-200 text-right text-indigo-700 font-medium">
-                                ₹{rate.toFixed(2)}
-                              </td>
-                              <td className="px-4 py-2 border border-gray-200 text-center">
-                                ₹{gstAmount.toFixed(2)}
-                              </td>
-                              <td className="px-4 py-2 border border-gray-200 text-right text-indigo-800 font-semibold">
-                                ₹{totalAmount.toFixed(2)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </React.Fragment>
-                    )
+                  <tr>
+                    <td style={{ padding: '2px 8px 2px 0', color: '#555' }}>Quotation No</td>
+                    <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{headerData?.quotationNo || "—"}</span></td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '2px 8px 2px 0', color: '#555' }}>Date</td>
+                    <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{headerData?.quotationDate ? new Date(headerData.quotationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : "—"}</span></td>
+                  </tr>
+                  {headerData?.reference && (
+                    <tr>
+                      <td style={{ padding: '2px 8px 2px 0', color: '#555' }}>Reference</td>
+                      <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>{headerData.reference}</span></td>
+                    </tr>
                   )}
-                  <tr className="bg-indigo-100 text-indigo-800 font-semibold text-sm">
-                    <td
-                      colSpan={4}
-                      style={{ fontSize: "0.8rem", paddingLeft: "5%" }}
-                      className="footer-small py-3 text-left border border-gray-300 uppercase"
-                    >
-                      <b>Amount in Words:</b> ₹ {numberToWords(total)}
-                    </td>
-                    <td className="px-4 py-3 text-right border border-gray-300">
-                      ₹{total.toFixed(2)}
-                    </td>
+                  <tr>
+                    <td style={{ padding: '2px 8px 2px 0', color: '#555' }}>Place</td>
+                    <td style={{ padding: '2px 0' }}>: <span style={{ fontWeight: 'bold' }}>Kerala</span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
+            <div>
+              <img
+                src="/assets/logo_new-01.png"
+                alt="Adstra Logo"
+                style={{ maxWidth: '220px', height: 'auto' }}
+              />
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* --- Merged Sections (Manual + Dynamic) --- */}
-      <div className="pdf-page" style={{ breakBefore: "page" }}>
-        {sections.map((sec, i) => {
-          const lines =
-            sec.content
-              ?.split("\n")
-              .map((line) => line.trim())
-              .filter(Boolean) || [];
+          {/* Row 2: From & To */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid black' }}>
+            <div style={{ padding: '8px', borderRight: '1px solid black', fontSize: '10px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>From:</div>
+              <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{settings?.name || "Adstra Digital"}</div>
+              <div style={{ fontSize: '9px', color: '#666', marginBottom: '8px' }}>ISO 9001:2015 & IAF Certified</div>
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>
+                {(settings?.address || "Husna Complex, 1st Floor, Nadakkavu, Kozhikode, Kerala - 673011").replace(', Kozhikode', ',\nKozhikode')}
+              </div>
+              <div style={{ marginTop: '4px', wordBreak: 'break-word' }}>
+                <strong>GSTIN:</strong> {settings?.gstin || "32CMJPK3035L1Z2"} 
+                {(settings?.lut_no || "AD320224004945V") && ` | LUT: ${settings?.lut_no || "AD320224004945V"}`}
+              </div>
+              <div style={{ wordBreak: 'break-word' }}><strong>Mobile:</strong> {settings?.mobile || "+91 974 477 9574 | 956 756 8185"}</div>
+              <div style={{ wordBreak: 'break-word' }}><strong>Email:</strong> {settings?.email || "info.adstradigital@gmail.com"}</div>
+            </div>
+            <div style={{ padding: '8px', fontSize: '11px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>To:</div>
+              <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>{headerData?.billTo?.name || "Client Name"}</div>
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>{headerData?.billTo?.address || "—"}</div>
+              {headerData?.billTo?.gstin && headerData?.billTo?.gstin !== "N/A" && (
+                <div><strong>GSTIN:</strong> {headerData.billTo.gstin}</div>
+              )}
+              {headerData?.billTo?.email && (
+                <div><strong>Email:</strong> {headerData.billTo.email}</div>
+              )}
+            </div>
+          </div>
 
-          const contentElements = lines.map((line, idx) => {
-            const match = line.match(/^-?\s*\*\*(.*?)\*\*:\s*(.*)/);
-            if (match) {
-              return (
-                <p key={idx}>
-                  <strong>{match[1]}:</strong> {match[2]}
-                </p>
-              );
-            }
-            return <p key={idx}>{line}</p>;
-          });
+          {/* Purpose */}
+          {headerData?.purpose && (
+            <div style={{ padding: '8px', borderBottom: '1px solid black', fontSize: '11px' }}>
+              <strong>Purpose:</strong> {headerData.purpose}
+            </div>
+          )}
 
-          return (
-            <div
-              key={`${sec.title || "section"}-${i}`}
-              className="mb-8 pb-6 last:pb-0"
-            >
-              <h4
-                className="text-xl sm:text-2xl font-bold text-indigo-700 mb-2"
-                style={{ textAlign: sec.alignment || "left" }}
-              >
-                {sec.title}
-              </h4>
-              <div
-                className="text-[14px] sm:text-[15px] text-gray-800 leading-relaxed space-y-2"
-                style={{ textAlign: sec.alignment || "left" }}
-              >
-                {contentElements}
+          {/* Intro Sections */}
+          {introSections.length > 0 && (
+            <div style={{ padding: '12px', borderBottom: '1px solid black', fontSize: '12px', lineHeight: '1.5' }}>
+              {introSections.map((sec, i) => (
+                <div key={i} style={{ marginBottom: i < introSections.length - 1 ? '12px' : '0' }}>
+                  <h4 style={{ fontWeight: 'bold', fontSize: '14px', margin: '0 0 6px 0', color: '#111' }}>{sec.title}</h4>
+                  <div style={{ color: '#333' }}>
+                    {renderSectionContent(sec.content)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Items/Services Table Section */}
+          {services.length > 0 && (
+            <div style={{ borderBottom: '1px solid black' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid black', backgroundColor: '#f9fafb' }}>
+                    <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '40px' }}>Sr.</th>
+                    <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'left' }}>Item / Service Description</th>
+                    <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '60px' }}>Qty</th>
+                    <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', width: '100px' }}>Rate (Rs)</th>
+                    <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '90px' }}>Tax (Amt/%)</th>
+                    <th style={{ padding: '6px', textAlign: 'right', width: '100px' }}>Amount (Rs)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(groupedServices).map(([category, items], groupIdx) => (
+                    <React.Fragment key={category || groupIdx}>
+                      <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
+                        <td colSpan={6} style={{ padding: '4px 8px', borderBottom: '1px solid #eee', fontSize: '10px' }}>
+                          {category}
+                        </td>
+                      </tr>
+                      {items.map((item, idx) => {
+                        const qty = Number(item.quantity) || 1;
+                        const rate = Number(item.rate) || 0;
+                        const gst = Number(item.gst) || 18;
+                        const base = rate * qty;
+                        const gstAmt = (base * gst) / 100;
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{idx + 1}</td>
+                            <td style={{ borderRight: '1px solid black', padding: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.description}</td>
+                            <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{qty.toFixed(2)}</td>
+                            <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>{rate.toFixed(2)}</td>
+                            <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', fontSize: '10px' }}>{gstAmt.toFixed(2)} ({gst}%)</td>
+                            <td style={{ padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>{base.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+                <tfoot>
+                  {/* Financial Breakdown */}
+                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                    <td colSpan="5" style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Sub Total</td>
+                    <td style={{ padding: '6px', textAlign: 'right' }}>{subtotal.toFixed(2)}</td>
+                  </tr>
+                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                    <td colSpan="5" style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Total Tax (GST)</td>
+                    <td style={{ padding: '6px', textAlign: 'right' }}>{totalGST.toFixed(2)}</td>
+                  </tr>
+                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>
+                    <td colSpan="5" style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', fontSize: '13px' }}>Grand Total (Rs)</td>
+                    <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {/* Amount in words */}
+          {total > 0 && (
+            <div style={{ padding: '8px', borderBottom: '1px solid black', fontSize: '11px' }}>
+              <span style={{ fontWeight: 'bold' }}>Rs.</span> {numberToWords(total)}
+            </div>
+          )}
+
+          {/* Other Sections (Conclusions / details) */}
+          {otherSections.length > 0 && (
+            <div style={{ padding: '12px', borderBottom: '1px solid black', fontSize: '12px', lineHeight: '1.5', pageBreakBefore: 'always', breakBefore: 'always' }}>
+              {otherSections.map((sec, i) => (
+                <div key={i} style={{ marginBottom: i < otherSections.length - 1 ? '12px' : '0' }}>
+                  <h4 style={{ fontWeight: 'bold', fontSize: '14px', margin: '0 0 4px 0', color: '#111' }}>{sec.title}</h4>
+                  <div style={{ color: '#333' }}>
+                    {renderSectionContent(sec.content)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Footer Section: Terms, Bank Details, Signatory */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', fontSize: '10px' }}>
+            <div style={{ padding: '8px', borderRight: '1px solid black' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>Terms and Conditions:</div>
+              <ul style={{ paddingLeft: '15px', margin: '0', listStyleType: 'disc', fontSize: '9px' }}>
+                {settings?.terms_conditions ? (
+                  settings.terms_conditions.split(/\n|\/\//).filter(t => t.trim()).map((term, idx) => (
+                    <li key={idx} style={{ marginBottom: '2px' }}>{term.trim()}</li>
+                  ))
+                ) : (
+                  <>
+                    <li>Proposal / Quotation is valid for 30 days.</li>
+                    <li>Payment terms: As agreed in terms of reference.</li>
+                    <li>All disputes are subject to Kozhikode jurisdiction.</li>
+                  </>
+                )}
+              </ul>
+            </div>
+            <div style={{ padding: '8px', borderRight: '1px solid black' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>Official Bank Details:</div>
+              <div style={{ fontSize: '9px', lineHeight: '1.4' }}>
+                Acc Holder: <span style={{ fontWeight: 'bold' }}>Adstra Digital</span><br />
+                Acc No: <span style={{ fontWeight: 'bold' }}>50200091927202</span><br />
+                Bank: <span style={{ fontWeight: 'bold' }}>HDFC Bank</span><br />
+                IFSC: <span style={{ fontWeight: 'bold' }}>HDFC0001595</span>
               </div>
             </div>
-          );
-        })}
-      </div>
+            <div style={{ padding: '8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', minHeight: '100px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>For {settings?.name || "Adstra Digital"}</div>
+              <img
+                src="/assets/seal.png"
+                alt="Company Seal"
+                style={{ width: '80px', height: 'auto', marginBottom: '4px', opacity: 0.85 }}
+              />
+              <div style={{ borderTop: '1px solid black', width: '80%', padding: '4px 0', fontWeight: 'bold' }}>Authorised Signatory</div>
+            </div>
+          </div>
 
-      {/* --- Bank Details --- */}
-      <div className="mt-8 pt-6 p-4 text-center rounded-md bg-gray-50" style={{ marginTop: "50px" }}>
-        <h4 className="text-lg font-semibold text-gray-800 mb-2" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22" /><rect x="2" y="11" width="20" height="11" /><path d="M12 2L2 7h20z" /><line x1="12" y1="11" x2="12" y2="22" /><line x1="7" y1="11" x2="7" y2="22" /><line x1="17" y1="11" x2="17" y2="22" /></svg>
-          We bank with HDFC Bank
-        </h4>
-        <p>
-          <strong>Account Holder:</strong> Adstra Digital<br />
-          <strong>A/C No:</strong> 50200091927202 | <strong>IFSC:</strong>{" "}
-          HDFC0001595
-        </p>
-      </div>
+          <div style={{ padding: '4px', borderTop: '1px solid black', textAlign: 'center', fontSize: '9px', color: '#666' }}>
+            This is a computer-generated proposal. No signature is required.
+          </div>
 
-      {/* --- Conclusion --- */}
-      <div className="mt-6 mb-2 text-gray-700 leading-relaxed text-center">
-        <h4 className="text-xl font-semibold mb-2 text-indigo-700">
-          Conclusion
-        </h4>
-        <p style={{ fontSize: "0.8rem" }}>
-          We are committed to delivering quality services with full <br />
-          transparency, measurable outcomes, and a focus on long-term success.
-          <br />
-          Thank you for considering Adstra Digital as your strategic partner.
-        </p>
-
-        <div style={{ fontSize: "0.7rem" }} className="footer-small">
-          <p>
-            <strong>LUT Registered:</strong> hence ZERO taxation for Overseas
-            billing.
-            <br />© {new Date().getFullYear()} <strong>Adstra Digital</strong>.
-            All rights reserved.
-            <br />
-            Powered by Passion - Driven by Strategy - Delivered with Creativity
-          </p>
         </div>
       </div>
     </div>

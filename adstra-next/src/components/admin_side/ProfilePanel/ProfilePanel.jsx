@@ -2,10 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { User, Mail, Phone, MapPin, Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Clock, CheckCircle, XCircle, KeyRound } from "lucide-react";
+import { useModal } from "@/Context/ModalContext";
 import "./ProfilePanel.css";
 
 const ProfilePanel = ({ user, API_BASE }) => {
+  const { showAlert } = useModal();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [attendanceLogs, setAttendanceLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,6 +22,43 @@ const ProfilePanel = ({ user, API_BASE }) => {
   const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
     return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (!newPassword) {
+      showAlert("Error", "Please enter a new password.", "error");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showAlert("Error", "Passwords do not match.", "error");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await axios.put(`${API_BASE}/user/update-user/${user.id}`, {
+        password: newPassword
+      }, {
+        headers: getAuthHeaders()
+      });
+      showAlert("Success", "Password updated successfully!", "success");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      let errMsg = "Failed to update password.";
+      if (err.response?.data?.errors?.password) {
+        errMsg = err.response.data.errors.password.join(", ");
+      } else if (err.response?.data?.error) {
+        errMsg = err.response.data.error;
+      } else if (err.response?.data?.errors) {
+        errMsg = Object.entries(err.response.data.errors)
+          .map(([key, val]) => `${key}: ${val}`)
+          .join("\n");
+      }
+      showAlert("Error", errMsg, "error");
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -82,6 +124,12 @@ const ProfilePanel = ({ user, API_BASE }) => {
           >
             <Calendar size={18} /> Full UI Calendar
           </button>
+          <button
+            className={`profile-nav-item ${activeTab === "password" ? "active" : ""}`}
+            onClick={() => setActiveTab("password")}
+          >
+            <KeyRound size={18} /> Reset Password
+          </button>
         </div>
       </div>
 
@@ -128,6 +176,46 @@ const ProfilePanel = ({ user, API_BASE }) => {
                   <p>{user?.phone_number || "-"}</p>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "password" && (
+          <div className="tab-content fade-in">
+            <h3 className="section-title"><KeyRound size={18} /> Reset Password</h3>
+            <div className="overview-details-card">
+              <h4>Change Password</h4>
+              <form onSubmit={handlePasswordChange} className="password-change-form">
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <label>New Password</label>
+                    <input
+                      type="password"
+                      className="password-input"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                    />
+                  </div>
+                  <div className="detail-item">
+                    <label>Confirm New Password</label>
+                    <input
+                      type="password"
+                      className="password-input"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
+                  <button type="submit" className="save-password-btn" disabled={passwordLoading}>
+                    {passwordLoading ? "Updating..." : "Update Password"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

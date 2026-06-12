@@ -1,20 +1,24 @@
 "use client";
-import html2pdf from "html2pdf.js";
 
-export default function ExportButton({ rootId = "proposal-content" }) {
-  const handleExport = () => {
+export default function ExportButton({ rootId = "proposal-preview-pdf", filename = "proposal" }) {
+  const handleExport = async () => {
     const element = document.getElementById(rootId);
     if (!element) return;
-    html2pdf()
-      .from(element)
-      .set({
-        margin: 0.5,
-        filename: "proposal.pdf",
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-      })
-      .save();
+
+    // Dynamically import html2pdf to prevent SSR/window issues in Next.js
+    const html2pdf = (await import("html2pdf.js")).default;
+    
+    const pdfFileName = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+
+    const opt = {
+      margin: 0,
+      filename: pdfFileName,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    };
+
+    html2pdf().set(opt).from(element).save();
   };
 
   return (

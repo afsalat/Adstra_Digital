@@ -515,3 +515,51 @@
 .legend-dot.status-absent { background: #EF4444; }
 .legend-dot.status-leave { background: #F59E0B; }
 .legend-dot.status-offday { background: #CBD5E1; }
+
+/* Change Password Section */
+.password-change-form {
+  margin-top: 16px;
+}
+
+.password-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #0F172A;
+  background-color: #F8FAFC;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+}
+
+.password-input:focus {
+  outline: none;
+  border-color: #4F46E5;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.save-password-btn {
+  background-color: #4F46E5;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+  transition: all 0.2s ease;
+}
+
+.save-password-btn:hover:not(:disabled) {
+  background-color: #4338CA;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.25);
+}
+
+.save-password-btn:disabled {
+  background-color: #A5B4FC;
+  cursor: not-allowed;
+}

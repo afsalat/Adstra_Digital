@@ -5,7 +5,6 @@ import { useState, useCallback } from "react";
 import SectionEditor from "../SectionEditor/SectionEditor";
 import ProposalPreview from "../ProposalPreview/ProposalPreview";
 import ExportButton from "../ExportButton/ExportButton";
-import ProformaHeader from "../ProformaHeader/ProformaHeader";
 import HeaderEditor from "../HeaderEditor/HeaderEditor";
 import ServiceTable from "../ServiceTable/ServiceTable";
 import RecentProposalsModal from "./RecentProposalsModal"; // Import Modal
@@ -292,7 +291,9 @@ export default function ProposalBuilder() {
           <button onClick={handleNewProposal} style={{ background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500 }}>
             New Proposal
           </button>
-          <ExportButton />
+          <ExportButton 
+            filename={headerData?.quotationNo ? `proposal_${headerData.quotationNo.replace(/[^a-z0-9]/gi, '_').toUpperCase()}` : "proposal"} 
+          />
           <button onClick={() => window.print()} style={{ background: "#fff", border: "1px solid #d1d5db", color: "#374151", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500 }}>
             Print
           </button>
@@ -367,9 +368,8 @@ export default function ProposalBuilder() {
             </div>
           </div>
           <div className="col-md-6 print-full-width">
-            <div id="proposal-content" className="bg-white p-3 shadow-sm rounded-3 h-100 overflow-auto border">
-              <ProformaHeader {...headerData} />
-              <ProposalPreview sections={sections} services={service} />
+            <div id="proposal-content" className="bg-white p-3 shadow-sm rounded-3 h-100 overflow-auto border" style={{ maxWidth: "720px", margin: "0 auto" }}>
+              <ProposalPreview headerData={headerData} sections={sections} services={service} />
             </div>
           </div>
         </div>
