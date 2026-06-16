@@ -147,38 +147,80 @@ export default function BlogCreator() {
     const keywords = Object.keys(activeKeywords || {}).sort(
       (a, b) => b.length - a.length
     );
-    if (keywords.length === 0) return (text) => parse(text);
+
+    const formatMarkdown = (text) => {
+      let formattedText = text;
+      formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong style="color: inherit; font-weight: 700;">$1</strong>');
+      formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      formattedText = formattedText.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="blog-content-image" style="max-width: 100%; height: auto; margin: 1.5em 0; border-radius: 8px;" />');
+      formattedText = formattedText.replace(/\[(.*?)\]\((.*?)\)/g, (match, linkText, url) => {
+        const isInternal = url.startsWith('/') || url.includes('adstradigital.com');
+        if (isInternal) {
+          return `<a href="${url}" class="interlink">${linkText}</a>`;
+        } else {
+          return `<a href="${url}" class="interlink" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
+        }
+      });
+      return formattedText;
+    };
+
+    if (keywords.length === 0) {
+      return (text) => parse(formatMarkdown(text));
+    }
+
     const regex = new RegExp(`\\b(${keywords.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join("|")})\\b`, "gi");
 
     return (text) => {
-      const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong style="color: inherit; font-weight: 700;">$1</strong>');
-      return parse(
-        formattedText.replace(regex, (match) => {
-          const matchedKey = keywords.find(k => k.toLowerCase() === match.toLowerCase()) || match;
-          const targetObj = activeKeywords[matchedKey];
-          if (!targetObj) return match;
-          
-          let link = "";
-          let isInternal = true;
-          
-          if (typeof targetObj === "object") {
-            link = targetObj.link;
-            isInternal = targetObj.type ? (targetObj.type === "internal") : ((link || "").startsWith('/') || (link || "").includes('adstradigital.com'));
-          } else {
-            link = targetObj;
-            isInternal = (link || "").startsWith('/') || (link || "").includes('adstradigital.com') || (link || "").startsWith('http://localhost') || (link || "").startsWith('http://127.0.0.1');
-          }
+      const formattedText = formatMarkdown(text);
+      const parts = formattedText.split(/(<[^>]+>)/g);
+      let insideLink = false;
+      const processedParts = [];
 
-          keywordCounts[matchedKey] = (keywordCounts[matchedKey] || 0) + 1;
-          if (keywordCounts[matchedKey] > maxPerKeyword) return match;
-          
-          if (isInternal) {
-            return `<a href="${link}" class="interlink">${match}</a>`;
-          } else {
-            return `<a href="${link}" class="interlink" target="_blank" rel="noopener noreferrer">${match}</a>`;
+      for (const part of parts) {
+        if (part.startsWith("<") && part.endsWith(">")) {
+          const lowerPart = part.toLowerCase();
+          if (lowerPart.startsWith("<a ") || lowerPart === "<a>") {
+            insideLink = true;
+          } else if (lowerPart === "</a>") {
+            insideLink = false;
           }
-        })
-      );
+          processedParts.push(part);
+        } else {
+          if (insideLink) {
+            processedParts.push(part);
+          } else {
+            processedParts.push(
+              part.replace(regex, (match) => {
+                const matchedKey = keywords.find(k => k.toLowerCase() === match.toLowerCase()) || match;
+                const targetObj = activeKeywords[matchedKey];
+                if (!targetObj) return match;
+
+                let link = "";
+                let isInternal = true;
+
+                if (typeof targetObj === "object") {
+                  link = targetObj.link;
+                  isInternal = targetObj.type ? (targetObj.type === "internal") : ((link || "").startsWith('/') || (link || "").includes('adstradigital.com'));
+                } else {
+                  link = targetObj;
+                  isInternal = (link || "").startsWith('/') || (link || "").includes('adstradigital.com') || (link || "").startsWith('http://localhost') || (link || "").startsWith('http://127.0.0.1');
+                }
+
+                keywordCounts[matchedKey] = (keywordCounts[matchedKey] || 0) + 1;
+                if (keywordCounts[matchedKey] > maxPerKeyword) return match;
+
+                if (isInternal) {
+                  return `<a href="${link}" class="interlink">${match}</a>`;
+                } else {
+                  return `<a href="${link}" class="interlink" target="_blank" rel="noopener noreferrer">${match}</a>`;
+                }
+              })
+            );
+          }
+        }
+      }
+
+      return parse(processedParts.join(""));
     };
   };
 
@@ -1085,16 +1127,24 @@ export default function BlogCreator() {
     const selectedText = text.substring(start, end);
     const replacement = syntaxStart + selectedText + syntaxEnd;
 
-    setContent(text.substring(0, start) + replacement + text.substring(end));
+    const newContent = text.substring(0, start) + replacement + text.substring(end);
+    
+    // Update the DOM element directly first to prevent React from resetting the caret position
+    textarea.value = newContent;
+    setContent(newContent);
 
-    // Refocus and place cursor
+    const newStart = start + syntaxStart.length;
+    const newEnd = newStart + selectedText.length;
+
+    // Set selection range immediately
+    textarea.focus();
+    textarea.setSelectionRange(newStart, newEnd);
+
+    // Backup selection in a microtask/setTimeout in case of delayed React render commits
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(
-        start + syntaxStart.length,
-        start + syntaxStart.length + selectedText.length
-      );
-    }, 50);
+      textarea.setSelectionRange(newStart, newEnd);
+    }, 0);
   };
 
   // Filtered blogs
@@ -1703,15 +1753,15 @@ export default function BlogCreator() {
                     </div>
 
                     <div className="markdown-toolbar">
-                      <button type="button" onClick={() => insertMarkdown("**", "**")} title="Bold text"><strong>B</strong></button>
-                      <button type="button" onClick={() => insertMarkdown("*", "*")} title="Italic text"><em>I</em></button>
-                      <button type="button" onClick={() => insertMarkdown("## ", "\n")} title="Heading 2">H2</button>
-                      <button type="button" onClick={() => insertMarkdown("### ", "\n")} title="Heading 3">H3</button>
-                      <button type="button" onClick={() => insertMarkdown("[Link Text](url)", "")} title="Insert Link">Link</button>
-                      <button type="button" onClick={() => insertMarkdown("![Image Alt](url)", "")} title="Insert Image">Image</button>
-                      <button type="button" onClick={() => insertMarkdown("> ", "")} title="Quote Block">Quote</button>
-                      <button type="button" onClick={() => insertMarkdown("```\n", "\n```")} title="Code Block"><Code size={14} /></button>
-                      <button type="button" onClick={() => insertMarkdown("- ", "")} title="Unordered list">• List</button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("**", "**")} title="Bold text"><strong>B</strong></button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("*", "*")} title="Italic text"><em>I</em></button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("## ", "\n")} title="Heading 2">H2</button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("### ", "\n")} title="Heading 3">H3</button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("[Link Text](url)", "")} title="Insert Link">Link</button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("![Image Alt](url)", "")} title="Insert Image">Image</button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("> ", "")} title="Quote Block">Quote</button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("```\n", "\n```")} title="Code Block"><Code size={14} /></button>
+                      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown("- ", "")} title="Unordered list">• List</button>
                     </div>
 
                     <textarea

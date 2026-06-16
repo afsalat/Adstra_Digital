@@ -1,6 +1,6 @@
 const nextConfig = {
   output: 'export',          // Static HTML export
-  trailingSlash: false,       // /page/ URLs
+  trailingSlash: true,       // /page/ URLs
   images: { unoptimized: true },
   basePath: '',              // Optional: subfolder
   assetPrefix: '',           // Optional: CDN/subfolder

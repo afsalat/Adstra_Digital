@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from "@/Context/ModalContext";
+import parse from "html-react-parser";
+import RichTextEditor from "./RichTextEditor";
 
 const SectionEditor = ({ section, onChange, onRemove }) => {
+  const { showAlert, showConfirm } = useModal();
   const [history, setHistory] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editData, setEditData] = useState({});
@@ -148,14 +152,10 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
               case "approach":
               case "conclusion":
                 return (
-                  <textarea
-                    rows={5}
-                    className="form-control"
-                    style={{ textAlign: section.alignment || "left" }}
+                  <RichTextEditor
                     value={section.content}
-                    onChange={(e) =>
-                      onChange({ ...section, content: e.target.value })
-                    }
+                    onChange={(val) => onChange({ ...section, content: val })}
+                    alignment={section.alignment}
                   />
                 );
               case "number":
@@ -215,18 +215,16 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
               default:
                 // Fallback so unknown types are still editable
                 return (
-                  <textarea
-                    rows={5}
-                    className="form-control"
-                    style={{ textAlign: section.alignment || "left" }}
+                  <RichTextEditor
                     value={section.content || ""}
-                    onChange={(e) =>
+                    onChange={(val) =>
                       onChange({
                         ...section,
-                        content: e.target.value,
+                        content: val,
                         type: "textarea",
                       })
                     }
+                    alignment={section.alignment}
                   />
                 );
             }
@@ -265,14 +263,22 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
                         setEditData({ ...editData, title: e.target.value })
                       }
                     />
-                    <textarea
-                      className="form-control mb-2"
-                      rows={3}
-                      value={editData.content}
-                      onChange={(e) =>
-                        setEditData({ ...editData, content: e.target.value })
-                      }
-                    />
+                    {["textarea", "introduction", "objective", "approach", "conclusion"].includes(editData.type || "textarea") ? (
+                      <RichTextEditor
+                        value={editData.content}
+                        onChange={(val) => setEditData({ ...editData, content: val })}
+                        alignment={editData.alignment}
+                      />
+                    ) : (
+                      <textarea
+                        className="form-control mb-2"
+                        rows={3}
+                        value={editData.content}
+                        onChange={(e) =>
+                          setEditData({ ...editData, content: e.target.value })
+                        }
+                      />
+                    )}
                     <div className="d-flex gap-2">
                       <button
                         className="btn btn-sm btn-success"
@@ -293,9 +299,13 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
                     <strong>{item.type?.toUpperCase?.() || "TEXT"}</strong> —{" "}
                     {item.title} <br />
                     <small>{item.time}</small>
-                    <p style={{ textAlign: item.alignment || "left" }}>
-                      {item.content}
-                    </p>
+                    <div style={{ textAlign: item.alignment || "left" }} className="mb-2">
+                      {/<[a-z][\s\S]*>/i.test(item.content) ? (
+                        <div className="html-content-preview">{parse(item.content)}</div>
+                      ) : (
+                        <p>{item.content}</p>
+                      )}
+                    </div>
                     <button
                       className="btn btn-sm btn-outline-primary"
                       onClick={() => startEdit(idx)}

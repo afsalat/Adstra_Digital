@@ -20,41 +20,80 @@ const createInterlinker = (activeKeywords) => {
   const keywords = Object.keys(activeKeywords || {}).sort(
     (a, b) => b.length - a.length
   );
-  if (keywords.length === 0) return (text) => parse(text);
+
+  const formatMarkdown = (text) => {
+    let formattedText = text;
+    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong style="color: inherit; font-weight: 700;">$1</strong>');
+    formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    formattedText = formattedText.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="blog-content-image" style="max-width: 100%; height: auto; margin: 1.5em 0; border-radius: 8px;" />');
+    formattedText = formattedText.replace(/\[(.*?)\]\((.*?)\)/g, (match, linkText, url) => {
+      const isInternal = url.startsWith('/') || url.includes('adstradigital.com');
+      if (isInternal) {
+        return `<a href="${url}" class="interlink">${linkText}</a>`;
+      } else {
+        return `<a href="${url}" class="interlink" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
+      }
+    });
+    return formattedText;
+  };
+
+  if (keywords.length === 0) {
+    return (text) => parse(formatMarkdown(text));
+  }
+
   const regex = new RegExp(`\\b(${keywords.map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join("|")})\\b`, "gi");
 
   return (text) => {
-    // 1. Handle Markdown Bold: **text** -> <strong>text</strong>
-    const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong style="color: inherit; font-weight: 700;">$1</strong>');
+    const formattedText = formatMarkdown(text);
+    const parts = formattedText.split(/(<[^>]+>)/g);
+    let insideLink = false;
+    const processedParts = [];
 
-    // 2. Handle Interlinking & Parse HTML
-    return parse(
-      formattedText.replace(regex, (match) => {
-        const matchedKey = keywords.find(k => k.toLowerCase() === match.toLowerCase()) || match;
-        const targetObj = activeKeywords[matchedKey];
-        if (!targetObj) return match;
-
-        let link = "";
-        let isInternal = true;
-
-        if (typeof targetObj === "object") {
-          link = targetObj.link;
-          isInternal = targetObj.type ? (targetObj.type === "internal") : ((link || "").startsWith('/') || (link || "").includes('adstradigital.com'));
-        } else {
-          link = targetObj;
-          isInternal = (link || "").startsWith('/') || (link || "").includes('adstradigital.com') || (link || "").startsWith('http://localhost') || (link || "").startsWith('http://127.0.0.1');
+    for (const part of parts) {
+      if (part.startsWith("<") && part.endsWith(">")) {
+        const lowerPart = part.toLowerCase();
+        if (lowerPart.startsWith("<a ") || lowerPart === "<a>") {
+          insideLink = true;
+        } else if (lowerPart === "</a>") {
+          insideLink = false;
         }
-
-        keywordCounts[matchedKey] = (keywordCounts[matchedKey] || 0) + 1;
-        if (keywordCounts[matchedKey] > maxPerKeyword) return match;
-
-        if (isInternal) {
-          return `<a href="${link}" class="interlink">${match}</a>`;
+        processedParts.push(part);
+      } else {
+        if (insideLink) {
+          processedParts.push(part);
         } else {
-          return `<a href="${link}" class="interlink" target="_blank" rel="noopener noreferrer">${match}</a>`;
+          processedParts.push(
+            part.replace(regex, (match) => {
+              const matchedKey = keywords.find(k => k.toLowerCase() === match.toLowerCase()) || match;
+              const targetObj = activeKeywords[matchedKey];
+              if (!targetObj) return match;
+
+              let link = "";
+              let isInternal = true;
+
+              if (typeof targetObj === "object") {
+                link = targetObj.link;
+                isInternal = targetObj.type ? (targetObj.type === "internal") : ((link || "").startsWith('/') || (link || "").includes('adstradigital.com'));
+              } else {
+                link = targetObj;
+                isInternal = (link || "").startsWith('/') || (link || "").includes('adstradigital.com') || (link || "").startsWith('http://localhost') || (link || "").startsWith('http://127.0.0.1');
+              }
+
+              keywordCounts[matchedKey] = (keywordCounts[matchedKey] || 0) + 1;
+              if (keywordCounts[matchedKey] > maxPerKeyword) return match;
+
+              if (isInternal) {
+                return `<a href="${link}" class="interlink">${match}</a>`;
+              } else {
+                return `<a href="${link}" class="interlink" target="_blank" rel="noopener noreferrer">${match}</a>`;
+              }
+            })
+          );
         }
-      })
-    );
+      }
+    }
+
+    return parse(processedParts.join(""));
   };
 };
 
@@ -354,7 +393,16 @@ const BlogDetail = ({ blog }) => {
                   {" "}
                   |{" "}
                   <time dateTime={blog.publishedDate}>
-                    {format(new Date(blog.publishedDate), "MMMM d, yyyy")}
+                    {(() => {
+                      if (!blog.publishedDate) return "No date specified";
+                      try {
+                        const date = new Date(blog.publishedDate);
+                        if (isNaN(date.getTime())) return blog.publishedDate;
+                        return format(date, "MMMM d, yyyy");
+                      } catch (e) {
+                        return blog.publishedDate;
+                      }
+                    })()}
                   </time>
                 </span>
                 {blog.readingTime && <span> • {blog.readingTime}</span>}

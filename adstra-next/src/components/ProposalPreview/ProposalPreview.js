@@ -3,6 +3,7 @@
 import { toWords } from "number-to-words";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import parse from "html-react-parser";
 import API_BASE_URL from "@/utils/apiBase";
 import { serviceExtraDetails } from "@/data/clientData";
 
@@ -95,9 +96,25 @@ export default function ProposalPreview({
     ...dynamicSections.filter(sec => !existingTitles.has(sec.title)),
   ];
 
-  // Helper to split text into paragraphs/bullet points
-  const renderSectionContent = (content) => {
-    const lines = content?.split("\n").map((line) => line.trim()).filter(Boolean) || [];
+  // Detect whether content is HTML (from rich text editor) vs plaintext
+  const isHtmlContent = (content) => {
+    if (!content) return false;
+    return /<[a-z][\s\S]*>/i.test(content);
+  };
+
+  // Helper to split text into paragraphs/bullet points (legacy plaintext)
+  const renderPlaintextContent = (content) => {
+    let lines = content?.split("\n").map((line) => line.trim()) || [];
+    
+    // Trim leading empty lines
+    while (lines.length > 0 && lines[0] === "") {
+      lines.shift();
+    }
+    // Trim trailing empty lines
+    while (lines.length > 0 && lines[lines.length - 1] === "") {
+      lines.pop();
+    }
+
     const elements = [];
     let currentList = [];
 
@@ -123,6 +140,16 @@ export default function ProposalPreview({
     };
 
     lines.forEach((line) => {
+      if (line === "") {
+        flushList();
+        elements.push(
+          <p key={`p-${elements.length}`} style={{ margin: '6px 0', fontSize: '11.5px', lineHeight: '1.4', color: '#222', minHeight: '1.2em' }}>
+            {"\u00A0"}
+          </p>
+        );
+        return;
+      }
+
       let isList = false;
       let title = null;
       let desc = line;
@@ -177,6 +204,38 @@ export default function ProposalPreview({
 
     flushList();
     return elements;
+  };
+
+  // Render section content — HTML from rich editor or legacy plaintext
+  const renderSectionContent = (content) => {
+    if (!content) return null;
+
+    if (isHtmlContent(content)) {
+      return (
+        <div className="html-section-content" style={{ fontSize: '11.5px', lineHeight: '1.5', color: '#222' }}>
+          <style>{`
+            .html-section-content p { margin: 4px 0; }
+            .html-section-content h1 { font-size: 18px; font-weight: bold; margin: 8px 0 4px 0; color: #111; }
+            .html-section-content h2 { font-size: 16px; font-weight: bold; margin: 8px 0 4px 0; color: #111; }
+            .html-section-content h3 { font-size: 14px; font-weight: bold; margin: 6px 0 4px 0; color: #111; }
+            .html-section-content h4 { font-size: 13px; font-weight: bold; margin: 6px 0 4px 0; color: #111; }
+            .html-section-content h5 { font-size: 12px; font-weight: bold; margin: 4px 0 2px 0; color: #111; }
+            .html-section-content ul, .html-section-content ol { padding-left: 18px; margin: 4px 0 8px 0; }
+            .html-section-content ul { list-style-type: disc; }
+            .html-section-content ol { list-style-type: decimal; }
+            .html-section-content li { margin-bottom: 3px; font-size: 11px; line-height: 1.4; }
+            .html-section-content a { color: #2563eb; text-decoration: underline; }
+            .html-section-content pre { background: #f3f4f6; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 10px; overflow-x: auto; margin: 6px 0; }
+            .html-section-content code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-family: monospace; font-size: 10px; }
+            .html-section-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 6px 0; }
+            .html-section-content blockquote { border-left: 3px solid #d1d5db; padding-left: 10px; margin: 6px 0; color: #555; font-style: italic; }
+          `}</style>
+          {parse(content)}
+        </div>
+      );
+    }
+
+    return renderPlaintextContent(content);
   };
 
   // Intro sections (typically "Proposal by ADSTRA DIGITAL" or similar)
