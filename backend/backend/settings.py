@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
 # Load environment variables
-load_dotenv()
+load_dotenv(override=True)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'apis.transactions',
     'apis.settings',
     'apis.blogs',
+    'apis.leads',
+    'apis.chat',
 ]
 
 MIDDLEWARE = [
@@ -107,8 +109,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': os.getenv('DRF_ANON_THROTTLE_RATE', '60/minute'),
-        'user': os.getenv('DRF_USER_THROTTLE_RATE', '1000/day'),
-        'login': os.getenv('DRF_LOGIN_THROTTLE_RATE', '5/minute'),
+        'user': os.getenv('DRF_USER_THROTTLE_RATE', '300/minute'),
+        'login': os.getenv('DRF_LOGIN_THROTTLE_RATE', '10/minute'),
     },
 }
 
@@ -143,20 +145,17 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True' if DEBUG els
 CORS_ALLOW_CREDENTIALS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', str(not DEBUG)) == 'True'
+SECURE_SSL_REDIRECT = False if DEBUG else os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
 SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', str(not DEBUG)) == 'True'
 SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', str(not DEBUG)) == 'True'
-SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', str(not DEBUG)) == 'True'
-CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', str(not DEBUG)) == 'True'
+SESSION_COOKIE_SECURE = False if DEBUG else os.getenv('SESSION_COOKIE_SECURE', 'True') == 'True'
+CSRF_COOKIE_SECURE = False if DEBUG else os.getenv('CSRF_COOKIE_SECURE', 'True') == 'True'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'

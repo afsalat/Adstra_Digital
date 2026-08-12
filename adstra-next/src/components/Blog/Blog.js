@@ -28,7 +28,7 @@ const Blog = () => {
           }
         }
       } catch (err) {
-        console.error("Error fetching blogs from API:", err);
+        console.warn("API endpoint unavailable, fallback to static blogs:", err?.message || err);
       }
     }
     fetchBlogs();

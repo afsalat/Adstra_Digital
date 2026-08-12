@@ -38,7 +38,7 @@ import "../../BlogDetails/BlogDetails.css";
 import "./BlogCreator.css";
 
 export default function BlogCreator() {
-  const { showConfirm } = useModal();
+  const { showConfirm, showAlert } = useModal();
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isSessionExpired, setIsSessionExpired] = useState(false);
@@ -113,7 +113,7 @@ export default function BlogCreator() {
       }
     } catch (err) {
       console.error("Upload error:", err);
-      alert("Error uploading image: " + (err.response?.data?.error || err.message));
+      showAlert("Error Uploading Image", err.response?.data?.error || err.message, "error");
     } finally {
       setIsUploading(false);
     }
@@ -435,7 +435,7 @@ export default function BlogCreator() {
   const handleSaveKeyword = async (e) => {
     e.preventDefault();
     if (!kwKeyword.trim() || !kwLink.trim()) {
-      alert("Please enter both Anchor Keyword and Target Link.");
+      showAlert("Required Fields", "Please enter both Anchor Keyword and Target Link.", "warning");
       return;
     }
     setKeywordLoading(true);
@@ -496,7 +496,7 @@ export default function BlogCreator() {
           errorMsg = String(err.response.data);
         }
       }
-      alert("Error saving keyword mapping:\n\n" + errorMsg);
+      showAlert("Error Saving Keyword Mapping", errorMsg, "error");
     } finally {
       setKeywordLoading(false);
     }
@@ -519,7 +519,7 @@ export default function BlogCreator() {
             // Already deleted or database reset, just refresh the list silently
             fetchKeywords();
           } else {
-            alert("Error deleting keyword mapping: " + (err.response?.data?.detail || err.message));
+            showAlert("Error Deleting Keyword Mapping", err.response?.data?.detail || err.message, "error");
           }
         } finally {
           setKeywordLoading(false);
@@ -648,7 +648,7 @@ export default function BlogCreator() {
             // Already deleted silently refresh
             fetchBlogs();
           } else {
-            alert("Error deleting blog: " + (err.response?.data?.detail || err.message));
+            showAlert("Error Deleting Blog", err.response?.data?.detail || err.message, "error");
           }
         }
       },
@@ -660,7 +660,7 @@ export default function BlogCreator() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!title || !slug || !content) {
-      alert("Please fill in the required fields: Title, Slug, and Content.");
+      showAlert("Required Fields", "Please fill in the required fields: Title, Slug, and Content.", "warning");
       return;
     }
 
@@ -724,7 +724,7 @@ export default function BlogCreator() {
           errorMsg = String(err.response.data);
         }
       }
-      alert("Error saving blog post:\n\n" + errorMsg);
+      showAlert("Error Saving Blog Post", errorMsg, "error");
     } finally {
       setActionLoading(false);
     }

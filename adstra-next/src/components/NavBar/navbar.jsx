@@ -65,8 +65,8 @@ function NavBar() {
       isActive: () => normalizePath(pathname).startsWith("/service"),
     },
     {
-      label: "Products",
-      href: "/#products",
+      label: "Software Solutions",
+      href: "/products/",
       isActive: () => normalizePath(pathname).startsWith("/products"),
     },
     {

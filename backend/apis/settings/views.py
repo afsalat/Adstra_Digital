@@ -98,6 +98,23 @@ def export_backup(request):
             ('apis.transactions', 'Transaction'),
             ('apis.attendance', 'Attendance'),
             ('apis.attendance', 'Holiday'),
+            # Lead management — ordered by FK depth
+            ('apis.leads', 'TargetCustomerList'),
+            ('apis.leads', 'TargetCustomer'),
+            ('apis.leads', 'Lead'),
+            ('apis.leads', 'LeadAssignmentHistory'),
+            ('apis.leads', 'LeadCall'),
+            ('apis.leads', 'LeadFollowUp'),
+            ('apis.leads', 'LeadMeeting'),
+            ('apis.leads', 'ProductDemo'),
+            ('apis.leads', 'ServiceRequirement'),
+            ('apis.leads', 'LeadRequirementItem'),
+            ('apis.leads', 'LeadCostEstimate'),
+            ('apis.leads', 'LeadTask'),
+            ('apis.leads', 'LeadDocument'),
+            ('apis.leads', 'LeadRejection'),
+            ('apis.leads', 'LeadConversion'),
+            ('apis.leads', 'LeadActivity'),
         ]
     elif table in mapping:
         models_to_backup = mapping[table]

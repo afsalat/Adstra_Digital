@@ -12,9 +12,11 @@ import SettingsPanel from "@/components/common/SettingsPanel";
 import "../InvoiceList.css";
 
 import { useAuth } from "@/Context/AuthContext";
+import { useModal } from "@/Context/ModalContext";
 
 export default function ProformaInvoiceList() {
   const { user } = useAuth();
+  const { showAlert, showConfirm } = useModal();
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,7 +75,7 @@ export default function ProformaInvoiceList() {
         if (process.env.NODE_ENV !== "production") {
           console.error("Failed to update status:", err);
         }
-        alert("Could not update status. Please try again.");
+        showAlert("Error", "Could not update status. Please try again.", "error");
       })
       .finally(() => {
         setUpdatingStatus((prev) => ({ ...prev, [invoiceId]: false }));
@@ -81,18 +83,24 @@ export default function ProformaInvoiceList() {
   };
 
   const handleDeleteInvoice = (invoiceId, invoiceNo) => {
-    if (!window.confirm(`Move proforma ${invoiceNo} to trash?`)) return;
-    axios
-      .delete(`${API_BASE}/invoice/delete/${invoiceId}/`)
-      .then(() => {
-        setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
-      })
-      .catch((err) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Failed to delete proforma:", err);
-        }
-        alert("Could not move to trash. Please try again.");
-      });
+    showConfirm(
+      "Confirm Trash",
+      `Move proforma ${invoiceNo} to trash?`,
+      () => {
+        axios
+          .delete(`${API_BASE}/invoice/delete/${invoiceId}/`)
+          .then(() => {
+            setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+          })
+          .catch((err) => {
+            if (process.env.NODE_ENV !== "production") {
+              console.error("Failed to delete proforma:", err);
+            }
+            showAlert("Error", "Could not move to trash. Please try again.", "error");
+          });
+      },
+      "danger"
+    );
   };
 
   const fetchTrashInvoices = () => {
@@ -111,7 +119,7 @@ export default function ProformaInvoiceList() {
         if (process.env.NODE_ENV !== "production") {
           console.error("Failed to fetch trash:", err);
         }
-        alert("Could not load trash.");
+        showAlert("Error", "Could not load trash.", "error");
       });
   };
 
@@ -126,23 +134,29 @@ export default function ProformaInvoiceList() {
         if (process.env.NODE_ENV !== "production") {
           console.error("Failed to restore proforma:", err);
         }
-        alert("Could not restore.");
+        showAlert("Error", "Could not restore.", "error");
       });
   };
 
   const handleHardDeleteInvoice = (invoiceId, invoiceNo) => {
-    if (!window.confirm(`Are you sure you want to permanently delete proforma ${invoiceNo}? This action cannot be undone.`)) return;
-    axios
-      .delete(`${API_BASE}/invoice/hard-delete/${invoiceId}/`)
-      .then(() => {
-        setTrashInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
-      })
-      .catch((err) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Failed to permanently delete invoice:", err);
-        }
-        alert("Could not delete invoice permanently.");
-      });
+    showConfirm(
+      "Permanent Delete",
+      `Are you sure you want to permanently delete proforma ${invoiceNo}? This action cannot be undone.`,
+      () => {
+        axios
+          .delete(`${API_BASE}/invoice/hard-delete/${invoiceId}/`)
+          .then(() => {
+            setTrashInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+          })
+          .catch((err) => {
+            if (process.env.NODE_ENV !== "production") {
+              console.error("Failed to permanently delete invoice:", err);
+            }
+            showAlert("Error", "Could not delete invoice permanently.", "error");
+          });
+      },
+      "danger"
+    );
   };
 
   const filterInvoices = () => {

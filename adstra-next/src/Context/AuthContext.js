@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { hasPermission as checkPermissionUtil } from "@/utils/permissionUtils";
 
 const AuthContext = createContext();
 
@@ -99,8 +100,13 @@ export const AuthProvider = ({ children }) => {
     window.location.href = "/userlogin";
   };
 
+  const hasPermission = useCallback(
+    (permissionCode) => checkPermissionUtil(user, permissionCode),
+    [user]
+  );
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, setUser, login, logout, hardReset, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, setUser, login, logout, hardReset, loading, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

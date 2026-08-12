@@ -13,15 +13,17 @@ function sleep(ms) {
 async function removeOutDirWithRetry() {
   for (let i = 1; i <= 5; i += 1) {
     try {
-      fs.rmSync(OUT_DIR, { recursive: true, force: true });
+      if (fs.existsSync(OUT_DIR)) {
+        fs.rmSync(OUT_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+      }
       return;
     } catch (error) {
-      const isBusy = error && (error.code === "EBUSY" || error.code === "EPERM");
-      if (!isBusy || i === 5) {
+      const isTransient = error && ["EBUSY", "EPERM", "ENOTEMPTY"].includes(error.code);
+      if (!isTransient || i === 5) {
         throw error;
       }
       console.warn(
-        `[build-retry] out/ is busy (attempt ${i}/5). Retrying cleanup...`
+        `[build-retry] out/ cleanup transient lock (${error.code}) (attempt ${i}/5). Retrying in 1s...`
       );
       await sleep(1000);
     }
@@ -30,18 +32,9 @@ async function removeOutDirWithRetry() {
 
 function runNextBuild() {
   return new Promise((resolve) => {
-    const nextBin = path.resolve(
-      __dirname,
-      "..",
-      "node_modules",
-      "next",
-      "dist",
-      "bin",
-      "next"
-    );
-    const child = spawn(process.execPath, [nextBin, "build"], {
+    const child = spawn("npx", ["next", "build"], {
       cwd: path.resolve(__dirname, ".."),
-      shell: false,
+      shell: true,
       stdio: ["inherit", "pipe", "pipe"],
     });
 
@@ -76,7 +69,7 @@ async function main() {
       process.exit(0);
     }
 
-    const busy = /EBUSY|resource busy or locked|EPERM/i.test(result.output);
+    const busy = /EBUSY|resource busy or locked|EPERM|PageNotFoundError|ENOENT/i.test(result.output);
     if (!busy || attempt === MAX_ATTEMPTS) {
       console.error("[build-retry] Build failed.");
       process.exit(result.code);

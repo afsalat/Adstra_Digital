@@ -387,26 +387,57 @@ const UserList = () => {
                 </div>
 
                 <div className="permissions-panel">
-                  <label className="field-label">Permissions</label>
-                  {Object.keys(permissions).length > 0 && (
-                    <div className="permissions-grid">
-                      {Object.entries(permissions).map(([code, label]) => (
-                        <label key={code} className="permission-option">
-                          <input
-                            type="checkbox"
-                          name="custom_permissions"
-                          value={code}
-                          defaultChecked={
-                            FULL_ACCESS_ROLES.has(editUser?.role) ||
-                            (editUser?.effective_permissions || []).includes("*") ||
-                            (editUser?.custom_permissions || []).includes(code)
-                          }
-                        />
-                          <span>{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                  <label className="field-label">Custom Permissions</label>
+                  {Object.keys(permissions).length > 0 && (() => {
+                    const categories = {};
+                    Object.entries(permissions).forEach(([code, label]) => {
+                      const prefix = code.split(".")[0] || "other";
+                      const catName = {
+                        lead: "Lead Management",
+                        users: "User Management",
+                        attendance: "Attendance",
+                        clients: "Clients",
+                        proposals: "Proposals",
+                        invoices: "Invoices",
+                        transactions: "Transactions",
+                        settings: "Settings",
+                        blogs: "Blog Posts",
+                        backup: "Backup",
+                      }[prefix] || "General";
+
+                      if (!categories[catName]) categories[catName] = [];
+                      categories[catName].push({ code, label });
+                    });
+
+                    return (
+                      <div className="permissions-categories">
+                        {Object.entries(categories).map(([catName, permList]) => (
+                          <div key={catName} className="permission-category-group" style={{ marginBottom: "16px" }}>
+                            <strong className="category-title" style={{ display: "block", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "8px", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px" }}>
+                              {catName}
+                            </strong>
+                            <div className="permissions-grid">
+                              {permList.map(({ code, label }) => (
+                                <label key={code} className="permission-option">
+                                  <input
+                                    type="checkbox"
+                                    name="custom_permissions"
+                                    value={code}
+                                    defaultChecked={
+                                      FULL_ACCESS_ROLES.has(editUser?.role) ||
+                                      (editUser?.effective_permissions || []).includes("*") ||
+                                      (editUser?.custom_permissions || []).includes(code)
+                                    }
+                                  />
+                                  <span>{label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               <button type="submit" className="submit-btn">

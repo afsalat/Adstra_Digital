@@ -99,6 +99,7 @@ async function main() {
     "/career/",
     "/blogs/all/",
     "/service/all/",
+    "/products/",
     "/products/campus-management-system/",
     "/privacypolicy/",
     "/TermsNconditions/",

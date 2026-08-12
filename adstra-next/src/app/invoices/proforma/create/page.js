@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import API_BASE_URL from "@/utils/apiBase";
 import SearchableClientSelect from "@/components/common/SearchableClientSelect";
+import { useModal } from "@/Context/ModalContext";
 import "../../create/CreateInvoice.css";
 
 export default function CreateProforma() {
+  const { showAlert } = useModal();
   const [invoice, setInvoice] = useState({
     invoice_no: "",
     client: "",
@@ -156,7 +158,7 @@ export default function CreateProforma() {
     e?.preventDefault();
 
     if (invoice.items.length === 0) {
-      alert("Please add at least one item before submitting.");
+      showAlert("Required Fields", "Please add at least one item before submitting.", "warning");
       return;
     }
 

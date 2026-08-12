@@ -36,7 +36,10 @@ const CustomModal = ({
                         {getIcon()}
                     </div>
                     {title && <h3 className="modal-title">{title}</h3>}
-                    <button className="modal-close-btn" onClick={onClose} aria-label="Close">
+                    <button className="modal-close-btn" onClick={() => {
+                        if (typeof onConfirm === "function") onConfirm();
+                        onClose();
+                    }} aria-label="Close">
                         <X size={20} />
                     </button>
                 </div>
@@ -60,7 +63,10 @@ const CustomModal = ({
                             </button>
                         </>
                     ) : (
-                        <button className="modal-btn ok" onClick={onClose}>
+                        <button className="modal-btn ok" onClick={() => {
+                            if (typeof onConfirm === "function") onConfirm();
+                            onClose();
+                        }}>
                             OK
                         </button>
                     )}

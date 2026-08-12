@@ -23,7 +23,7 @@
   padding: 20px 30px;
   border-radius: 16px;
   margin-bottom: 30px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.09), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
   border: 1px solid #e2e8f0;
 }
 
@@ -53,6 +53,7 @@
   font-weight: 800;
   background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
   letter-spacing: -0.025em;
@@ -79,6 +80,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.12);
 }
 
 .logout-btn:hover {
@@ -86,6 +88,7 @@
   color: #7f1d1d;
   border-color: #fca5a5;
   transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.22);
 }
 
 /* --- Navigation Menu --- */
@@ -95,7 +98,7 @@
   background: #ffffff;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 25px -4px rgba(15, 23, 42, 0.08), 0 2px 8px -1px rgba(15, 23, 42, 0.04);
   display: flex;
   justify-content: center;
 }
@@ -128,7 +131,7 @@
 .menu-bar li.active {
   background-color: #0f172a;
   color: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.35);
 }
 
 /* --- Dashboard Grid --- */
@@ -145,7 +148,7 @@
   padding: 30px;
   height: 100%;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.09), 0 2px 8px -2px rgba(15, 23, 42, 0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
@@ -156,7 +159,7 @@
 
 .dashboard-box:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 35px -8px rgba(15, 23, 42, 0.16), 0 8px 16px -3px rgba(15, 23, 42, 0.08);
   border-color: #cbd5e1;
 }
 

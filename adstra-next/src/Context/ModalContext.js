@@ -34,8 +34,8 @@ export const ModalProvider = ({ children }) => {
   }, []);
 
   // Shorthand methods
-  const showAlert = useCallback((title, message, type = "info") => {
-    showModal({ title, message, type });
+  const showAlert = useCallback((title, message, type = "info", onConfirm = null) => {
+    showModal({ title, message, type, onConfirm });
   }, [showModal]);
 
   // Confirmation modal with optional severity styling (e.g. "warning", "danger", "error").

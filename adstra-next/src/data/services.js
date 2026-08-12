@@ -642,7 +642,7 @@ For these searches, Google often shows local map results first. That means your 
 Key Benefits of Local SEO for Hotels
 
 - Higher visibility in Google Maps
-- More direct bookings without heavy commission loss
+- More direct bookings without heavy platform fee loss
 - Increased trust through strong reviews
 - Better mobile traffic from local-intent users
 

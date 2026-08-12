@@ -18,12 +18,10 @@ const geistMono = Geist_Mono({
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://adstradigital.com"
-    : "http://localhost:3000")
+  "https://adstradigital.com"
 ).replace(/\/+$/, "");
 
-const LOGO_PATH = "/static/media/logo_icon.jpeg";
+const LOGO_PATH = "/assets/logo_new-01.png";
 const LOGO_URL = `${SITE_URL}${LOGO_PATH}`;
 
 export const metadata = {

@@ -14,6 +14,7 @@ import {
   PenTool,
   Video,
   Users,
+  UserRoundPlus,
   Building2,
   FileText,
   Receipt,
@@ -36,7 +37,7 @@ const AdminDashboard = () => {
   const router = useRouter();
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem("authToken");
+    const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
@@ -50,18 +51,20 @@ const AdminDashboard = () => {
 
   const renderFeatureCard = ({ permission, anyPermission, href, color, icon, title, description, action }) => {
     const allowed = anyPermission ? hasAnyPermission(anyPermission) : hasPermission(permission);
+    if (!allowed) return null;
+
     const card = (
-      <div className={`dashboard-box ${allowed ? color : "no-hover"}`}>
+      <div className={`dashboard-box ${color}`}>
         <div className="icon-wrapper">
           {icon}
         </div>
         <h4>{title}</h4>
-        <p>{allowed ? description : "Access denied"}</p>
-        {allowed && action && <span className="action-link">{action} <ArrowRight size={16} /></span>}
+        <p>{description}</p>
+        {action && <span className="action-link">{action} <ArrowRight size={16} /></span>}
       </div>
     );
 
-    return allowed && href ? <Link href={href} className="link">{card}</Link> : card;
+    return href ? <Link href={href} className="link">{card}</Link> : card;
   };
 
   // Logout handler with warnings
@@ -129,8 +132,8 @@ Are you sure you want to continue with logout?`,
   const menuItems = [
     "Home",
     ...(hasAnyPermission(["clients.view", "proposals.view", "invoices.view", "transactions.view"]) ? ["Finance"] : []),
+    ...(hasAnyPermission(["lead.view_own", "lead.view_all"]) ? ["CRM"] : []),
     "Profile",
-    "Assigned Projects",
     ...(hasPermission("users.view") ? ["Team"] : []),
     ...(hasPermission("settings.view") ? ["Settings"] : []),
     ...(hasPermission("settings.view") ? ["System Log"] : []),
@@ -176,7 +179,7 @@ Are you sure you want to continue with logout?`,
       </nav>
 
       {/* Dashboard Grid for Grid-based Views */}
-      {["Home", "Finance"].includes(activeMenu) && (
+      {["Home", "Finance", "CRM"].includes(activeMenu) && (
         <section className="dashboard-grid">
 
           {/* HOME MENU ITEMS */}
@@ -191,16 +194,6 @@ Are you sure you want to continue with logout?`,
                 title: "Attendance Sheet",
                 description: "Track daily attendance and submit work reports.",
                 action: "Open Sheet",
-              })}
-
-              {/* Work Status */}
-              {renderFeatureCard({
-                permission: "attendance.view_all",
-                color: "amber",
-                icon: <BarChart3 size={28} />,
-                title: "Work Status",
-                description: "Monitor ongoing projects and task progress.",
-                action: "View Status",
               })}
 
               {/* Blogs Creator */}
@@ -234,8 +227,6 @@ Are you sure you want to continue with logout?`,
                 description: "Manage team members and permissions.",
                 action: "Manage Users",
               })}
-
-
             </>
           )}
 
@@ -295,6 +286,22 @@ Are you sure you want to continue with logout?`,
                 title: "Receipts",
                 description: "Track billing and payment receipts.",
                 action: "View Receipts",
+              })}
+            </>
+          )}
+
+          {/* CRM MENU ITEMS */}
+          {activeMenu === "CRM" && (
+            <>
+              {/* Lead Management */}
+              {renderFeatureCard({
+                anyPermission: ["lead.view_own", "lead.view_all"],
+                href: "/leadmanagement/",
+                color: "emerald",
+                icon: <UserRoundPlus size={28} />,
+                title: "Lead Management",
+                description: "Capture, qualify, and follow up with new business leads.",
+                action: "Manage Leads",
               })}
             </>
           )}

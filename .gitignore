@@ -43,3 +43,7 @@ backend.zip
 out.zip
 .meta-panel-trigger
 meta.bat
+.design-*
+.kombai/
+.zencoder/
+.zenflow/

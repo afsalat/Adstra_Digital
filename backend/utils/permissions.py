@@ -26,6 +26,32 @@ PERMISSIONS = {
     "clients.create": "Create clients",
     "clients.update": "Update clients",
     "clients.delete": "Delete clients",
+    "lead.view_own": "View own leads",
+    "lead.view_all": "View all leads",
+    "lead.view_my_profile": "View own lead profile",
+    "lead.create": "Create leads",
+    "lead.edit": "Edit leads",
+    "lead.assign": "Assign leads",
+    "lead.reassign": "Reassign leads",
+    "lead.import": "Import leads",
+    "lead.export": "Export leads",
+    "lead.send_email": "Send lead emails",
+    "lead.call": "Record lead calls",
+    "lead.follow_up": "Manage lead follow-ups",
+    "lead.schedule_meeting": "Schedule lead meetings",
+    "lead.complete_demo": "Complete product demos",
+    "lead.capture_requirement": "Capture lead requirements",
+    "lead.technical_review": "Perform technical reviews",
+    "lead.create_cost_estimate": "Create lead cost estimates",
+    "lead.approve_cost_estimate": "Approve lead cost estimates",
+    "lead.create_proposal": "Create lead proposals",
+    "lead.create_quotation": "Create lead quotations",
+    "lead.convert": "Convert leads",
+    "lead.reject": "Reject leads",
+    "lead.reopen": "Reopen leads",
+    "lead.delete": "Delete leads",
+    "lead.view_reports": "View lead reports",
+    "lead.manage_settings": "Manage lead settings",
     "proposals.view": "View proposals",
     "proposals.create": "Create proposals",
     "proposals.update": "Update proposals",
@@ -69,6 +95,31 @@ ROLE_PERMISSIONS = {
         "clients.create",
         "clients.update",
         "clients.delete",
+        "lead.view_own",
+        "lead.view_all",
+        "lead.create",
+        "lead.edit",
+        "lead.assign",
+        "lead.reassign",
+        "lead.import",
+        "lead.export",
+        "lead.send_email",
+        "lead.call",
+        "lead.follow_up",
+        "lead.schedule_meeting",
+        "lead.complete_demo",
+        "lead.capture_requirement",
+        "lead.technical_review",
+        "lead.create_cost_estimate",
+        "lead.approve_cost_estimate",
+        "lead.create_proposal",
+        "lead.create_quotation",
+        "lead.convert",
+        "lead.reject",
+        "lead.reopen",
+        "lead.delete",
+        "lead.view_reports",
+        "lead.manage_settings",
         "proposals.view",
         "proposals.create",
         "proposals.update",
@@ -88,6 +139,12 @@ ROLE_PERMISSIONS = {
     "accountant": [
         "users.update_self",
         "clients.view",
+        "lead.view_own",
+        "lead.create_cost_estimate",
+        "lead.approve_cost_estimate",
+        "lead.create_proposal",
+        "lead.create_quotation",
+        "lead.view_reports",
         "proposals.view",
         "invoices.view",
         "invoices.create",
@@ -109,10 +166,67 @@ ROLE_PERMISSIONS = {
         "attendance.update_any",
         "attendance.validate",
         "attendance.self",
+        "lead.view_own",
+        "lead.create",
+        "lead.edit",
+        "lead.assign",
+        "lead.reassign",
+        "lead.import",
+        "lead.export",
+        "lead.send_email",
+        "lead.call",
+        "lead.follow_up",
+        "lead.schedule_meeting",
+        "lead.complete_demo",
+        "lead.capture_requirement",
+        "lead.technical_review",
+        "lead.create_cost_estimate",
+        "lead.create_proposal",
+        "lead.create_quotation",
+        "lead.convert",
+        "lead.reject",
+        "lead.reopen",
+        "lead.view_reports",
     ],
     "employee": [
         "users.update_self",
         "attendance.self",
+        "lead.view_own",
+        "lead.create",
+        "lead.edit",
+        "lead.export",
+        "lead.send_email",
+        "lead.call",
+        "lead.follow_up",
+        "lead.schedule_meeting",
+        "lead.complete_demo",
+        "lead.capture_requirement",
+        "lead.view_reports",
+    ],
+    "sales_and_marketing": [
+        "users.update_self",
+        "attendance.self",
+        "lead.view_own",
+        "lead.view_all",
+        "lead.create",
+        "lead.edit",
+        "lead.assign",
+        "lead.reassign",
+        "lead.import",
+        "lead.export",
+        "lead.call",
+        "lead.follow_up",
+        "lead.schedule_meeting",
+        "lead.complete_demo",
+        "lead.capture_requirement",
+        "lead.technical_review",
+        "lead.create_cost_estimate",
+        "lead.create_proposal",
+        "lead.create_quotation",
+        "lead.convert",
+        "lead.reject",
+        "lead.reopen",
+        "lead.view_reports",
     ],
 }
 
@@ -131,14 +245,14 @@ def effective_permissions(user):
     if not user or not getattr(user, "is_authenticated", False):
         return []
 
-    # EXPLICIT SUPERUSER CHECK
+    # EXPLICIT SUPERUSER / SUPER ADMIN CHECK
     is_super = getattr(user, "is_superuser", False)
-    is_staff = getattr(user, "is_staff", False)
+    role = getattr(user, "role", "")
     
-    if is_super or is_staff or getattr(user, "role", "") == "super_admin":
+    if is_super or role in {"super_admin", "admin"}:
         return ["*"]
 
-    role_permissions = ROLE_PERMISSIONS.get(getattr(user, "role", "employee"), [])
+    role_permissions = ROLE_PERMISSIONS.get(role or "employee", [])
     custom_permissions = getattr(user, "custom_permissions", []) or []
     
     if "*" in role_permissions or "*" in custom_permissions:
@@ -151,10 +265,8 @@ def has_permission(user, permission_code):
     if not user or not getattr(user, "is_authenticated", False):
         return False
         
-    # Superuser/Staff/SuperAdmin Bypass
-    if (getattr(user, "is_superuser", False) or 
-        getattr(user, "is_staff", False) or 
-        getattr(user, "role", "") == "super_admin"):
+    # Superuser/SuperAdmin/Admin Bypass
+    if getattr(user, "is_superuser", False) or getattr(user, "role", "") in {"super_admin", "admin"}:
         return True
         
     permissions = effective_permissions(user)
