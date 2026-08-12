@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./ClientList.css";
-import { Edit, Eye, Plus, ArrowLeft, X, Trash2 } from "lucide-react";
+import { Edit, Eye, Plus, ArrowLeft, X, Trash2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
 import { useModal } from "@/Context/ModalContext";
@@ -13,6 +13,7 @@ const BASE_URL = API_BASE_URL;
 const ClientList = () => {
     const { showAlert, showConfirm } = useModal();
     const [clients, setClients] = useState([]);
+    const [searchQuery, setSearchQuery] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const [selectedClient, setSelectedClient] = useState(null);
@@ -102,10 +103,32 @@ const ClientList = () => {
         </div>
     );
 
+    const filteredClients = clients.filter((client) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            (client.company_name || "").toLowerCase().includes(query) ||
+            (client.name || "").toLowerCase().includes(query) ||
+            (client.email || "").toLowerCase().includes(query) ||
+            (client.contact || "").toLowerCase().includes(query) ||
+            (client.address || "").toLowerCase().includes(query) ||
+            (client.gstin || "").toLowerCase().includes(query)
+        );
+    });
+
     return (
         <div className="client-list-container">
             <div className="header-actions">
                 <h2>🏢 Client Companies</h2>
+                <div className="search-container">
+                    <Search size={18} className="search-icon" />
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search clients..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
                 <div className="button-group">
                     <button className="back-btn" onClick={handleBack}>
                         <ArrowLeft size={16} /> Back
@@ -130,12 +153,12 @@ const ClientList = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {clients.length === 0 ? (
+                        {filteredClients.length === 0 ? (
                             <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No clients found.</td>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No clients found.</td>
                             </tr>
                         ) : (
-                            clients.map((client, index) => (
+                            filteredClients.map((client, index) => (
                                 <tr key={client.id}>
                                     <td>{index + 1}</td>
                                     <td>{client.company_name || "—"}</td>

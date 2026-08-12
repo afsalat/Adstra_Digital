@@ -207,7 +207,8 @@ export default function InvoicePreview() {
               <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>To:</div>
               <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>{invoice?.client?.company_name || invoice?.client?.name || "N/A"}</div>
               <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>{invoice?.client?.address || "N/A"}</div>
-              <div>Email: {invoice?.client?.email || "-"}</div>
+              <div style={{ marginTop: '2px', wordBreak: 'break-word' }}>GSTIN: {invoice?.client?.gstin || "-"} | Mobile: {invoice?.client?.contact || "-"}</div>
+              <div style={{ wordBreak: 'break-word' }}>Email: {invoice?.client?.email || "-"}</div>
             </div>
           </div>
           {/* Items Table Section */}

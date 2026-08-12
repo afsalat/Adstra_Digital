@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./UserManagement.css";
-import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound } from "lucide-react";
+import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
 import { useModal } from "@/Context/ModalContext";
@@ -13,6 +13,7 @@ const FULL_ACCESS_ROLES = new Set(["admin", "super_admin"]);
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -180,10 +181,33 @@ const UserList = () => {
   if (loading) return <p className="loader">Loading users...</p>;
   if (error) return <p className="error">{error}</p>;
 
+  const filteredUsers = users.filter((user) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (user.username || "").toLowerCase().includes(query) ||
+      (user.fullname || "").toLowerCase().includes(query) ||
+      (user.email || "").toLowerCase().includes(query) ||
+      (user.phone || "").toLowerCase().includes(query) ||
+      (user.address || "").toLowerCase().includes(query) ||
+      (user.role || "").toLowerCase().includes(query) ||
+      (user.designation || "").toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="user-list-container">
       <div className="header-actions">
         <h2>👥 User Management</h2>
+        <div className="search-container">
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
         <div className="button-group">
           <button className="back-btn" onClick={handleBack}>
             <ArrowLeft size={16} /> Back
@@ -212,12 +236,12 @@ const UserList = () => {
             </tr>
           </thead>
           <tbody>
-            {users.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan="11">No users found.</td>
+                <td colSpan="11" style={{ textAlign: "center", padding: "24px", color: "#64748b" }}>No users found.</td>
               </tr>
             ) : (
-              users.map((user, index) => (
+              filteredUsers.map((user, index) => (
                 <tr key={user.id}>
                   <td>{index + 1}</td>
                   <td>{user.username}</td>

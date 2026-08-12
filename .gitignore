@@ -41,3 +41,5 @@ htmlcov/
 db.sqlite3
 backend.zip
 out.zip
+.meta-panel-trigger
+meta.bat
