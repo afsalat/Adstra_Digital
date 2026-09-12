@@ -13,7 +13,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 
 from apis.invoice.models import Invoice, create_invoice_from_proposal
-from apis.proposal.models import Client, Proposal, ProposalService
+from apis.proposal.models import Client, Proposal, ProposalSection, ProposalService
 from utils.logging_helper import log_action
 from utils.permissions import has_permission
 
@@ -468,8 +468,8 @@ class DuplicateCustomerMatchingService:
 
 class LeadQuotationService:
     @classmethod
-    def create(cls, lead, actor, *, data=None, request=None):
-        _require_permission(actor, "lead.create_quotation")
+    def create(cls, lead, actor, *, data=None, request=None, permission="lead.create_quotation"):
+        _require_permission(actor, permission)
         data = data or {}
         with transaction.atomic():
             locked = Lead.objects.select_for_update().select_related("customer", "quotation").get(pk=lead.pk)
@@ -477,22 +477,50 @@ class LeadQuotationService:
                 return locked.quotation
 
             year = timezone.localdate().year
-            proposal_no = f"AD/{year}/LEAD-{locked.id}"
+            proposal_no = data.get("proposal_no") or f"AD/{year}/LEAD-{locked.id}"
             total = Decimal(str(data.get("total_amount") or locked.estimated_value or "0"))
+            client = locked.customer
+            client_id = data.get("client_id")
+            if client_id:
+                try:
+                    client = Client.objects.select_for_update().get(pk=client_id)
+                except Client.DoesNotExist as exc:
+                    raise ValidationError({"client_id": "Client not found."}) from exc
+            elif client is None:
+                matches = DuplicateCustomerMatchingService.for_lead(
+                    locked,
+                    gstin=data.get("gstin", ""),
+                )
+                if matches and not data.get("confirm_create_client"):
+                    raise DuplicateCustomerError(matches)
+                phone = ""
+                if locked.phone or locked.whatsapp_number:
+                    phone = normalize_phone(locked.phone or locked.whatsapp_number)
+                client = Client(
+                    company_name=" ".join((locked.company_name or "").split()) or None,
+                    name=locked.customer_name or locked.contact_person or locked.company_name or "Lead customer",
+                    address=locked.address or None,
+                    gstin=str(data.get("gstin") or "").strip().upper() or None,
+                    lut=str(data.get("lut") or "").strip() or None,
+                    email=(locked.email or "").strip().lower() or None,
+                    contact=phone or None,
+                )
+                client.full_clean()
+                client.save()
+
             proposal = Proposal(
                 proposal_no=proposal_no,
                 reference=locked.lead_number,
-                company_name=locked.company_name,
+                company_name=data.get("company_name") or locked.company_name,
                 purpose=data.get("purpose") or locked.requirement_summary or locked.product or locked.service,
                 total_amount=total,
                 total_in_words=data.get("total_in_words") or "",
-                client=locked.customer,
+                client=client,
                 notes=data.get("notes") or "",
                 status=data.get("status") or "draft",
                 created_by=actor,
             )
-            exclude_fields = [] if locked.customer_id else ["client"]
-            proposal.full_clean(exclude=exclude_fields)
+            proposal.full_clean()
             proposal.save()
             for item in data.get("services", []):
                 service = ProposalService(
@@ -505,8 +533,23 @@ class LeadQuotationService:
                 )
                 service.full_clean()
                 service.save()
+            for item in data.get("sections", []):
+                section = ProposalSection(
+                    proposal=proposal,
+                    title=item.get("title") or "",
+                    type=item.get("type") or "textarea",
+                    alignment=item.get("alignment") or "left",
+                    content=item.get("content") or "",
+                )
+                section.full_clean()
+                section.save()
+            if locked.customer_id != client.id:
+                locked.customer = client
             locked.quotation = proposal
-            locked.save(update_fields=["quotation", "updated_at"])
+            locked.save(update_fields=["customer", "quotation", "updated_at"])
+            if hasattr(locked, "proposal_request"):
+                locked.proposal_request.status = "completed"
+                locked.proposal_request.save(update_fields=["status", "updated_at"])
             _record_activity(
                 locked,
                 "QUOTATION",

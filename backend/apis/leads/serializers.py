@@ -27,9 +27,11 @@ from .models import (
     LeadRequirementItem,
     LeadTask,
     ProductDemo,
+    LeadFollowUp,
     ServiceRequirement,
     TargetCustomer,
     TargetCustomerList,
+    ContactNumber,
 )
 from .validators import normalize_phone
 
@@ -113,9 +115,16 @@ class TargetCustomerListSerializer(FullCleanModelSerializer):
         return len(prefetched) if prefetched is not None else obj.customers.count()
 
 
+class ContactNumberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactNumber
+        fields = ("id", "number_type", "label", "number", "contact_name", "is_primary")
+
+
 class TargetCustomerSerializer(FullCleanModelSerializer):
     assigned_to_name = serializers.CharField(source="assigned_to.fullname", read_only=True)
     customer_list_name = serializers.CharField(source="customer_list.name", read_only=True)
+    contact_numbers = ContactNumberSerializer(many=True, required=False)
 
     class Meta:
         model = TargetCustomer
@@ -133,6 +142,17 @@ class TargetCustomerSerializer(FullCleanModelSerializer):
         duplicate_filter = Q()
         for number in {value for value in (phone, whatsapp) if value}:
             duplicate_filter |= Q(phone=number) | Q(whatsapp_number=number)
+        
+        # Also check contact_numbers in memory if provided
+        contact_numbers = attrs.get("contact_numbers", [])
+        for cn in contact_numbers:
+            val = cn.get("number")
+            if val:
+                duplicate_filter |= Q(phone=val) | Q(whatsapp_number=val)
+                # Also check existing contact numbers in db
+                if ContactNumber.objects.filter(number=val).exclude(target_customer=self.instance).exists():
+                    raise serializers.ValidationError({"duplicate": f"Contact number {val} already exists."})
+
         if email:
             duplicate_filter |= Q(email__iexact=email)
         if duplicate_filter and queryset.filter(duplicate_filter).exists():
@@ -140,6 +160,23 @@ class TargetCustomerSerializer(FullCleanModelSerializer):
                 {"duplicate": "A target customer with this phone or email already exists."}
             )
         return attrs
+        
+    def create(self, validated_data):
+        contact_numbers_data = validated_data.pop("contact_numbers", [])
+        instance = super().create(validated_data)
+        for cn_data in contact_numbers_data:
+            ContactNumber.objects.create(target_customer=instance, **cn_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        contact_numbers_data = validated_data.pop("contact_numbers", None)
+        instance = super().update(instance, validated_data)
+        if contact_numbers_data is not None:
+            # For simplicity, replace all numbers
+            instance.contact_numbers.all().delete()
+            for cn_data in contact_numbers_data:
+                ContactNumber.objects.create(target_customer=instance, **cn_data)
+        return instance
 
 
 class LeadSerializer(FullCleanModelSerializer):
@@ -153,6 +190,7 @@ class LeadSerializer(FullCleanModelSerializer):
     target_list_name = serializers.CharField(source="target_customer.customer_list.name", read_only=True)
     allowed_transitions = serializers.SerializerMethodField()
     last_follow_up = serializers.SerializerMethodField()
+    contact_numbers = ContactNumberSerializer(many=True, required=False)
 
     class Meta:
         model = Lead
@@ -239,11 +277,38 @@ class LeadSerializer(FullCleanModelSerializer):
         target_matches = TargetCustomer.objects.all()
         if target_customer:
             target_matches = target_matches.exclude(pk=target_customer.pk)
+        
+        # Also check contact_numbers in memory if provided
+        contact_numbers = attrs.get("contact_numbers", [])
+        for cn in contact_numbers:
+            val = cn.get("number")
+            if val:
+                duplicate_filter |= Q(phone=val) | Q(whatsapp_number=val)
+                if ContactNumber.objects.filter(number=val).exclude(lead=self.instance).exists():
+                    raise serializers.ValidationError({"duplicate": f"Contact number {val} already exists."})
+
         if duplicate_filter and target_matches.filter(duplicate_filter).exists():
             raise serializers.ValidationError(
                 {"duplicate": "A target customer with this phone or email already exists."}
             )
         return attrs
+
+    def create(self, validated_data):
+        contact_numbers_data = validated_data.pop("contact_numbers", [])
+        instance = super().create(validated_data)
+        for cn_data in contact_numbers_data:
+            ContactNumber.objects.create(lead=instance, **cn_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        contact_numbers_data = validated_data.pop("contact_numbers", None)
+        instance = super().update(instance, validated_data)
+        if contact_numbers_data is not None:
+            # For simplicity, replace all numbers
+            instance.contact_numbers.all().delete()
+            for cn_data in contact_numbers_data:
+                ContactNumber.objects.create(lead=instance, **cn_data)
+        return instance
 
 
 class LeadAssignmentHistorySerializer(serializers.ModelSerializer):
@@ -282,12 +347,24 @@ class LeadFollowUpSerializer(FullCleanModelSerializer):
 class LeadMeetingSerializer(FullCleanModelSerializer):
     assigned_to_name = serializers.CharField(source="assigned_to.fullname", read_only=True)
     created_by_name = serializers.CharField(source="created_by.fullname", read_only=True)
+    lead_name = serializers.SerializerMethodField()
+    lead_number = serializers.CharField(source="lead.lead_number", read_only=True)
+    is_overdue = serializers.SerializerMethodField()
 
     class Meta:
         model = LeadMeeting
         fields = "__all__"
         read_only_fields = ("id", "lead", "created_by", "created_at", "updated_at")
         extra_kwargs = {"assigned_to": {"required": False, "allow_null": True}}
+
+    def get_lead_name(self, obj):
+        lead = getattr(obj, "lead", None)
+        if not lead:
+            return ""
+        return lead.company_name or lead.customer_name or lead.contact_person or ""
+
+    def get_is_overdue(self, obj):
+        return obj.scheduled_start < timezone.now() and obj.status in {"SCHEDULED", "CONFIRMED", "RESCHEDULED"}
 
 
 class ProductDemoSerializer(FullCleanModelSerializer):

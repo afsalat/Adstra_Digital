@@ -71,12 +71,12 @@ const SectionEditor = ({ section, onChange, onRemove }) => {
   };
 
   return (
-    <div className="mb-4 border p-3 rounded shadow-sm bg-light">
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h5 className="text-primary">
+    <div className="mb-3 border p-3 rounded shadow-sm bg-light">
+      <div className="d-flex justify-content-between align-items-start mb-3 gap-2">
+        <h6 className="text-primary m-0" style={{ lineHeight: 1.4, overflowWrap: "anywhere" }}>
           🧩 {section.title || "New Section"} - Description
-        </h5>
-        <button className="btn btn-sm btn-outline-danger" onClick={onRemove}>
+        </h6>
+        <button className="btn btn-sm btn-outline-danger flex-shrink-0" onClick={onRemove}>
           🗑 Remove
         </button>
       </div>

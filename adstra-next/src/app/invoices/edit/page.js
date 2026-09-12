@@ -8,12 +8,14 @@ import Link from "next/link";
 import API_BASE_URL from "@/utils/apiBase";
 import SearchableClientSelect from "@/components/common/SearchableClientSelect";
 import { useModal } from "@/Context/ModalContext";
+import { useAuth } from "@/Context/AuthContext";
 import "./CreateInvoice.css";
 
 import { Suspense } from "react";
 
 function EditInvoice() {
   const { showAlert } = useModal();
+  const { loading: authLoading, hasPermission } = useAuth();
   const [invoice, setInvoice] = useState({
     invoice_no: "",
     client: "",
@@ -39,11 +41,14 @@ function EditInvoice() {
   const [showPreview, setShowPreview] = useState(false);
   const [settings, setSettings] = useState(null);
   const [isEmergencyMode, setIsEmergencyMode] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const invoiceId = searchParams.get("id");
   const API_BASE = API_BASE_URL;
+  const canUpdateInvoice = hasPermission("invoices.update");
+  const canUpdateProforma = hasPermission("proforma_invoices.update");
 
   const toWords = new ToWords({
     localeCode: "en-IN",
@@ -57,6 +62,10 @@ function EditInvoice() {
 
   // Fetch clients
   useEffect(() => {
+    if (authLoading || (!canUpdateInvoice && !canUpdateProforma)) {
+      if (!authLoading) setAccessDenied(true);
+      return;
+    }
     axios
       .get(`${API_BASE}/proposal/clients/`)
       .then((res) => setClients(res.data))
@@ -71,6 +80,12 @@ function EditInvoice() {
       axios.get(`${API_BASE}/invoice/view/${invoiceId}/`)
         .then((res) => {
           const data = res.data;
+          const isProforma = Boolean(data.is_proforma);
+          if ((isProforma && !canUpdateProforma) || (!isProforma && !canUpdateInvoice)) {
+            setAccessDenied(true);
+            return;
+          }
+          setAccessDenied(false);
           setInvoice({
             invoice_no: data.invoice_no || "",
             client: data.client?.id || data.client || "",
@@ -98,7 +113,7 @@ function EditInvoice() {
           showAlert("Load Failed", "Failed to load invoice data. Please try again.", "error");
         });
     }
-  }, [API_BASE, invoiceId]);
+  }, [API_BASE, invoiceId, authLoading, canUpdateInvoice, canUpdateProforma]);
 
   useEffect(() => {
     const subtotal = invoice.items.reduce((sum, item) => {
@@ -182,6 +197,10 @@ function EditInvoice() {
   // Submit invoice
   const handleSubmit = async (e) => {
     e?.preventDefault();
+    if ((invoice.is_proforma && !canUpdateProforma) || (!invoice.is_proforma && !canUpdateInvoice)) {
+      showAlert("Permission Denied", "You do not have permission to update this invoice.", "error");
+      return;
+    }
 
     if (invoice.items.length === 0) {
       showAlert("Missing Items", "Please add at least one item before submitting the invoice.", "warning");
@@ -254,6 +273,18 @@ function EditInvoice() {
       })),
     }));
   };
+
+  if (!authLoading && accessDenied) {
+    return (
+      <div className="invoice-create-wrapper min-h-screen bg-slate-50 pt-28 px-4">
+        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Access denied</h2>
+          <p className="text-slate-500 mb-6">You do not have permission to edit this invoice.</p>
+          <button className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold" onClick={() => router.push("/admindashboard/")}>Back to Dashboard</button>
+        </div>
+      </div>
+    );
+  }
 
   // Fetch Next Invoice Number with cache-busting (skip for edit)
   // useEffect(() => {

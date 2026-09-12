@@ -35,6 +35,37 @@ class Proposal(models.Model):
     def __str__(self):
         return f"Proposal #{self.proposal_no} - {self.client.name if self.client else 'Unknown'}"
 
+
+class ProposalRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+    ]
+
+    lead = models.OneToOneField(
+        'leads.Lead',
+        on_delete=models.CASCADE,
+        related_name='proposal_request',
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='proposal_requests',
+    )
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-id']
+
+    def __str__(self):
+        return f"Proposal request for {self.lead.lead_number}"
+
 class ProposalSection(models.Model):
     proposal = models.ForeignKey(Proposal, on_delete=models.CASCADE, related_name='sections')
     title = models.CharField(max_length=255, null=True, blank=True)

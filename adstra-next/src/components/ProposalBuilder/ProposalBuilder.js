@@ -1,13 +1,11 @@
 "use client";
 
 import { toWords } from "number-to-words";
-import { useState, useCallback } from "react";
-import SectionEditor from "../SectionEditor/SectionEditor";
-import ProposalPreview from "../ProposalPreview/ProposalPreview";
-import ExportButton from "../ExportButton/ExportButton";
-import HeaderEditor from "../HeaderEditor/HeaderEditor";
-import ServiceTable from "../ServiceTable/ServiceTable";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { CheckCircle, AlertCircle, X } from "lucide-react";
+import ProposalWorkspace from "../ProposalWorkspace/ProposalWorkspace";
 import RecentProposalsModal from "./RecentProposalsModal"; // Import Modal
+import LeadSelector from "./LeadSelector";
 import { serviceExtraDetails } from "../../data/clientData";
 import API_BASE_URL from "@/utils/apiBase";
 
@@ -28,6 +26,9 @@ export default function ProposalBuilder() {
   const [isViewMode, setIsViewMode] = useState(false); // True when opened via View
   const [currentProposalId, setCurrentProposalId] = useState(null); // Track ID for updates
   const [showRecentModal, setShowRecentModal] = useState(false); // Modal state
+  const [showLeadSelector, setShowLeadSelector] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const initializedFromUrl = useRef(false);
   const [modal, setModal] = useState({ show: false, type: "success", title: "", message: "" });
   const showModal = (type, title, message) => setModal({ show: true, type, title, message });
   const closeModal = () => setModal((m) => ({ ...m, show: false }));
@@ -56,6 +57,68 @@ export default function ProposalBuilder() {
     reference: "",
     purpose: "Quotation for N/A",
   });
+
+  // Undo / Redo state management
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoRedoAction = useRef(false);
+
+  useEffect(() => {
+    // Only capture history when not in view mode
+    if (isViewMode) return;
+    
+    // If this state change was caused by an undo/redo action, don't capture it again
+    if (isUndoRedoAction.current) {
+      isUndoRedoAction.current = false;
+      return;
+    }
+
+    const currentState = { headerData, service, sections };
+    
+    // Debounce pushing to history by 800ms
+    const timer = setTimeout(() => {
+      setHistory((prev) => {
+        // Prevent storing duplicate states if nothing actually changed
+        if (prev.length > 0 && historyIndex >= 0) {
+          const lastState = prev[historyIndex];
+          if (JSON.stringify(lastState) === JSON.stringify(currentState)) {
+            return prev;
+          }
+        }
+        
+        const past = prev.slice(0, historyIndex + 1);
+        const newHistory = [...past, JSON.parse(JSON.stringify(currentState))].slice(-50); // Keep last 50 states
+        setHistoryIndex(newHistory.length - 1);
+        return newHistory;
+      });
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [headerData, service, sections, historyIndex, isViewMode]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      isUndoRedoAction.current = true;
+      const prev = history[historyIndex - 1];
+      setHeaderData(prev.headerData);
+      setService(prev.service);
+      setSections(prev.sections);
+      setHistoryIndex(historyIndex - 1);
+      setIsSaved(false);
+    }
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      isUndoRedoAction.current = true;
+      const next = history[historyIndex + 1];
+      setHeaderData(next.headerData);
+      setService(next.service);
+      setSections(next.sections);
+      setHistoryIndex(historyIndex + 1);
+      setIsSaved(false);
+    }
+  }, [history, historyIndex]);
 
   const updateSection = (id, updated) => {
     setSections((prev) => prev.map((sec) => (sec.id === id ? updated : sec)));
@@ -95,11 +158,11 @@ export default function ProposalBuilder() {
 
   const handleSaveProposal = async () => {
     const validationErrors = [];
-    if (!headerData.billTo?.id) {
-      validationErrors.push("• Please select a client from the search list.");
+    if (!headerData.billTo?.id && !selectedLead?.id) {
+      validationErrors.push("â€¢ Please select a client from the search list.");
     }
     if (!service || service.length === 0) {
-      validationErrors.push("• Please add at least one service item.");
+      validationErrors.push("â€¢ Please add at least one service item.");
     }
     if (validationErrors.length > 0) {
       showModal("error", "Missing Information", validationErrors.join("\n"));
@@ -126,13 +189,32 @@ export default function ProposalBuilder() {
         purpose: headerData.purpose,
         total_amount: total,
         total_in_words: numberToWords(total),
-        client_id: headerData.billTo?.id,
+        client_id: headerData.billTo?.id || null,
+        company_name: headerData.billTo?.company_name || headerData.billTo?.name || "",
+        gstin: headerData.billTo?.gstin && headerData.billTo.gstin !== "N/A" ? headerData.billTo.gstin : "",
+        lut: headerData.billTo?.lut || "",
+        lead_id: currentProposalId ? undefined : selectedLead?.id,
         services: service.map((item) => ({
           ...item,
           gst: parseFloat(item.gst) || 0,
         })),
         sections,
       };
+
+      // If we are editing an existing client, update their details
+      if (headerData.billTo?.id) {
+        try {
+          await fetch(`${API_BASE_URL}/proposal/clients/update/${headerData.billTo.id}/`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...headers },
+            body: JSON.stringify(headerData.billTo),
+          });
+        } catch (err) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Failed to update client details", err);
+          }
+        }
+      }
 
       let response;
       if (currentProposalId) {
@@ -151,12 +233,22 @@ export default function ProposalBuilder() {
 
       const data = await response.json();
       if (response.ok) {
-        showModal("success", "Proposal Saved", "✅ Proposal saved successfully!");
+        showModal("success", "Proposal Saved", "Proposal saved successfully!");
         setIsSaved(true);
         if (!currentProposalId && data.id) {
           setCurrentProposalId(data.id);
+          setSelectedLead(data.source_lead || selectedLead);
+          const url = new URL(window.location.href);
+          url.searchParams.delete("lead");
+          url.searchParams.set("proposal", String(data.id));
+          window.history.replaceState({}, "", url);
         }
       } else {
+        if (response.status === 409 && data.existing_proposal) {
+          handleLoadProposal(data.existing_proposal, "edit");
+          showModal("error", "Existing Proposal Opened", "This lead already had a proposal, so the existing proposal was opened.");
+          return;
+        }
         const parseErrors = (errData) => {
           if (!errData || typeof errData !== "object") return "Failed to save proposal.";
           const src = errData.errors || errData;
@@ -168,13 +260,13 @@ export default function ProposalBuilder() {
           }
           return messages.length ? messages.join("\n") : "Failed to save proposal.";
         };
-        showModal("error", "Save Failed", `❌ ${parseErrors(data)}`);
+        showModal("error", "Save Failed", parseErrors(data));
       }
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
         console.error("Error saving proposal:", error);
       }
-      showModal("error", "Error", "❌ An unexpected error occurred while saving.");
+      showModal("error", "Error", "âŒ An unexpected error occurred while saving.");
     }
   };
 
@@ -198,6 +290,12 @@ export default function ProposalBuilder() {
     setSections(DEFAULT_SECTIONS());
     setIsSaved(false);
     setCurrentProposalId(null);
+    setSelectedLead(null);
+    setIsViewMode(false);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("lead");
+    url.searchParams.delete("proposal");
+    window.history.replaceState({}, "", url);
     const freshHeader = DEFAULT_HEADER();
     try {
       const res = await fetch(`${API_BASE_URL}/proposal/next-number/?t=${Date.now()}`, {
@@ -215,15 +313,24 @@ export default function ProposalBuilder() {
   const handleLoadProposal = (proposal, action = 'edit') => {
     setCurrentProposalId(proposal.id);
     setIsViewMode(action === 'view');
+    setSelectedLead(proposal.source_lead || null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("lead");
+    url.searchParams.set("proposal", String(proposal.id));
+    window.history.replaceState({}, "", url);
     setHeaderData({
       tagline: "The Soul of a Premium Digital Brand",
       mainBranch: "Husna Complex, near English Church, West Nadakkave, west, Nadakkave, Kozhikode, Kerala 673011",
       otherBranches: "Anganvadi Road, Thiruvelli, Sulthan Bathery, Wayanad 673592",
       billTo: {
         id: proposal.client?.id,
+        company_name: proposal.client?.company_name || "",
         name: proposal.client?.name || "",
         address: proposal.client?.address || "",
+        email: proposal.client?.email || "",
+        contact: proposal.client?.contact || "",
         gstin: proposal.client?.gstin || "N/A",
+        lut: proposal.client?.lut || "",
       },
       quotationNo: proposal.proposal_no,
       quotationDate: proposal.date,
@@ -252,144 +359,253 @@ export default function ProposalBuilder() {
     setShowRecentModal(false);
   };
 
-  return (
-    <div style={{ minHeight: "100vh" }}>
-      <style>{`
-        @media print {
-          @page { margin: 15mm; size: A4; }
-          body, html { background: white; height: auto; }
-          .d-print-none { display: none !important; }
-          .print-full-width {
-            width: 100% !important;
-            max-width: 100% !important;
-            flex: 0 0 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            padding-top: 20px !important;
-          }
-          #proposal-content {
-            box-shadow: none !important;
-            border: none !important;
-            overflow: visible !important;
-            height: auto !important;
-          }
-          .container {
-            max-width: 100% !important;
-            width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  const applyLead = useCallback(async (lead) => {
+    if (lead.existing_proposal?.id) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/proposal/detail/${lead.existing_proposal.id}/`, {
+          headers: getAuthHeaders(),
+        });
+        const proposal = await response.json();
+        if (!response.ok) throw new Error(proposal.error || "Could not open the proposal.");
+        handleLoadProposal(proposal, "edit");
+      } catch (error) {
+        showModal("error", "Open Failed", error.message || "Could not open the proposal.");
+      }
+      setShowLeadSelector(false);
+      return;
+    }
+
+    let clientRecord;
+    try {
+      const response = await fetch(`${API_BASE_URL}/proposal/clients/from-lead/${lead.id}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not create the client from this lead.");
+      clientRecord = data.client;
+    } catch (error) {
+      showModal("error", "Client Creation Failed", error.message || "Could not create the client from this lead.");
+      return;
+    }
+
+    const resolvedLead = { ...lead, customer_record: clientRecord };
+    setSelectedLead(resolvedLead);
+    setIsViewMode(false);
+    setCurrentProposalId(null);
+    setSections(DEFAULT_SECTIONS());
+    const url = new URL(window.location.href);
+    url.searchParams.delete("proposal");
+    url.searchParams.set("lead", String(lead.id));
+    window.history.replaceState({}, "", url);
+    const leadClientDefaults = {
+      name: lead.customer_name || lead.contact_person || lead.company_name || "Lead customer",
+      company_name: lead.company_name || "",
+      address: lead.address || "",
+      email: lead.email || "",
+      contact: lead.phone || "",
+      gstin: "N/A",
+    };
+    const client = {
+      ...leadClientDefaults,
+      ...(clientRecord || {}),
+      company_name: clientRecord?.company_name || leadClientDefaults.company_name,
+      name: clientRecord?.name || leadClientDefaults.name,
+      address: clientRecord?.address || leadClientDefaults.address,
+      email: clientRecord?.email || leadClientDefaults.email,
+      contact: clientRecord?.contact || leadClientDefaults.contact,
+      gstin: clientRecord?.gstin || "N/A",
+    };
+    setHeaderData((current) => ({
+      ...current,
+      billTo: client,
+      reference: lead.lead_number || current.reference,
+      purpose: lead.purpose || lead.requirement_summary || lead.service || lead.product || `Proposal for ${lead.company_name || lead.customer_name || "client"}`,
+    }));
+    if (!headerData.quotationNo) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/proposal/next-number/?t=${Date.now()}`, { headers: getAuthHeaders() });
+        const data = await response.json();
+        if (response.ok && data.proposal_no) {
+          setHeaderData((current) => ({ ...current, quotationNo: data.proposal_no }));
         }
-      `}</style>
+      } catch {
+        // The save endpoint will return a clear validation error if numbering is unavailable.
+      }
+    }
+    const proposalServices = (lead.proposal_services || []).map((item) => ({
+      ...item,
+      quantity: Number(item.quantity || 1),
+      rate: Number(item.rate || 0),
+      amount: Number(item.amount ?? item.rate ?? 0),
+      gst: Number(item.gst ?? 18),
+      category: item.category || "Lead",
+    }));
+    setService(proposalServices.length ? proposalServices : [{
+      description: lead.service || lead.product || lead.purpose || `Services for ${lead.company_name || lead.customer_name || "client"}`,
+      quantity: 1,
+      rate: Number(lead.estimated_value || 0),
+      amount: Number(lead.estimated_value || 0),
+      gst: 18,
+      category: "Lead",
+    }]);
+    setShowLeadSelector(false);
+  }, [DEFAULT_SECTIONS, headerData.quotationNo]);
 
-      <div className="d-print-none" style={{ position: "sticky", top: 0, zIndex: 1040, background: "#f0f2f5", borderBottom: "1px solid #d1d5db", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", padding: "8px 24px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-          <button onClick={() => window.history.back()} style={{ background: "#fff", border: "1px solid #d1d5db", color: "#374151", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500 }}>
-            Back
-          </button>
-          <button onClick={handleNewProposal} style={{ background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500 }}>
-            New Proposal
-          </button>
-          <ExportButton 
-            filename={headerData?.quotationNo ? `proposal_${headerData.quotationNo.replace(/[^a-z0-9]/gi, '_').toUpperCase()}` : "proposal"} 
-          />
-          <button onClick={() => window.print()} style={{ background: "#fff", border: "1px solid #d1d5db", color: "#374151", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500 }}>
-            Print
-          </button>
-          <button onClick={() => setShowRecentModal(true)} style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500 }}>
-            Recent Proposals
-          </button>
-        </div>
+  useEffect(() => {
+    if (initializedFromUrl.current) return;
+    initializedFromUrl.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const proposalId = params.get("proposal");
+    const leadId = params.get("lead");
+    if (proposalId) {
+      fetch(`${API_BASE_URL}/proposal/detail/${proposalId}/`, { headers: getAuthHeaders() })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || "Could not open the proposal.");
+          handleLoadProposal(data, "edit");
+        })
+        .catch((error) => showModal("error", "Open Failed", error.message));
+    } else if (leadId) {
+      fetch(`${API_BASE_URL}/proposal/eligible-leads/?lead_id=${encodeURIComponent(leadId)}`, { headers: getAuthHeaders() })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || "Could not open the lead.");
+          if (!data.results?.[0]) throw new Error("This lead is not available to you.");
+          return applyLead(data.results[0]);
+        })
+        .catch((error) => showModal("error", "Lead Not Available", error.message));
+    }
+  }, [applyLead]);
 
-        <RecentProposalsModal
-          show={showRecentModal}
-          onClose={() => setShowRecentModal(false)}
-          onAction={(action, proposal) => {
-            if (action === 'edit' || action === 'view') {
-              handleLoadProposal(proposal, action);
-            }
-          }}
-        />
-
-        <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
-          {isSaved && (
-            <span style={{ background: "#d1fae5", border: "1px solid #6ee7b7", color: "#065f46", borderRadius: "8px", padding: "8px 20px", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-              Saved ✓
-            </span>
-          )}
-          {!isViewMode && (
-            <button
-              onClick={handleSaveProposal}
-              style={{ background: "linear-gradient(135deg,#16a34a,#059669)", border: "none", color: "#fff", borderRadius: "8px", padding: "8px 20px", cursor: "pointer", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 2px 6px rgba(22,163,74,0.35)" }}
-            >
-              {currentProposalId ? "Update Proposal" : "Save Proposal"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="container py-4">
-        <div className="row g-4">
-          <div className="col-md-6 d-print-none">
-            <div className="bg-white p-4 shadow-sm rounded-3 h-100 d-flex flex-column overflow-auto border">
-              <h2 className="h4 fw-semibold text-primary mb-3">Proposal Editor</h2>
-              <hr className="text-muted" />
-              <HeaderEditor data={headerData} onChange={setHeaderData} />
-              <div className="mb-3">
-                <ServiceTable
-                  services={service}
-                  onChange={setService}
-                  onServiceSelect={addExtraSectionFromService}
-                  onServiceUnselect={removeExtraSectionFromService}
-                />
-                {sections.map((sec) => (
-                  <SectionEditor
-                    key={sec.id}
-                    section={sec}
-                    onChange={(s) => updateSection(sec.id, s)}
-                    onRemove={() => removeSection(sec.id)}
-                  />
-                ))}
+  const workspace = (
+    <>
+      <ProposalWorkspace
+        headerData={headerData}
+        onHeaderChange={(next) => {
+          setHeaderData((current) => typeof next === "function" ? next(current) : next);
+          setIsSaved(false);
+        }}
+        services={service}
+        onServicesChange={(next) => {
+          setService((current) => typeof next === "function" ? next(current) : next);
+          setIsSaved(false);
+        }}
+        sections={sections}
+        onSectionChange={(id, next) => {
+          updateSection(id, next);
+          setIsSaved(false);
+        }}
+        onSectionRemove={(id) => {
+          removeSection(id);
+          setIsSaved(false);
+        }}
+        onAddSection={() => {
+          setSections((prev) => [
+            ...prev,
+            { id: newId(), title: "", type: "textarea", alignment: "left", content: "" },
+          ]);
+          setIsSaved(false);
+        }}
+        onServiceSelect={addExtraSectionFromService}
+        onServiceUnselect={removeExtraSectionFromService}
+        selectedLead={selectedLead}
+        currentProposalId={currentProposalId}
+        isSaved={isSaved}
+        isViewMode={isViewMode}
+        onBack={() => window.history.back()}
+        onNew={handleNewProposal}
+        onSelectLead={() => setShowLeadSelector(true)}
+        onOpenProposals={() => setShowRecentModal(true)}
+        onSave={handleSaveProposal}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+      />
+      <RecentProposalsModal
+        show={showRecentModal}
+        onClose={() => setShowRecentModal(false)}
+        onAction={(action, proposal) => {
+          if (action === "edit" || action === "view") handleLoadProposal(proposal, action);
+        }}
+      />
+      <LeadSelector
+        show={showLeadSelector}
+        onClose={() => setShowLeadSelector(false)}
+        onSelect={applyLead}
+        initialLeadId={selectedLead?.id}
+      />
+      {modal.show && (
+        <div 
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+          style={{ 
+            backgroundColor: "rgba(15, 23, 42, 0.4)", 
+            backdropFilter: "blur(8px)", 
+            zIndex: 99999,
+            padding: "20px"
+          }} 
+          onClick={closeModal}
+        >
+          <div 
+            className="bg-white rounded shadow-lg" 
+            style={{ 
+              width: "100%", 
+              maxWidth: "400px", 
+              overflow: "hidden", 
+              transform: "translateY(0)",
+              transition: "transform 0.2s ease-out"
+            }} 
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="d-flex align-items-start p-4">
+              <div className="me-3 mt-1">
+                {modal.type === "success" ? (
+                  <CheckCircle size={32} color="#10b981" strokeWidth={2} />
+                ) : (
+                  <AlertCircle size={32} color="#ef4444" strokeWidth={2} />
+                )}
               </div>
-              <div className="sticky-bottom bg-white pt-2 pb-3 mt-auto d-flex justify-content-between align-items-center border-top">
-                <button
-                  className="btn btn-outline-primary"
-                  onClick={() =>
-                    setSections((prev) => [
-                      ...prev,
-                      { id: newId(), title: "", type: "textarea", alignment: "left", content: "" },
-                    ])
-                  }
-                >
-                  ➕ Add Section
-                </button>
+              <div className="flex-grow-1">
+                <h5 className="mb-2 fw-bold" style={{ color: "#0f172a", fontSize: "1.15rem" }}>
+                  {modal.title}
+                </h5>
+                <p className="mb-0" style={{ color: "#475569", fontSize: "0.95rem", whiteSpace: "pre-line", lineHeight: "1.5" }}>
+                  {modal.message}
+                </p>
               </div>
+              <button 
+                className="btn btn-link p-0 border-0 ms-2"
+                style={{ color: "#94a3b8" }}
+                onClick={closeModal}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="px-4 py-3 text-end border-top" style={{ backgroundColor: "#f8fafc" }}>
+              <button 
+                className="btn px-4 text-white" 
+                style={{ 
+                  backgroundColor: modal.type === "success" ? "#10b981" : "#ef4444", 
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  paddingTop: "8px",
+                  paddingBottom: "8px",
+                  border: "none",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                }}
+                onClick={closeModal}
+              >
+                Got it
+              </button>
             </div>
           </div>
-          <div className="col-md-6 print-full-width">
-            <div id="proposal-content" className="bg-white p-3 shadow-sm rounded-3 h-100 overflow-auto border" style={{ maxWidth: "720px", margin: "0 auto" }}>
-              <ProposalPreview headerData={headerData} sections={sections} services={service} />
-            </div>
-          </div>
         </div>
-        {modal.show && (
-          <div className="modal d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={closeModal}>
-            <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-content">
-                <div className={`modal-header ${modal.type === "success" ? "bg-success text-white" : "bg-danger text-white"}`}>
-                  <h5 className="modal-title">{modal.title}</h5>
-                  <button type="button" className="btn-close btn-close-white" onClick={closeModal} />
-                </div>
-                <div className="modal-body"><p className="mb-0">{modal.message}</p></div>
-                <div className="modal-footer">
-                  <button className={`btn ${modal.type === "success" ? "btn-success" : "btn-danger"}`} onClick={closeModal}>OK</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </>
   );
+
+  return workspace;
 }

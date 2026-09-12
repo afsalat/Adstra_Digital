@@ -9,6 +9,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import API_BASE_URL from "@/utils/apiBase";
 import { useModal } from "@/Context/ModalContext";
+import { useAuth } from "@/Context/AuthContext";
 import "./ReceiptList.css";
 
 /* ─────────────────── helpers ─────────────────── */
@@ -143,6 +144,7 @@ const IconTrash = () => (
 export default function ReceiptManager() {
   const router = useRouter();
   const { showAlert, showConfirm } = useModal();
+  const { loading: authLoading, hasPermission } = useAuth();
   const [receipts, setReceipts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -166,9 +168,17 @@ export default function ReceiptManager() {
   const [trashSearchTerm, setTrashSearchTerm] = useState("");
   const [trashStartDate, setTrashStartDate] = useState("");
   const [trashEndDate, setTrashEndDate] = useState("");
+  const canView = hasPermission("receipts.view");
+  const canCreate = hasPermission("receipts.create");
+  const canDelete = hasPermission("receipts.delete");
+  const canRestore = hasPermission("receipts.restore");
 
   /* fetch */
   const fetchReceipts = useCallback(async () => {
+    if (!canView) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const res = await axios.get(`${API_BASE_URL}/transactions/list-create/`);
@@ -180,14 +190,18 @@ export default function ReceiptManager() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [canView]);
 
   useEffect(() => {
-    fetchReceipts();
-  }, [fetchReceipts]);
+    if (!authLoading) fetchReceipts();
+  }, [authLoading, fetchReceipts]);
 
   /* fetch trash */
   const fetchTrashReceipts = useCallback(async () => {
+    if (!canDelete && !canRestore) {
+      showAlert("Permission Denied", "You do not have permission to manage receipt trash.", "error");
+      return;
+    }
     try {
       const res = await axios.get(`${API_BASE_URL}/transactions/trash/?_=${Date.now()}`);
       setTrashReceipts(res.data);
@@ -201,9 +215,13 @@ export default function ReceiptManager() {
       }
       showAlert("Error", "Could not load trash.", "error");
     }
-  }, [showAlert]);
+  }, [canDelete, canRestore, showAlert]);
 
   const handleRestoreReceipt = async (receiptId) => {
+    if (!canRestore) {
+      showAlert("Permission Denied", "You do not have permission to restore receipts.", "error");
+      return;
+    }
     try {
       await axios.patch(`${API_BASE_URL}/transactions/restore/${receiptId}/`);
       setTrashReceipts((prev) => prev.filter((r) => r.id !== receiptId));
@@ -218,6 +236,10 @@ export default function ReceiptManager() {
   };
 
   const handleDeleteReceipt = async (receiptId, receiptNo) => {
+    if (!canDelete) {
+      showAlert("Permission Denied", "You do not have permission to delete receipts.", "error");
+      return;
+    }
     showConfirm(
       "Move to Trash",
       `Are you sure you want to move receipt ${receiptNo || ""} to trash?`,
@@ -333,6 +355,20 @@ export default function ReceiptManager() {
     doc.save("receipts.pdf");
   };
 
+  if (!authLoading && !canView) {
+    return (
+      <div className="receipt-layout">
+        <main className="receipt-content" style={{ display: "grid", placeItems: "center" }}>
+          <div className="receipt-empty-state">
+            <h3>Access denied</h3>
+            <p>You do not have permission to view receipts.</p>
+            <button className="receipt-btn-create" onClick={() => router.push("/admindashboard/")}>Back to Dashboard</button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   /* ───── render ───── */
   return (
     <div className="receipt-layout">
@@ -350,9 +386,11 @@ export default function ReceiptManager() {
         </div>
 
         <div className="receipt-controls">
-          <Link href="/receipts/create/" className="receipt-btn-create">
-            <IconPlus /> Add Receipt
-          </Link>
+          {canCreate && (
+            <Link href="/receipts/create/" className="receipt-btn-create">
+              <IconPlus /> Add Receipt
+            </Link>
+          )}
 
           <button className="receipt-btn-export" onClick={exportPDF}>
             <IconDownload /> Export PDF
@@ -506,9 +544,11 @@ export default function ReceiptManager() {
             )}
           </div>
 
-          <button className="receipt-btn-trash" onClick={fetchTrashReceipts}>
-            <IconFileX /> Trash / Bin
-          </button>
+          {(canDelete || canRestore) && (
+            <button className="receipt-btn-trash" onClick={fetchTrashReceipts}>
+              <IconFileX /> Trash / Bin
+            </button>
+          )}
         </div>
       </aside>
 
@@ -679,13 +719,15 @@ export default function ReceiptManager() {
                             >
                               <IconView />
                             </button>
-                            <button
-                              className="receipt-btn-action receipt-btn-action--danger"
-                              onClick={() => handleDeleteReceipt(receipt.id, receipt.receipt_no)}
-                              title="Move to trash"
-                            >
-                              <IconTrash />
-                            </button>
+                            {canDelete && (
+                              <button
+                                className="receipt-btn-action receipt-btn-action--danger"
+                                onClick={() => handleDeleteReceipt(receipt.id, receipt.receipt_no)}
+                                title="Move to trash"
+                              >
+                                <IconTrash />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </motion.tr>
@@ -751,12 +793,14 @@ export default function ReceiptManager() {
                           <td>{receipt.client_name || "—"}</td>
                           <td>{formatINR(receipt.amount)}</td>
                           <td>
-                            <button
-                              className="receipt-btn-restore"
-                              onClick={() => handleRestoreReceipt(receipt.id)}
-                            >
-                              Restore
-                            </button>
+                            {canRestore && (
+                              <button
+                                className="receipt-btn-restore"
+                                onClick={() => handleRestoreReceipt(receipt.id)}
+                              >
+                                Restore
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

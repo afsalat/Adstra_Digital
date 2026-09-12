@@ -8,10 +8,12 @@ import Link from "next/link";
 import API_BASE_URL from "@/utils/apiBase";
 import SearchableClientSelect from "@/components/common/SearchableClientSelect";
 import { useModal } from "@/Context/ModalContext";
+import { useAuth } from "@/Context/AuthContext";
 import "../../create/CreateInvoice.css";
 
 export default function CreateProforma() {
   const { showAlert } = useModal();
+  const { loading: authLoading, hasPermission } = useAuth();
   const [invoice, setInvoice] = useState({
     invoice_no: "",
     client: "",
@@ -40,6 +42,7 @@ export default function CreateProforma() {
 
   const router = useRouter();
   const API_BASE = API_BASE_URL;
+  const canCreate = hasPermission("proforma_invoices.create");
 
   const toWords = new ToWords({
     localeCode: "en-IN",
@@ -53,6 +56,7 @@ export default function CreateProforma() {
 
   // Fetch clients
   useEffect(() => {
+    if (authLoading || !canCreate) return;
     axios
       .get(`${API_BASE}/proposal/clients/`)
       .then((res) => setClients(res.data))
@@ -70,7 +74,7 @@ export default function CreateProforma() {
           console.error("Settings Fetch Error:", err);
         }
       });
-  }, [API_BASE]);
+  }, [API_BASE, authLoading, canCreate]);
 
   useEffect(() => {
     const subtotal = invoice.items.reduce((sum, item) => {
@@ -232,6 +236,7 @@ export default function CreateProforma() {
 
   // Fetch Next Proforma Number with cache-busting
   useEffect(() => {
+    if (authLoading || !canCreate) return;
     const fetchNextInvoiceNumber = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/invoice/next-number/?is_proforma=true&_=${Date.now()}`);
@@ -245,7 +250,19 @@ export default function CreateProforma() {
       }
     };
     fetchNextInvoiceNumber();
-  }, []);
+  }, [authLoading, canCreate]);
+
+  if (!authLoading && !canCreate) {
+    return (
+      <div className="invoice-create-wrapper min-h-screen bg-slate-50 pt-28 px-4">
+        <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Access denied</h2>
+          <p className="text-slate-500 mb-6">You do not have permission to create proforma invoices.</p>
+          <button className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold" onClick={() => router.push("/invoices/proforma/")}>Back to Proforma</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="invoice-create-wrapper min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-10 pt-28 px-4 sm:px-6 lg:px-8 font-sans">

@@ -14,23 +14,60 @@ from .models import Invoice, create_invoice_from_proposal
 from .serializers import InvoiceSerializer, ViewInvoiceSerializer
 from apis.proposal.serializers import ProposalSerializer
 from apis.proposal.models import Proposal
-from utils.permissions import require_permission
+from utils.permissions import has_permission, permission_denied, require_permission
 
 logger = logging.getLogger(__name__)
+
+
+def _invoice_permission_code(action, is_proforma=False):
+    prefix = "proforma_invoices" if is_proforma else "invoices"
+    return f"{prefix}.{action}"
+
+
+def _require_invoice_permission(request, action, is_proforma=False):
+    code = _invoice_permission_code(action, is_proforma)
+    if has_permission(request.user, code):
+        return None
+    return permission_denied(code)
+
+
+def _request_is_proforma(request):
+    return str(request.data.get("is_proforma", "false")).lower() == "true"
+
+
+def _request_target_is_proforma(request, current=False):
+    if "is_proforma" not in request.data:
+        return current
+    return str(request.data.get("is_proforma")).lower() == "true"
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @never_cache
 def list_invoices(request):
-    denial = require_permission(request, "invoices.view")
+    is_proforma = request.query_params.get('is_proforma')
+    if is_proforma is not None:
+        denial = _require_invoice_permission(request, "view", is_proforma.lower() == 'true')
+    else:
+        standard_allowed = has_permission(request.user, "invoices.view")
+        proforma_allowed = has_permission(request.user, "proforma_invoices.view")
+        if not standard_allowed and not proforma_allowed:
+            return permission_denied("invoices.view")
+        denial = None
     if denial:
         return denial
-    is_proforma = request.query_params.get('is_proforma')
+
     invoices = Invoice.objects.filter(is_deleted=False).order_by('-id')
     
     if is_proforma is not None:
         is_proforma_bool = is_proforma.lower() == 'true'
         invoices = invoices.filter(is_proforma=is_proforma_bool)
+    else:
+        standard_allowed = has_permission(request.user, "invoices.view")
+        proforma_allowed = has_permission(request.user, "proforma_invoices.view")
+        if standard_allowed and not proforma_allowed:
+            invoices = invoices.filter(is_proforma=False)
+        elif proforma_allowed and not standard_allowed:
+            invoices = invoices.filter(is_proforma=True)
         
     serializer = ViewInvoiceSerializer(invoices, many=True)
     return Response(serializer.data)
@@ -38,7 +75,7 @@ def list_invoices(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_invoice(request):
-    denial = require_permission(request, "invoices.create")
+    denial = _require_invoice_permission(request, "create", _request_is_proforma(request))
     if denial:
         return denial
     serializer = InvoiceSerializer(data=request.data)
@@ -51,13 +88,18 @@ def create_invoice(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_invoice(request, pk):
-    denial = require_permission(request, "invoices.update")
-    if denial:
-        return denial
     try:
         invoice = Invoice.objects.get(pk=pk)
     except Invoice.DoesNotExist:
         return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+    denial = _require_invoice_permission(request, "update", invoice.is_proforma)
+    if denial:
+        return denial
+    target_is_proforma = _request_target_is_proforma(request, invoice.is_proforma)
+    if target_is_proforma != invoice.is_proforma:
+        denial = _require_invoice_permission(request, "update", target_is_proforma)
+        if denial:
+            return denial
 
     serializer = InvoiceSerializer(invoice, data=request.data)
     if serializer.is_valid():
@@ -69,14 +111,14 @@ def update_invoice(request, pk):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_invoice_status(request, pk):
-    denial = require_permission(request, "invoices.update")
-    if denial:
-        return denial
     """Update only the status field of an invoice."""
     try:
         invoice = Invoice.objects.get(pk=pk)
     except Invoice.DoesNotExist:
         return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+    denial = _require_invoice_permission(request, "update", invoice.is_proforma)
+    if denial:
+        return denial
 
     new_status = request.data.get('status')
     valid_statuses = ['unpaid', 'partially_paid', 'paid', 'cancelled']
@@ -94,14 +136,14 @@ def update_invoice_status(request, pk):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_invoice(request, pk):
-    denial = require_permission(request, "invoices.delete")
-    if denial:
-        return denial
     """Soft-delete (move to trash) an invoice."""
     try:
         invoice = Invoice.objects.get(pk=pk)
     except Invoice.DoesNotExist:
         return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+    denial = _require_invoice_permission(request, "delete", invoice.is_proforma)
+    if denial:
+        return denial
     invoice.is_deleted = True
     invoice.save(update_fields=['is_deleted'])
     return Response({'message': 'Invoice moved to trash'}, status=status.HTTP_200_OK)
@@ -110,14 +152,14 @@ def delete_invoice(request, pk):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def hard_delete_invoice(request, pk):
-    denial = require_permission(request, "invoices.delete")
-    if denial:
-        return denial
     """Permanently delete an invoice."""
     try:
         invoice = Invoice.objects.get(pk=pk)
     except Invoice.DoesNotExist:
         return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+    denial = _require_invoice_permission(request, "delete", invoice.is_proforma)
+    if denial:
+        return denial
     invoice.delete()
     return Response({'message': 'Invoice permanently deleted'}, status=status.HTTP_200_OK)
 
@@ -126,12 +168,17 @@ def hard_delete_invoice(request, pk):
 @permission_classes([IsAuthenticated])
 @never_cache
 def list_trash(request):
-    denial = require_permission(request, "invoices.view")
-    if denial:
-        return denial
     """List all soft-deleted (trashed) invoices."""
     logger.debug("list_trash called")
     invoices = Invoice.objects.filter(is_deleted=True)
+    standard_allowed = has_permission(request.user, "invoices.view")
+    proforma_allowed = has_permission(request.user, "proforma_invoices.view")
+    if not standard_allowed and not proforma_allowed:
+        return permission_denied("invoices.view")
+    if standard_allowed and not proforma_allowed:
+        invoices = invoices.filter(is_proforma=False)
+    elif proforma_allowed and not standard_allowed:
+        invoices = invoices.filter(is_proforma=True)
     logger.debug(f"Found {invoices.count()} deleted invoices")
     serializer = ViewInvoiceSerializer(invoices, many=True)
     return Response(serializer.data)
@@ -140,14 +187,14 @@ def list_trash(request):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def restore_invoice(request, pk):
-    denial = require_permission(request, "invoices.restore")
-    if denial:
-        return denial
     """Restore a soft-deleted invoice back to the active list."""
     try:
         invoice = Invoice.objects.get(pk=pk, is_deleted=True)
     except Invoice.DoesNotExist:
         return Response({'error': 'Trashed invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+    denial = _require_invoice_permission(request, "restore", invoice.is_proforma)
+    if denial:
+        return denial
     invoice.is_deleted = False
     invoice.save(update_fields=['is_deleted'])
     return Response({'message': 'Invoice restored'})
@@ -172,7 +219,7 @@ def get_proposals_for_client(request, client_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_invoice_from_proposal(request, proposal_id):
-    denial = require_permission(request, "invoices.create")
+    denial = _require_invoice_permission(request, "create", False)
     if denial:
         return denial
     try:
@@ -194,9 +241,6 @@ def generate_invoice_from_proposal(request, proposal_id):
 @permission_classes([IsAuthenticated])
 @never_cache
 def view_invoice_detail(request, invoiceID):
-    denial = require_permission(request, "invoices.view")
-    if denial:
-        return denial
     try:
         invoiceID = str(invoiceID).strip('/')
         logger.debug(f"view_invoice_detail called for ID: {invoiceID}")
@@ -213,6 +257,10 @@ def view_invoice_detail(request, invoiceID):
     except Invoice.DoesNotExist:
         return Response({'error': 'Invoice not found'}, status=404)
 
+    denial = _require_invoice_permission(request, "view", invoice.is_proforma)
+    if denial:
+        return denial
+
     serializer = ViewInvoiceSerializer(invoice)
     return Response(serializer.data)
 
@@ -222,11 +270,16 @@ def view_invoice_detail(request, invoiceID):
 @permission_classes([IsAuthenticated])
 @never_cache
 def invoice_list(request, client_id):
-    denial = require_permission(request, "invoices.view")
-    if denial:
-        return denial
     # client_id = request.GET.get('client_id')
     qs = Invoice.objects.all()
+    standard_allowed = has_permission(request.user, "invoices.view")
+    proforma_allowed = has_permission(request.user, "proforma_invoices.view")
+    if not standard_allowed and not proforma_allowed:
+        return permission_denied("invoices.view")
+    if standard_allowed and not proforma_allowed:
+        qs = qs.filter(is_proforma=False)
+    elif proforma_allowed and not standard_allowed:
+        qs = qs.filter(is_proforma=True)
     if client_id:
         qs = qs.filter(client=client_id)
     serializer = InvoiceSerializer(qs, many=True)
@@ -355,12 +408,12 @@ def verify_razorpay_payment(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_payment_status(request, invoice_id):
-    denial = require_permission(request, "invoices.view")
-    if denial:
-        return denial
     """Get payment status for an invoice"""
     try:
         invoice = Invoice.objects.get(pk=invoice_id)
+        denial = _require_invoice_permission(request, "view", invoice.is_proforma)
+        if denial:
+            return denial
         return Response({
             'invoice_no': invoice.invoice_no,
             'status': invoice.status,
@@ -375,10 +428,10 @@ def get_payment_status(request, invoice_id):
 @permission_classes([IsAuthenticated])
 @never_cache
 def get_next_invoice_number(request):
-    denial = require_permission(request, "invoices.create")
-    if denial:
-        return denial
     """Generate and return the next invoice number."""
     is_proforma = request.GET.get('is_proforma', 'false').lower() == 'true'
+    denial = _require_invoice_permission(request, "create", is_proforma)
+    if denial:
+        return denial
     next_num = Invoice.generate_invoice_number(is_proforma=is_proforma)
     return Response({'next_invoice_number': next_num})

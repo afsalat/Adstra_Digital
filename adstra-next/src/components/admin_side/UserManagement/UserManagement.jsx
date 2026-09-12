@@ -3,13 +3,54 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./UserManagement.css";
-import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound, Search } from "lucide-react";
+import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound, Search, MessageCircle, QrCode } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
 import { useModal } from "@/Context/ModalContext";
 
 const BASE_URL = API_BASE_URL;
 const FULL_ACCESS_ROLES = new Set(["admin", "super_admin"]);
+const SALES_MARKETING_ROLE = "sales_and_marketing";
+const SALES_MY_PROFILE_PERMISSIONS = new Set([
+  "lead.view_my_profile",
+  "lead.edit",
+  "lead.call",
+  "lead.follow_up",
+  "lead.schedule_meeting",
+  "lead.create_proposal",
+]);
+const SALES_PROPOSAL_PERMISSIONS = [
+  "clients.view",
+  "clients.create",
+  "proposals.view",
+  "proposals.create",
+  "proposals.update",
+];
+
+const applyLeadPermissionPreset = (form, permissions, preset) => {
+  if (!form) return;
+  const leadCodes = Object.keys(permissions).filter((code) => code.startsWith("lead."));
+  const selectedCodes = preset === "team_lead"
+    ? new Set([...leadCodes, ...SALES_PROPOSAL_PERMISSIONS])
+    : SALES_MY_PROFILE_PERMISSIONS;
+
+  form.querySelectorAll("input[name='custom_permissions']").forEach((input) => {
+    if (!input.value.startsWith("lead.") && !input.value.startsWith("proposals.") && !input.value.startsWith("clients.")) return;
+    input.checked = selectedCodes.has(input.value);
+  });
+};
+
+const getWhatsAppNumber = (phone = "") => {
+  const digits = String(phone).replace(/\D/g, "");
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.startsWith("0") && digits.length === 11) return `91${digits.slice(1)}`;
+  return digits;
+};
+
+const getWhatsAppUrl = (phone) => {
+  const number = getWhatsAppNumber(phone);
+  return number ? `https://wa.me/${number}` : "";
+};
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -21,6 +62,9 @@ const UserList = () => {
   const [deactivating, setDeactivating] = useState(false);
   const [roles, setRoles] = useState({});
   const [permissions, setPermissions] = useState({});
+  const [selectedRole, setSelectedRole] = useState("employee");
+  const [salesLeadPreset, setSalesLeadPreset] = useState("my_profile");
+  const [whatsappUser, setWhatsappUser] = useState(null);
 
   const { showAlert, showConfirm } = useModal();
   const router = useRouter();
@@ -63,11 +107,15 @@ const UserList = () => {
 
   const handleAddUser = () => {
     setEditUser(null);
+    setSelectedRole("employee");
+    setSalesLeadPreset("my_profile");
     setShowForm(true);
   };
 
   const handleEdit = (user) => {
     setEditUser(user);
+    setSelectedRole(user?.role || "employee");
+    setSalesLeadPreset((user?.custom_permissions || []).includes("lead.view_all") ? "team_lead" : "my_profile");
     setShowForm(true);
   };
 
@@ -164,6 +212,14 @@ const UserList = () => {
         }
       }
     );
+  };
+
+  const handleWhatsApp = (user) => {
+    if (!getWhatsAppUrl(user.phone)) {
+      showAlert("WhatsApp", "This user does not have a valid phone number.", "warning");
+      return;
+    }
+    setWhatsappUser(user);
   };
 
   const formatDate = (datetime) => {
@@ -266,6 +322,9 @@ const UserList = () => {
                     <button onClick={() => handleEdit(user)} title="Edit">
                       <Edit size={16} />
                     </button>
+                    <button className="whatsapp-action-btn" onClick={() => handleWhatsApp(user)} title="WhatsApp">
+                      <MessageCircle size={16} />
+                    </button>
                     <button
                       onClick={() => handleToggleActive(user)}
                       title="Deactivate"
@@ -294,13 +353,52 @@ const UserList = () => {
         </table>
       </div>
 
+      {whatsappUser && (() => {
+        const whatsappUrl = getWhatsAppUrl(whatsappUser.phone);
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodeURIComponent(whatsappUrl)}`;
+        return (
+          <div className="popup-overlay" onClick={() => setWhatsappUser(null)}>
+            <div className="popup whatsapp-qr-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="whatsapp-qr-header">
+                <div>
+                  <span>WhatsApp Chat</span>
+                  <h3>{whatsappUser.fullname || whatsappUser.username}</h3>
+                </div>
+                <button className="close-popup" onClick={() => setWhatsappUser(null)} aria-label="Close WhatsApp QR">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="whatsapp-qr-body">
+                <div className="whatsapp-qr-icon">
+                  <QrCode size={22} />
+                </div>
+                <img src={qrUrl} alt={`WhatsApp QR for ${whatsappUser.fullname || whatsappUser.username}`} />
+                <p>Scan this QR code to open the WhatsApp chat.</p>
+                <strong>+{getWhatsAppNumber(whatsappUser.phone)}</strong>
+              </div>
+              <div className="whatsapp-qr-actions">
+                <button type="button" className="cancel-btn" onClick={() => setWhatsappUser(null)}>Close</button>
+                <a className="submit-btn whatsapp-open-link" href={whatsappUrl} target="_blank" rel="noreferrer">
+                  <MessageCircle size={16} /> Open Chat
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {showForm && (
         <div className="popup-overlay" onClick={() => setShowForm(false)}>
           <div className="popup user-form-popup" onClick={(e) => e.stopPropagation()}>
-            <button className="close-popup" onClick={() => setShowForm(false)}>
-              <X size={18} />
-            </button>
-            <h3>{editUser ? "Edit User" : "Add New User"}</h3>
+            <div className="user-form-header">
+              <div>
+                <span className="user-form-kicker">User Administration</span>
+                <h3>{editUser ? "Edit User" : "Add New User"}</h3>
+              </div>
+              <button className="close-popup" onClick={() => setShowForm(false)} aria-label="Close form">
+                <X size={18} />
+              </button>
+            </div>
 
             <form
               onSubmit={async (e) => {
@@ -365,15 +463,20 @@ const UserList = () => {
                   <label className="field-label">Role</label>
                   <select
                     name="role"
-                    defaultValue={editUser?.role || "employee"}
+                    value={selectedRole}
                     onChange={(e) => {
-                      const shouldCheckAll = FULL_ACCESS_ROLES.has(e.target.value);
-                      const permissionInputs = e.currentTarget
-                        .closest("form")
-                        ?.querySelectorAll("input[name='custom_permissions']");
+                      const nextRole = e.target.value;
+                      setSelectedRole(nextRole);
+                      const form = e.currentTarget.closest("form");
+                      const permissionInputs = form?.querySelectorAll("input[name='custom_permissions']");
+                      const shouldCheckAll = FULL_ACCESS_ROLES.has(nextRole);
                       permissionInputs?.forEach((input) => {
                         input.checked = shouldCheckAll;
                       });
+                      if (nextRole === SALES_MARKETING_ROLE) {
+                        setSalesLeadPreset("my_profile");
+                        window.setTimeout(() => applyLeadPermissionPreset(form, permissions, "my_profile"), 0);
+                      }
                     }}
                   >
                     {Object.keys(roles).length > 0 ? (
@@ -384,6 +487,37 @@ const UserList = () => {
                       <option value="employee">employee</option>
                     )}
                   </select>
+                  {selectedRole === SALES_MARKETING_ROLE && (
+                    <div className="sales-permission-preset" role="radiogroup" aria-label="Sales and marketing lead access">
+                      <span className="sales-permission-preset__title">Lead access</span>
+                      <label>
+                        <input
+                          type="radio"
+                          name="sales_lead_preset"
+                          value="my_profile"
+                          checked={salesLeadPreset === "my_profile"}
+                          onChange={(event) => {
+                            setSalesLeadPreset(event.target.value);
+                            applyLeadPermissionPreset(event.currentTarget.closest("form"), permissions, "my_profile");
+                          }}
+                        />
+                        <span>My Profile</span>
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="sales_lead_preset"
+                          value="team_lead"
+                          checked={salesLeadPreset === "team_lead"}
+                          onChange={(event) => {
+                            setSalesLeadPreset(event.target.value);
+                            applyLeadPermissionPreset(event.currentTarget.closest("form"), permissions, "team_lead");
+                          }}
+                        />
+                        <span>Team Lead</span>
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 <div className="permissions-panel">
@@ -440,9 +574,12 @@ const UserList = () => {
                   })()}
                 </div>
               </div>
-              <button type="submit" className="submit-btn">
-                {editUser ? "Update User" : "Create User"}
-              </button>
+              <div className="user-form-footer">
+                <button type="button" className="cancel-btn" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="submit" className="submit-btn">
+                  {editUser ? "Update User" : "Create User"}
+                </button>
+              </div>
             </form>
           </div>
         </div>

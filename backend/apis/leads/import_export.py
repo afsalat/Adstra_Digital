@@ -1457,7 +1457,11 @@ def _target_duplicate_index(
     queryset = (queryset if queryset is not None else TargetCustomer.objects.all()).annotate(_email_lower=Lower("email"))
     if emails:
         query |= Q(_email_lower__in=emails)
-    return _contact_index(queryset.filter(query).only("id", "phone", "whatsapp_number", "email", "do_not_call"))
+    return _contact_index(
+        queryset.filter(query)
+        .select_related(None)
+        .only("id", "phone", "whatsapp_number", "email", "do_not_call")
+    )
 
 
 def _lead_duplicate_index(

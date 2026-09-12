@@ -27,6 +27,7 @@ from utils.permissions import has_permission, permission_denied, require_permiss
 from .models import (
     Lead,
     LeadActivity,
+    LeadAssignmentHistory,
     LeadCall,
     LeadConversion,
     LeadCostEstimate,
@@ -38,6 +39,9 @@ from .models import (
     ServiceRequirement,
     TargetCustomer,
     TargetCustomerList,
+    IncentiveUserConfig,
+    IncentivePayout,
+    ContactNumber,
 )
 from .choices import ACTIVITY_TYPE_CHOICES, LEAD_STAGE_CHOICES
 from .pagination import LeadPagination
@@ -110,7 +114,11 @@ def _service_error(exc):
 
 
 def _check_view_permission(request):
-    if has_permission(request.user, "lead.view_all") or has_permission(request.user, "lead.view_own"):
+    if (
+        has_permission(request.user, "lead.view_all")
+        or has_permission(request.user, "lead.view_own")
+        or has_permission(request.user, "lead.view_my_profile")
+    ):
         return None
     return require_permission(request, "lead.view_own")
 
@@ -123,7 +131,7 @@ def _target_list_queryset(user):
     queryset = TargetCustomerList.objects.select_related("created_by").prefetch_related("customers")
     if has_permission(user, "lead.view_all"):
         return queryset
-    if has_permission(user, "lead.view_own"):
+    if has_permission(user, "lead.view_own") or has_permission(user, "lead.view_my_profile"):
         return queryset.filter(Q(created_by=user) | Q(customers__assigned_to=user)).distinct()
     return queryset.none()
 
@@ -132,9 +140,53 @@ def _target_customer_queryset(user):
     queryset = TargetCustomer.objects.select_related("customer_list", "assigned_to", "customer_list__created_by")
     if has_permission(user, "lead.view_all"):
         return queryset
-    if has_permission(user, "lead.view_own"):
+    if has_permission(user, "lead.view_own") or has_permission(user, "lead.view_my_profile"):
         return queryset.filter(Q(assigned_to=user) | Q(customer_list__created_by=user)).distinct()
     return queryset.none()
+
+
+def _can_manage_own_profile(user):
+    return has_permission(user, "lead.view_my_profile")
+
+
+def _can_manage_target_list(user, target_list):
+    return _can_manage_own_profile(user) and target_list.created_by_id == user.pk
+
+
+def _can_manage_target_customer(user, target_customer):
+    return _can_manage_own_profile(user) and (
+        target_customer.assigned_to_id == user.pk
+        or target_customer.customer_list.created_by_id == user.pk
+    )
+
+
+def _assign_profile_lead_to_self(lead, user, *, reason="", request=None):
+    locked = Lead.objects.select_for_update().select_related("assigned_to").get(pk=lead.pk)
+    if locked.assigned_to_id == user.pk:
+        return locked
+
+    previous = locked.assigned_to
+    locked.assigned_to = user
+    locked.assigned_by = user
+    update_fields = ["assigned_to", "assigned_by", "updated_at"]
+    locked.save(update_fields=update_fields)
+    LeadAssignmentHistory.objects.create(
+        lead=locked,
+        assigned_from=previous,
+        assigned_to=user,
+        assigned_by=user,
+        reason=reason,
+    )
+    LeadActivity.objects.create(
+        lead=locked,
+        activity_type="ASSIGNED",
+        title=f"Lead assigned to {user.fullname or user.username}",
+        actor=user,
+        description=reason,
+        metadata={"from_user_id": getattr(previous, "id", None), "to_user_id": user.id},
+    )
+    log_action(user, "Lead Assigned", f"{locked.lead_number} -> {user.username}", request)
+    return locked
 
 
 def _paginated_response(request, queryset, serializer_class):
@@ -508,10 +560,68 @@ def lead_meetings(request, pk):
                 LeadWorkflowService.transition(lead, "REQUIREMENT_MEETING_SCHEDULED", request.user, request=request)
         except DjangoValidationError:
             logger.info("Meeting saved without automatic workflow transition for lead %s", lead.pk)
+        conflict_warning = _meeting_time_conflict_warning(meeting)
+    data = LeadMeetingSerializer(meeting).data
+    if conflict_warning:
+        data["booking_warning"] = conflict_warning
     return Response(
-        LeadMeetingSerializer(meeting).data,
+        data,
         status=status.HTTP_200_OK if existing else status.HTTP_201_CREATED,
     )
+
+
+def _meeting_time_conflict_warning(meeting):
+    active_statuses = {"SCHEDULED", "CONFIRMED", "RESCHEDULED"}
+    if meeting.status not in active_statuses:
+        return None
+    conflicts = (
+        LeadMeeting.objects.select_related("lead", "assigned_to")
+        .filter(
+            status__in=active_statuses,
+            scheduled_start__lt=meeting.scheduled_end,
+            scheduled_end__gt=meeting.scheduled_start,
+        )
+        .exclude(pk=meeting.pk)
+        .order_by("scheduled_start", "id")[:3]
+    )
+    rows = []
+    for conflict in conflicts:
+        rows.append({
+            "id": conflict.id,
+            "title": conflict.title,
+            "lead_name": conflict.lead.company_name or conflict.lead.customer_name or conflict.lead.contact_person if conflict.lead else "",
+            "assigned_to_name": conflict.assigned_to.fullname if conflict.assigned_to else "",
+            "scheduled_start": conflict.scheduled_start,
+            "scheduled_end": conflict.scheduled_end,
+        })
+    if not rows:
+        return None
+    first = rows[0]
+    who = first["assigned_to_name"] or "another user"
+    lead_name = first["lead_name"] or first["title"] or "another meeting"
+    return {
+        "message": f"This time is already booked for {who} ({lead_name}). Meeting saved anyway.",
+        "conflicts": rows,
+    }
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def all_lead_meetings(request):
+    role = getattr(request.user, "role", "")
+    allowed = (
+        has_permission(request.user, "lead.view_all")
+        or request.user.is_staff
+        or request.user.is_superuser
+        or role in {"admin", "super_admin", "manager"}
+    )
+    if not allowed:
+        return permission_denied("lead.view_all")
+    queryset = (
+        LeadMeeting.objects.select_related("lead", "assigned_to", "created_by")
+        .order_by("-scheduled_start", "-id")
+    )
+    return _paginated_response(request, queryset, LeadMeetingSerializer)
 
 
 @api_view(["GET", "POST"])
@@ -764,8 +874,8 @@ def target_customer_lists(request):
         if denial:
             return denial
         return _paginated_response(request, _target_list_queryset(request.user), TargetCustomerListSerializer)
-    denial = require_permission(request, "lead.create")
-    if denial:
+    if not (has_permission(request.user, "lead.create") or _can_manage_own_profile(request.user)):
+        denial = require_permission(request, "lead.create")
         return denial
     serializer = TargetCustomerListSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
@@ -780,13 +890,13 @@ def target_customer_list_detail(request, pk):
     if request.method == "GET":
         return Response(TargetCustomerListSerializer(instance).data)
     if request.method == "DELETE":
-        denial = require_permission(request, "lead.delete")
-        if denial:
+        if not (has_permission(request.user, "lead.delete") or _can_manage_target_list(request.user, instance)):
+            denial = require_permission(request, "lead.delete")
             return denial
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    denial = require_permission(request, "lead.edit")
-    if denial:
+    if not (has_permission(request.user, "lead.edit") or _can_manage_target_list(request.user, instance)):
+        denial = require_permission(request, "lead.edit")
         return denial
     serializer = TargetCustomerListSerializer(instance, data=request.data, partial=request.method == "PATCH")
     serializer.is_valid(raise_exception=True)
@@ -797,12 +907,16 @@ def target_customer_list_detail(request, pk):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def target_customer_list_convert_to_leads(request, pk):
-    denial = require_permission(request, "lead.create")
-    if denial:
-        return denial
     target_list = get_object_or_404(_target_list_queryset(request.user), pk=pk)
+    if not (has_permission(request.user, "lead.create") or _can_manage_target_list(request.user, target_list)):
+        denial = require_permission(request, "lead.create")
+        return denial
     assigned_user_id = request.data.get("assigned_to") or request.user.pk
     from apis.user.models import CustomUser
+    if _can_manage_target_list(request.user, target_list) and not (
+        has_permission(request.user, "lead.assign") or has_permission(request.user, "lead.reassign")
+    ):
+        assigned_user_id = request.user.pk
     assigned_user = get_object_or_404(CustomUser, pk=assigned_user_id, is_active=True)
 
     customers = target_list.customers.select_for_update().all()
@@ -830,15 +944,26 @@ def target_customer_list_convert_to_leads(request, pk):
                     lead_type="PRODUCT" if tc.interested_product and not tc.interested_service else "SERVICE",
                     priority=tc.priority or "MEDIUM",
                 )
+                ContactNumber.objects.filter(target_customer=tc, lead__isnull=True).update(lead=lead)
                 created_leads.append(lead)
             was_different = lead.assigned_to_id not in {None, assigned_user.pk}
-            lead = LeadAssignmentService.assign(
-                lead,
-                assigned_user,
-                request.user,
-                reason=f"Converted from target list {target_list.pk}",
-                request=request,
-            )
+            if assigned_user.pk == request.user.pk and _can_manage_target_list(request.user, target_list) and not (
+                has_permission(request.user, "lead.assign") or has_permission(request.user, "lead.reassign")
+            ):
+                lead = _assign_profile_lead_to_self(
+                    lead,
+                    request.user,
+                    reason=f"Converted from target list {target_list.pk}",
+                    request=request,
+                )
+            else:
+                lead = LeadAssignmentService.assign(
+                    lead,
+                    assigned_user,
+                    request.user,
+                    reason=f"Converted from target list {target_list.pk}",
+                    request=request,
+                )
             if was_different:
                 reassigned_count += 1
 
@@ -869,12 +994,17 @@ def target_customers(request):
             if request.query_params.get(key) not in (None, ""):
                 queryset = queryset.filter(**{key: request.query_params[key]})
         return _paginated_response(request, queryset, TargetCustomerSerializer)
-    denial = require_permission(request, "lead.create")
-    if denial:
+    customer_list_id = request.data.get("customer_list")
+    customer_list = None
+    if customer_list_id:
+        customer_list = get_object_or_404(_target_list_queryset(request.user), pk=customer_list_id)
+    if not (has_permission(request.user, "lead.create") or (customer_list and _can_manage_target_list(request.user, customer_list))):
+        denial = require_permission(request, "lead.create")
         return denial
     serializer = TargetCustomerSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
-    instance = serializer.save()
+    save_kwargs = {"assigned_to": request.user} if customer_list and _can_manage_target_list(request.user, customer_list) else {}
+    instance = serializer.save(**save_kwargs)
     return Response(TargetCustomerSerializer(instance).data, status=status.HTTP_201_CREATED)
 
 
@@ -885,13 +1015,13 @@ def target_customer_detail(request, pk):
     if request.method == "GET":
         return Response(TargetCustomerSerializer(instance).data)
     if request.method == "DELETE":
-        denial = require_permission(request, "lead.delete")
-        if denial:
+        if not (has_permission(request.user, "lead.delete") or _can_manage_target_customer(request.user, instance)):
+            denial = require_permission(request, "lead.delete")
             return denial
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    denial = require_permission(request, "lead.edit")
-    if denial:
+    if not (has_permission(request.user, "lead.edit") or _can_manage_target_customer(request.user, instance)):
+        denial = require_permission(request, "lead.edit")
         return denial
     serializer = TargetCustomerSerializer(instance, data=request.data, partial=request.method == "PATCH")
     serializer.is_valid(raise_exception=True)
@@ -903,18 +1033,18 @@ def target_customer_detail(request, pk):
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def lead_import(request):
-    denial = require_permission(request, "lead.import")
-    if denial:
-        return denial
     serializer = LeadImportActionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    mode = serializer.validated_data.get("mode", "targets")
+    if not (has_permission(request.user, "lead.import") or (_can_manage_own_profile(request.user) and mode == "targets")):
+        denial = require_permission(request, "lead.import")
+        return denial
     source = request.FILES.get("file")
     if source is None:
         try:
             source = _rows_as_csv(serializer.validated_data.get("rows", []))
         except CSVImportError as exc:
             return Response({"errors": [str(exc)]}, status=status.HTTP_400_BAD_REQUEST)
-    mode = serializer.validated_data.get("mode", "targets")
     dry_run = serializer.validated_data.get("dry_run", False)
     from apis.user.models import CustomUser
     assignee_queryset = CustomUser.objects.filter(is_active=True)
@@ -939,6 +1069,8 @@ def lead_import(request):
                 _target_list_queryset(request.user),
                 pk=getattr(customer_list_value, "pk", customer_list_value),
             )
+            if not (has_permission(request.user, "lead.import") or _can_manage_target_list(request.user, customer_list)):
+                return permission_denied("lead.import")
             result = import_target_customers(
                 source,
                 actor=request.user,
@@ -1123,9 +1255,7 @@ def lead_my_profile(request):
     own_tasks = LeadTask.objects.filter(lead_id__in=lead_ids).filter(
         Q(assigned_to=user) | Q(created_by=user)
     )
-    own_meetings = LeadMeeting.objects.filter(lead_id__in=lead_ids).filter(
-        Q(assigned_to=user) | Q(created_by=user)
-    )
+    own_meetings = LeadMeeting.objects.filter(lead_id__in=lead_ids, assigned_to=user)
     own_calls = LeadCall.objects.filter(lead_id__in=lead_ids, caller=user)
     own_conversions = LeadConversion.objects.filter(lead_id__in=lead_ids, converted_by=user)
     own_activities = LeadActivity.objects.filter(lead_id__in=lead_ids, actor=user)
@@ -1198,6 +1328,7 @@ def lead_my_profile(request):
 
     follow_up_rows = active_follow_ups.select_related("lead", "assigned_to", "created_by").order_by("scheduled_at", "id")[:50]
     task_rows = open_tasks.select_related("lead", "assigned_to", "created_by").order_by("due_at", "id")[:50]
+    meeting_rows = own_meetings.select_related("lead", "assigned_to", "created_by").order_by("scheduled_start", "id")[:100]
     activity_rows = own_activities.select_related("lead").order_by("-created_at", "-id")[:50]
     telecalling_leads = leads.filter(
         current_stage__in={"NEW", "ASSIGNED", "CONTACT_ATTEMPTED", "FOLLOW_UP_REQUIRED", "CONNECTED"}
@@ -1570,6 +1701,33 @@ def lead_my_profile(request):
             }
             for item in task_rows
         ],
+        "meetings": [
+            {
+                "id": item.pk,
+                "lead_id": item.lead_id,
+                "lead_name": item.lead.company_name or item.lead.customer_name or item.lead.lead_number,
+                "lead_number": item.lead.lead_number,
+                "title": item.title,
+                "meeting_type": item.meeting_type,
+                "meeting_mode": item.meeting_mode,
+                "scheduled_start": item.scheduled_start,
+                "scheduled_end": item.scheduled_end,
+                "location": item.location,
+                "map_link": item.map_link,
+                "meeting_link": item.meeting_link,
+                "agenda": item.agenda,
+                "notes": item.notes,
+                "status": item.status,
+                "outcome": item.outcome,
+                "assigned_to": item.assigned_to_id,
+                "assigned_to_name": item.assigned_to.fullname if item.assigned_to else "",
+                "created_by": item.created_by_id,
+                "created_by_name": item.created_by.fullname if item.created_by else "",
+                "created_at": item.created_at,
+                "is_overdue": item.scheduled_start < now and item.status in {"SCHEDULED", "CONFIRMED", "RESCHEDULED"},
+            }
+            for item in meeting_rows
+        ],
         "recent_activity": [
             {
                 "id": item.pk,
@@ -1612,9 +1770,6 @@ def lead_my_profile_target_contacts(request, pk):
     if request.method == "GET":
         return _paginated_response(request, contacts, TargetCustomerSerializer)
 
-    denial = require_permission(request, "lead.create")
-    if denial:
-        return denial
     serializer = TargetCustomerSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     contact = serializer.save(customer_list=target_list, assigned_to=request.user)
@@ -1633,15 +1788,9 @@ def lead_my_profile_target_contact_detail(request, pk, contact_id):
         pk=contact_id,
     )
     if request.method == "DELETE":
-        denial = require_permission(request, "lead.delete")
-        if denial:
-            return denial
         contact.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    denial = require_permission(request, "lead.edit")
-    if denial:
-        return denial
     serializer = TargetCustomerSerializer(
         contact,
         data=request.data,
@@ -1657,9 +1806,6 @@ def lead_my_profile_target_contact_detail(request, pk, contact_id):
 @permission_classes([IsAuthenticated])
 def lead_my_profile_target_list_convert(request, pk):
     denial = require_permission(request, "lead.view_my_profile")
-    if denial:
-        return denial
-    denial = require_permission(request, "lead.create")
     if denial:
         return denial
     target_list = _my_profile_target_list(request.user, pk)
@@ -1687,11 +1833,11 @@ def lead_my_profile_target_list_convert(request, pk):
                     lead_type="PRODUCT" if contact.interested_product and not contact.interested_service else "SERVICE",
                     priority=contact.priority or "MEDIUM",
                 )
+                ContactNumber.objects.filter(target_customer=contact, lead__isnull=True).update(lead=lead)
                 created_leads.append(lead)
             was_different = lead.assigned_to_id not in {None, request.user.pk}
-            LeadAssignmentService.assign(
+            _assign_profile_lead_to_self(
                 lead,
-                request.user,
                 request.user,
                 reason=f"Converted from own target list {target_list.pk}",
                 request=request,
@@ -2106,3 +2252,388 @@ list_leads = lead_list_create
 create_lead = lead_list_create
 update_lead = lead_detail
 delete_lead = lead_detail
+
+
+# ─── Incentive Config ──────────────────────────────────────────────────────────
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def incentive_config(request):
+    """GET: return all users with their incentive config.
+    POST: bulk-update incentive rates and targets per user.
+    """
+    from apis.user.models import CustomUser
+    denial = require_permission(request, "lead.view_all")
+    if denial:
+        return denial
+
+    if request.method == "GET":
+        users = (
+            CustomUser.objects
+            .filter(is_active=True)
+            .prefetch_related("incentive_config")
+            .order_by("fullname", "username")
+        )
+        result = []
+        for u in users:
+            try:
+                cfg = u.incentive_config
+                rate = float(cfg.incentive_rate)
+                target = float(cfg.monthly_target) if cfg.monthly_target is not None else None
+            except IncentiveUserConfig.DoesNotExist:
+                rate = 10.0
+                target = None
+            result.append({
+                "user_id": u.pk,
+                "fullname": u.fullname or u.username,
+                "username": u.username,
+                "designation": u.designation or "",
+                "department": u.department or "",
+                "incentive_rate": rate,
+                "monthly_target": target,
+            })
+        return Response(result)
+
+    # POST — bulk update list of {user_id, incentive_rate, monthly_target}
+    denial = require_permission(request, "lead.manage_settings")
+    if denial:
+        return denial
+
+    updates = request.data if isinstance(request.data, list) else [request.data]
+    saved = []
+    for item in updates:
+        user_id = item.get("user_id")
+        if not user_id:
+            continue
+        try:
+            rate = max(0, min(100, float(item.get("incentive_rate", 10))))
+        except (TypeError, ValueError):
+            rate = 10.0
+        target_raw = item.get("monthly_target")
+        target = None
+        if target_raw not in (None, ""):
+            try:
+                target = max(0, float(target_raw))
+            except (TypeError, ValueError):
+                target = None
+
+        cfg, _ = IncentiveUserConfig.objects.update_or_create(
+            user_id=user_id,
+            defaults={"incentive_rate": rate, "monthly_target": target},
+        )
+        saved.append({"user_id": user_id, "incentive_rate": float(cfg.incentive_rate), "monthly_target": float(cfg.monthly_target) if cfg.monthly_target is not None else None})
+
+    return Response({"status": "saved", "updated": len(saved), "records": saved})
+
+
+# ─── Incentive Summary ────────────────────────────────────────────────────────
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def incentive_summary(request):
+    """Aggregate LeadConversion data per user per month.
+    Query params:
+      month  (YYYY-MM, default current month)
+      year   (YYYY, for YTD mode — returns all 12 months)
+      mode   (month | ytd)
+    """
+    denial = require_permission(request, "lead.view_all")
+    if denial:
+        return denial
+
+    from apis.user.models import CustomUser
+
+    now = timezone.now()
+    mode = request.query_params.get("mode", "month")
+
+    if mode == "ytd":
+        year_str = request.query_params.get("year", str(now.year))
+        try:
+            year = int(year_str)
+        except (ValueError, TypeError):
+            year = now.year
+
+        current_tz = timezone.get_current_timezone()
+        year_start = timezone.make_aware(datetime(year, 1, 1), current_tz)
+        year_end = timezone.make_aware(datetime(year + 1, 1, 1), current_tz)
+
+        conversions = (
+            LeadConversion.objects
+            .filter(converted_at__gte=year_start, converted_at__lt=year_end)
+            .select_related("converted_by", "lead")
+        )
+
+        # Group by month + user
+        monthly_user_map = {}  # (month_label, user_id) -> aggregates
+        for conv in conversions:
+            converted_at_local = timezone.localtime(conv.converted_at, current_tz)
+            month_label = converted_at_local.strftime("%Y-%m")
+            uid = conv.converted_by_id or 0
+            key = (month_label, uid)
+            if key not in monthly_user_map:
+                monthly_user_map[key] = {"gross": 0, "discount": 0, "count": 0, "user_id": uid}
+            monthly_user_map[key]["gross"] += float(conv.final_value or 0)
+            monthly_user_map[key]["discount"] += float(conv.discount or 0)
+            monthly_user_map[key]["count"] += 1
+
+        # Build per-month summary
+        months_map = {}
+        for (month_label, uid), agg in monthly_user_map.items():
+            if month_label not in months_map:
+                months_map[month_label] = {"month": month_label, "gross": 0, "net": 0, "count": 0, "incentive": 0}
+            net = agg["gross"] - agg["discount"]
+            # Get incentive rate for this user
+            try:
+                rate = float(IncentiveUserConfig.objects.get(user_id=uid).incentive_rate)
+            except IncentiveUserConfig.DoesNotExist:
+                rate = 10.0
+            months_map[month_label]["gross"] += agg["gross"]
+            months_map[month_label]["net"] += net
+            months_map[month_label]["count"] += agg["count"]
+            months_map[month_label]["incentive"] += net * rate / 100
+
+        ytd_months = sorted(months_map.values(), key=lambda x: x["month"])
+        return Response({"mode": "ytd", "year": year, "months": ytd_months})
+
+    # --- Monthly mode ---
+    month_str = request.query_params.get("month", now.strftime("%Y-%m"))
+    try:
+        month_date = datetime.strptime(month_str, "%Y-%m").date()
+    except (ValueError, TypeError):
+        month_date = now.date().replace(day=1)
+
+    current_tz = timezone.get_current_timezone()
+    month_start = timezone.make_aware(datetime.combine(month_date.replace(day=1), datetime.min.time()), current_tz)
+    # Next month start
+    if month_date.month == 12:
+        next_month = month_date.replace(year=month_date.year + 1, month=1, day=1)
+    else:
+        next_month = month_date.replace(month=month_date.month + 1, day=1)
+    month_end = timezone.make_aware(datetime.combine(next_month, datetime.min.time()), current_tz)
+
+    conversions = (
+        LeadConversion.objects
+        .filter(converted_at__gte=month_start, converted_at__lt=month_end)
+        .select_related("converted_by", "lead", "customer")
+    )
+
+    # Build per-user aggregates
+    user_map = {}
+    for conv in conversions:
+        uid = conv.converted_by_id or 0
+        if uid not in user_map:
+            user_map[uid] = {
+                "user_id": uid,
+                "gross": 0.0,
+                "discount": 0.0,
+                "count": 0,
+                "records": [],
+            }
+        gross = float(conv.final_value or 0)
+        discount = float(conv.discount or 0)
+        user_map[uid]["gross"] += gross
+        user_map[uid]["discount"] += discount
+        user_map[uid]["count"] += 1
+        user_map[uid]["records"].append({
+            "id": conv.id,
+            "lead_id": conv.lead_id,
+            "lead_number": conv.lead.lead_number if conv.lead else "",
+            "customer_name": (
+                (conv.customer.company_name or conv.customer.name) if conv.customer
+                else (conv.lead.company_name or conv.lead.customer_name if conv.lead else "")
+            ),
+            "service": conv.service or conv.product or "",
+            "conversion_type": conv.get_conversion_type_display(),
+            "converted_at": timezone.localtime(conv.converted_at, current_tz).isoformat() if conv.converted_at else None,
+            "final_value": gross,
+            "discount": discount,
+            "net_value": gross - discount,
+            "quotation_ref": getattr(conv.quotation, "proposal_no", "") if conv.quotation else "",
+            "invoice_ref": getattr(conv.invoice, "invoice_no", "") if conv.invoice else "",
+            "project": conv.project or "",
+            "notes": conv.notes or "",
+        })
+
+    # Enrich with user info + incentive config + payout status
+    user_ids = [uid for uid in user_map if uid]
+    from apis.user.models import CustomUser
+    users_qs = CustomUser.objects.filter(pk__in=user_ids).values(
+        "id", "fullname", "username", "designation", "department"
+    )
+    user_info = {u["id"]: u for u in users_qs}
+
+    configs = {cfg.user_id: cfg for cfg in IncentiveUserConfig.objects.filter(user_id__in=user_ids)}
+    payouts = {p.user_id: p for p in IncentivePayout.objects.filter(user_id__in=user_ids, month=month_date.replace(day=1))}
+
+    result = []
+    overall_gross = 0.0
+    overall_net = 0.0
+    overall_incentive = 0.0
+    overall_deals = 0
+
+    for uid, agg in user_map.items():
+        if uid == 0:
+            continue
+        info = user_info.get(uid, {})
+        cfg = configs.get(uid)
+        payout = payouts.get(uid)
+        rate = float(cfg.incentive_rate) if cfg else 10.0
+        target = float(cfg.monthly_target) if (cfg and cfg.monthly_target is not None) else None
+        net = agg["gross"] - agg["discount"]
+        incentive = net * rate / 100
+
+        overall_gross += agg["gross"]
+        overall_net += net
+        overall_incentive += incentive
+        overall_deals += agg["count"]
+
+        result.append({
+            "user_id": uid,
+            "fullname": info.get("fullname") or info.get("username", f"User {uid}"),
+            "username": info.get("username", ""),
+            "designation": info.get("designation", ""),
+            "department": info.get("department", ""),
+            "gross_revenue": round(agg["gross"], 2),
+            "discount_total": round(agg["discount"], 2),
+            "net_revenue": round(net, 2),
+            "deal_count": agg["count"],
+            "incentive_rate": rate,
+            "incentive_amount": round(incentive, 2),
+            "target_amount": target,
+            "target_progress": round((net / target * 100), 1) if target else None,
+            "payout_status": payout.payout_status if payout else "PENDING",
+            "payout_id": payout.id if payout else None,
+            "approved_by": payout.approved_by.fullname if (payout and payout.approved_by) else None,
+            "approved_at": payout.approved_at.isoformat() if (payout and payout.approved_at) else None,
+            "records": agg["records"],
+        })
+
+    # Sort by net revenue desc
+    result.sort(key=lambda x: x["net_revenue"], reverse=True)
+
+    return Response({
+        "month": month_str,
+        "month_label": month_date.strftime("%B %Y"),
+        "users": result,
+        "totals": {
+            "gross_revenue": round(overall_gross, 2),
+            "net_revenue": round(overall_net, 2),
+            "incentive_amount": round(overall_incentive, 2),
+            "deal_count": overall_deals,
+            "active_reps": len(result),
+        },
+    })
+
+
+# ─── Incentive Payouts CRUD ───────────────────────────────────────────────────
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def incentive_payouts(request):
+    """List or upsert monthly incentive payout records."""
+    denial = require_permission(request, "lead.view_all")
+    if denial:
+        return denial
+
+    if request.method == "GET":
+        month_str = request.query_params.get("month", "")
+        qs = IncentivePayout.objects.select_related("user", "approved_by").all()
+        if month_str:
+            try:
+                month_date = datetime.strptime(month_str, "%Y-%m").date().replace(day=1)
+                qs = qs.filter(month=month_date)
+            except (ValueError, TypeError):
+                pass
+        data = []
+        for p in qs:
+            data.append({
+                "id": p.id,
+                "user_id": p.user_id,
+                "fullname": p.user.fullname or p.user.username,
+                "month": p.month.strftime("%Y-%m"),
+                "gross_revenue": float(p.gross_revenue),
+                "discount_total": float(p.discount_total),
+                "net_revenue": float(p.net_revenue),
+                "deal_count": p.deal_count,
+                "incentive_rate": float(p.incentive_rate),
+                "incentive_amount": float(p.incentive_amount),
+                "target_amount": float(p.target_amount) if p.target_amount is not None else None,
+                "payout_status": p.payout_status,
+                "approved_by": p.approved_by.fullname if p.approved_by else None,
+                "approved_at": p.approved_at.isoformat() if p.approved_at else None,
+                "notes": p.notes,
+            })
+        return Response(data)
+
+    # POST — create or update a payout record
+    denial = require_permission(request, "lead.manage_settings")
+    if denial:
+        return denial
+
+    user_id = request.data.get("user_id")
+    month_str = request.data.get("month", "")
+    if not user_id or not month_str:
+        return Response({"error": "user_id and month are required."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        month_date = datetime.strptime(month_str, "%Y-%m").date().replace(day=1)
+    except (ValueError, TypeError):
+        return Response({"error": "month must be YYYY-MM format."}, status=status.HTTP_400_BAD_REQUEST)
+
+    fields = {
+        "gross_revenue": float(request.data.get("gross_revenue", 0) or 0),
+        "discount_total": float(request.data.get("discount_total", 0) or 0),
+        "net_revenue": float(request.data.get("net_revenue", 0) or 0),
+        "deal_count": int(request.data.get("deal_count", 0) or 0),
+        "incentive_rate": float(request.data.get("incentive_rate", 10) or 10),
+        "incentive_amount": float(request.data.get("incentive_amount", 0) or 0),
+        "notes": str(request.data.get("notes", "") or ""),
+    }
+    target_raw = request.data.get("target_amount")
+    if target_raw not in (None, ""):
+        try:
+            fields["target_amount"] = max(0, float(target_raw))
+        except (ValueError, TypeError):
+            pass
+
+    payout, _ = IncentivePayout.objects.update_or_create(
+        user_id=user_id,
+        month=month_date,
+        defaults=fields,
+    )
+    return Response({"id": payout.id, "payout_status": payout.payout_status}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def incentive_payout_detail(request, pk):
+    """Update payout status (Pending → Approved → Paid)."""
+    denial = require_permission(request, "lead.manage_settings")
+    if denial:
+        return denial
+
+    try:
+        payout = IncentivePayout.objects.select_related("user", "approved_by").get(pk=pk)
+    except IncentivePayout.DoesNotExist:
+        return Response({"error": "Payout record not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    new_status = request.data.get("payout_status")
+    if new_status and new_status in {"PENDING", "APPROVED", "PAID"}:
+        payout.payout_status = new_status
+        if new_status == "APPROVED" and not payout.approved_at:
+            payout.approved_by = request.user
+            payout.approved_at = timezone.now()
+        elif new_status == "PENDING":
+            payout.approved_by = None
+            payout.approved_at = None
+        payout.save()
+
+    if "notes" in request.data:
+        payout.notes = str(request.data["notes"])[:2000]
+        payout.save(update_fields=["notes"])
+
+    return Response({
+        "id": payout.id,
+        "payout_status": payout.payout_status,
+        "approved_by": payout.approved_by.fullname if payout.approved_by else None,
+        "approved_at": payout.approved_at.isoformat() if payout.approved_at else None,
+    })

@@ -259,9 +259,10 @@ export default function HeaderEditor({ data, onChange }) {
         />
       </div>
 
-      <input
+      <textarea
         className="form-control mb-2"
         placeholder="Bill To Address"
+        rows={3}
         value={data.billTo?.address || ""}
         onChange={(e) =>
           onChange({
@@ -289,6 +290,25 @@ export default function HeaderEditor({ data, onChange }) {
           value={data.billTo?.lut || ""}
           onChange={(e) =>
             onChange({ ...data, billTo: { ...data.billTo, lut: e.target.value } })
+          }
+        />
+      </div>
+
+      <div className="d-flex gap-2 mb-2">
+        <input
+          className="form-control"
+          placeholder="Email Address"
+          value={data.billTo?.email || ""}
+          onChange={(e) =>
+            onChange({ ...data, billTo: { ...data.billTo, email: e.target.value } })
+          }
+        />
+        <input
+          className="form-control"
+          placeholder="Mobile / Contact"
+          value={data.billTo?.contact || ""}
+          onChange={(e) =>
+            onChange({ ...data, billTo: { ...data.billTo, contact: e.target.value } })
           }
         />
       </div>

@@ -60,7 +60,7 @@ function StatusBadge({ status }) {
 }
 
 export default function AttendanceDashboard() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const { showAlert, showConfirm } = useModal();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,12 +75,22 @@ export default function AttendanceDashboard() {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [entryForm, setEntryForm] = useState({ id: null, user: "", date: "", status: "Present", checkin: "", checkout: "", locationMode: "text", locationText: "", locationLat: "", locationLng: "", work_report: [{ category: "", description: "" }] });
 
+  const canViewAllAttendance = hasPermission("attendance.view_all");
+  const canViewSelfAttendance = hasPermission("attendance.self");
+  const canCreateAnyAttendance = hasPermission("attendance.create_any");
+  const canUpdateAnyAttendance = hasPermission("attendance.update_any");
+  const canValidateAttendance = hasPermission("attendance.validate");
+  const canExportAttendance = hasPermission("attendance.export");
+  const canViewUsers = hasPermission("users.view");
+  const canAccessAttendance = canViewAllAttendance || canViewSelfAttendance;
+  const canUseEmployeeList = canViewUsers && (canViewAllAttendance || canCreateAnyAttendance || canUpdateAnyAttendance || canExportAttendance);
+
   const excelLib = useRef(null); // Cache for library
   const saverLib = useRef(null); // Cache for library
 
   // Pre-load libraries when modal is about to open
   useEffect(() => {
-    if (showExportModal && !excelLib.current) {
+    if (showExportModal && canExportAttendance && !excelLib.current) {
       const loadLibs = async () => {
         try {
           const [excel, saver] = await Promise.all([
@@ -97,7 +107,7 @@ export default function AttendanceDashboard() {
       };
       loadLibs();
     }
-  }, [showExportModal]);
+  }, [showExportModal, canExportAttendance]);
 
   // Log Form State - Array for multiple tasks
   const [logEntries, setLogEntries] = useState([{ project: "", description: "" }]);
@@ -118,6 +128,20 @@ export default function AttendanceDashboard() {
 
   const router = useRouter();
 
+  const normalizeCurrentEmployee = useCallback(() => {
+    if (!currentUser) return null;
+
+    return {
+      id: currentUser.id,
+      fullname: currentUser.fullname || currentUser.username || currentUser.email || "My Profile",
+      username: currentUser.username,
+      email: currentUser.email,
+      designation: currentUser.designation,
+      department: currentUser.department,
+      is_active: currentUser.is_active,
+    };
+  }, [currentUser]);
+
   // Helper to get auth header
   const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
@@ -125,6 +149,12 @@ export default function AttendanceDashboard() {
   };
 
   const fetchEmployees = useCallback(async () => {
+    if (!canUseEmployeeList) {
+      const selfEmployee = normalizeCurrentEmployee();
+      setEmployees(selfEmployee ? [selfEmployee] : []);
+      return;
+    }
+
     try {
       const response = await axios.get(`${BASE_URL}/user/user-list/`, {
         headers: getAuthHeaders()
@@ -134,8 +164,10 @@ export default function AttendanceDashboard() {
       if (process.env.NODE_ENV !== "production") {
         console.error("Error fetching employees:", err);
       }
+      const selfEmployee = normalizeCurrentEmployee();
+      setEmployees(selfEmployee ? [selfEmployee] : []);
     }
-  }, []);
+  }, [canUseEmployeeList, normalizeCurrentEmployee]);
 
   const handlePresetRange = (months) => {
     const end = new Date();
@@ -194,6 +226,12 @@ export default function AttendanceDashboard() {
     setLoading(true);
     setError(null);
     try {
+      if (!canAccessAttendance) {
+        setData([]);
+        setError("You do not have permission to view attendance.");
+        return;
+      }
+
       const token = localStorage.getItem("authToken");
       if (!token) {
         throw new Error("No auth token found. Please login.");
@@ -223,7 +261,7 @@ export default function AttendanceDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, router]);
+  }, [canAccessAttendance, selectedDate, router]);
 
   useEffect(() => {
     fetchAttendance();
@@ -252,6 +290,11 @@ export default function AttendanceDashboard() {
   }), [data, search, activeFilter]);
 
   const toggleValidation = async (id) => {
+    if (!canValidateAttendance) {
+      showAlert("Permission Required", "You do not have permission to validate attendance.", "warning");
+      return;
+    }
+
     try {
       const item = data.find(d => d.id === id);
       if (!item) return;
@@ -366,6 +409,12 @@ export default function AttendanceDashboard() {
   };
 
   const handleOpenEntryModal = (record = null) => {
+    const canOpen = record ? canUpdateAnyAttendance : canCreateAnyAttendance;
+    if (!canOpen) {
+      showAlert("Permission Required", "You do not have permission to manage attendance entries.", "warning");
+      return;
+    }
+
     if (record) {
       let r = [];
       try {
@@ -500,6 +549,11 @@ export default function AttendanceDashboard() {
   };
 
   const handleExport = async () => {
+    if (!canExportAttendance) {
+      showAlert("Permission Required", "You do not have permission to export attendance reports.", "warning");
+      return;
+    }
+
     if (!exportDates.start || !exportDates.end) {
       showAlert("Warning", "Please select both start and end dates.", "warning");
       return;
@@ -923,6 +977,8 @@ export default function AttendanceDashboard() {
         }
         .validation-btn.valid { background: #ECFDF5; border-color: #10B981; color: #10B981; }
         .validation-btn:hover { transform: scale(1.1); }
+        .validation-btn:disabled { cursor: default; opacity: 0.65; }
+        .validation-btn:disabled:hover { transform: none; }
 
         /* Modal */
         .modal-overlay {
@@ -1046,14 +1102,18 @@ export default function AttendanceDashboard() {
           </div>
         </div>
         <div className="header-actions">
-          {(currentUser?.username?.toLowerCase() === "wilson" || currentUser?.fullname?.toLowerCase() === "wilson" || currentUser?.is_staff || currentUser?.is_superuser) && (
+          {(canCreateAnyAttendance || canExportAttendance) && (
             <>
-              <button className="btn btn-primary" onClick={() => handleOpenEntryModal()} style={{ background: '#10B981', color: 'white', borderColor: '#10B981' }}>
-                + Manual Entry
-              </button>
-              <button className="btn btn-secondary" onClick={() => setShowExportModal(true)}>
-                Export Report
-              </button>
+              {canCreateAnyAttendance && (
+                <button className="btn btn-primary" onClick={() => handleOpenEntryModal()} style={{ background: '#10B981', color: 'white', borderColor: '#10B981' }}>
+                  + Manual Entry
+                </button>
+              )}
+              {canExportAttendance && (
+                <button className="btn btn-secondary" onClick={() => setShowExportModal(true)}>
+                  Export Report
+                </button>
+              )}
             </>
           )}
           <button className="btn btn-primary" onClick={handleCurrentUserWorkReport}>
@@ -1229,8 +1289,9 @@ export default function AttendanceDashboard() {
                   <td>
                     <button
                       className={`validation-btn ${item.validation ? "valid" : ""}`}
+                      disabled={!canValidateAttendance}
                       onClick={() => toggleValidation(item.id)}
-                      title="Toggle Validation"
+                      title={canValidateAttendance ? "Toggle Validation" : "Validation permission required"}
                     >
                       {item.validation ? "✓" : "○"}
                     </button>
@@ -1240,7 +1301,7 @@ export default function AttendanceDashboard() {
                       <button className="btn-icon" onClick={() => setSelectedAttendance(item)} title="View Details" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
                         <Info size={20} />
                       </button>
-                      {(currentUser?.username?.toLowerCase() === "wilson" || currentUser?.fullname?.toLowerCase() === "wilson" || currentUser?.is_staff || currentUser?.is_superuser) && (
+                      {canUpdateAnyAttendance && (
                         <button className="btn-icon" onClick={() => handleOpenEntryModal(item)} title="Edit Record" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3B82F6', fontSize: '18px' }}>
                           ✎
                         </button>

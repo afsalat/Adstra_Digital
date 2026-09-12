@@ -7,6 +7,7 @@ app_name = "leads"
 
 urlpatterns = [
     path("", views.lead_list_create, name="lead-list-create"),
+    path("meetings/", views.all_lead_meetings, name="all-lead-meetings"),
     path("<int:pk>/", views.lead_detail, name="lead-detail"),
     path("<int:pk>/assign/", views.assign_lead, name="lead-assign"),
     path("<int:pk>/reassign/", views.reassign_lead, name="lead-reassign"),

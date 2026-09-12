@@ -55,6 +55,7 @@ class Priority(models.TextChoices):
     MEDIUM = "MEDIUM", "Medium"
     HIGH = "HIGH", "High"
     URGENT = "URGENT", "Urgent"
+    CRITICAL = "CRITICAL", "Critical"
 
 
 class TargetListStatus(models.TextChoices):
@@ -282,8 +283,21 @@ class ConversionType(models.TextChoices):
     PROJECT = "PROJECT", "Project"
 
 
+class ContactNumberType(models.TextChoices):
+    PHONE = "PHONE", "Phone"
+    WHATSAPP = "WHATSAPP", "WhatsApp"
+
+
+class ContactNumberLabel(models.TextChoices):
+    COMPANY = "COMPANY", "Company No."
+    PERSON = "PERSON", "Person Name No."
+    OTHER = "OTHER", "Other"
+
+
 # Model-field aliases.  Keeping these names independent of the enum classes
 # makes imports concise and preserves a stable contract for migrations.
+CONTACT_NUMBER_TYPE_CHOICES = tuple(ContactNumberType.choices)
+CONTACT_NUMBER_LABEL_CHOICES = tuple(ContactNumberLabel.choices)
 LEAD_TYPE_CHOICES = tuple(LeadType.choices)
 LEAD_TEMPERATURE_CHOICES = tuple(LeadTemperature.choices)
 LEAD_STAGE_CHOICES = tuple(LeadStage.choices)

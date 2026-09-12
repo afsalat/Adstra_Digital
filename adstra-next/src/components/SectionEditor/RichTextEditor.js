@@ -3,7 +3,7 @@ import {
   Bold, Italic, Underline, Strikethrough,
   AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered, Link, Code, Image as ImageIcon,
-  Type, Highlighter
+  Type, Highlighter, ChevronUp, ChevronDown
 } from "lucide-react";
 
 function convertPlaintextToHtml(text) {
@@ -53,6 +53,7 @@ function convertPlaintextToHtml(text) {
 export default function RichTextEditor({ value, onChange, alignment }) {
   const editorRef = useRef(null);
   const [fontSize, setFontSize] = useState("16");
+  const [showToolbar, setShowToolbar] = useState(true);
 
   // Load initial content or handle external value changes
   useEffect(() => {
@@ -147,6 +148,9 @@ export default function RichTextEditor({ value, onChange, alignment }) {
           padding: 6px 12px;
           user-select: none;
         }
+        .rte-toolbar::-webkit-scrollbar {
+          display: none;
+        }
         .rte-divider {
           width: 1px;
           height: 20px;
@@ -198,7 +202,9 @@ export default function RichTextEditor({ value, onChange, alignment }) {
         }
         .rte-editor-area {
           border: 1px solid #cbd5e1;
-          border-top: none;
+          border-top: ${showToolbar ? 'none' : '1px solid #cbd5e1'};
+          border-top-left-radius: ${showToolbar ? '0' : '8px'};
+          border-top-right-radius: ${showToolbar ? '0' : '8px'};
           border-bottom-left-radius: 8px;
           border-bottom-right-radius: 8px;
           padding: 14px;
@@ -233,31 +239,28 @@ export default function RichTextEditor({ value, onChange, alignment }) {
         }
       `}</style>
 
-      {/* Toolbar */}
-      <div className="rte-toolbar">
-        {/* Colors Group */}
-        <div className="rte-color-picker-wrapper" title="Text Color">
-          <button type="button" className="rte-btn">
-            <Type size={16} />
-            <input
-              type="color"
-              className="rte-color-input"
-              onChange={(e) => handleForeColor(e.target.value)}
-            />
-          </button>
-        </div>
-        <div className="rte-color-picker-wrapper" title="Highlight Color">
-          <button type="button" className="rte-btn">
-            <Highlighter size={16} />
-            <input
-              type="color"
-              className="rte-color-input"
-              onChange={(e) => handleBackColor(e.target.value)}
-            />
-          </button>
-        </div>
+      {/* Toggle Button */}
+      <div className="d-flex justify-content-end mb-1">
+        <button
+          type="button"
+          onClick={() => setShowToolbar(!showToolbar)}
+          className="d-flex align-items-center gap-1"
+          style={{
+            background: "transparent",
+            border: "none",
+            fontSize: "12px",
+            color: "#64748b",
+            cursor: "pointer",
+            padding: 0
+          }}
+        >
+          {showToolbar ? <><ChevronUp size={14} /> Hide Formatting</> : <><ChevronDown size={14} /> Show Formatting</>}
+        </button>
+      </div>
 
-        <div className="rte-divider" />
+      {/* Toolbar */}
+      {showToolbar && (
+      <div className="rte-toolbar">
 
         {/* Text style Group */}
         <button type="button" className="rte-btn" onClick={() => executeCommand("bold")} title="Bold">
@@ -335,6 +338,7 @@ export default function RichTextEditor({ value, onChange, alignment }) {
           <ImageIcon size={16} />
         </button>
       </div>
+      )}
 
       {/* Content Area */}
       <div

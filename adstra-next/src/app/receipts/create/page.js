@@ -6,10 +6,12 @@ import API_BASE_URL from "@/utils/apiBase";
 import SearchableClientSelect from "@/components/common/SearchableClientSelect";
 import ReceiptTemplate from "@/components/ReceiptDetail/ReceiptTemplate";
 import { useModal } from "@/Context/ModalContext";
+import { useAuth } from "@/Context/AuthContext";
 import "./create.css";
 
 export default function CreateTransaction() {
   const { showAlert } = useModal();
+  const { loading: authLoading, hasPermission } = useAuth();
   const router = useRouter();
   const [clients, setClients] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -30,9 +32,11 @@ export default function CreateTransaction() {
   });
 
   const API_URL = API_BASE_URL;
+  const canCreate = hasPermission("receipts.create");
 
   /* fetch clients and settings */
   useEffect(() => {
+    if (authLoading || !canCreate) return;
     axios.get(`${API_URL}/proposal/clients/`)
       .then((res) => setClients(res.data))
       .catch((err) => {
@@ -49,10 +53,11 @@ export default function CreateTransaction() {
           console.error("Settings Fetch Error:", err);
         }
       });
-  }, [API_URL]);
+  }, [API_URL, authLoading, canCreate]);
 
   /* fetch invoices when client changes */
   useEffect(() => {
+    if (authLoading || !canCreate) return;
     if (form.client) {
       // Fetch invoices with cache-busting
       axios.get(`${API_URL}/invoice/invoice_list/${form.client}/?_=${Date.now()}`)
@@ -68,7 +73,7 @@ export default function CreateTransaction() {
       setTotalAmount(0);
       setSelectedInvoice(null);
     }
-  }, [form.client, API_URL]);
+  }, [form.client, API_URL, authLoading, canCreate]);
 
   /* update balance when invoice changes */
   useEffect(() => {
@@ -107,6 +112,10 @@ export default function CreateTransaction() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canCreate) {
+      showAlert("Permission Denied", "You do not have permission to create receipts.", "error");
+      return;
+    }
     setSubmitting(true);
     
     // Prepare payload with correct types
@@ -144,6 +153,20 @@ export default function CreateTransaction() {
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   /* ─── render ─── */
+  if (!authLoading && !canCreate) {
+    return (
+      <div className="ct-page">
+        <div className="ct-inner">
+          <button className="ct-back-btn" onClick={() => router.push("/receipts/")}>Back</button>
+          <div className="ct-form" style={{ textAlign: "center" }}>
+            <h2 className="ct-title">Access denied</h2>
+            <p>You do not have permission to create receipts.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ct-page">
       <div className="ct-inner">

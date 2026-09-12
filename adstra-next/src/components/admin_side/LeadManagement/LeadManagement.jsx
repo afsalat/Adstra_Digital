@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, Legend, AreaChart, Area } from "recharts";
 import {
   AlertCircle,
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   BadgePercent,
   BarChart2,
   Building2,
+  CalendarDays,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -40,6 +41,7 @@ import {
   PhoneMissed,
   Plus,
   Printer,
+  QrCode,
   RefreshCw,
   RotateCcw,
   Save,
@@ -65,6 +67,7 @@ import { useAuth } from "@/Context/AuthContext";
 import API_BASE_URL from "@/utils/apiBase";
 import "./LeadManagement.css";
 import LiveChatWorkspace from "./ChatWorkspace";
+import LeadSelector from "@/components/ProposalBuilder/LeadSelector";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -109,8 +112,9 @@ const SOURCE_LABELS = {
 const LEAD_TYPES = { SERVICE: "Service", PRODUCT: "Product", BOTH: "Both" };
 
 const CALL_OUTCOMES = [
-  "CONNECTED","NOT_ANSWERED","BUSY","WRONG_NUMBER","CALL_BACK_REQUESTED",
-  "INTERESTED","NOT_INTERESTED","DEMO_REQUESTED","MEETING_REQUESTED","VOICEMAIL",
+  "CONNECTED", "NO_ANSWER", "BUSY", "SWITCHED_OFF", "INVALID_NUMBER",
+  "CALLBACK_REQUESTED", "INTERESTED", "NOT_INTERESTED", "DEMO_REQUESTED",
+  "MEETING_REQUESTED", "FOLLOW_UP_REQUIRED",
 ];
 
 const FOLLOW_UP_TYPES = [
@@ -118,10 +122,61 @@ const FOLLOW_UP_TYPES = [
   "REQUIREMENT_DISCUSSION", "SITE_VISIT", "PROPOSAL", "QUOTATION", "PAYMENT",
 ];
 
+const FOLLOW_UP_TYPES_ROUTED_TO_MEETINGS = new Set([
+  "MEETING",
+  "DEMO",
+  "REQUIREMENT_DISCUSSION",
+  "SITE_VISIT",
+]);
+
+const FOLLOW_UP_TO_MEETING_TYPE = {
+  MEETING: "FOLLOW_UP",
+  DEMO: "PRODUCT_DEMO",
+  REQUIREMENT_DISCUSSION: "TECHNICAL_DISCUSSION",
+  SITE_VISIT: "SITE_VISIT",
+};
+
+const FOLLOW_UP_TO_MEETING_MODE = {
+  MEETING: "ONLINE",
+  DEMO: "ONLINE",
+  REQUIREMENT_DISCUSSION: "ONLINE",
+  SITE_VISIT: "CUSTOMER_LOCATION",
+};
+
+const MEETING_TYPES = {
+  PRODUCT_DEMO: "Product Demo",
+  PRODUCT_DISCUSSION: "Product Discussion",
+  CUSTOMIZATION_REQUIREMENT: "Customization Requirement",
+  SERVICE_REQUIREMENT: "Service Requirement",
+  TECHNICAL_DISCUSSION: "Technical Discussion",
+  SITE_VISIT: "Site Visit",
+  PROPOSAL_DISCUSSION: "Proposal Discussion",
+  NEGOTIATION: "Negotiation",
+  FOLLOW_UP: "Follow-up",
+};
+
+const MEETING_MODES = {
+  ONLINE: "Online",
+  OFFICE: "Office",
+  CUSTOMER_LOCATION: "Customer Location",
+  PHONE: "Phone",
+};
+
+const MEETING_STATUSES = {
+  SCHEDULED: "Scheduled",
+  CONFIRMED: "Confirmed",
+  RESCHEDULED: "Rescheduled",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+  CUSTOMER_NO_SHOW: "Customer No-show",
+  TEAM_NO_SHOW: "Team No-show",
+};
+
 const EMPTY_FORM = {
   customer_name: "", contact_person: "", company_name: "", email: "",
   phone: "", source: "WEBSITE", lead_type: "SERVICE", service: "",
   product: "", priority: "MEDIUM", estimated_value: "", requirement_summary: "",
+  contact_numbers: [],
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -147,6 +202,18 @@ const isOverdue = (d) => d && new Date(d) < new Date();
 
 const compactLabel = (value) =>
   value ? String(value).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase()) : "";
+
+const getWhatsAppNumber = (phone = "") => {
+  const digits = String(phone).replace(/\D/g, "");
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.startsWith("0") && digits.length === 11) return `91${digits.slice(1)}`;
+  return digits;
+};
+
+const getWhatsAppUrl = (phone) => {
+  const number = getWhatsAppNumber(phone);
+  return number ? `https://wa.me/${number}` : "";
+};
 
 const getLastFollowUpDetails = (lead = {}) => {
   const candidates = [
@@ -203,6 +270,99 @@ export const PriorityDot = ({ priority }) => {
   );
 };
 
+export function PrioritySelector({ priority, onChange, disabled, small }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const containerRef = useRef(null);
+  const m = PRIORITY_META[priority] || { label: priority || "Medium", color: "#94a3b8" };
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const priorities = [
+    { key: "CRITICAL", label: "Critical", color: "#dc2626" },
+    { key: "HIGH",     label: "High",     color: "#f97316" },
+    { key: "MEDIUM",   label: "Medium",   color: "#eab308" },
+    { key: "LOW",      label: "Low",      color: "#22c55e" },
+  ];
+
+  const handleSelect = async (key) => {
+    if (key === priority || disabled || loading) {
+      setOpen(false);
+      return;
+    }
+    setOpen(false);
+    if (onChange) {
+      try {
+        setLoading(true);
+        await onChange(key);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="lm-priority-selector-wrapper">
+      <button
+        type="button"
+        className={`lm-priority-badge-btn ${small ? "lm-priority-badge-btn--sm" : ""}`}
+        style={{ "--dot-color": m.color }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!disabled && !loading) setOpen(prev => !prev);
+        }}
+        disabled={disabled || loading}
+        title="Click to change priority"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        {loading ? (
+          <Loader2 size={11} className="spin" />
+        ) : (
+          <span className="lm-priority-dot-indicator" style={{ background: m.color }} />
+        )}
+        <span className="lm-priority-label">{m.label}</span>
+        <ChevronDown size={12} className={`lm-priority-chevron ${open ? "open" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="lm-priority-dropdown-menu" role="listbox">
+          <div className="lm-priority-dropdown-header">Change Priority</div>
+          {priorities.map((item) => {
+            const isSelected = (priority || "MEDIUM").toUpperCase() === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                className={`lm-priority-dropdown-item ${isSelected ? "selected" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelect(item.key);
+                }}
+              >
+                <span className="lm-priority-dropdown-dot" style={{ background: item.color }} />
+                <span className="lm-priority-dropdown-text">{item.label}</span>
+                {isSelected && <Check size={14} className="lm-priority-dropdown-check" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatCard({ label, value, icon: Icon, color, sub }) {
   return (
     <div className="lm-stat" style={{ "--stat-color": color }}>
@@ -227,12 +387,16 @@ const api = {
   dashboard:  (p={}) => ax("get",  "/lead-dashboard/",    null, { params: p }),
   reports:    (p={}) => ax("get",  "/lead-reports/",      null, { params: p }),
   myProfile:  (p={}) => ax("get",  "/lead-my-profile/",   null, { params: p }),
+  myProposals:(p={}) => ax("get",  "/proposal/mine/",    null, { params: p }),
+  proposalRequests:() => ax("get", "/proposal/requests/"),
   timeline:   (id)   => ax("get",  `/leads/${id}/timeline/`),
   calls:      (id)   => ax("get",  `/leads/${id}/calls/`),
   addCall:    (id,d) => ax("post", `/leads/${id}/calls/`, d),
   followUps:  (id)   => ax("get",  `/leads/${id}/follow-ups/`),
   addFollowUp:(id,d) => ax("post", `/leads/${id}/follow-ups/`, d),
   meetings:   (id)   => ax("get",  `/leads/${id}/meetings/`),
+  addMeeting: (id,d) => ax("post", `/leads/${id}/meetings/`, d),
+  allMeetings:(p={}) => ax("get",  "/leads/meetings/", null, { params: p }),
   transition: (id,stage,reason="") => ax("post",`/leads/${id}/transition/`, { target_stage: stage, reason }),
   qualify:    (id,reason="") => ax("post",`/leads/${id}/qualify/`, { reason }),
   reject:     (id,d) => ax("post", `/leads/${id}/reject/`, d),
@@ -255,6 +419,65 @@ const api = {
 };
 
 // ─── Lead Form ────────────────────────────────────────────────────────────────
+
+function ContactNumbersInput({ value = [], onChange, label = "Contact Numbers" }) {
+  const addNumber = () => onChange([...value, { number: "", contact_name: "", number_type: "PHONE", label: "COMPANY", is_primary: value.length === 0 }]);
+  const removeNumber = (i) => onChange(value.filter((_, idx) => idx !== i));
+  const updateNumber = (i, field, val) => {
+    const updated = [...value];
+    updated[i][field] = val;
+    if (field === "is_primary" && val) {
+      updated.forEach((n, idx) => { if (idx !== i) n.is_primary = false; });
+    }
+    onChange(updated);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, gridColumn: "1 / -1", border: "1px solid #e2e8f0", padding: 12, borderRadius: 8, background: "#f8fafc" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>{label}</span>
+        <button type="button" onClick={addNumber} className="lm-btn lm-btn--ghost lm-btn--sm" style={{ padding: "4px 8px" }}>
+          <Plus size={14} /> Add Number
+        </button>
+      </div>
+      {value.map((num, i) => (
+        <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <select value={num.number_type} onChange={e => updateNumber(i, "number_type", e.target.value)} style={{ padding: "6px", border: "1px solid #cbd5e1", borderRadius: 4, width: 100, fontSize: 12 }}>
+            <option value="PHONE">Phone</option>
+            <option value="WHATSAPP">WhatsApp</option>
+          </select>
+          <select value={num.label} onChange={e => updateNumber(i, "label", e.target.value)} style={{ padding: "6px", border: "1px solid #cbd5e1", borderRadius: 4, width: 110, fontSize: 12 }}>
+            <option value="COMPANY">Company No.</option>
+            <option value="PERSON">Person Name No.</option>
+            <option value="OTHER">Other</option>
+          </select>
+          <input 
+            type="text" 
+            value={num.number} 
+            onChange={e => updateNumber(i, "number", e.target.value)} 
+            placeholder="+91 98765 43210" 
+            style={{ flex: 1, minWidth: 140, padding: "6px", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 12 }} 
+          />
+          <input 
+            type="text" 
+            value={num.contact_name || ""} 
+            onChange={e => updateNumber(i, "contact_name", e.target.value)} 
+            placeholder="Contact Name (optional)" 
+            style={{ flex: 1, minWidth: 140, padding: "6px", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 12 }} 
+          />
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, cursor: "pointer", color: "#64748b" }}>
+            <input type="radio" checked={num.is_primary} onChange={e => updateNumber(i, "is_primary", e.target.checked)} />
+            Primary
+          </label>
+          <button type="button" onClick={() => removeNumber(i)} className="lm-icon-btn" style={{ color: "#ef4444" }} title="Remove number">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ))}
+      {value.length === 0 && <p style={{ fontSize: 12, color: "#94a3b8", margin: 0, fontStyle: "italic" }}>No numbers added.</p>}
+    </div>
+  );
+}
 
 function LeadForm({ initial, onClose, onSaved }) {
   const [form, setForm] = useState(() => Object.fromEntries(
@@ -293,8 +516,7 @@ function LeadForm({ initial, onClose, onSaved }) {
               <input value={form.company_name} onChange={e => set("company_name", e.target.value)} /></label>
             <label><span>Email</span>
               <input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></label>
-            <label><span>Phone</span>
-              <input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+91 98765 43210" /></label>
+            <ContactNumbersInput value={form.contact_numbers || []} onChange={val => set("contact_numbers", val)} />
             <label><span>Source</span>
               <select value={form.source} onChange={e => set("source", e.target.value)}>
                 {Object.entries(SOURCE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -350,11 +572,12 @@ function LogCallModal({ lead, onClose, onLogged }) {
     setSaving(true);
     try {
       const startedAt = new Date();
-      const durationSeconds = Math.max(0, Number(form.duration_seconds) || 0);
+      const hasDuration = form.duration_seconds !== "";
+      const durationSeconds = hasDuration ? Math.max(0, Number(form.duration_seconds)) * 60 : null;
       const payload = {
         outcome: form.outcome,
         started_at: startedAt.toISOString(),
-        ended_at: durationSeconds ? new Date(startedAt.getTime() + durationSeconds * 1000).toISOString() : null,
+        ended_at: durationSeconds !== null ? new Date(startedAt.getTime() + durationSeconds * 1000).toISOString() : null,
         discussion_summary: form.discussion_summary || "",
         follow_up_required: form.follow_up_required,
         follow_up_at: form.follow_up_required && form.next_follow_up_at ? new Date(form.next_follow_up_at).toISOString() : null,
@@ -388,8 +611,21 @@ function LogCallModal({ lead, onClose, onLogged }) {
                 {CALL_OUTCOMES.map(o => <option key={o} value={o}>{o.replace(/_/g," ")}</option>)}
               </select>
             </label>
-            <label><span>Duration (seconds)</span>
-              <input type="number" min="0" value={form.duration_seconds} onChange={e => setForm(f => ({ ...f, duration_seconds: e.target.value }))} />
+            <label><span>Duration (minutes)</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.duration_seconds}
+                onChange={e => {
+                  const [first, ...rest] = e.target.value.replace(/[^\d.]/g, "").split(".");
+                  const value = rest.length ? `${first}.${rest.join("")}` : first;
+                  setForm(f => ({ ...f, duration_seconds: value }));
+                }}
+                onBlur={() => setForm(f => ({
+                  ...f,
+                  duration_seconds: f.duration_seconds === "" ? "" : String(Math.max(0, Number(f.duration_seconds) || 0)),
+                }))}
+              />
             </label>
             <label className="lm-form__span"><span>Discussion Notes</span>
               <textarea rows={3} value={form.discussion_summary} onChange={e => setForm(f => ({ ...f, discussion_summary: e.target.value }))} />
@@ -443,19 +679,51 @@ function ScheduleFollowUpModal({ lead, onClose, onScheduled, initialDateTime, ca
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await api.addFollowUp(lead.id, {
-        ...form,
-        ...(existingFollowUp?.id ? { id: existingFollowUp.id, status: "SCHEDULED" } : {}),
-        scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : new Date().toISOString()
-      });
-      onScheduled(res.data);
-      showAlert("Follow-Up Scheduled", "Follow-up reminder set successfully!", "success");
+      const scheduledAt = form.scheduled_at ? new Date(form.scheduled_at) : new Date();
+      const scheduledAtIso = scheduledAt.toISOString();
+      if (FOLLOW_UP_TYPES_ROUTED_TO_MEETINGS.has(form.follow_up_type)) {
+        const scheduledEnd = new Date(scheduledAt.getTime() + 60 * 60 * 1000);
+        const meetingType = form.follow_up_type === "DEMO" && lead.lead_type !== "PRODUCT"
+          ? "PRODUCT_DISCUSSION"
+          : FOLLOW_UP_TO_MEETING_TYPE[form.follow_up_type];
+        const res = await api.addMeeting(lead.id, {
+          title: form.purpose || `${compactLabel(form.follow_up_type)} meeting`,
+          meeting_type: meetingType,
+          meeting_mode: FOLLOW_UP_TO_MEETING_MODE[form.follow_up_type] || "ONLINE",
+          scheduled_start: scheduledAtIso,
+          scheduled_end: scheduledEnd.toISOString(),
+          agenda: form.purpose || "",
+          notes: form.notes || "",
+          status: "SCHEDULED",
+        });
+        if (existingFollowUp?.id) {
+          await api.addFollowUp(lead.id, {
+            id: existingFollowUp.id,
+            status: "CANCELLED",
+            result: "Moved to meetings",
+          });
+        }
+        onScheduled(res.data);
+        if (res.data?.booking_warning?.message) {
+          showAlert("Time Already Booked", res.data.booking_warning.message, "warning");
+        } else {
+          showAlert("Meeting Scheduled", "This item was moved to the Meetings section.", "success");
+        }
+      } else {
+        const res = await api.addFollowUp(lead.id, {
+          ...form,
+          ...(existingFollowUp?.id ? { id: existingFollowUp.id, status: "SCHEDULED" } : {}),
+          scheduled_at: scheduledAtIso
+        });
+        onScheduled(res.data);
+        showAlert("Follow-Up Scheduled", "Follow-up reminder set successfully!", "success");
+      }
       onClose();
     } catch (err) {
       const data = err.response?.data;
       const message = data?.detail || data?.non_field_errors?.[0]
-        || Object.values(data || {}).flat()?.[0] || "Failed to save the follow-up. Nothing was scheduled.";
-      showAlert("Follow-Up Not Saved", String(message), "error");
+        || Object.values(data || {}).flat()?.[0] || "Failed to save the schedule. Nothing was scheduled.";
+      showAlert("Schedule Not Saved", String(message), "error");
     } finally {
       setSaving(false);
     }
@@ -471,7 +739,7 @@ function ScheduleFollowUpModal({ lead, onClose, onScheduled, initialDateTime, ca
         <form className="lm-form" onSubmit={handleSubmit}>
           <div className="lm-form__grid">
             <label><span>Type</span>
-              <select disabled={callMode} value={form.follow_up_type} onChange={e => setForm(f => ({ ...f, follow_up_type: e.target.value }))}>
+              <select value={form.follow_up_type} onChange={e => setForm(f => ({ ...f, follow_up_type: e.target.value }))}>
                 {FOLLOW_UP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select></label>
             <label><span>Scheduled At *</span>
@@ -495,18 +763,176 @@ function ScheduleFollowUpModal({ lead, onClose, onScheduled, initialDateTime, ca
 
 // ─── Lead Detail Panel ────────────────────────────────────────────────────────
 
+function MeetingFormModal({ leadOptions = [], initialMeeting = null, initialLeadId = "", onClose, onSaved }) {
+  const defaultStart = new Date();
+  defaultStart.setDate(defaultStart.getDate() + 1);
+  defaultStart.setHours(10, 0, 0, 0);
+  const defaultEnd = new Date(defaultStart.getTime() + 30 * 60 * 1000);
+  const [form, setForm] = useState(() => ({
+    lead_id: initialMeeting?.lead_id || initialLeadId || leadOptions[0]?.id || "",
+    title: initialMeeting?.title || "",
+    meeting_type: initialMeeting?.meeting_type || "FOLLOW_UP",
+    meeting_mode: initialMeeting?.meeting_mode || "ONLINE",
+    scheduled_start: initialMeeting?.scheduled_start ? localDateTimeInputValue(new Date(initialMeeting.scheduled_start)) : localDateTimeInputValue(defaultStart),
+    scheduled_end: initialMeeting?.scheduled_end ? localDateTimeInputValue(new Date(initialMeeting.scheduled_end)) : localDateTimeInputValue(defaultEnd),
+    location: initialMeeting?.location || "",
+    map_link: initialMeeting?.map_link || "",
+    meeting_link: initialMeeting?.meeting_link || "",
+    attendees: Array.isArray(initialMeeting?.attendees) ? initialMeeting.attendees.join(", ") : "",
+    agenda: initialMeeting?.agenda || "",
+    notes: initialMeeting?.notes || "",
+    status: initialMeeting?.status || "SCHEDULED",
+    outcome: initialMeeting?.outcome || "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const { showAlert } = useModal();
+  const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const selectedLead = useMemo(
+    () => leadOptions.find(lead => String(lead.id) === String(form.lead_id)) || null,
+    [leadOptions, form.lead_id]
+  );
+  const mapQuery = [
+    form.location,
+    selectedLead?.address,
+    selectedLead?.company_name || selectedLead?.customer_name || selectedLead?.contact_person,
+  ].filter(Boolean).join(", ");
+  const mapPreviewTarget = form.map_link.trim() || mapQuery || "Kerala";
+  const mapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapPreviewTarget)}&output=embed`;
+  const mapOpenUrl = form.map_link.trim() || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery || "Kerala")}`;
+  const openDirectionsFromCurrentLocation = () => {
+    if (!navigator?.geolocation) {
+      showAlert("Location Not Available", "Your browser does not support current location.", "warning");
+      return;
+    }
+    if (!mapQuery && !form.map_link.trim()) {
+      showAlert("Location Required", "Enter a location or paste a map link first.", "warning");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const destination = form.map_link.trim() || mapQuery;
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${coords.latitude},${coords.longitude}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+        window.open(url, "_blank", "noopener,noreferrer");
+      },
+      () => showAlert("Location Blocked", "Allow location access to get directions from your current place.", "warning"),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!form.lead_id) {
+      showAlert("Required", "Choose a lead for this meeting.", "warning");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        ...(initialMeeting?.id ? { id: initialMeeting.id } : {}),
+        title: form.title.trim(),
+        meeting_type: form.meeting_type,
+        meeting_mode: form.meeting_mode,
+        scheduled_start: new Date(form.scheduled_start).toISOString(),
+        scheduled_end: new Date(form.scheduled_end).toISOString(),
+        location: form.location.trim(),
+        map_link: form.map_link.trim(),
+        meeting_link: form.meeting_link.trim(),
+        attendees: form.attendees.split(",").map(item => item.trim()).filter(Boolean),
+        agenda: form.agenda.trim(),
+        notes: form.notes.trim(),
+        status: form.status,
+        outcome: form.outcome.trim(),
+      };
+      const res = await api.addMeeting(form.lead_id, payload);
+      onSaved?.(res.data);
+    } catch (err) {
+      const data = err.response?.data;
+      const message = data?.detail || data?.non_field_errors?.[0] || Object.values(data || {}).flat()?.[0] || "Failed to save meeting.";
+      showAlert("Meeting Not Saved", String(message), "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="lm-overlay" onClick={onClose}>
+      <div className="lm-dialog lm-dialog--meeting" onClick={event => event.stopPropagation()}>
+        <div className="lm-dialog__head">
+          <h3>{initialMeeting?.id ? "Edit Meeting" : "Schedule Meeting"}</h3>
+          <button type="button" className="lm-icon-btn" onClick={onClose}><X size={18} /></button>
+        </div>
+        <form className="lm-form lm-meeting-form" onSubmit={handleSubmit}>
+          <div className="lm-meeting-form__body">
+            <div className="lm-form__grid lm-meeting-form__fields">
+              <label className="lm-form__span"><span>Lead *</span>
+                <select required value={form.lead_id} onChange={event => set("lead_id", event.target.value)} disabled={Boolean(initialMeeting?.id)}>
+                  <option value="">Choose lead</option>
+                  {leadOptions.map(lead => <option key={lead.id} value={lead.id}>{lead.company_name || lead.customer_name || lead.contact_person || lead.lead_number}</option>)}
+                </select>
+              </label>
+              <label className="lm-form__span"><span>Meeting Title *</span>
+                <input required value={form.title} onChange={event => set("title", event.target.value)} placeholder="e.g. Requirement discussion" />
+              </label>
+              <label><span>Type</span><select value={form.meeting_type} onChange={event => set("meeting_type", event.target.value)}>{Object.entries(MEETING_TYPES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <label><span>Mode</span><select value={form.meeting_mode} onChange={event => set("meeting_mode", event.target.value)}>{Object.entries(MEETING_MODES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <label><span>Start *</span><input type="datetime-local" required value={form.scheduled_start} onChange={event => set("scheduled_start", event.target.value)} /></label>
+              <label><span>End *</span><input type="datetime-local" required value={form.scheduled_end} onChange={event => set("scheduled_end", event.target.value)} /></label>
+              <label><span>Status</span><select value={form.status} onChange={event => set("status", event.target.value)}>{Object.entries(MEETING_STATUSES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <label><span>Location</span><input value={form.location} onChange={event => set("location", event.target.value)} placeholder="Office, customer site, etc." /></label>
+              <label className="lm-form__span"><span>Meeting Link</span><input type="url" value={form.meeting_link} onChange={event => set("meeting_link", event.target.value)} placeholder="https://meet.google.com/..." /></label>
+              <label className="lm-form__span"><span>Attendees</span><input value={form.attendees} onChange={event => set("attendees", event.target.value)} placeholder="Comma separated names or emails" /></label>
+              <label className="lm-form__span"><span>Agenda</span><textarea rows={3} value={form.agenda} onChange={event => set("agenda", event.target.value)} /></label>
+              <label className="lm-form__span"><span>Notes</span><textarea rows={3} value={form.notes} onChange={event => set("notes", event.target.value)} /></label>
+              <label className="lm-form__span"><span>Outcome</span><textarea rows={2} value={form.outcome} onChange={event => set("outcome", event.target.value)} /></label>
+            </div>
+            <aside className="lm-meeting-form__map">
+              <div className="lm-meeting-form__map-head">
+                <span>Location Map</span>
+                <a href={mapOpenUrl} target="_blank" rel="noreferrer">Open map</a>
+              </div>
+              <label className="lm-meeting-form__map-link">
+                <span>Map Link</span>
+                <input type="url" value={form.map_link} onChange={event => set("map_link", event.target.value)} placeholder="Paste Google Maps link" />
+              </label>
+              <button type="button" className="lm-meeting-form__directions" onClick={openDirectionsFromCurrentLocation}>
+                <Maximize2 size={14} /> From current location
+              </button>
+              <iframe
+                title="Meeting location map"
+                src={mapSrc}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <p>{form.map_link.trim() || mapQuery || "Enter a location or paste a map link to preview the meeting place."}</p>
+            </aside>
+          </div>
+          <div className="lm-form__actions">
+            <button type="button" className="lm-btn lm-btn--ghost" onClick={onClose} disabled={saving}>Cancel</button>
+            <button type="submit" className="lm-btn lm-btn--primary" disabled={saving}>{saving && <Loader2 size={15} className="spin" />} Save Meeting</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function LeadDetailPanel({ lead: initialLead, onClose, onEdit, onRefresh }) {
   const [lead, setLead] = useState(initialLead);
   const [activeTab, setActiveTab] = useState("overview");
   const [timeline, setTimeline] = useState([]);
   const [calls, setCalls] = useState([]);
   const [followUps, setFollowUps] = useState([]);
+  const [meetings, setMeetings] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
-  const { showAlert, showConfirm } = useModal();
+  const { showAlert } = useModal();
   const { hasPermission } = useAuth();
+  const leadMapQuery = [
+    lead.address,
+    lead.company_name || lead.customer_name || lead.contact_person,
+  ].filter(Boolean).join(", ");
 
   const loadTabData = useCallback(async (tab) => {
     setLoadingData(true);
@@ -520,6 +946,9 @@ function LeadDetailPanel({ lead: initialLead, onClose, onEdit, onRefresh }) {
       } else if (tab === "followups") {
         const r = await api.followUps(lead.id);
         setFollowUps(r.data.results || r.data);
+      } else if (tab === "meetings") {
+        const r = await api.meetings(lead.id);
+        setMeetings(r.data.results || r.data);
       }
     } catch { /* silent */ }
     finally { setLoadingData(false); }
@@ -539,27 +968,17 @@ function LeadDetailPanel({ lead: initialLead, onClose, onEdit, onRefresh }) {
     } finally { setTransitioning(false); }
   };
 
-  const handleReject = () => {
-    const detailedNotes = window.prompt("Enter the detailed reason for rejecting this lead:");
-    if (!detailedNotes?.trim()) return;
-    showConfirm("Reject Lead", "Confirm rejection with the provided notes.", async () => {
-      try {
-        await api.reject(lead.id, { reason: "OTHER", detailed_notes: detailedNotes.trim() });
-        onClose(); onRefresh?.();
-      } catch (err) {
-        showAlert("Error", err.response?.data?.error || "Rejection failed.", "error");
-      }
-    }, "danger");
-  };
-
   const nextStages = (lead.allowed_transitions || []).filter(
     stage => !["REJECTED", "CONVERTED"].includes(stage)
   );
-  const canReject = hasPermission("lead.reject")
-    && !["REJECTED", "LOST", "CONVERTED", "ON_HOLD"].includes(lead.current_stage);
+  const holdActionStage = lead.current_stage === "ON_HOLD"
+    ? nextStages[0]
+    : (nextStages.includes("ON_HOLD") ? "ON_HOLD" : "");
+  const holdActionLabel = lead.current_stage === "ON_HOLD" ? "Unhold" : "Hold";
 
   const TABS = [
     { id: "overview", label: "Overview", icon: Eye },
+    { id: "meetings", label: "Meetings", icon: Users },
     { id: "calls", label: "Calls", icon: PhoneCall },
     { id: "followups", label: "Follow-ups", icon: Clock },
     { id: "timeline", label: "Timeline", icon: BarChart2 },
@@ -575,7 +994,19 @@ function LeadDetailPanel({ lead: initialLead, onClose, onEdit, onRefresh }) {
             <div className="lm-detail__meta">
               <code className="lm-lead-no">{lead.lead_number}</code>
               <StagePill stage={lead.current_stage} />
-              <PriorityDot priority={lead.priority} />
+              <PrioritySelector
+                priority={lead.priority}
+                onChange={async (newPriority) => {
+                  try {
+                    await api.update(lead.id, { priority: newPriority });
+                    setLead(prev => ({ ...prev, priority: newPriority }));
+                    onRefresh?.();
+                  } catch (err) {
+                    const d = err.response?.data;
+                    showAlert("Error", typeof d === "string" ? d : d?.detail || "Failed to update priority.", "error");
+                  }
+                }}
+              />
             </div>
           </div>
           <div className="lm-detail__headbtn">
@@ -593,26 +1024,18 @@ function LeadDetailPanel({ lead: initialLead, onClose, onEdit, onRefresh }) {
         </div>
 
         {/* Workflow Actions */}
-        {(nextStages.length > 0 || canReject) && (
+        {holdActionStage && (
           <div className="lm-workflow-bar">
-            <span>Move to:</span>
-            {nextStages.map(s => (
-              <button
-                key={s}
-                className="lm-btn lm-btn--stage"
-                style={{ "--stage-c": STAGE_META[s]?.color || "#6366f1" }}
-                disabled={transitioning}
-                onClick={() => handleTransition(s)}
-              >
-                {transitioning ? <Loader2 size={13} className="spin" /> : null}
-                {STAGE_META[s]?.label || s}
-              </button>
-            ))}
-            {canReject && (
-              <button className="lm-btn lm-btn--danger-ghost lm-btn--sm" onClick={handleReject}>
-                Reject
-              </button>
-            )}
+            <span>Status action:</span>
+            <button
+              className="lm-btn lm-btn--stage"
+              style={{ "--stage-c": STAGE_META.ON_HOLD.color }}
+              disabled={transitioning}
+              onClick={() => handleTransition(holdActionStage)}
+            >
+              {transitioning ? <Loader2 size={13} className="spin" /> : null}
+              {holdActionLabel}
+            </button>
           </div>
         )}
 
@@ -669,18 +1092,65 @@ function LeadDetailPanel({ lead: initialLead, onClose, onEdit, onRefresh }) {
             </div>
           )}
 
+          {activeTab === "meetings" && !loadingData && (
+            <div className="lm-activity-list">
+              {meetings.length === 0 ? <p className="lm-muted">No meetings scheduled yet.</p> : meetings.map(meeting => {
+                const meetingMapUrl = meeting.map_link || (meeting.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meeting.location)}` : "");
+                const meetingMapTarget = meeting.map_link || meeting.location || leadMapQuery || "Kerala";
+                const meetingMapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(meetingMapTarget)}&output=embed`;
+                return (
+                  <div key={meeting.id} className={`lm-activity-item ${meeting.is_overdue ? "lm-activity-item--overdue" : ""}`}>
+                    <div className={`lm-activity-icon ${meeting.status === "COMPLETED" ? "lm-activity-icon--green" : "lm-activity-icon--blue"}`}>
+                      {meeting.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Users size={15} />}
+                    </div>
+                    <div className="lm-activity-item__content">
+                      <div className="lm-activity-item__head">
+                        <strong>{meeting.title || compactLabel(meeting.meeting_type) || "Meeting"}</strong>
+                        <span className="lm-pill lm-pill--sm" style={{ "--pill-color": meeting.status === "COMPLETED" ? "#16a34a" : "#6366f1" }}>
+                          {MEETING_STATUSES[meeting.status] || compactLabel(meeting.status)}
+                        </span>
+                      </div>
+                      <p className="lm-activity-item__note">
+                        {[MEETING_TYPES[meeting.meeting_type] || compactLabel(meeting.meeting_type), MEETING_MODES[meeting.meeting_mode] || compactLabel(meeting.meeting_mode), meeting.location].filter(Boolean).join(" · ")}
+                      </p>
+                      {(meeting.agenda || meeting.notes || meeting.outcome) && <p className="lm-activity-item__note">{meeting.agenda || meeting.notes || meeting.outcome}</p>}
+                      <time className="lm-activity-item__time">Scheduled: {fmtDateTime(meeting.scheduled_start)} - {fmtDateTime(meeting.scheduled_end)}</time>
+                      {(meeting.meeting_link || meetingMapUrl) && (
+                        <div className="lm-activity-item__actions">
+                          {meeting.meeting_link && <a className="lm-btn lm-btn--primary lm-btn--sm" href={meeting.meeting_link} target="_blank" rel="noreferrer"><Maximize2 size={14} /> Join</a>}
+                          {meetingMapUrl && <a className="lm-btn lm-btn--ghost lm-btn--sm" href={meetingMapUrl} target="_blank" rel="noreferrer"><Maximize2 size={14} /> Map</a>}
+                        </div>
+                      )}
+                      <div className="lm-meeting-inline-map">
+                        <iframe
+                          title={`Meeting map for ${meeting.title || "lead meeting"}`}
+                          src={meetingMapSrc}
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
+                        <p>{meeting.location || leadMapQuery || "No meeting location available."}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {activeTab === "calls" && !loadingData && (
             <div className="lm-activity-list">
               {calls.length === 0 ? <p className="lm-muted">No calls recorded yet.</p> : calls.map(c => (
                 <div key={c.id} className="lm-activity-item">
                   <div className={`lm-activity-icon ${c.outcome === "CONNECTED" || c.outcome === "INTERESTED" ? "lm-activity-icon--green" : "lm-activity-icon--red"}`}>
-                    {c.outcome === "NOT_ANSWERED" ? <PhoneMissed size={15} /> : <Phone size={15} />}
+                    {c.outcome === "NO_ANSWER" ? <PhoneMissed size={15} /> : <Phone size={15} />}
                   </div>
-                  <div>
-                    <strong>{c.outcome?.replace(/_/g, " ")}</strong>
-                    {c.duration_seconds ? <span className="lm-muted"> · {Math.round(c.duration_seconds / 60)}m</span> : null}
-                    {c.discussion_summary && <p className="lm-muted">{c.discussion_summary}</p>}
-                    <time className="lm-muted">{fmtDateTime(c.created_at)}</time>
+                  <div className="lm-activity-item__content">
+                    <div className="lm-activity-item__head">
+                      <strong>{compactLabel(c.outcome) || c.outcome?.replace(/_/g, " ")}</strong>
+                      {c.duration_seconds ? <span className="lm-muted"> · {Math.round(c.duration_seconds / 60)}m</span> : null}
+                    </div>
+                    {c.discussion_summary && <p className="lm-activity-item__note">{c.discussion_summary}</p>}
+                    <time className="lm-activity-item__time">{fmtDateTime(c.created_at)}</time>
                   </div>
                 </div>
               ))}
@@ -694,11 +1164,15 @@ function LeadDetailPanel({ lead: initialLead, onClose, onEdit, onRefresh }) {
                   <div className={`lm-activity-icon ${f.status === "COMPLETED" ? "lm-activity-icon--green" : "lm-activity-icon--blue"}`}>
                     {f.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock size={15} />}
                   </div>
-                  <div>
-                    <strong>{f.follow_up_type} Follow-Up</strong>
-                    <span className={`lm-pill lm-pill--sm`} style={{ "--pill-color": f.status === "COMPLETED" ? "#16a34a" : "#f59e0b" }}>{f.status}</span>
-                    {f.notes && <p className="lm-muted">{f.notes}</p>}
-                    <time className="lm-muted">Scheduled: {fmtDateTime(f.scheduled_at)}</time>
+                  <div className="lm-activity-item__content">
+                    <div className="lm-activity-item__head">
+                      <strong>{compactLabel(f.follow_up_type) || f.follow_up_type} Follow-Up</strong>
+                      <span className="lm-pill lm-pill--sm" style={{ "--pill-color": f.status === "COMPLETED" ? "#16a34a" : "#f59e0b" }}>
+                        {compactLabel(f.status) || f.status}
+                      </span>
+                    </div>
+                    {f.notes && <p className="lm-activity-item__note">{f.notes}</p>}
+                    <time className="lm-activity-item__time">Scheduled: {fmtDateTime(f.scheduled_at)}</time>
                   </div>
                 </div>
               ))}
@@ -857,7 +1331,19 @@ function EmployeePerformanceReport({ report: initialReport, person, recentActivi
         ["Activity type", appliedFilters.activityType ? reportLabel(appliedFilters.activityType) : "All"], ["Total leads", summary.total_leads || 0],
         ["Converted leads", summary.converted_leads || 0], ["Conversion rate", `${summary.conversion_rate || 0}%`], ["Calls", engagement.calls || 0],
         ["Emails", engagement.emails || 0], ["Meetings", engagement.meetings || 0], ["Pending workload", pendingTotal],
-      ].forEach(([metric, value]) => summarySheet.addRow({ metric, value })); styleSheet(summarySheet);
+      ].forEach(([metric, value]) => summarySheet.addRow({ metric, value })); 
+      
+      const addSection = (title, items) => {
+        if (!items || !items.length) return;
+        summarySheet.addRow({ metric: "", value: "" });
+        const header = summarySheet.addRow({ metric: `--- ${title} ---`, value: "" });
+        header.font = { bold: true, color: { argb: "FF4F46E5" } };
+        items.forEach(item => summarySheet.addRow({ metric: item.label || item.name, value: item.count !== undefined ? item.count : item.value }));
+      };
+      addSection("Pipeline Stages", stageData);
+      breakdowns.forEach(b => addSection(b.title, b.rows));
+      styleSheet(summarySheet);
+
       const leadsSheet = workbook.addWorksheet("Leads");
       leadsSheet.columns = [
         { header: "Lead #", key: "lead_number", width: 20 }, { header: "Company", key: "company_name", width: 28 }, { header: "Customer", key: "customer_name", width: 28 },
@@ -1212,17 +1698,465 @@ function SearchableBatchSelect({ options, value, onChange, totalCount }) {
   );
 }
 
+function MyProfileMeetingsView({ meetings = [], leads = [], onViewLead, onChanged }) {
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [modeFilter, setModeFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [editingMeeting, setEditingMeeting] = useState(null);
+  const [showMeetingForm, setShowMeetingForm] = useState(false);
+  const [savingStatusId, setSavingStatusId] = useState(null);
+  const { showAlert } = useModal();
+  const now = new Date();
+  const activeStatuses = new Set(["SCHEDULED", "CONFIRMED", "RESCHEDULED"]);
+
+  const filteredMeetings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (meetings || []).filter(meeting => {
+      if (statusFilter === "ACTIVE" && !activeStatuses.has(meeting.status)) return false;
+      if (statusFilter === "OVERDUE" && !meeting.is_overdue) return false;
+      if (statusFilter !== "ALL" && statusFilter !== "ACTIVE" && statusFilter !== "OVERDUE" && meeting.status !== statusFilter) return false;
+      if (modeFilter !== "ALL" && meeting.meeting_mode !== modeFilter) return false;
+      if (!q) return true;
+      return [meeting.title, meeting.lead_name, meeting.lead_number, meeting.location, meeting.agenda, meeting.notes]
+        .some(value => String(value || "").toLowerCase().includes(q));
+    });
+  }, [meetings, statusFilter, modeFilter, search]);
+
+  const summary = useMemo(() => ({
+    active: meetings.filter(item => activeStatuses.has(item.status)).length,
+    overdue: meetings.filter(item => item.is_overdue).length,
+    completed: meetings.filter(item => item.status === "COMPLETED").length,
+    online: meetings.filter(item => item.meeting_mode === "ONLINE").length,
+  }), [meetings]);
+
+  const updateMeetingStatus = async (meeting, status) => {
+    setSavingStatusId(meeting.id);
+    try {
+      await api.addMeeting(meeting.lead_id, { id: meeting.id, status, outcome: meeting.outcome || "", title: meeting.title });
+      showAlert("Saved", `Meeting marked ${MEETING_STATUSES[status] || status}.`, "success");
+      onChanged?.();
+    } catch (err) {
+      const data = err.response?.data;
+      showAlert("Error", String(data?.detail || data?.non_field_errors?.[0] || Object.values(data || {}).flat()?.[0] || "Failed to update meeting."), "error");
+    } finally {
+      setSavingStatusId(null);
+    }
+  };
+
+  const closeForm = () => {
+    setShowMeetingForm(false);
+    setEditingMeeting(null);
+  };
+
+  const handleSaved = (savedMeeting) => {
+    closeForm();
+    if (savedMeeting?.booking_warning?.message) {
+      showAlert("Time Already Booked", savedMeeting.booking_warning.message, "warning");
+    } else {
+      showAlert("Saved", "Meeting saved successfully.", "success");
+    }
+    onChanged?.();
+  };
+
+  return (
+    <div className="lm-profile-panel lm-meetings">
+      <div className="lm-meetings__head">
+        <div>
+          <h3>Meetings</h3>
+          <p className="lm-muted">Plan, track, and close lead meetings from your profile.</p>
+        </div>
+        <button type="button" className="lm-btn lm-btn--primary lm-btn--sm" onClick={() => setShowMeetingForm(true)}>
+          <Plus size={14} /> Schedule Meeting
+        </button>
+      </div>
+
+      <div className="lm-profile-stat-grid">
+        <StatCard label="Active Meetings" value={summary.active} icon={Users} color="#6366f1" />
+        <StatCard label="Overdue Meetings" value={summary.overdue} icon={AlertCircle} color="#ef4444" />
+        <StatCard label="Completed" value={summary.completed} icon={CheckCircle2} color="#16a34a" />
+        <StatCard label="Online Meetings" value={summary.online} icon={MessageSquare} color="#0891b2" />
+      </div>
+
+      <div className="lm-meetings__filters">
+        <div className="lm-search lm-meetings__search"><Search size={15} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search meetings, leads, agenda..." /></div>
+        <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+          <option value="ALL">All Statuses</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="ACTIVE">Active</option>
+          <option value="OVERDUE">Overdue</option>
+          {Object.entries(MEETING_STATUSES)
+            .filter(([value]) => value !== "COMPLETED")
+            .map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        <select value={modeFilter} onChange={event => setModeFilter(event.target.value)}>
+          <option value="ALL">All Modes</option>
+          {Object.entries(MEETING_MODES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </div>
+
+      <div className="lm-meetings__list">
+        {filteredMeetings.length === 0 ? (
+          <div className="lm-center-state"><Users size={34} /><p>No meetings match this view.</p></div>
+        ) : filteredMeetings.map(meeting => (
+          <article key={meeting.id} className={`lm-meeting-card ${meeting.is_overdue ? "is-overdue" : ""}`}>
+            <div className="lm-meeting-card__main">
+              <div className="lm-meeting-card__top">
+                <span>{MEETING_TYPES[meeting.meeting_type] || compactLabel(meeting.meeting_type)}</span>
+                <b className={`lm-meeting-status lm-meeting-status--${String(meeting.status).toLowerCase()}`}>{MEETING_STATUSES[meeting.status] || compactLabel(meeting.status)}</b>
+              </div>
+              <h4>{meeting.title}</h4>
+              <p><strong>{meeting.lead_name}</strong>{meeting.lead_number ? ` · ${meeting.lead_number}` : ""}</p>
+              <dl>
+                <div><dt>Start</dt><dd className={meeting.is_overdue ? "lm-overdue" : ""}>{fmtDateTime(meeting.scheduled_start)}</dd></div>
+                <div><dt>End</dt><dd>{fmtDateTime(meeting.scheduled_end)}</dd></div>
+                <div><dt>Mode</dt><dd>{MEETING_MODES[meeting.meeting_mode] || compactLabel(meeting.meeting_mode)}</dd></div>
+                <div><dt>Assigned</dt><dd>{meeting.assigned_to_name || "Unassigned"}</dd></div>
+              </dl>
+              {(meeting.agenda || meeting.notes || meeting.outcome) && <div className="lm-meeting-card__notes">{meeting.agenda || meeting.notes || meeting.outcome}</div>}
+            </div>
+            <div className="lm-meeting-card__actions">
+              {meeting.meeting_link && <a className="lm-btn lm-btn--primary lm-btn--sm" href={meeting.meeting_link} target="_blank" rel="noreferrer"><Maximize2 size={14} /> Join</a>}
+              {(meeting.map_link || meeting.location) && <a className="lm-btn lm-btn--ghost lm-btn--sm" href={meeting.map_link || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meeting.location)}`} target="_blank" rel="noreferrer"><Maximize2 size={14} /> Map</a>}
+              <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => onViewLead?.({ id: meeting.lead_id })}><Eye size={14} /> Lead</button>
+              <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => { setEditingMeeting(meeting); setShowMeetingForm(true); }}><Edit2 size={14} /> Edit</button>
+              {activeStatuses.has(meeting.status) && <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" disabled={savingStatusId === meeting.id} onClick={() => updateMeetingStatus(meeting, "COMPLETED")}><Check size={14} /> Complete</button>}
+              {activeStatuses.has(meeting.status) && <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" disabled={savingStatusId === meeting.id} onClick={() => updateMeetingStatus(meeting, "CANCELLED")}><X size={14} /> Cancel</button>}
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {showMeetingForm && (
+        <MeetingFormModal
+          leadOptions={leads}
+          initialMeeting={editingMeeting}
+          onClose={closeForm}
+          onSaved={handleSaved}
+        />
+      )}
+    </div>
+  );
+}
+
+function AllMeetingsView({ onViewLead }) {
+  const [meetings, setMeetings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [modeFilter, setModeFilter] = useState("ALL");
+  const { showAlert } = useModal();
+  const activeStatuses = new Set(["SCHEDULED", "CONFIRMED", "RESCHEDULED"]);
+
+  const loadMeetings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.allMeetings({ page_size: 100 });
+      setMeetings(res.data.results || res.data || []);
+    } catch (err) {
+      const data = err.response?.data;
+      showAlert("Meetings Not Loaded", String(data?.detail || data?.error || "Could not load all meetings."), "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [showAlert]);
+
+  useEffect(() => { loadMeetings(); }, [loadMeetings]);
+
+  const filteredMeetings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return meetings.filter(meeting => {
+      if (statusFilter === "ACTIVE" && !activeStatuses.has(meeting.status)) return false;
+      if (statusFilter !== "ALL" && statusFilter !== "ACTIVE" && meeting.status !== statusFilter) return false;
+      if (modeFilter !== "ALL" && meeting.meeting_mode !== modeFilter) return false;
+      if (!q) return true;
+      return [
+        meeting.title,
+        meeting.lead_name,
+        meeting.lead_number,
+        meeting.location,
+        meeting.created_by_name,
+        meeting.assigned_to_name,
+        meeting.agenda,
+        meeting.notes,
+      ].some(value => String(value || "").toLowerCase().includes(q));
+    });
+  }, [meetings, search, statusFilter, modeFilter]);
+
+  const summary = useMemo(() => ({
+    total: meetings.length,
+    active: meetings.filter(item => activeStatuses.has(item.status)).length,
+    completed: meetings.filter(item => item.status === "COMPLETED").length,
+    today: meetings.filter(item => item.scheduled_start && new Date(item.scheduled_start).toDateString() === new Date().toDateString()).length,
+  }), [meetings]);
+
+  return (
+    <section className="lm-profile-panel lm-meetings lm-all-meetings">
+      <div className="lm-meetings__head">
+        <div>
+          <h3>All Meetings</h3>
+          <p className="lm-muted">All users' created and assigned lead meetings.</p>
+        </div>
+        <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={loadMeetings} disabled={loading}>
+          <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh
+        </button>
+      </div>
+
+      <div className="lm-profile-stat-grid">
+        <StatCard label="Total Meetings" value={summary.total} icon={Users} color="#6366f1" />
+        <StatCard label="Active" value={summary.active} icon={Clock} color="#2563eb" />
+        <StatCard label="Completed" value={summary.completed} icon={CheckCircle2} color="#16a34a" />
+        <StatCard label="Today" value={summary.today} icon={AlertCircle} color="#f59e0b" />
+      </div>
+
+      <div className="lm-meetings__filters">
+        <div className="lm-search lm-meetings__search"><Search size={15} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search meetings, users, leads, location..." /></div>
+        <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+          <option value="ALL">All Statuses</option>
+          <option value="ACTIVE">Active</option>
+          {Object.entries(MEETING_STATUSES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        <select value={modeFilter} onChange={event => setModeFilter(event.target.value)}>
+          <option value="ALL">All Modes</option>
+          {Object.entries(MEETING_MODES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="lm-center-state"><Loader2 size={28} className="spin" /><p>Loading meetings...</p></div>
+      ) : (
+        <div className="lm-meetings__list">
+          {filteredMeetings.length === 0 ? (
+            <div className="lm-center-state"><Users size={34} /><p>No meetings match this view.</p></div>
+          ) : filteredMeetings.map(meeting => {
+            const meetingMapUrl = meeting.map_link || (meeting.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meeting.location)}` : "");
+            return (
+              <article key={meeting.id} className={`lm-meeting-card ${meeting.is_overdue ? "is-overdue" : ""}`}>
+                <div className="lm-meeting-card__main">
+                  <div className="lm-meeting-card__top">
+                    <span>{MEETING_TYPES[meeting.meeting_type] || compactLabel(meeting.meeting_type)}</span>
+                    <b className={`lm-meeting-status lm-meeting-status--${String(meeting.status).toLowerCase()}`}>{MEETING_STATUSES[meeting.status] || compactLabel(meeting.status)}</b>
+                  </div>
+                  <h4>{meeting.title || "Untitled meeting"}</h4>
+                  <p><strong>{meeting.lead_name || "Unnamed lead"}</strong>{meeting.lead_number ? ` · ${meeting.lead_number}` : ""}</p>
+                  <dl>
+                    <div><dt>Start</dt><dd>{fmtDateTime(meeting.scheduled_start)}</dd></div>
+                    <div><dt>End</dt><dd>{fmtDateTime(meeting.scheduled_end)}</dd></div>
+                    <div><dt>Created by</dt><dd>{meeting.created_by_name || "Unknown"}</dd></div>
+                    <div><dt>Assigned</dt><dd>{meeting.assigned_to_name || "Unassigned"}</dd></div>
+                  </dl>
+                  {(meeting.location || meeting.agenda || meeting.notes || meeting.outcome) && <div className="lm-meeting-card__notes">{meeting.location || meeting.agenda || meeting.notes || meeting.outcome}</div>}
+                </div>
+                <div className="lm-meeting-card__actions">
+                  {meeting.meeting_link && <a className="lm-btn lm-btn--primary lm-btn--sm" href={meeting.meeting_link} target="_blank" rel="noreferrer"><Maximize2 size={14} /> Join</a>}
+                  {meetingMapUrl && <a className="lm-btn lm-btn--ghost lm-btn--sm" href={meetingMapUrl} target="_blank" rel="noreferrer"><Maximize2 size={14} /> Map</a>}
+                  {meeting.lead && <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => onViewLead?.({ id: meeting.lead })}><Eye size={14} /> Lead</button>}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MyProposalsPanel({ onViewLead }) {
+  const router = useRouter();
+  const { showAlert } = useModal();
+  const [showRequestSelector, setShowRequestSelector] = useState(false);
+  const [data, setData] = useState({ results: [], counts: {}, count: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError("");
+      api.myProposals({ page, page_size: 20, search: search.trim(), status: statusFilter })
+        .then((response) => { if (!cancelled) setData(response.data); })
+        .catch((err) => { if (!cancelled) setError(err.response?.data?.error || "Could not load your proposals."); })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    }, search ? 250 : 0);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [page, search, statusFilter, refreshKey]);
+
+  const totalPages = Math.max(1, Math.ceil((data.count || 0) / 20));
+  const counts = data.counts || {};
+  const openProposal = (proposal) => router.push(`/proposal?proposal=${proposal.id}`);
+  const requestProposal = async (lead) => {
+    try {
+      const response = await ax("post", "/proposal/requests/", { lead_id: lead.id });
+      setShowRequestSelector(false);
+      setRefreshKey(value => value + 1);
+      showAlert("Proposal Requested", `Your request for ${lead.lead_number} was sent successfully.`, "success");
+      return response;
+    } catch (err) {
+      showAlert("Request Failed", err.response?.data?.error || "Could not submit the proposal request.", "error");
+    }
+  };
+
+  return (
+    <div className="lm-profile-panel lm-my-proposals">
+      <div className="lm-my-proposals__head">
+        <div><h3>My Proposals</h3><p>Request proposals for your leads and track their progress.</p></div>
+        <div className="lm-my-proposals__actions">
+          <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => setRefreshKey(value => value + 1)}><RefreshCw size={14} /> Refresh</button>
+          <button type="button" className="lm-btn lm-btn--primary lm-btn--sm" onClick={() => setShowRequestSelector(true)}><Send size={14} /> Request Proposal</button>
+        </div>
+      </div>
+
+      <LeadSelector show={showRequestSelector} onClose={() => setShowRequestSelector(false)} onSelect={requestProposal} mode="request" />
+
+      {(data.requests || []).length > 0 && <section className="lm-proposal-requests">
+        <div className="lm-proposal-requests__head"><h4>Proposal Requests</h4><span>{data.request_counts?.all || 0}</span></div>
+        <div className="lm-table-wrap"><table className="lm-table"><thead><tr><th>Lead</th><th>Customer</th><th>Requested</th><th>Status</th><th>Proposal</th></tr></thead><tbody>
+          {data.requests.map((request) => <tr key={request.id}>
+            <td><button type="button" className="lm-link" onClick={() => onViewLead?.({ id: request.lead })}>{request.lead_number}</button></td>
+            <td>{request.lead_name}</td><td>{fmtDate(request.created_at)}</td>
+            <td><span className={`lm-proposal-status lm-proposal-status--${request.status}`}>{compactLabel(request.status)}</span></td>
+            <td>{request.proposal ? <button type="button" className="lm-link" onClick={() => router.push(`/proposal?proposal=${request.proposal.id}`)}>{request.proposal.proposal_no}</button> : <span className="lm-muted">Waiting</span>}</td>
+          </tr>)}
+        </tbody></table></div>
+      </section>}
+
+      <div className="lm-my-proposals__stats">
+        <StatCard label="All Proposals" value={counts.all || 0} icon={FileText} color="#4f46e5" />
+        <StatCard label="Draft" value={counts.draft || 0} icon={Edit2} color="#f59e0b" />
+        <StatCard label="Sent" value={counts.sent || 0} icon={Send} color="#0284c7" />
+        <StatCard label="Approved" value={counts.approved || 0} icon={CheckCircle2} color="#16a34a" />
+      </div>
+
+      <div className="lm-my-proposals__toolbar">
+        <div className="lm-search"><Search size={16} /><input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search proposal, lead or client..." /></div>
+        <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
+          <option value="">All statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="approved">Approved</option>
+        </select>
+      </div>
+
+      {loading ? <div className="lm-center-state"><Loader2 size={28} className="spin" /><p>Loading proposals...</p></div>
+        : error ? <div className="lm-center-state"><AlertCircle size={30} /><p>{error}</p><button className="lm-btn lm-btn--primary lm-btn--sm" onClick={() => setRefreshKey(value => value + 1)}>Try again</button></div>
+        : data.results?.length === 0 ? <div className="lm-center-state"><Inbox size={32} /><p>No completed proposals yet.</p><button className="lm-btn lm-btn--primary lm-btn--sm" onClick={() => setShowRequestSelector(true)}>Request a proposal</button></div>
+        : <div className="lm-table-wrap"><table className="lm-table"><thead><tr><th>Proposal</th><th>Lead</th><th>Client</th><th>Purpose</th><th>Amount</th><th>Status</th><th>Date</th><th /></tr></thead><tbody>
+          {data.results.map((proposal) => <tr key={proposal.id}>
+            <td><button type="button" className="lm-link" onClick={() => openProposal(proposal)}>{proposal.proposal_no}</button></td>
+            <td>{proposal.source_lead ? <button type="button" className="lm-link" onClick={() => onViewLead?.({ id: proposal.source_lead.id })}>{proposal.source_lead.lead_number}</button> : <span className="lm-muted">Manual</span>}</td>
+            <td>{proposal.client?.company_name || proposal.client?.name || proposal.company_name || "—"}</td>
+            <td>{proposal.purpose || "—"}</td><td>{fmt(proposal.total_amount)}</td>
+            <td><span className={`lm-proposal-status lm-proposal-status--${proposal.status || "draft"}`}>{compactLabel(proposal.status || "draft")}</span></td>
+            <td>{fmtDate(proposal.date)}</td>
+            <td><button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => openProposal(proposal)}><Eye size={14} /> Open</button></td>
+          </tr>)}
+        </tbody></table></div>}
+
+      {totalPages > 1 && <div className="lm-pagination"><button className="lm-btn lm-btn--ghost lm-btn--sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}><ChevronLeft size={14} /></button><span>Page {page} of {totalPages}</span><button className="lm-btn lm-btn--ghost lm-btn--sm" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}><ChevronRight size={14} /></button></div>}
+    </div>
+  );
+}
+
+function AllProposalRequestsView({ onViewLead }) {
+  const router = useRouter();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    api.proposalRequests()
+      .then((response) => { if (!cancelled) setRequests(response.data || []); })
+      .catch((err) => { if (!cancelled) setError(err.response?.data?.error || "Could not load proposal requests."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+
+  const filteredRequests = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return requests.filter((request) => {
+      if (statusFilter && request.status !== statusFilter) return false;
+      if (!query) return true;
+      return [request.lead_number, request.lead_name, request.requested_by_name, request.notes]
+        .some((value) => String(value || "").toLowerCase().includes(query));
+    });
+  }, [requests, search, statusFilter]);
+
+  const counts = useMemo(() => requests.reduce((summary, request) => {
+    summary.all += 1;
+    summary[request.status] = (summary[request.status] || 0) + 1;
+    return summary;
+  }, { all: 0, pending: 0, in_progress: 0, completed: 0, rejected: 0 }), [requests]);
+  const openLead = (leadId) => {
+    api.get(leadId)
+      .then((response) => onViewLead?.(response.data))
+      .catch(() => setError("This lead could not be opened."));
+  };
+
+  return (
+    <section className="lm-profile-panel lm-my-proposals lm-all-proposal-requests">
+      <div className="lm-my-proposals__head">
+        <div><h3>All Proposal Requests</h3><p>Review requests submitted from sales users and create proposals for their leads.</p></div>
+        <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => setRefreshKey(value => value + 1)}><RefreshCw size={14} /> Refresh</button>
+      </div>
+      <div className="lm-my-proposals__stats">
+        <StatCard label="All Requests" value={counts.all} icon={FileText} color="#4f46e5" />
+        <StatCard label="Pending" value={counts.pending} icon={Clock} color="#f59e0b" />
+        <StatCard label="In Progress" value={counts.in_progress} icon={Loader2} color="#0284c7" />
+        <StatCard label="Completed" value={counts.completed} icon={CheckCircle2} color="#16a34a" />
+      </div>
+      <div className="lm-my-proposals__toolbar">
+        <div className="lm-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search lead, customer or requester..." /></div>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <option value="">All statuses</option><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="completed">Completed</option><option value="rejected">Rejected</option>
+        </select>
+      </div>
+      {loading ? <div className="lm-center-state"><Loader2 size={30} className="spin" /><p>Loading proposal requests...</p></div>
+        : error ? <div className="lm-center-state"><AlertCircle size={30} /><p>{error}</p><button className="lm-btn lm-btn--primary lm-btn--sm" onClick={() => setRefreshKey(value => value + 1)}>Try again</button></div>
+        : filteredRequests.length === 0 ? <div className="lm-center-state"><Inbox size={32} /><p>No proposal requests found.</p></div>
+        : <div className="lm-table-wrap"><table className="lm-table"><thead><tr><th>Lead</th><th>Customer</th><th>Requested By</th><th>Requested</th><th>Notes</th><th>Status</th><th>Proposal</th><th /></tr></thead><tbody>
+          {filteredRequests.map((request) => <tr key={request.id}>
+            <td><button type="button" className="lm-link" onClick={() => openLead(request.lead)}>{request.lead_number}</button></td>
+            <td>{request.lead_name}</td><td>{request.requested_by_name || "—"}</td><td>{fmtDate(request.created_at)}</td><td>{request.notes || "—"}</td>
+            <td><span className={`lm-proposal-status lm-proposal-status--${request.status}`}>{compactLabel(request.status)}</span></td>
+            <td>{request.proposal ? <button type="button" className="lm-link" onClick={() => router.push(`/proposal?proposal=${request.proposal.id}`)}>{request.proposal.proposal_no}</button> : <span className="lm-muted">Not created</span>}</td>
+            <td>{request.proposal
+              ? <button type="button" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => router.push(`/proposal?proposal=${request.proposal.id}`)}><Eye size={14} /> Open</button>
+              : <button type="button" className="lm-btn lm-btn--primary lm-btn--sm" onClick={() => router.push(`/proposal?lead=${request.lead}`)}><Plus size={14} /> Create Proposal</button>}
+            </td>
+          </tr>)}
+        </tbody></table></div>}
+    </section>
+  );
+}
+
 function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editingLead, setEditingLead] = useState(null);
   const [page, setPage] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedTargetList, setSelectedTargetList] = useState(null);
+  const [editingTargetList, setEditingTargetList] = useState(null);
+  const [targetListForm, setTargetListForm] = useState({ name: "", scope_date: "", campaign: "", source: "", description: "", status: "ACTIVE" });
+  const [savingTargetList, setSavingTargetList] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showScopeUploadModal, setShowScopeUploadModal] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [pendingFile, setPendingFile] = useState(null);
+  const [pendingCustomerListId, setPendingCustomerListId] = useState(null);
+  const [pendingListName, setPendingListName] = useState("");
+  const [isSavingImport, setIsSavingImport] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(() => localDateInputValue());
+  const [leadOwnershipFilter, setLeadOwnershipFilter] = useState("ASSIGNED");
   const [batchFilter, setBatchFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [targetSearchQuery, setTargetSearchQuery] = useState("");
@@ -1230,6 +2164,22 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
   const pageSize = 25;
 
   const ownLeads = useMemo(() => profile?.leads?.results || [], [profile]);
+  const person = profile?.user || {};
+  const personId = person?.id != null ? String(person.id) : "";
+
+  const getLeadUserId = (value) => {
+    if (value && typeof value === "object") return value.id != null ? String(value.id) : "";
+    return value != null ? String(value) : "";
+  };
+
+  const assignedLeadCount = useMemo(
+    () => ownLeads.filter(lead => getLeadUserId(lead.assigned_to) === personId).length,
+    [ownLeads, personId]
+  );
+  const selfCreatedLeadCount = useMemo(
+    () => ownLeads.filter(lead => getLeadUserId(lead.created_by) === personId && getLeadUserId(lead.assigned_to) !== personId).length,
+    [ownLeads, personId]
+  );
 
   const targetBatchOptions = useMemo(() => {
     const listNames = new Set((profile?.target_lists || []).map(l => l.name));
@@ -1240,7 +2190,14 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
   }, [profile, ownLeads]);
 
   const filteredLeads = useMemo(() => {
-    let result = ownLeads;
+    let result = ownLeads.filter(lead => {
+      const assignedToId = getLeadUserId(lead.assigned_to);
+      const createdById = getLeadUserId(lead.created_by);
+      if (leadOwnershipFilter === "SELF_CREATED") {
+        return createdById === personId && assignedToId !== personId;
+      }
+      return assignedToId === personId;
+    });
     if (batchFilter === "DIRECT") {
       result = result.filter(l => !l.target_list_name);
     } else if (batchFilter !== "ALL") {
@@ -1266,7 +2223,7 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
     }
 
     return result;
-  }, [ownLeads, batchFilter, searchQuery]);
+  }, [ownLeads, leadOwnershipFilter, personId, batchFilter, searchQuery]);
 
   const filteredTargetLists = useMemo(() => {
     const lists = profile?.target_lists || [];
@@ -1371,7 +2328,6 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
     return <div className="lm-center-state"><AlertCircle size={34} /><p>{error}</p><button className="lm-btn lm-btn--primary lm-btn--sm" onClick={() => setRefreshKey(value => value + 1)}>Try Again</button></div>;
   }
 
-  const person = profile?.user || {};
   const overview = profile?.overview || {};
   const totalLeads = Number(overview.total_leads) || 0;
   const convertedLeads = Number(overview.converted_leads) || 0;
@@ -1405,11 +2361,116 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
       .then(response => onViewLead(response.data))
       .catch(() => setError("This lead could not be opened."));
   };
+
+  const openLeadEdit = (lead) => {
+    api.get(lead?.id || lead)
+      .then(response => setEditingLead(response.data))
+      .catch(() => setError("This lead could not be edited."));
+  };
+
+  const handleProfileLeadSaved = () => {
+    setEditingLead(null);
+    setRefreshKey(value => value + 1);
+    showAlert("Saved", "Lead updated.", "success");
+  };
+
+  const handleCancelImport = () => {
+    setImportResult(null);
+    setPendingFile(null);
+    setPendingCustomerListId(null);
+    setPendingListName("");
+  };
+
+  const handleCommitImport = async () => {
+    if (!pendingFile || !pendingCustomerListId) return;
+
+    setIsSavingImport(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", pendingFile);
+      fd.append("mode", "targets");
+      fd.append("customer_list", pendingCustomerListId);
+
+      const res = await ax("post", "/lead-import/", fd, {
+        headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" },
+      });
+
+      setImportResult(null);
+      setPendingFile(null);
+      setPendingCustomerListId(null);
+      setPendingListName("");
+      setRefreshKey(v => v + 1);
+      showAlert("Import Complete", `Successfully imported ${res.data.created_count} record(s).`, "success");
+    } catch (err) {
+      showAlert(
+        "Import Error",
+        err.response?.data?.errors?.[0]?.message ||
+          err.response?.data?.errors?.[0] ||
+          err.response?.data?.error ||
+          "Save failed.",
+        "error"
+      );
+    } finally {
+      setIsSavingImport(false);
+    }
+  };
+
+  const openTargetListEdit = (list) => {
+    setEditingTargetList(list);
+    setTargetListForm({
+      name: list.name || "",
+      scope_date: list.scope_date || "",
+      campaign: list.campaign || "",
+      source: list.source || "",
+      description: list.description || "",
+      status: list.status || "ACTIVE",
+    });
+  };
+
+  const closeTargetListEdit = () => {
+    setEditingTargetList(null);
+    setTargetListForm({ name: "", scope_date: "", campaign: "", source: "", description: "", status: "ACTIVE" });
+  };
+
+  const saveTargetListEdit = async (event) => {
+    event.preventDefault();
+    if (!editingTargetList?.id) return;
+    if (!targetListForm.name.trim()) {
+      showAlert("Required", "Target scope name is required.", "warning");
+      return;
+    }
+
+    setSavingTargetList(true);
+    try {
+      const payload = {
+        ...targetListForm,
+        name: targetListForm.name.trim(),
+        scope_date: targetListForm.scope_date || null,
+      };
+      const res = await ax("patch", `/lead-lists/${editingTargetList.id}/`, payload);
+      setSelectedTargetList(prev => prev?.id === editingTargetList.id ? { ...prev, ...res.data } : prev);
+      closeTargetListEdit();
+      setRefreshKey(v => v + 1);
+      showAlert("Saved", "Target scope updated successfully.", "success");
+    } catch (err) {
+      showAlert(
+        "Save Error",
+        err.response?.data?.errors?.[0]?.message ||
+          err.response?.data?.error ||
+          "Failed to update target scope.",
+        "error"
+      );
+    } finally {
+      setSavingTargetList(false);
+    }
+  };
   const tabs = [
     { id: "overview", label: "Overview", icon: User },
     { id: "leads", label: "Leads", icon: LayoutList, count: profile?.leads?.count || 0 },
     { id: "targets", label: "Target Lists", icon: Building2, count: profile?.target_lists?.length || 0 },
     ...(canTelecall ? [{ id: "telecalling", label: "Telecalling", icon: PhoneCall, count: profile?.telecalling_leads?.length || 0 }] : []),
+    { id: "meetings", label: "Meetings", icon: Users, count: profile?.meetings?.length || 0 },
+    { id: "proposals", label: "My Proposals", icon: FileText },
     { id: "performance", label: "Performance Report", icon: BarChart2 },
     { id: "incentive", label: "My Incentive", icon: BadgePercent },
   ];
@@ -1486,11 +2547,27 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
       </div>}
 
       {activeTab === "leads" && <div className="lm-profile-panel">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
+        <div className="lm-profile-leads-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
           <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-            Assigned & Created Leads <span style={{ color: "#64748b", fontWeight: 400 }}>({filteredLeads.length})</span>
+            {leadOwnershipFilter === "SELF_CREATED" ? "Self Created Leads" : "Assigned Leads"} <span style={{ color: "#64748b", fontWeight: 400 }}>({filteredLeads.length})</span>
           </h4>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: 4, background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 8 }}>
+              <button
+                type="button"
+                className={`lm-btn lm-btn--sm ${leadOwnershipFilter === "ASSIGNED" ? "lm-btn--primary" : "lm-btn--ghost"}`}
+                onClick={() => setLeadOwnershipFilter("ASSIGNED")}
+              >
+                Assigned <span className="lm-badge">{assignedLeadCount}</span>
+              </button>
+              <button
+                type="button"
+                className={`lm-btn lm-btn--sm ${leadOwnershipFilter === "SELF_CREATED" ? "lm-btn--primary" : "lm-btn--ghost"}`}
+                onClick={() => setLeadOwnershipFilter("SELF_CREATED")}
+              >
+                Self Created <span className="lm-badge">{selfCreatedLeadCount}</span>
+              </button>
+            </div>
             {/* Global Search Bar */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
               <Search size={14} color="#64748b" />
@@ -1637,9 +2714,14 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
                       )}
                     </td>
                     <td>
-                      <button className="lm-icon-btn" title="View lead" onClick={() => openLead(lead)}>
-                        <Eye size={16} />
-                      </button>
+                      <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                        <button className="lm-icon-btn" title="View lead" onClick={() => openLead(lead)}>
+                          <Eye size={16} />
+                        </button>
+                        <button className="lm-icon-btn" title="Edit lead" onClick={() => openLeadEdit(lead)}>
+                          <Edit2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -1724,6 +2806,18 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
                         {fmtDate(list.scope_date || list.updated_at || list.created_at)}
                       </td>
                       <td style={{ textAlign: "center" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                          <button
+                            type="button"
+                            className="lm-btn lm-btn--ghost lm-btn--sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openTargetListEdit(list);
+                            }}
+                            style={{ fontSize: 11, padding: "4px 10px" }}
+                          >
+                            <Edit2 size={12} /> Edit
+                          </button>
                         <button
                           type="button"
                           className="lm-btn lm-btn--primary lm-btn--sm"
@@ -1735,6 +2829,7 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
                         >
                           View Batch Contacts
                         </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1744,6 +2839,14 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
           )}
         </>
       </div>}
+
+      {editingLead && (
+        <LeadForm
+          initial={editingLead}
+          onClose={() => setEditingLead(null)}
+          onSaved={handleProfileLeadSaved}
+        />
+      )}
 
       {selectedTargetList && activeTab === "targets" && (
         <TargetListDetailModal
@@ -1766,6 +2869,85 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
         />
       )}
 
+      {editingTargetList && activeTab === "targets" && (
+        <div className="lm-overlay" onClick={closeTargetListEdit}>
+          <div className="lm-dialog" onClick={e => e.stopPropagation()} style={{ width: "90vw", maxWidth: 560 }}>
+            <div className="lm-dialog__head">
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16 }}>Edit Target Scope</h3>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>Update batch name, date, campaign and status.</p>
+              </div>
+              <button className="lm-icon-btn" onClick={closeTargetListEdit}><X size={18} /></button>
+            </div>
+            <form className="lm-form" onSubmit={saveTargetListEdit}>
+              <div className="lm-form__grid">
+                <label>
+                  <span>Scope / Batch Name</span>
+                  <input
+                    value={targetListForm.name}
+                    onChange={e => setTargetListForm(form => ({ ...form, name: e.target.value }))}
+                    placeholder="e.g. Aug 2026"
+                    required
+                    autoFocus
+                  />
+                </label>
+                <label>
+                  <span>Scope Date</span>
+                  <input
+                    type="date"
+                    value={targetListForm.scope_date || ""}
+                    onChange={e => setTargetListForm(form => ({ ...form, scope_date: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  <span>Campaign</span>
+                  <input
+                    value={targetListForm.campaign}
+                    onChange={e => setTargetListForm(form => ({ ...form, campaign: e.target.value }))}
+                    placeholder="Campaign name"
+                  />
+                </label>
+                <label>
+                  <span>Source</span>
+                  <input
+                    value={targetListForm.source}
+                    onChange={e => setTargetListForm(form => ({ ...form, source: e.target.value }))}
+                    placeholder="e.g. WEBSITE"
+                  />
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select
+                    value={targetListForm.status}
+                    onChange={e => setTargetListForm(form => ({ ...form, status: e.target.value }))}
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="ARCHIVED">Archived</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </label>
+                <label className="lm-form__span">
+                  <span>Description</span>
+                  <textarea
+                    value={targetListForm.description}
+                    onChange={e => setTargetListForm(form => ({ ...form, description: e.target.value }))}
+                    rows={3}
+                    placeholder="Scope notes"
+                  />
+                </label>
+              </div>
+              <div className="lm-form__actions">
+                <button type="button" className="lm-btn lm-btn--ghost" onClick={closeTargetListEdit} disabled={savingTargetList}>Cancel</button>
+                <button type="submit" className="lm-btn lm-btn--primary" disabled={savingTargetList}>
+                  {savingTargetList && <Loader2 size={15} className="spin" />}
+                  {savingTargetList ? "Saving..." : "Save Scope"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showUploadModal && (
         <ScopeDefinitionModal
           selectedUser={person}
@@ -1785,10 +2967,23 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
           targetListName={selectedTargetList.name}
           onClose={() => setShowScopeUploadModal(false)}
           downloadTemplate={downloadTemplate}
-          onUploadSuccess={() => {
+          onUploadSuccess={({ importResult: result, file, customerListId, listName }) => {
             setShowScopeUploadModal(false);
-            setRefreshKey(v => v + 1);
+            setImportResult(result);
+            setPendingFile(file);
+            setPendingCustomerListId(customerListId);
+            setPendingListName(listName || selectedTargetList.name);
           }}
+        />
+      )}
+
+      {importResult && (
+        <ImportResultModal
+          result={{ ...importResult, listName: importResult.listName || pendingListName }}
+          onClose={handleCancelImport}
+          onCancel={handleCancelImport}
+          onSave={handleCommitImport}
+          isSaving={isSavingImport}
         />
       )}
 
@@ -1800,12 +2995,24 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
           onDateChange={setScheduleDate}
           onViewLead={openLead}
           onScheduleChanged={() => setRefreshKey(value => value + 1)}
+          onLeadUpdated={() => setRefreshKey(value => value + 1)}
           onCallLogged={(call) => {
             onCallLogged?.(call);
             setRefreshKey(value => value + 1);
           }}
         />
       </div>}
+
+      {activeTab === "meetings" && (
+        <MyProfileMeetingsView
+          meetings={profile?.meetings || []}
+          leads={ownLeads}
+          onViewLead={openLead}
+          onChanged={() => setRefreshKey(value => value + 1)}
+        />
+      )}
+
+      {activeTab === "proposals" && <MyProposalsPanel onViewLead={openLead} />}
 
       {activeTab === "performance" && <EmployeePerformanceReport report={profile?.performance_report} person={person} recentActivity={profile?.recent_activity || []} openLead={openLead} />}
       {activeTab === "incentive" && <div className="lm-profile-panel lm-profile-incentive-panel"><MonthlyIncentiveCard detailed monthlyIncentive={monthlyIncentive} monthlyConversionValue={monthlyConversionValue} /></div>}
@@ -1828,11 +3035,15 @@ function MyProfileView({ onViewLead, canTelecall, onCallLogged, onTargetUploaded
 
 // ─── Email Templates ─────────────────────────────────────────────────────────
 
-function DailyTelecallingView({ leads, schedule, selectedDate, onDateChange, onViewLead, onCallLogged, onScheduleChanged }) {
+function DailyTelecallingView({ leads, schedule, selectedDate, onDateChange, onViewLead, onCallLogged, onScheduleChanged, onLeadUpdated }) {
   const [queueType, setQueueType] = useState("scheduled");
   const [selectedLeadId, setSelectedLeadId] = useState(null);
   const [showCallModal, setShowCallModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [whatsappLead, setWhatsappLead] = useState(null);
+  const [overridePriorities, setOverridePriorities] = useState({});
+  const [savingPriorityId, setSavingPriorityId] = useState(null);
+  const { showAlert } = useModal();
   const queueChoiceRef = useRef({ date: null, manual: false });
   const scheduledIds = schedule?.scheduled_lead_ids || [];
   const overdueIds = schedule?.overdue_lead_ids || [];
@@ -1842,13 +3053,38 @@ function DailyTelecallingView({ leads, schedule, selectedDate, onDateChange, onV
   const activePhoneItems = schedule?.active_phone_items || scheduledItems;
   const ids = useMemo(() => ({ scheduled: new Set(scheduledIds), overdue: new Set(overdueIds), unscheduled: new Set(unscheduledIds) }), [scheduledIds, overdueIds, unscheduledIds]);
   const scheduleByLead = useMemo(() => new Map(activePhoneItems.map(item => [item.lead_id, item])), [activePhoneItems]);
-  const sortedLeads = useMemo(() => [...leads].sort((a, b) => {
+
+  const effectiveLeads = useMemo(() => {
+    return (leads || []).map(l => overridePriorities[l.id] ? { ...l, priority: overridePriorities[l.id] } : l);
+  }, [leads, overridePriorities]);
+
+  const sortedLeads = useMemo(() => [...effectiveLeads].sort((a, b) => {
     const aTime = scheduleByLead.get(a.id)?.scheduled_at;
     const bTime = scheduleByLead.get(b.id)?.scheduled_at;
     if (aTime || bTime) return new Date(aTime || "2999-01-01") - new Date(bTime || "2999-01-01");
     return (PRIORITY_META[a.priority]?.order ?? 99) - (PRIORITY_META[b.priority]?.order ?? 99);
-  }), [leads, scheduleByLead]);
+  }), [effectiveLeads, scheduleByLead]);
   const queue = useMemo(() => queueType === "all" ? sortedLeads : sortedLeads.filter(lead => ids[queueType]?.has(lead.id)), [queueType, sortedLeads, ids]);
+
+  const handlePriorityChange = async (leadId, newPriority) => {
+    try {
+      setSavingPriorityId(leadId);
+      setOverridePriorities(prev => ({ ...prev, [leadId]: newPriority }));
+      await api.update(leadId, { priority: newPriority });
+      onLeadUpdated?.(leadId, newPriority);
+      onScheduleChanged?.();
+    } catch (err) {
+      setOverridePriorities(prev => {
+        const next = { ...prev };
+        delete next[leadId];
+        return next;
+      });
+      const d = err.response?.data;
+      showAlert("Error", typeof d === "string" ? d : d?.detail || "Failed to update priority.", "error");
+    } finally {
+      setSavingPriorityId(null);
+    }
+  };
 
   useEffect(() => {
     if (String(schedule?.date || "") !== selectedDate) return;
@@ -1906,6 +3142,7 @@ function DailyTelecallingView({ leads, schedule, selectedDate, onDateChange, onV
   const progressPercent = hasScheduledProgress ? Math.round(completedScheduled / scheduledIds.length * 100) : 0;
   const slideStart = Math.max(0, Math.min(current - 2, Math.max(0, queue.length - 5)));
   const visibleSlides = queue.slice(slideStart, slideStart + 5);
+  const whatsappPhone = lead ? (lead.whatsapp_number || lead.phone) : "";
 
   return <section className="lm-dtc">
     <header className="lm-dtc__planner">
@@ -1942,8 +3179,23 @@ function DailyTelecallingView({ leads, schedule, selectedDate, onDateChange, onV
       <main className="lm-dtc__main lm-dtc__deck">
         {!!queue.length && <div className="lm-dtc__slide-rail" aria-label="Visible lead previews">{visibleSlides.map((item, index) => { const itemSchedule = scheduleByLead.get(item.id); const done = completedIds.includes(item.id); return <button key={item.id} type="button" className={item.id === lead?.id ? "selected" : ""} aria-current={item.id === lead?.id ? "true" : undefined} onClick={() => setSelectedLeadId(item.id)}><span className="lm-dtc__slide-index">{done ? <Check size={13} /> : String(slideStart + index + 1).padStart(2, "0")}</span><span><strong>{item.company_name || item.customer_name || item.contact_person || "Unnamed lead"}</strong><small>{itemSchedule ? fmtDateTime(itemSchedule.scheduled_at) : item.phone || "No phone"}</small></span><i style={{ background: PRIORITY_META[item.priority]?.color || "#94a3b8" }} /></button>; })}</div>}
         {lead ? <article className="lm-dtc__lead-card">
-          <header className="lm-dtc__lead-head"><div><span className="lm-dtc__position">{tabs.find(tab => tab.id === queueType)?.label} queue · {current + 1} of {queue.length}</span><h3>{lead.company_name || lead.customer_name || lead.contact_person || "Unnamed lead"}</h3><p>{lead.contact_person || lead.customer_name || "No contact person provided"} · {lead.lead_number}</p></div><div className="lm-dtc__badges">{isLogged && <span className="completed"><CheckCircle2 size={14} /> Completed</span>}<StagePill stage={lead.current_stage} /><PriorityDot priority={lead.priority} /></div></header>
-          <div className="lm-dtc__call-bar"><div><small>Phone number</small><strong>{lead.phone || "No phone number"}</strong></div>{lead.phone && <a href={`tel:${lead.phone}`} className="lm-dtc__call"><PhoneCall size={18} /> Call now</a>}{lead.whatsapp_number && <a href={`https://wa.me/${String(lead.whatsapp_number).replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="lm-dtc__contact-action"><MessageSquare size={18} /> WhatsApp</a>}{lead.email && <a href={`mailto:${lead.email}`} className="lm-dtc__contact-action"><Mail size={18} /> Email</a>}</div>
+          <header className="lm-dtc__lead-head">
+            <div>
+              <span className="lm-dtc__position">{tabs.find(tab => tab.id === queueType)?.label} queue · {current + 1} of {queue.length}</span>
+              <h3>{lead.company_name || lead.customer_name || lead.contact_person || "Unnamed lead"}</h3>
+              <p>{lead.contact_person || lead.customer_name || "No contact person provided"} · {lead.lead_number}</p>
+            </div>
+            <div className="lm-dtc__badges">
+              {isLogged && <span className="completed"><CheckCircle2 size={14} /> Completed</span>}
+              <StagePill stage={lead.current_stage} />
+              <PrioritySelector
+                priority={lead.priority}
+                disabled={savingPriorityId === lead.id}
+                onChange={(newPriority) => handlePriorityChange(lead.id, newPriority)}
+              />
+            </div>
+          </header>
+          <div className="lm-dtc__call-bar"><div><small>Phone number</small><strong>{lead.phone || "No phone number"}</strong></div>{lead.phone && <a href={`tel:${lead.phone}`} className="lm-dtc__call"><PhoneCall size={18} /> Call now</a>}{whatsappPhone && <button type="button" className="lm-dtc__contact-action lm-dtc__whatsapp-action" onClick={() => setWhatsappLead(lead)}><MessageSquare size={18} /> WhatsApp</button>}{lead.email && <a href={`mailto:${lead.email}`} className="lm-dtc__contact-action"><Mail size={18} /> Email</a>}</div>
           <div className="lm-dtc__detail-grid">
             <section><h4>Lead context</h4><dl><div><dt>Service / product</dt><dd>{lead.service || lead.product || "—"}</dd></div><div><dt>Source</dt><dd>{SOURCE_LABELS[lead.source] || lead.source || "—"}</dd></div><div><dt>Campaign</dt><dd>{lead.campaign || "—"}</dd></div><div><dt>Estimated value</dt><dd>{fmt(lead.estimated_value)}</dd></div></dl></section>
             <section><h4>Ownership & timing</h4><dl><div><dt>Assigned to</dt><dd>{lead.assigned_to_name || "Unassigned"}</dd></div><div><dt>Schedule status</dt><dd className={scheduledItem ? "lm-dtc__due" : ""}>{scheduledItem ? fmtDateTime(scheduledItem.scheduled_at) : queueType === "overdue" ? "Overdue" : "Not scheduled"}</dd></div><div><dt>Next follow-up</dt><dd className={isOverdue(lead.next_follow_up_at) ? "lm-overdue" : ""}>{fmtDateTime(lead.next_follow_up_at)}</dd></div><div><dt>Purpose</dt><dd>{scheduledItem?.purpose || "—"}</dd></div></dl></section>
@@ -1956,6 +3208,34 @@ function DailyTelecallingView({ leads, schedule, selectedDate, onDateChange, onV
     </div>
     {showCallModal && lead && <LogCallModal lead={lead} onClose={() => setShowCallModal(false)} onLogged={call => { setShowCallModal(false); onCallLogged?.(call); }} />}
     {showScheduleModal && lead && <ScheduleFollowUpModal lead={lead} callMode existingFollowUp={scheduledItem} initialDateTime={localDateTimeInputValue(desiredTime)} onClose={() => setShowScheduleModal(false)} onScheduled={() => { setShowScheduleModal(false); onScheduleChanged?.(); }} />}
+    {whatsappLead && (() => {
+      const phone = whatsappLead.whatsapp_number || whatsappLead.phone;
+      const whatsappUrl = getWhatsAppUrl(phone);
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodeURIComponent(whatsappUrl)}`;
+      return (
+        <div className="lm-overlay" onClick={() => setWhatsappLead(null)}>
+          <div className="lm-dialog lm-dialog--sm lm-whatsapp-qr" onClick={e => e.stopPropagation()}>
+            <div className="lm-dialog__head">
+              <div>
+                <span className="lm-whatsapp-qr__kicker">WhatsApp Chat</span>
+                <h3>{whatsappLead.company_name || whatsappLead.customer_name || whatsappLead.contact_person || "Lead contact"}</h3>
+              </div>
+              <button className="lm-icon-btn" onClick={() => setWhatsappLead(null)}><X size={18} /></button>
+            </div>
+            <div className="lm-whatsapp-qr__body">
+              <span className="lm-whatsapp-qr__icon"><QrCode size={22} /></span>
+              <img src={qrUrl} alt={`WhatsApp QR for ${whatsappLead.company_name || whatsappLead.customer_name || "lead"}`} />
+              <p>Scan this QR code to open the WhatsApp chat.</p>
+              <strong>+{getWhatsAppNumber(phone)}</strong>
+            </div>
+            <div className="lm-form__actions lm-whatsapp-qr__actions">
+              <button type="button" className="lm-btn lm-btn--ghost" onClick={() => setWhatsappLead(null)}>Close</button>
+              <a className="lm-btn lm-btn--primary lm-whatsapp-qr__open" href={whatsappUrl} target="_blank" rel="noreferrer"><MessageSquare size={16} /> Open Chat</a>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
   </section>;
 }
 
@@ -3512,7 +4792,7 @@ function ScopeDefinitionModal({ selectedUser, onClose, onSuccess }) {
 
 // ─── Upload Target List Modal ──────────────────────────────────────────────────
 
-function UploadTargetModal({ selectedUser, onClose, onUploadSuccess, downloadTemplate, targetListId = null, targetListName = "", commitImmediately = false }) {
+function UploadTargetModal({ selectedUser, onClose, onUploadSuccess, downloadTemplate, targetListId = null, targetListName = "" }) {
   const [listName, setListName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -3560,14 +4840,12 @@ function UploadTargetModal({ selectedUser, onClose, onUploadSuccess, downloadTem
         newList = listRes.data;
       }
 
-      // 2. Import the file into that list with dry_run=true
+      // Validate first; the ImportResultModal commits the accepted rows.
       const fd = new FormData();
       fd.append("file", selectedFile);
       fd.append("mode", "targets");
       fd.append("customer_list", targetListId || newList.id);
-      // Existing scopes are imported immediately; newly-created scopes retain
-      // the validation/preview flow used by the admin workspace.
-      if (!targetListId && !commitImmediately) fd.append("dry_run", "true");
+      fd.append("dry_run", "true");
 
       const importRes = await ax("post", "/lead-import/", fd, {
         headers: { ...getAuthHeaders(), "Content-Type": "multipart/form-data" },
@@ -3579,6 +4857,7 @@ function UploadTargetModal({ selectedUser, onClose, onUploadSuccess, downloadTem
         mode: "targets",
         customerListId: targetListId || newList.id,
         listName: targetListName || newList.name,
+        createdList: !targetListId,
       });
       onClose();
     } catch (err) {
@@ -3686,12 +4965,13 @@ function UploadTargetModal({ selectedUser, onClose, onUploadSuccess, downloadTem
                     className="lm-icon-btn"
                     onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
                     title="Remove file"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "4px", margin: 0, border: "none", background: "transparent" }}
                   >
                     <X size={16} color="#dc2626" />
                   </button>
                 </div>
               ) : (
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <Upload size={28} color="#6366f1" style={{ marginBottom: 6 }} />
                   <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "#334155" }}>
                     Click to choose file or drag & drop here
@@ -3749,7 +5029,7 @@ function TargetListDetailModal({ targetList, selectedUser, onClose, onConfirmLea
     company_name: "",
     customer_name: "",
     contact_person: "",
-    phone: "",
+    contact_numbers: [],
     email: "",
     city: "",
     industry: "",
@@ -3776,7 +5056,7 @@ function TargetListDetailModal({ targetList, selectedUser, onClose, onConfirmLea
       company_name: c.company_name || "",
       customer_name: c.customer_name || "",
       contact_person: c.contact_person || "",
-      phone: c.phone || "",
+      contact_numbers: c.contact_numbers || [],
       email: c.email || "",
       city: c.city || "",
       industry: c.industry || "",
@@ -3797,7 +5077,14 @@ function TargetListDetailModal({ targetList, selectedUser, onClose, onConfirmLea
       setEditForm({});
       onContactsChanged?.();
     } catch (err) {
-      showAlert("Save Error", err.response?.data?.errors?.[0]?.message || err.response?.data?.error || "Failed to update contact.", "error");
+      const d = err.response?.data;
+      let msg = "Failed to update contact.";
+      if (d) {
+        if (typeof d.error === 'string') msg = d.error;
+        else if (d.errors?.[0]?.message) msg = d.errors[0].message;
+        else if (typeof d === 'object') msg = Object.values(d).flat()[0] || msg;
+      }
+      showAlert("Save Error", msg, "error");
     } finally {
       setSavingRowId(null);
     }
@@ -3809,7 +5096,7 @@ function TargetListDetailModal({ targetList, selectedUser, onClose, onConfirmLea
       company_name: "",
       customer_name: "",
       contact_person: "",
-      phone: "",
+      contact_numbers: [],
       email: "",
       city: "",
       industry: "",
@@ -3835,7 +5122,14 @@ function TargetListDetailModal({ targetList, selectedUser, onClose, onConfirmLea
       onContactsChanged?.();
       showAlert("Added", "New target contact added to list.", "success");
     } catch (err) {
-      showAlert("Error", err.response?.data?.errors?.[0]?.message || err.response?.data?.error || "Failed to add contact.", "error");
+      const d = err.response?.data;
+      let msg = "Failed to add contact.";
+      if (d) {
+        if (typeof d.error === 'string') msg = d.error;
+        else if (d.errors?.[0]?.message) msg = d.errors[0].message;
+        else if (typeof d === 'object') msg = Object.values(d).flat()[0] || msg;
+      }
+      showAlert("Error", msg, "error");
     } finally {
       setSavingNew(false);
     }
@@ -4005,7 +5299,19 @@ function TargetListDetailModal({ targetList, selectedUser, onClose, onConfirmLea
                           <td style={cellStyle}><strong>{c.company_name || "—"}</strong></td>
                           <td style={cellStyle}>{c.customer_name || "—"}</td>
                           <td style={cellStyle}>{c.contact_person || "—"}</td>
-                          <td style={cellStyle}>{c.phone || "—"}</td>
+                          <td style={cellStyle}>
+                            {c.contact_numbers?.length > 0 ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                {c.contact_numbers.map(n => (
+                                  <span key={n.id || n.number} style={{ fontSize: 11, whiteSpace: "nowrap" }}>
+                                    <span style={{ fontWeight: 600, color: "#64748b" }}>{n.number_type === 'WHATSAPP' ? 'WA' : 'PH'} ({n.label}):</span> {n.number}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              c.phone || "—"
+                            )}
+                          </td>
                           <td style={cellStyle}>{c.email || "—"}</td>
                           <td style={cellStyle}>{c.city || "—"}</td>
                           <td style={cellStyle}>{c.industry || "—"}</td>
@@ -4099,18 +5405,13 @@ function TargetListDetailModal({ targetList, selectedUser, onClose, onConfirmLea
                     placeholder="Contact Person"
                   />
                 </label>
-                <label>
-                  <span>Phone Number</span>
-                  <input
-                    value={isAddingNew ? (newForm.phone || "") : (editForm.phone || "")}
-                    onChange={e => {
-                      const val = e.target.value;
-                      if (isAddingNew) setNewForm(f => ({ ...f, phone: val }));
-                      else setEditForm(f => ({ ...f, phone: val }));
-                    }}
-                    placeholder="+91 98765 43210"
-                  />
-                </label>
+                <ContactNumbersInput 
+                  value={isAddingNew ? (newForm.contact_numbers || []) : (editForm.contact_numbers || [])}
+                  onChange={val => {
+                    if (isAddingNew) setNewForm(f => ({ ...f, contact_numbers: val }));
+                    else setEditForm(f => ({ ...f, contact_numbers: val }));
+                  }}
+                />
                 <label>
                   <span>Email Address</span>
                   <input
@@ -4425,12 +5726,12 @@ function TeleCallingSalesView({ onViewLead, onUsersUpdated, onOpenProfile }) {
       .finally(() => setLoadingReport(false));
   }, [selectedUser, showAlert]);
 
-  const handleUploadSuccess = ({ importResult, file, mode, customerListId, listName }) => {
+  const handleUploadSuccess = ({ importResult, file, mode, customerListId, listName, createdList }) => {
     setImportResult(importResult);
     setPendingFile(file);
     setPendingCustomerListId(customerListId);
     setPendingListName(listName);
-    setPendingListCreated(true);
+    setPendingListCreated(Boolean(createdList));
   };
 
   const handleCancelImport = async () => {
@@ -5291,658 +6592,7 @@ function TeleCallingSalesView({ onViewLead, onUsersUpdated, onOpenProfile }) {
   );
 }
 
-// ─── Incentive Management View ────────────────────────────────────────────────
-function IncentiveManagementView({ onViewLead }) {
-  const { user } = useAuth();
-  const { showAlert } = useModal();
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [salesUsers, setSalesUsers] = useState([]);
-  const [conversions, setConversions] = useState([]);
-  const [selectedUserFilter, setSelectedUserFilter] = useState("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showConfigModal, setShowConfigModal] = useState(false);
-
-  // Incentive Calculation Modes: "FIXED_PER_SALE" (e.g. ₹2000 per sale) or "PERCENTAGE" (e.g. 10%)
-  const [incentiveMode, setIncentiveMode] = useState("FIXED_PER_SALE");
-  const [globalFixedIncentive, setGlobalFixedIncentive] = useState(2000); // ₹2,000 per sale
-  const [globalPercentRate, setGlobalPercentRate] = useState(10); // 10%
-  const currentMonthValue = new Date().toISOString().slice(0, 7);
-  const [selectedMonth, setSelectedMonth] = useState(currentMonthValue);
-
-  // Custom rate overrides per user: { [userId]: fixedAmountOrRate }
-  const [customUserRates, setCustomUserRates] = useState({ FIXED_PER_SALE: {}, PERCENTAGE: {} });
-  const [payoutStatuses, setPayoutStatuses] = useState({});
-  const [activeTab, setActiveTab] = useState("overview");
-  const [editingRate, setEditingRate] = useState(null);
-  const [preferencesReady, setPreferencesReady] = useState(false);
-  const incentiveStorageKey = `lead-management-incentives:${user?.id || "anonymous"}`;
-
-  useEffect(() => {
-    setPreferencesReady(false);
-    try {
-      const saved = window.localStorage.getItem(incentiveStorageKey);
-      if (saved) {
-        const preferences = JSON.parse(saved);
-        if (["FIXED_PER_SALE", "PERCENTAGE"].includes(preferences.incentiveMode)) setIncentiveMode(preferences.incentiveMode);
-        if (Number.isFinite(Number(preferences.globalFixedIncentive))) setGlobalFixedIncentive(Number(preferences.globalFixedIncentive));
-        if (Number.isFinite(Number(preferences.globalPercentRate))) setGlobalPercentRate(Number(preferences.globalPercentRate));
-        if (preferences.customUserRates) setCustomUserRates(preferences.customUserRates);
-        if (preferences.payoutStatuses) setPayoutStatuses(preferences.payoutStatuses);
-      }
-    } catch (error) {
-      console.warn("Unable to restore local incentive preferences", error);
-    } finally {
-      setPreferencesReady(true);
-    }
-  }, [incentiveStorageKey]);
-
-  useEffect(() => {
-    if (!preferencesReady) return;
-    try {
-      window.localStorage.setItem(incentiveStorageKey, JSON.stringify({ incentiveMode, globalFixedIncentive, globalPercentRate, customUserRates, payoutStatuses }));
-    } catch (error) {
-      console.warn("Unable to save local incentive preferences", error);
-    }
-  }, [preferencesReady, incentiveStorageKey, incentiveMode, globalFixedIncentive, globalPercentRate, customUserRates, payoutStatuses]);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setLoadError("");
-    try {
-      // 1. Fetch team members from API
-      const usersRes = await ax("get", "/tele-sales-users/");
-      const fetchedUsers = usersRes.data?.users || (Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.results || []);
-
-      // 2. Fetch leads to gather converted sales and derive salesmen if needed
-      const leadsRes = await ax("get", "/leads/?page_size=300");
-      const allLeads = Array.isArray(leadsRes.data) ? leadsRes.data : leadsRes.data?.results || [];
-
-      // Ensure all unique salesmen from leads exist in salesUsers
-      const userMap = {};
-      fetchedUsers.forEach(u => {
-        userMap[u.id] = {
-          id: u.id,
-          fullname: u.fullname || u.username || `User #${u.id}`,
-          username: u.username,
-          designation: u.designation || u.department || u.role || "Sales Executive",
-        };
-      });
-
-      // Supplement from leads
-      allLeads.forEach(lead => {
-        if (lead.assigned_to) {
-          const uId = typeof lead.assigned_to === "object" ? lead.assigned_to.id : lead.assigned_to;
-          const uName = lead.assigned_to_name || (typeof lead.assigned_to === "object" ? lead.assigned_to.fullname : null) || `Sales Rep #${uId}`;
-          if (uId && !userMap[uId]) {
-            userMap[uId] = {
-              id: uId,
-              fullname: uName,
-              username: uName.toLowerCase().replace(/\s+/g, "_"),
-              designation: "Sales Executive",
-            };
-          }
-        }
-      });
-
-      const finalUsers = Object.values(userMap);
-      setSalesUsers(finalUsers);
-
-      // 3. Use only genuinely converted leads. Values are shown only when supplied by the API.
-      const convList = [];
-      allLeads.forEach(lead => {
-        if (lead.current_stage === "CONVERTED") {
-          const rawGrossValue = lead.final_value ?? lead.converted_value;
-          const rawDiscount = lead.discount ?? lead.conversion_discount;
-          const grossValue = rawGrossValue === null || rawGrossValue === undefined || rawGrossValue === "" ? null : Number(rawGrossValue);
-          const discount = rawDiscount === null || rawDiscount === undefined || rawDiscount === "" ? null : Number(rawDiscount);
-          const uId = typeof lead.assigned_to === "object" ? lead.assigned_to?.id : lead.assigned_to;
-          const sName = lead.assigned_to_name || (userMap[uId] ? userMap[uId].fullname : "Sales Executive");
-
-          convList.push({
-            id: lead.id,
-            lead_number: lead.lead_number || "",
-            customer_name: lead.company_name || lead.customer_name || "Unnamed customer",
-            salesperson_name: sName,
-            salesperson_id: uId,
-            service: lead.service || lead.product || "",
-            converted_at: lead.converted_at || null,
-            gross_value: Number.isFinite(grossValue) ? grossValue : null,
-            discount: Number.isFinite(discount) ? discount : null,
-            net_value: Number.isFinite(grossValue) ? Math.max(0, grossValue - (Number.isFinite(discount) ? discount : 0)) : null,
-            reference: lead.invoice_reference || lead.quotation_reference || lead.reference || "",
-          });
-        }
-      });
-      setConversions(convList);
-    } catch (err) {
-      console.error("Failed to load incentive data", err);
-      setLoadError("We couldn't load incentive data. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const periodConversions = useMemo(() => conversions.filter(conversion => {
-    if (selectedMonth === "ALL") return true;
-    if (!conversion.converted_at) return false;
-    const convertedDate = new Date(conversion.converted_at);
-    return !Number.isNaN(convertedDate.getTime()) && convertedDate.toISOString().slice(0, 7) === selectedMonth;
-  }), [conversions, selectedMonth]);
-
-  const monthOptions = useMemo(() => {
-    const values = new Set([currentMonthValue]);
-    conversions.forEach(conversion => {
-      if (!conversion.converted_at) return;
-      const date = new Date(conversion.converted_at);
-      if (!Number.isNaN(date.getTime())) values.add(date.toISOString().slice(0, 7));
-    });
-    return Array.from(values).sort((a, b) => b.localeCompare(a));
-  }, [conversions, currentMonthValue]);
-
-  const formatMonth = value => {
-    const [year, month] = value.split("-").map(Number);
-    return new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-  };
-
-  // Aggregate user incentives by selected period and salesperson.
-  const userIncentives = useMemo(() => {
-    const map = {};
-    salesUsers.forEach(u => {
-      const modeRates = customUserRates[incentiveMode] || {};
-      const defaultRate = incentiveMode === "FIXED_PER_SALE" ? globalFixedIncentive : globalPercentRate;
-      const rate = modeRates[u.id] !== undefined ? modeRates[u.id] : defaultRate;
-      map[u.id] = {
-        id: u.id,
-        fullname: u.fullname || u.username,
-        designation: u.designation || "Sales Executive",
-        deals: 0,
-        gross: 0,
-        discount: 0,
-        net: 0,
-        financeRecords: 0,
-        rate,
-        totalIncentive: 0,
-        status: payoutStatuses[u.id] || "APPROVED",
-      };
-    });
-
-    periodConversions.forEach(c => {
-      const uId = c.salesperson_id;
-      if (uId && map[uId]) {
-        map[uId].deals += 1;
-        if (Number.isFinite(c.gross_value)) {
-          map[uId].gross += c.gross_value;
-          map[uId].discount += Number.isFinite(c.discount) ? c.discount : 0;
-          map[uId].net += Number.isFinite(c.net_value) ? c.net_value : 0;
-          map[uId].financeRecords += 1;
-        }
-
-        // Calculate incentive for this sale
-        const rateForUser = map[uId].rate;
-        const saleIncentive = incentiveMode === "FIXED_PER_SALE"
-          ? Number(rateForUser)
-          : (Number.isFinite(c.net_value) ? Math.round((c.net_value * Number(rateForUser)) / 100) : 0);
-
-        map[uId].totalIncentive += saleIncentive;
-      }
-    });
-
-    return Object.values(map);
-  }, [salesUsers, periodConversions, customUserRates, globalFixedIncentive, globalPercentRate, incentiveMode, payoutStatuses]);
-
-  // Totals
-  const totalStats = useMemo(() => {
-    const deals = userIncentives.reduce((sum, u) => sum + u.deals, 0);
-    const gross = userIncentives.reduce((sum, u) => sum + u.gross, 0);
-    const discount = userIncentives.reduce((sum, u) => sum + u.discount, 0);
-    const net = gross - discount;
-    const totalIncentive = userIncentives.reduce((sum, u) => sum + u.totalIncentive, 0);
-    return { deals, gross, discount, net, totalIncentive };
-  }, [userIncentives]);
-  const hasFinancialData = periodConversions.some(conversion => Number.isFinite(conversion.gross_value));
-  const fmtFinance = value => value === null || value === undefined || !Number.isFinite(Number(value)) ? "—" : fmt(Number(value));
-
-  // Filtered conversions
-  const filteredConversions = useMemo(() => {
-    return periodConversions.filter(c => {
-      if (selectedUserFilter !== "ALL" && String(c.salesperson_id) !== String(selectedUserFilter)) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return (
-          (c.customer_name || "").toLowerCase().includes(q) ||
-          (c.lead_number || "").toLowerCase().includes(q) ||
-          (c.salesperson_name || "").toLowerCase().includes(q) ||
-          (c.service || "").toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [periodConversions, selectedUserFilter, searchQuery]);
-
-  const handleUpdateUserRate = (uId, newRate) => {
-    const parsed = Number(newRate);
-    if (!Number.isNaN(parsed)) {
-      setCustomUserRates(prev => ({ ...prev, [incentiveMode]: { ...prev[incentiveMode], [uId]: parsed } }));
-      showAlert("Rate Updated", `Incentive rate updated to ${incentiveMode === "FIXED_PER_SALE" ? `${fmt(parsed)} per sale` : `${parsed}% of net revenue`}.`, "success");
-    }
-  };
-
-  const handleTogglePayoutStatus = (uId) => {
-    const current = payoutStatuses[uId] || "APPROVED";
-    const next = current === "PAID" ? "APPROVED" : "PAID";
-    setPayoutStatuses(prev => ({ ...prev, [uId]: next }));
-    showAlert("Payout Status Updated", `Monthly incentive payout marked as ${next}.`, "success");
-  };
-
-  return (
-    <div className="lm-advanced-incentives">
-      {/* ── Top Bar Header ── */}
-      <header className="lm-advanced-incentives__header">
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 4px", color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
-            <BadgePercent size={22} color="#4f46e5" /> Incentive Management
-          </h2>
-          <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-            Review monthly conversion revenue, team earnings, and payout readiness.
-          </p>
-        </div>
-
-        <div className="lm-advanced-incentives__controls">
-          {/* Month Selector */}
-          <label className="lm-incentive-month-select">
-            <Clock size={14} color="#64748b" />
-            <span className="sr-only">Incentive period</span>
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-            >
-              {monthOptions.map(month => <option key={month} value={month}>{formatMonth(month)}{month === currentMonthValue ? " (Current Month)" : ""}</option>)}
-              <option value="ALL">All Time Total</option>
-            </select>
-          </label>
-
-          <button
-            className="lm-btn lm-btn--primary lm-btn--sm"
-            onClick={() => setShowConfigModal(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "#4f46e5" }}
-          >
-            <Settings size={14} /> Incentive Rate Rules
-          </button>
-          <button className="lm-btn lm-btn--ghost lm-btn--sm" onClick={fetchData}>
-            <RefreshCw size={14} /> Refresh
-          </button>
-        </div>
-      </header>
-
-      {loadError && <div className="lm-incentive-error" role="alert"><AlertCircle size={18} /><span>{loadError}</span><button type="button" onClick={fetchData}>Try again</button></div>}
-
-      {/* ── Summary KPI Cards ── */}
-      <div className="lm-incentive-kpi-grid">
-        <article className="lm-incentive-kpi lm-incentive-kpi--indigo">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 12.5, color: "#64748b", fontWeight: 600 }}>Total Monthly Incentive</span>
-            <div style={{ background: "#eef2ff", padding: 8, borderRadius: 8 }}><Award size={18} color="#4f46e5" /></div>
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#4f46e5", marginTop: 8 }}>
-            {fmt(totalStats.totalIncentive)}
-          </div>
-          <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>Total payout across {totalStats.deals} sales</span>
-        </article>
-
-        <article className="lm-incentive-kpi lm-incentive-kpi--green">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 12.5, color: "#64748b", fontWeight: 600 }}>Net Monthly Sales Revenue</span>
-            <div style={{ background: "#f0fdf4", padding: 8, borderRadius: 8 }}><TrendingUp size={18} color="#16a34a" /></div>
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#16a34a", marginTop: 8 }}>
-            {hasFinancialData ? fmt(totalStats.net) : "—"}
-          </div>
-          <span style={{ fontSize: 11, color: "#64748b" }}>Gross: {hasFinancialData ? fmt(totalStats.gross) : "—"}</span>
-        </article>
-
-        <article className="lm-incentive-kpi lm-incentive-kpi--cyan">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 12.5, color: "#64748b", fontWeight: 600 }}>Total Converted Sales</span>
-            <div style={{ background: "#ecfeff", padding: 8, borderRadius: 8 }}><ShieldCheck size={18} color="#0891b2" /></div>
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#0891b2", marginTop: 8 }}>
-            {totalStats.deals} deals
-          </div>
-          <span style={{ fontSize: 11, color: "#64748b" }}>Active Sales Reps: {salesUsers.length}</span>
-        </article>
-
-        <article className="lm-incentive-kpi lm-incentive-kpi--orange">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 12.5, color: "#64748b", fontWeight: 600 }}>Incentive Calculation Mode</span>
-            <div style={{ background: "#fff7ed", padding: 8, borderRadius: 8 }}><BadgePercent size={18} color="#ea580c" /></div>
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#ea580c", marginTop: 8 }}>
-            {incentiveMode === "FIXED_PER_SALE" ? `${fmt(globalFixedIncentive)} / Sale` : `${globalPercentRate}% Commission`}
-          </div>
-          <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{incentiveMode === "FIXED_PER_SALE" ? "Fixed amount paid on every converted sale" : "Percentage of net conversion revenue"}</span>
-        </article>
-      </div>
-
-      {/* ── Sub Navigation Tabs ── */}
-      <div className="lm-workspace-tabs" style={{ marginBottom: 16 }}>
-        <button
-          className={`lm-workspace-tab ${activeTab === "overview" ? "lm-workspace-tab--active" : ""}`}
-          onClick={() => setActiveTab("overview")}
-        >
-          <Users size={15} /> Team Monthly Payout Leaderboard ({userIncentives.length})
-        </button>
-        <button
-          className={`lm-workspace-tab ${activeTab === "conversions" ? "lm-workspace-tab--active" : ""}`}
-          onClick={() => setActiveTab("conversions")}
-        >
-          <FileText size={15} /> Individual Converted Sales Records ({periodConversions.length})
-        </button>
-      </div>
-
-      {/* ── TAB 1: Team Monthly Leaderboard & Payouts ── */}
-      {activeTab === "overview" && (
-        <div className="lm-table-wrap">
-          <div style={{ padding: "14px 18px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-            <div>
-              <h4 style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-                Monthly Sales & Incentive Payout Breakdown
-              </h4>
-              <span style={{ fontSize: 12, color: "#64748b" }}>
-                {incentiveMode === "FIXED_PER_SALE"
-                  ? `Each salesperson receives ${fmt(globalFixedIncentive)} per converted sale.`
-                  : `Each salesperson receives ${globalPercentRate}% of net conversion revenue.`}
-              </span>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>Calculation Mode:</span>
-              <button
-                className={`lm-btn lm-btn--xs ${incentiveMode === "FIXED_PER_SALE" ? "lm-btn--primary" : "lm-btn--ghost"}`}
-                onClick={() => setIncentiveMode("FIXED_PER_SALE")}
-              >
-                Fixed ₹ / Sale
-              </button>
-              <button
-                className={`lm-btn lm-btn--xs ${incentiveMode === "PERCENTAGE" ? "lm-btn--primary" : "lm-btn--ghost"}`}
-                onClick={() => setIncentiveMode("PERCENTAGE")}
-              >
-                Percentage %
-              </button>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="lm-center-state"><Loader2 size={28} className="spin" /><p>Loading team incentives…</p></div>
-          ) : loadError ? (
-            <div className="lm-center-state"><AlertCircle size={26} /><p>Team incentives are temporarily unavailable.</p></div>
-          ) : userIncentives.length === 0 ? (
-            <div className="lm-center-state"><Users size={26} /><p>No sales team members found.</p></div>
-          ) : (
-            <div className="lm-incentive-table-scroll" role="region" aria-label="Team monthly payout breakdown" tabIndex="0">
-            <table className="lm-table">
-              <thead>
-                <tr>
-                  <th style={{ width: 50, textAlign: "center" }}>#</th>
-                  <th>Sales Executive</th>
-                  <th>Designation</th>
-                  <th style={{ textAlign: "center" }}>Monthly Total Sales</th>
-                  <th>Monthly Sales Revenue</th>
-                  <th>{incentiveMode === "FIXED_PER_SALE" ? "Fixed Incentive / Sale" : "Net Revenue Rate"}</th>
-                  <th>Total Monthly Incentive</th>
-                  <th style={{ textAlign: "center" }}>Payout Status</th>
-                  <th style={{ textAlign: "center" }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userIncentives.map((u, idx) => (
-                  <tr key={u.id}>
-                    <td style={{ textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
-                    <td>
-                      <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 13 }}>{u.fullname}</div>
-                    </td>
-                    <td><span style={{ fontSize: 12, color: "#475569" }}>{u.designation}</span></td>
-                    <td style={{ textAlign: "center", fontWeight: 700, color: "#4f46e5" }}>
-                      {u.deals} {u.deals === 1 ? "sale" : "sales"}
-                    </td>
-                    <td style={{ fontWeight: 600, color: "#0f172a" }}>{u.financeRecords ? fmt(u.net) : "—"}</td>
-                    <td>
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <span className="lm-badge lm-badge--indigo">
-                          {incentiveMode === "FIXED_PER_SALE" ? fmt(u.rate) : `${u.rate}%`}
-                        </span>
-                        <button
-                          className="lm-icon-btn"
-                          title={`Edit incentive rate for ${u.fullname}`}
-                          aria-label={`Edit incentive rate for ${u.fullname}`}
-                          onClick={() => setEditingRate({ id: u.id, fullname: u.fullname, value: u.rate })}
-                        >
-                          <Edit2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                    <td>
-                      <strong style={{ fontSize: 14, color: "#16a34a" }}>{fmt(u.totalIncentive)}</strong>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <span className={`lm-badge lm-badge--${u.status === "PAID" ? "green" : "orange"}`} style={{ padding: "4px 10px", fontSize: 11 }}>
-                        <Check size={12} style={{ display: "inline", marginRight: 4 }} /> {u.status}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <button
-                        className={`lm-btn lm-btn--sm ${u.status === "PAID" ? "lm-btn--ghost" : "lm-btn--primary"}`}
-                        style={{ fontSize: 11, padding: "4px 10px" }}
-                        onClick={() => handleTogglePayoutStatus(u.id)}
-                      >
-                        {u.status === "PAID" ? "Undo Payment" : "Mark as Paid"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── TAB 2: Detailed Converted Sales Records ── */}
-      {activeTab === "conversions" && (
-        <div className="lm-table-wrap">
-          <div style={{ padding: 14, borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, width: 280 }}>
-              <Search size={14} color="#64748b" />
-              <input
-                type="text"
-                placeholder="Search customer, lead #, service..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{ border: "none", outline: "none", background: "transparent", fontSize: 12, width: "100%" }}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} style={{ border: "none", background: "none", cursor: "pointer", color: "#94a3b8", fontWeight: 700 }}>×</button>
-              )}
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Filter size={14} color="#64748b" />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>Filter Executive:</span>
-              <select
-                value={selectedUserFilter}
-                onChange={e => setSelectedUserFilter(e.target.value)}
-                style={{ border: "1px solid #cbd5e1", borderRadius: 6, padding: "5px 10px", fontSize: 12, outline: "none" }}
-              >
-                <option value="ALL">All Executives</option>
-                {salesUsers.map(u => (
-                  <option key={u.id} value={u.id}>{u.fullname || u.username}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="lm-incentive-table-scroll" role="region" aria-label="Individual converted sale records" tabIndex="0">
-          <table className="lm-table">
-            <thead>
-              <tr>
-                <th style={{ width: 50, textAlign: "center" }}>#</th>
-                <th>Lead / Customer</th>
-                <th>Executive</th>
-                <th>Service / Product</th>
-                <th>Gross Sale</th>
-                <th>Discount</th>
-                <th>Net Revenue</th>
-                <th>{incentiveMode === "FIXED_PER_SALE" ? "Fixed Incentive / Sale" : "Net Revenue Rate"}</th>
-                <th>Earned Incentive</th>
-                <th>Sale Date</th>
-                <th style={{ textAlign: "center" }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredConversions.length === 0 ? (
-                <tr>
-                  <td colSpan={11} style={{ textAlign: "center", padding: 30, color: "#64748b" }}>
-                    No conversion records match the selected filter.
-                  </td>
-                </tr>
-              ) : (
-                filteredConversions.map((c, idx) => {
-                  const rateForUser = customUserRates[incentiveMode]?.[c.salesperson_id] ?? (incentiveMode === "FIXED_PER_SALE" ? globalFixedIncentive : globalPercentRate);
-                  const saleIncentive = incentiveMode === "FIXED_PER_SALE" ? Number(rateForUser) : (Number.isFinite(c.net_value) ? Math.round((c.net_value * Number(rateForUser)) / 100) : null);
-
-                  return (
-                    <tr key={c.id}>
-                      <td style={{ textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
-                      <td>
-                        <strong style={{ color: "#0f172a", fontSize: 13 }}>{c.customer_name}</strong>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>{[c.lead_number, c.reference && `Ref: ${c.reference}`].filter(Boolean).join(" · ") || "—"}</div>
-                      </td>
-                      <td><span style={{ fontSize: 12.5, fontWeight: 600, color: "#334155" }}>{c.salesperson_name}</span></td>
-                      <td><span style={{ fontSize: 12, color: "#475569" }}>{c.service || "—"}</span></td>
-                      <td style={{ color: "#475569" }}>{fmtFinance(c.gross_value)}</td>
-                      <td style={{ color: c.discount === null ? "#64748b" : "#dc2626" }}>{fmtFinance(c.discount)}</td>
-                      <td style={{ fontWeight: 600, color: "#0f172a" }}>{fmtFinance(c.net_value)}</td>
-                      <td><span className="lm-badge lm-badge--indigo">{incentiveMode === "FIXED_PER_SALE" ? fmt(rateForUser) : rateForUser + "%"}</span></td>
-                      <td><strong style={{ color: "#16a34a", fontSize: 13 }}>{fmtFinance(saleIncentive)}</strong></td>
-                      <td style={{ fontSize: 12, color: "#64748b" }}>{c.converted_at ? fmtDateTime(c.converted_at) : "—"}</td>
-                      <td style={{ textAlign: "center" }}>
-                        <button className="lm-icon-btn" title="View Lead" onClick={() => onViewLead?.({ id: c.id })}>
-                          <Eye size={15} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      )}
-
-      {editingRate && (
-        <div className="lm-overlay" onClick={() => setEditingRate(null)}>
-          <form className="lm-dialog lm-rate-editor" onSubmit={event => { event.preventDefault(); handleUpdateUserRate(editingRate.id, editingRate.value); setEditingRate(null); }} onClick={event => event.stopPropagation()}>
-            <div className="lm-rate-editor__head"><div><span>Personal rate override</span><h3>{editingRate.fullname}</h3></div><button type="button" className="lm-icon-btn" onClick={() => setEditingRate(null)} aria-label="Close rate editor"><X size={18} /></button></div>
-            <label htmlFor="incentive-user-rate">{incentiveMode === "FIXED_PER_SALE" ? "Fixed amount per converted sale (₹)" : "Percentage of net revenue (%)"}</label>
-            <input id="incentive-user-rate" type="number" min="0" step={incentiveMode === "FIXED_PER_SALE" ? "1" : "0.01"} value={editingRate.value} onChange={event => setEditingRate(current => ({ ...current, value: event.target.value }))} autoFocus required />
-            <p>{incentiveMode === "FIXED_PER_SALE" ? "This amount applies to every converted sale in the selected period." : "This percentage is calculated from net revenue after discounts."}</p>
-            <footer><button type="button" className="lm-btn lm-btn--ghost" onClick={() => setEditingRate(null)}>Cancel</button><button type="submit" className="lm-btn lm-btn--primary">Save rate</button></footer>
-          </form>
-        </div>
-      )}
-
-      {/* ── Incentive Rules Config Modal ── */}
-      {showConfigModal && (
-        <div className="lm-overlay" onClick={() => setShowConfigModal(false)}>
-          <div className="lm-dialog" onClick={e => e.stopPropagation()} style={{ maxWidth: 520, borderRadius: 14, padding: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Configure Incentive Calculation Rules</h3>
-              <button className="lm-icon-btn" onClick={() => setShowConfigModal(false)}><X size={18} /></button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                  Calculation Mode
-                </label>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-                    <input
-                      type="radio"
-                      name="inc_mode"
-                      checked={incentiveMode === "FIXED_PER_SALE"}
-                      onChange={() => setIncentiveMode("FIXED_PER_SALE")}
-                    />
-                    Fixed Rupee Amount Per Sale (₹)
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-                    <input
-                      type="radio"
-                      name="inc_mode"
-                      checked={incentiveMode === "PERCENTAGE"}
-                      onChange={() => setIncentiveMode("PERCENTAGE")}
-                    />
-                    Percentage Commission (%)
-                  </label>
-                </div>
-              </div>
-
-              {incentiveMode === "FIXED_PER_SALE" ? (
-                <div>
-                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                    Global Fixed Incentive Amount Per Sale (₹)
-                  </label>
-                  <input
-                    type="number"
-                    className="gmail-field-input"
-                    style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 12px", width: "100%" }}
-                    value={globalFixedIncentive}
-                    onChange={e => setGlobalFixedIncentive(Number(e.target.value))}
-                  />
-                  <small style={{ fontSize: 11, color: "#64748b" }}>Paid for every converted sale made by the salesman during the month</small>
-                </div>
-              ) : (
-                <div>
-                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-                    Global Percentage Commission Rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    className="gmail-field-input"
-                    style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 12px", width: "100%" }}
-                    value={globalPercentRate}
-                    onChange={e => setGlobalPercentRate(Number(e.target.value))}
-                  />
-                  <small style={{ fontSize: 11, color: "#64748b" }}>Calculated on Net Conversion Revenue (Gross - Discount)</small>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginTop: 22, display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button className="lm-btn lm-btn--ghost" onClick={() => setShowConfigModal(false)}>Cancel</button>
-              <button
-                className="lm-btn lm-btn--primary"
-                onClick={() => {
-                  showAlert("Rules Saved", "Incentive calculation rules updated successfully.", "success");
-                  setShowConfigModal(false);
-                }}
-              >
-                Save Incentive Rules
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
+// ─── Incentives View ──────────────────────────────────────────────────────────
 // ─── Reports View ─────────────────────────────────────────────────────────────
 
 function ReportsView() {
@@ -7219,323 +7869,627 @@ function ServicePieChart({ entries, total }) {
 
 // ─── Incentive & Payouts View ────────────────────────────────────────────────
 function IncentiveView({ leads, onViewLead, onOpenProfile }) {
-  const [search, setSearch] = useState("");
-  const [selectedSalesman, setSelectedSalesman] = useState("ALL");
-  const [stageFilter, setStageFilter] = useState("ALL");
-  const [payoutFilter, setPayoutFilter] = useState("ALL");
-  const [defaultRate, setDefaultRate] = useState(10); // default 10%
-  const [customRates, setCustomRates] = useState({});
-  const [payoutStatuses, setPayoutStatuses] = useState({});
+  const { user, hasPermission } = useAuth();
+  const { showAlert } = useModal();
+  const isAdmin = hasPermission(["lead.manage_settings"]);
 
   const fmtCurrency = (val) => {
     const num = Number(val) || 0;
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(num);
   };
+  const fmtPct = (n) => `${Number(n || 0).toFixed(1)}%`;
 
-  const salesmenList = useMemo(() => {
-    const names = new Set();
-    (leads || []).forEach(l => {
-      const name = l.assigned_to_name || l.assigned_user?.name || l.assigned_to || "Unassigned";
-      names.add(name);
-    });
-    return Array.from(names).sort();
-  }, [leads]);
+  // ── State ─────────────────────────────────────────────────────────────────
+  const now = new Date();
+  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [activeTab, setActiveTab] = useState("leaderboard"); // leaderboard | records | ytd | config
+  const [loading, setLoading] = useState(false);
+  const [ytdLoading, setYtdLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [summaryData, setSummaryData] = useState(null); // { month_label, users, totals }
+  const [ytdData, setYtdData] = useState(null);         // { year, months[] }
+  const [configData, setConfigData] = useState([]);     // per-user configs
+  const [configEdits, setConfigEdits] = useState({});   // {uid: {rate, target}}
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [updatingPayoutId, setUpdatingPayoutId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [repFilter, setRepFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const incentiveData = useMemo(() => {
-    return (leads || []).map(lead => {
-      const salesman = lead.assigned_to_name || lead.assigned_user?.name || lead.assigned_to || "Unassigned";
-      const value = Number(lead.estimated_value) || 0;
-      const rate = customRates[lead.id] !== undefined ? customRates[lead.id] : defaultRate;
-      const incentiveAmount = (value * rate) / 100;
-      const stage = lead.current_stage || "NEW";
-      const isWon = stage === "CONVERTED" || stage === "CLOSED_WON";
-      const payoutStatus = payoutStatuses[lead.id] || (isWon ? "Approved" : "Pending");
+  // ── Data Fetching ─────────────────────────────────────────────────────────
+  const fetchSummary = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const res = await ax("get", "/incentive-summary/", null, { params: { month, mode: "month" } });
+      setSummaryData(res.data);
+    } catch (e) {
+      if (!silent) showAlert("Error", "Could not load incentive data.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [month, showAlert]);
 
-      return {
-        ...lead,
-        salesman,
-        value,
-        rate,
-        incentiveAmount,
-        isWon,
-        payoutStatus
-      };
-    });
-  }, [leads, customRates, defaultRate, payoutStatuses]);
+  const fetchYTD = useCallback(async () => {
+    setYtdLoading(true);
+    try {
+      const year = month.split("-")[0];
+      const res = await ax("get", "/incentive-summary/", null, { params: { year, mode: "ytd" } });
+      setYtdData(res.data);
+    } catch {
+      showAlert("Error", "Could not load YTD data.", "error");
+    } finally {
+      setYtdLoading(false);
+    }
+  }, [month, showAlert]);
 
-  const filteredData = useMemo(() => {
-    return incentiveData.filter(item => {
-      if (selectedSalesman !== "ALL" && item.salesman !== selectedSalesman) return false;
-      if (stageFilter === "WON" && !item.isWon) return false;
-      if (stageFilter === "OTHER" && item.isWon) return false;
-      if (payoutFilter !== "ALL" && item.payoutStatus !== payoutFilter) return false;
+  const fetchConfig = useCallback(async () => {
+    setConfigLoading(true);
+    try {
+      const res = await ax("get", "/incentive-config/");
+      setConfigData(res.data || []);
+    } catch {
+      showAlert("Error", "Could not load incentive configuration.", "error");
+    } finally {
+      setConfigLoading(false);
+    }
+  }, [showAlert]);
 
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const customer = (item.customer_name || item.company_name || "").toLowerCase();
-        const salesman = (item.salesman || "").toLowerCase();
-        const leadNo = (item.lead_number || "").toLowerCase();
-        return customer.includes(q) || salesman.includes(q) || leadNo.includes(q);
-      }
-      return true;
-    });
-  }, [incentiveData, selectedSalesman, stageFilter, payoutFilter, search]);
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
+  useEffect(() => { if (activeTab === "ytd") fetchYTD(); }, [activeTab, fetchYTD]);
+  useEffect(() => { if (activeTab === "config") fetchConfig(); }, [activeTab, fetchConfig]);
 
-  const stats = useMemo(() => {
-    let totalValue = 0;
-    let totalIncentive = 0;
-    let paidIncentive = 0;
-    let pendingIncentive = 0;
-    let wonDealsCount = 0;
-
-    incentiveData.forEach(item => {
-      if (item.isWon) wonDealsCount++;
-      totalValue += item.value;
-      totalIncentive += item.incentiveAmount;
-      if (item.payoutStatus === "Paid") {
-        paidIncentive += item.incentiveAmount;
-      } else {
-        pendingIncentive += item.incentiveAmount;
-      }
-    });
-
-    return { totalValue, totalIncentive, paidIncentive, pendingIncentive, wonDealsCount };
-  }, [incentiveData]);
-
-  const salesmanSummary = useMemo(() => {
-    const map = {};
-    incentiveData.forEach(item => {
-      if (!map[item.salesman]) {
-        map[item.salesman] = { salesman: item.salesman, totalValue: 0, totalIncentive: 0, paidIncentive: 0, dealsCount: 0, wonCount: 0 };
-      }
-      map[item.salesman].dealsCount++;
-      if (item.isWon) map[item.salesman].wonCount++;
-      map[item.salesman].totalValue += item.value;
-      map[item.salesman].totalIncentive += item.incentiveAmount;
-      if (item.payoutStatus === "Paid") {
-        map[item.salesman].paidIncentive += item.incentiveAmount;
-      }
-    });
-    return Object.values(map).sort((a, b) => b.totalIncentive - a.totalIncentive);
-  }, [incentiveData]);
-
-  const handleRateChange = (leadId, newRate) => {
-    const val = Math.max(0, Math.min(100, Number(newRate) || 0));
-    setCustomRates(prev => ({ ...prev, [leadId]: val }));
+  // ── Payout approval ───────────────────────────────────────────────────────
+  const handlePayoutStatusChange = async (userEntry, newStatus) => {
+    const uid = userEntry.user_id;
+    setUpdatingPayoutId(uid);
+    try {
+      // Upsert payout record first (sync live conversion data)
+      const upsertRes = await ax("post", "/incentive-payouts/", {
+        user_id: uid,
+        month,
+        gross_revenue: userEntry.gross_revenue,
+        discount_total: userEntry.discount_total,
+        net_revenue: userEntry.net_revenue,
+        deal_count: userEntry.deal_count,
+        incentive_rate: userEntry.incentive_rate,
+        incentive_amount: userEntry.incentive_amount,
+        target_amount: userEntry.target_amount,
+      });
+      const payoutId = upsertRes.data.id;
+      // Now update the status
+      await ax("patch", `/incentive-payouts/${payoutId}/`, { payout_status: newStatus });
+      await fetchSummary(true);
+    } catch (e) {
+      showAlert("Error", e.response?.data?.error || "Could not update payout status.", "error");
+    } finally {
+      setUpdatingPayoutId(null);
+    }
   };
 
-  const handleStatusChange = (leadId, newStatus) => {
-    setPayoutStatuses(prev => ({ ...prev, [leadId]: newStatus }));
+  // ── Config save ───────────────────────────────────────────────────────────
+  const handleSaveConfig = async () => {
+    setSavingConfig(true);
+    try {
+      const updates = Object.entries(configEdits).map(([uid, vals]) => ({
+        user_id: parseInt(uid),
+        incentive_rate: vals.rate,
+        monthly_target: vals.target,
+      }));
+      if (!updates.length) { showAlert("Info", "No changes to save.", "info"); return; }
+      await ax("post", "/incentive-config/", updates);
+      setConfigEdits({});
+      await fetchConfig();
+      await fetchSummary(true);
+      showAlert("Saved", "Incentive configuration updated.", "success");
+    } catch {
+      showAlert("Error", "Could not save configuration.", "error");
+    } finally {
+      setSavingConfig(false);
+    }
   };
 
+  const setEdit = (uid, field, val) =>
+    setConfigEdits(prev => ({
+      ...prev,
+      [uid]: { ...(prev[uid] || {}), [field]: val },
+    }));
+
+  // ── Filtered records ──────────────────────────────────────────────────────
+  const allRecords = useMemo(() => {
+    if (!summaryData?.users) return [];
+    return summaryData.users.flatMap(u =>
+      (u.records || []).map(r => ({ ...r, salesman: u.fullname, payout_status: u.payout_status }))
+    );
+  }, [summaryData]);
+
+  const filteredRecords = useMemo(() => {
+    let rows = allRecords;
+    if (repFilter !== "ALL") rows = rows.filter(r => r.salesman === repFilter);
+    if (statusFilter !== "ALL") rows = rows.filter(r => r.payout_status === statusFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter(r =>
+        (r.customer_name || "").toLowerCase().includes(q) ||
+        (r.salesman || "").toLowerCase().includes(q) ||
+        (r.lead_number || "").toLowerCase().includes(q)
+      );
+    }
+    return rows;
+  }, [allRecords, repFilter, statusFilter, search]);
+
+  const repNames = useMemo(() => summaryData?.users?.map(u => u.fullname) || [], [summaryData]);
+  const totals = summaryData?.totals || {};
+
+  // ── CSV export ─────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
-    const headers = ["Lead #", "Customer/Company", "Salesman", "Stage", "Deal Value (INR)", "Incentive Rate (%)", "Incentive Amount (INR)", "Payout Status"];
-    const rows = filteredData.map(d => [
-      `"${d.lead_number || ""}"`,
-      `"${d.customer_name || d.company_name || ""}"`,
-      `"${d.salesman}"`,
-      `"${d.current_stage || ""}"`,
-      d.value,
-      d.rate,
-      d.incentiveAmount,
-      `"${d.payoutStatus}"`
+    const hdrs = ["Lead #", "Customer", "Sales Rep", "Conversion Date", "Gross (INR)", "Discount (INR)", "Net (INR)", "Payout Status"];
+    const rows = filteredRecords.map(r => [
+      `"${r.lead_number || ""}"`, `"${r.customer_name || ""}"`, `"${r.salesman}"`,
+      `"${r.converted_at ? new Date(r.converted_at).toLocaleDateString() : ""}"`,
+      r.final_value, r.discount, r.net_value, `"${r.payout_status}"`
     ]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `incentive_report_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csv = "data:text/csv;charset=utf-8," + [hdrs.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const a = document.createElement("a");
+    a.href = encodeURI(csv);
+    a.download = `incentive_records_${month}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
+
+  // ── Status badge ──────────────────────────────────────────────────────────
+  const PayoutBadge = ({ status }) => {
+    const map = { PENDING: ["#f97316", "Pending"], APPROVED: ["#6366f1", "Approved"], PAID: ["#16a34a", "Paid"] };
+    const [color, label] = map[status] || ["#64748b", status];
+    return (
+      <span className="lm-payout-badge" style={{ "--badge-color": color }}>
+        {status === "PAID" && <CheckCircle2 size={11} />}
+        {status === "APPROVED" && <BadgePercent size={11} />}
+        {status === "PENDING" && <Clock size={11} />}
+        {label}
+      </span>
+    );
+  };
+
+  // ── Target progress bar ────────────────────────────────────────────────────
+  const TargetBar = ({ progress }) => {
+    if (progress === null || progress === undefined) return null;
+    const pct = Math.min(progress, 100);
+    const color = pct >= 100 ? "#16a34a" : pct >= 75 ? "#6366f1" : pct >= 50 ? "#f97316" : "#ef4444";
+    return (
+      <div className="lm-target-bar">
+        <div className="lm-target-bar__track">
+          <div className="lm-target-bar__fill" style={{ width: `${pct}%`, background: color }} />
+        </div>
+        <span className="lm-target-bar__label" style={{ color }}>{progress.toFixed(0)}%</span>
+      </div>
+    );
+  };
+
+  const TABS = [
+    { id: "leaderboard", label: "Leaderboard", icon: TrendingUp },
+    { id: "records", label: "Converted Sales", icon: Table2 },
+    { id: "ytd", label: "YTD Chart", icon: BarChart2 },
+    ...(isAdmin ? [{ id: "config", label: "Config", icon: Settings }] : []),
+  ];
+
+  const monthLabel = summaryData?.month_label || month;
 
   return (
-    <div className="lm-incentive-view">
-      {/* Overview Cards */}
-      <div className="lm-stats lm-incentive-stats">
-        <StatCard label="Total Incentive Pool" value={fmtCurrency(stats.totalIncentive)} icon={BadgePercent} color="#6366f1" />
-        <StatCard label="Paid Incentive" value={fmtCurrency(stats.paidIncentive)} icon={CheckCircle2} color="#16a34a" />
-        <StatCard label="Pending Payouts" value={fmtCurrency(stats.pendingIncentive)} icon={Clock} color="#f97316" />
-        <StatCard label="Converted Deals" value={stats.wonDealsCount} icon={TrendingUp} color="#06b6d4" />
-      </div>
-
-      {/* Global Rate & Export Toolbar */}
-      <div className="lm-incentive-header">
-        <div className="lm-incentive-default-rate">
-          <label>Default Incentive Rate (%):</label>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.5"
-            value={defaultRate}
-            onChange={(e) => setDefaultRate(Number(e.target.value))}
-            className="lm-rate-input"
-          />
+    <div className="lm-incentive-view lm-incentive-v2">
+      {/* ── Header Bar ───────────────────────────────────────────────── */}
+      <div className="lm-incentive-topbar">
+        <div className="lm-incentive-topbar__left">
+          <BadgePercent size={20} className="lm-incentive-topbar__icon" />
+          <div>
+            <h3 className="lm-incentive-topbar__title">Incentives</h3>
+            <p className="lm-incentive-topbar__sub">Real conversion data · Payout workflow</p>
+          </div>
         </div>
-        <button className="lm-btn lm-btn--ghost lm-btn--sm" onClick={handleExportCSV}>
-          <Download size={15} /> Export Incentive CSV
-        </button>
-      </div>
-
-      {/* Salesmen Leaderboard Summary */}
-      <div className="lm-incentive-leaderboard">
-        <h4 className="lm-section-title"><Users2 size={16} /> Sales Team Incentive Summary</h4>
-        <div className="lm-incentive-grid">
-          {salesmanSummary.map((s) => (
-            <div
-              key={s.salesman}
-              className="lm-incentive-card"
-              onClick={() => onOpenProfile?.({ fullname: s.salesman, name: s.salesman, username: s.salesman })}
-              style={{ cursor: "pointer" }}
-              title={`Click to view ${s.salesman}'s Employee Profile`}
-            >
-              <div className="lm-incentive-card__head">
-                <div className="lm-incentive-card__avatar">{s.salesman.charAt(0).toUpperCase()}</div>
-                <div>
-                  <h5 className="lm-incentive-card__name">{s.salesman}</h5>
-                  <span className="lm-incentive-card__sub">{s.wonCount} won / {s.dealsCount} total leads</span>
-                </div>
-              </div>
-              <div className="lm-incentive-card__body">
-                <div className="lm-incentive-metric">
-                  <small>Total Pipeline Value</small>
-                  <strong>{fmtCurrency(s.totalValue)}</strong>
-                </div>
-                <div className="lm-incentive-metric">
-                  <small>Incentive Earned</small>
-                  <strong className="lm-text-indigo">{fmtCurrency(s.totalIncentive)}</strong>
-                </div>
-              </div>
-              <div className="lm-incentive-card__footer">
-                <small>Paid: <span className="lm-text-green">{fmtCurrency(s.paidIncentive)}</span></small>
-                <small>Pending: <span className="lm-text-orange">{fmtCurrency(s.totalIncentive - s.paidIncentive)}</span></small>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Toolbar Filters */}
-      <div className="lm-toolbar lm-incentive-toolbar">
-        <div className="lm-search">
-          <Search size={16} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search salesman, customer, lead number..."
-          />
-          {search && (
-            <button className="lm-search__clear" onClick={() => setSearch("")}>
-              <X size={14} />
+        <div className="lm-incentive-topbar__right">
+          <div className="lm-incentive-month-picker">
+            <CalendarDays size={15} />
+            <input
+              type="month"
+              value={month}
+              onChange={e => setMonth(e.target.value)}
+              className="lm-month-input"
+            />
+          </div>
+          <button className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => fetchSummary()}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+          {activeTab === "records" && (
+            <button className="lm-btn lm-btn--ghost lm-btn--sm" onClick={handleExportCSV}>
+              <Download size={14} /> Export CSV
             </button>
           )}
         </div>
-
-        <div className="lm-filters lm-incentive-filters">
-          <select value={selectedSalesman} onChange={(e) => setSelectedSalesman(e.target.value)}>
-            <option value="ALL">All Sales Representatives</option>
-            {salesmenList.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-
-          <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}>
-            <option value="ALL">All Deal Stages</option>
-            <option value="WON">Converted / Won Deals Only</option>
-            <option value="OTHER">In Pipeline / Other</option>
-          </select>
-
-          <select value={payoutFilter} onChange={(e) => setPayoutFilter(e.target.value)}>
-            <option value="ALL">All Payout Statuses</option>
-            <option value="Approved">Approved</option>
-            <option value="Pending">Pending</option>
-            <option value="Paid">Paid</option>
-          </select>
-        </div>
       </div>
 
-      {/* Incentive Breakdown Table */}
-      <div className="lm-table-wrap">
-        {filteredData.length === 0 ? (
-          <div className="lm-center-state">
-            <p>No incentive records match the selected filters.</p>
+      {/* ── Stat Cards ───────────────────────────────────────────────── */}
+      <div className="lm-stats lm-incentive-stats">
+        <StatCard label="Total Incentive Pool" value={fmtCurrency(totals.incentive_amount || 0)} icon={BadgePercent} color="#6366f1" />
+        <StatCard label="Net Monthly Revenue" value={fmtCurrency(totals.net_revenue || 0)} icon={TrendingUp} color="#16a34a" />
+        <StatCard label="Converted Deals" value={totals.deal_count || 0} icon={CheckCircle2} color="#06b6d4" />
+        <StatCard label="Active Reps" value={totals.active_reps || 0} icon={Users2} color="#f97316" />
+      </div>
+
+      {/* ── Tabs ─────────────────────────────────────────────────────── */}
+      <div className="lm-incentive-tabs">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            className={`lm-incentive-tab${activeTab === id ? " active" : ""}`}
+            onClick={() => setActiveTab(id)}
+          >
+            <Icon size={15} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="lm-center-state"><Loader2 className="spin" size={28} /><p>Loading {monthLabel} data…</p></div>
+      ) : (
+
+        /* ── LEADERBOARD TAB ─────────────────────────────────────────── */
+        activeTab === "leaderboard" && (
+          <div className="lm-incentive-leaderboard-v2">
+            {(!summaryData?.users?.length) ? (
+              <div className="lm-center-state">
+                <BadgePercent size={40} />
+                <strong>No conversions in {monthLabel}</strong>
+                <p>No converted sales records were found for this month.</p>
+              </div>
+            ) : (
+              <div className="lm-incentive-cards-grid">
+                {summaryData.users.map((u, idx) => (
+                  <div key={u.user_id} className="lm-incentive-card-v2">
+                    <div className="lm-incentive-card-v2__rank">#{idx + 1}</div>
+                    <div className="lm-incentive-card-v2__head">
+                      <div
+                        className="lm-incentive-card__avatar lm-clickable"
+                        onClick={() => onOpenProfile?.({ fullname: u.fullname, name: u.fullname, username: u.username })}
+                        title={`View ${u.fullname}'s profile`}
+                      >
+                        {(u.fullname || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h5
+                          className="lm-incentive-card__name lm-clickable"
+                          onClick={() => onOpenProfile?.({ fullname: u.fullname, name: u.fullname, username: u.username })}
+                        >
+                          {u.fullname}
+                        </h5>
+                        <span className="lm-incentive-card__sub">{u.designation || u.department || "Sales Rep"}</span>
+                      </div>
+                      <PayoutBadge status={u.payout_status} />
+                    </div>
+
+                    <div className="lm-incentive-card-v2__metrics">
+                      <div className="lm-incentive-metric">
+                        <small>Gross Revenue</small>
+                        <strong>{fmtCurrency(u.gross_revenue)}</strong>
+                      </div>
+                      <div className="lm-incentive-metric">
+                        <small>Discount</small>
+                        <strong className="lm-text-orange">- {fmtCurrency(u.discount_total)}</strong>
+                      </div>
+                      <div className="lm-incentive-metric">
+                        <small>Net Revenue</small>
+                        <strong className="lm-text-green">{fmtCurrency(u.net_revenue)}</strong>
+                      </div>
+                      <div className="lm-incentive-metric">
+                        <small>Incentive ({fmtPct(u.incentive_rate)})</small>
+                        <strong className="lm-text-indigo">{fmtCurrency(u.incentive_amount)}</strong>
+                      </div>
+                      <div className="lm-incentive-metric">
+                        <small>Deals Converted</small>
+                        <strong>{u.deal_count}</strong>
+                      </div>
+                    </div>
+
+                    {u.target_amount && (
+                      <div className="lm-incentive-card-v2__target">
+                        <div className="lm-incentive-target-label">
+                          <small>Monthly Target Progress</small>
+                          <small>{fmtCurrency(u.net_revenue)} / {fmtCurrency(u.target_amount)}</small>
+                        </div>
+                        <TargetBar progress={u.target_progress} />
+                      </div>
+                    )}
+
+                    {isAdmin && (
+                      <div className="lm-incentive-card-v2__actions">
+                        {updatingPayoutId === u.user_id ? (
+                          <div className="lm-center-state lm-center-state--sm"><Loader2 className="spin" size={14} /></div>
+                        ) : (
+                          <select
+                            value={u.payout_status}
+                            onChange={e => handlePayoutStatusChange(u, e.target.value)}
+                            className={`lm-payout-select lm-payout-select--${u.payout_status.toLowerCase()}`}
+                            disabled={updatingPayoutId !== null}
+                          >
+                            <option value="PENDING">⏳ Pending</option>
+                            <option value="APPROVED">✅ Approved</option>
+                            <option value="PAID">💰 Paid</option>
+                          </select>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <table className="lm-table lm-incentive-table">
-            <thead>
-              <tr>
-                <th>Lead / Customer</th>
-                <th>Sales Representative</th>
-                <th>Stage</th>
-                <th>Deal Value</th>
-                <th>Incentive Rate (%)</th>
-                <th>Earned Incentive</th>
-                <th>Payout Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((d) => (
-                <tr key={d.id} className={d.isWon ? "lm-row--won" : ""}>
-                  <td>
-                    <div className="lm-lead-cell">
-                      <strong>{d.customer_name || d.company_name || "—"}</strong>
-                      <small className="lm-lead-no">{d.lead_number}</small>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="lm-salesman-pill" onClick={() => onOpenProfile?.({ fullname: d.salesman, name: d.salesman })} style={{ cursor: 'pointer' }} title="Click to view Employee Profile">{d.salesman}</div>
-                  </td>
-                  <td>
-                    <StagePill stage={d.current_stage} />
-                  </td>
-                  <td>
-                    <strong>{fmtCurrency(d.value)}</strong>
-                  </td>
-                  <td>
-                    <div className="lm-inline-rate">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                        value={d.rate}
-                        onChange={(e) => handleRateChange(d.id, e.target.value)}
-                        className="lm-rate-input-sm"
-                      />
-                      <span>%</span>
-                    </div>
-                  </td>
-                  <td>
-                    <strong className="lm-incentive-amt">{fmtCurrency(d.incentiveAmount)}</strong>
-                  </td>
-                  <td>
-                    <select
-                      value={d.payoutStatus}
-                      onChange={(e) => handleStatusChange(d.id, e.target.value)}
-                      className={`lm-status-select lm-status-select--${d.payoutStatus.toLowerCase()}`}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Paid">Paid</option>
-                    </select>
-                  </td>
-                  <td>
-                    <button title="View Lead" className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => onViewLead(d)}>
-                      <Eye size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+        )
+      )}
+
+      {/* ── RECORDS TAB ──────────────────────────────────────────────── */}
+      {activeTab === "records" && !loading && (
+        <div className="lm-incentive-records">
+          <div className="lm-toolbar lm-incentive-toolbar">
+            <div className="lm-search">
+              <Search size={15} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search lead, customer, rep…" />
+              {search && <button className="lm-search__clear" onClick={() => setSearch("")}><X size={13} /></button>}
+            </div>
+            <div className="lm-filters">
+              <select value={repFilter} onChange={e => setRepFilter(e.target.value)}>
+                <option value="ALL">All Reps</option>
+                {repNames.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="PAID">Paid</option>
+              </select>
+            </div>
+          </div>
+
+          {filteredRecords.length === 0 ? (
+            <div className="lm-center-state">
+              <Table2 size={36} />
+              <strong>No records found</strong>
+              <p>Try adjusting the filters or month picker.</p>
+            </div>
+          ) : (
+            <div className="lm-table-wrap">
+              <table className="lm-table lm-incentive-table">
+                <thead>
+                  <tr>
+                    <th>Lead / Customer</th>
+                    <th>Sales Rep</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Gross Value</th>
+                    <th>Discount</th>
+                    <th>Net Value</th>
+                    <th>Payout Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRecords.map(r => (
+                    <tr key={r.id}>
+                      <td>
+                        <div className="lm-lead-cell">
+                          <strong>{r.customer_name || "—"}</strong>
+                          <small className="lm-lead-no">{r.lead_number}</small>
+                        </div>
+                      </td>
+                      <td>
+                        <div
+                          className="lm-salesman-pill lm-clickable"
+                          onClick={() => onOpenProfile?.({ fullname: r.salesman, name: r.salesman })}
+                          title="View profile"
+                        >
+                          {r.salesman}
+                        </div>
+                      </td>
+                      <td><span className="lm-tag">{r.conversion_type || r.service || "—"}</span></td>
+                      <td><small>{r.converted_at ? new Date(r.converted_at).toLocaleDateString() : "—"}</small></td>
+                      <td><strong>{fmtCurrency(r.final_value)}</strong></td>
+                      <td><span className="lm-text-orange">{fmtCurrency(r.discount)}</span></td>
+                      <td><strong className="lm-text-green">{fmtCurrency(r.net_value)}</strong></td>
+                      <td><PayoutBadge status={r.payout_status} /></td>
+                      <td>
+                        <button
+                          title="View Lead"
+                          className="lm-btn lm-btn--ghost lm-btn--sm"
+                          onClick={() => onViewLead?.({ id: r.lead_id })}
+                        >
+                          <Eye size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── YTD CHART TAB ────────────────────────────────────────────── */}
+      {activeTab === "ytd" && (
+        <div className="lm-incentive-ytd">
+          {ytdLoading ? (
+            <div className="lm-center-state"><Loader2 className="spin" size={28} /><p>Loading YTD data…</p></div>
+          ) : !ytdData?.months?.length ? (
+            <div className="lm-center-state">
+              <BarChart2 size={40} />
+              <strong>No data for {month.split("-")[0]}</strong>
+              <p>No conversions recorded in this year yet.</p>
+            </div>
+          ) : (
+            <>
+              <div className="lm-incentive-ytd__header">
+                <h4 className="lm-section-title"><BarChart2 size={16} /> Year-to-Date Incentive Summary — {month.split("-")[0]}</h4>
+              </div>
+              <div className="lm-incentive-ytd__chart">
+                <ResponsiveContainer width="100%" height={320}>
+                  <AreaChart data={ytdData.months} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gradNet" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="gradIncentive" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#16a34a" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#16a34a" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="month"
+                      tickFormatter={m => { const d = new Date(m + "-01"); return d.toLocaleString("en", { month: "short" }); }}
+                      tick={{ fontSize: 12, fill: "#64748b" }}
+                    />
+                    <YAxis
+                      tickFormatter={v => v >= 100000 ? `₹${(v / 100000).toFixed(1)}L` : `₹${(v / 1000).toFixed(0)}K`}
+                      tick={{ fontSize: 11, fill: "#64748b" }}
+                    />
+                    <Tooltip
+                      formatter={(val, name) => [
+                        new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val),
+                        name === "net" ? "Net Revenue" : name === "incentive" ? "Incentive Pool" : name
+                      ]}
+                      labelFormatter={m => { const d = new Date(m + "-01"); return d.toLocaleString("en", { month: "long", year: "numeric" }); }}
+                    />
+                    <Legend formatter={v => v === "net" ? "Net Revenue" : v === "incentive" ? "Incentive Pool" : v} />
+                    <Area type="monotone" dataKey="net" stroke="#6366f1" strokeWidth={2} fill="url(#gradNet)" dot={{ r: 4, fill: "#6366f1" }} />
+                    <Area type="monotone" dataKey="incentive" stroke="#16a34a" strokeWidth={2} fill="url(#gradIncentive)" dot={{ r: 4, fill: "#16a34a" }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* YTD Summary Table */}
+              <div className="lm-table-wrap lm-incentive-ytd__table">
+                <table className="lm-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Deals</th>
+                      <th>Gross Revenue</th>
+                      <th>Net Revenue</th>
+                      <th>Incentive Pool</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ytdData.months.map(m => (
+                      <tr key={m.month}>
+                        <td>{new Date(m.month + "-01").toLocaleString("en", { month: "long", year: "numeric" })}</td>
+                        <td>{m.count}</td>
+                        <td>{fmtCurrency(m.gross)}</td>
+                        <td className="lm-text-green">{fmtCurrency(m.net)}</td>
+                        <td className="lm-text-indigo">{fmtCurrency(m.incentive)}</td>
+                      </tr>
+                    ))}
+                    <tr className="lm-row--total">
+                      <td><strong>Total</strong></td>
+                      <td><strong>{ytdData.months.reduce((s, m) => s + (m.count || 0), 0)}</strong></td>
+                      <td><strong>{fmtCurrency(ytdData.months.reduce((s, m) => s + (m.gross || 0), 0))}</strong></td>
+                      <td><strong className="lm-text-green">{fmtCurrency(ytdData.months.reduce((s, m) => s + (m.net || 0), 0))}</strong></td>
+                      <td><strong className="lm-text-indigo">{fmtCurrency(ytdData.months.reduce((s, m) => s + (m.incentive || 0), 0))}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── CONFIG TAB (Admin only) ───────────────────────────────────── */}
+      {activeTab === "config" && isAdmin && (
+        <div className="lm-incentive-config">
+          <div className="lm-incentive-config__header">
+            <div>
+              <h4 className="lm-section-title"><Settings size={16} /> Per-User Incentive Configuration</h4>
+              <p className="lm-incentive-config__sub">Set individual incentive rates (% of net revenue) and monthly targets per sales representative.</p>
+            </div>
+            <button
+              className="lm-btn lm-btn--primary lm-btn--sm"
+              onClick={handleSaveConfig}
+              disabled={savingConfig || !Object.keys(configEdits).length}
+            >
+              {savingConfig ? <><Loader2 size={14} className="spin" /> Saving…</> : <><CheckCircle2 size={14} /> Save Changes</>}
+            </button>
+          </div>
+
+          {configLoading ? (
+            <div className="lm-center-state"><Loader2 className="spin" size={24} /></div>
+          ) : (
+            <div className="lm-table-wrap">
+              <table className="lm-table lm-incentive-config-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Designation / Dept</th>
+                    <th>Incentive Rate (%)</th>
+                    <th>Monthly Target (INR)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {configData.map(u => {
+                    const edits = configEdits[u.user_id] || {};
+                    const currentRate = edits.rate !== undefined ? edits.rate : u.incentive_rate;
+                    const currentTarget = edits.target !== undefined ? edits.target : (u.monthly_target ?? "");
+                    const isDirty = edits.rate !== undefined || edits.target !== undefined;
+                    return (
+                      <tr key={u.user_id} className={isDirty ? "lm-row--dirty" : ""}>
+                        <td>
+                          <div className="lm-incentive-user-cell">
+                            <div className="lm-incentive-card__avatar lm-avatar--sm">
+                              {(u.fullname || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <strong>{u.fullname}</strong>
+                              <small>@{u.username}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <small>{u.designation || "—"}{u.department ? ` · ${u.department}` : ""}</small>
+                        </td>
+                        <td>
+                          <div className="lm-inline-rate">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.5"
+                              value={currentRate}
+                              onChange={e => setEdit(u.user_id, "rate", parseFloat(e.target.value) || 0)}
+                              className="lm-rate-input-sm"
+                            />
+                            <span>%</span>
+                          </div>
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value={currentTarget}
+                            placeholder="No target set"
+                            onChange={e => setEdit(u.user_id, "target", e.target.value === "" ? null : parseFloat(e.target.value))}
+                            className="lm-target-input"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
 
 function ChatAvatar({ name, online, size = 38 }) {
   const initials = String(name || "?").split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
@@ -7588,8 +8542,12 @@ export default function LeadManagement() {
   const { showAlert, showConfirm } = useModal();
   const { user, hasPermission } = useAuth();
   const importRef = useRef(null);
-  const canListLeads = hasPermission(["lead.view_own", "lead.view_all"]);
-  const canViewSalesTeam = hasPermission(["lead.view_all", "lead.assign", "lead.reassign"]);
+  const userCustomPermissions = useMemo(() => new Set(user?.custom_permissions || []), [user]);
+  const isSalesMarketingProfileOnly = user?.role === "sales_and_marketing"
+    && userCustomPermissions.has("lead.view_my_profile")
+    && !userCustomPermissions.has("lead.view_all");
+  const canListLeads = !isSalesMarketingProfileOnly && hasPermission(["lead.view_own", "lead.view_all"]);
+  const canViewSalesTeam = !isSalesMarketingProfileOnly && hasPermission(["lead.view_all", "lead.assign", "lead.reassign"]);
   const canTelecall = hasPermission(["lead.call", "lead.follow_up"]);
 
   const [leads, setLeads] = useState([]);
@@ -7623,24 +8581,26 @@ export default function LeadManagement() {
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [workspaceRefresh, setWorkspaceRefresh] = useState(0);
   const [chatUnread, setChatUnread] = useState(0);
-  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    try {
-      setIsHeaderCollapsed(window.sessionStorage.getItem("lead-management-header-collapsed") === "true");
-    } catch {
-      // Storage may be unavailable in restricted browser contexts.
-    }
+    const updateFullscreenState = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", updateFullscreenState);
+    updateFullscreenState();
+    return () => document.removeEventListener("fullscreenchange", updateFullscreenState);
   }, []);
 
-  const setHeaderCollapsed = useCallback((collapsed) => {
-    setIsHeaderCollapsed(collapsed);
+  const toggleFullscreen = useCallback(async () => {
     try {
-      window.sessionStorage.setItem("lead-management-header-collapsed", String(collapsed));
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
     } catch {
-      // The preference is optional; keep the control working if storage is unavailable.
+      showAlert("Fullscreen", "Browser fullscreen could not be changed.", "error");
     }
-  }, []);
+  }, [showAlert]);
 
   useEffect(() => {
     if (view === "chat" || !user) return undefined;
@@ -7907,17 +8867,18 @@ export default function LeadManagement() {
 
 
   const ALL_VIEW_BTNS = [
-    { id: "table",       icon: Table2,       label: "Leads List", permission: ["lead.view_own", "lead.view_all"] },
-    { id: "tele_sales",  icon: Users2,       label: "Sales Team", permission: ["lead.view_all", "lead.assign", "lead.reassign"] },
+    { id: "table",       icon: Table2,       label: "Leads List", permission: ["lead.view_own", "lead.view_all"], hidden: isSalesMarketingProfileOnly },
+    { id: "tele_sales",  icon: Users2,       label: "Sales Team", permission: ["lead.view_all", "lead.assign", "lead.reassign"], hidden: isSalesMarketingProfileOnly },
     { id: "my_profile",  icon: User,         label: "My Profile", permission: ["lead.view_my_profile", "lead.view_own", "lead.view_all"] },
-    { id: "incentives",  icon: BadgePercent, label: "Incentive Management", permission: ["lead.view_all", "lead.view_my_profile", "lead.view_own"] },
-    { id: "emailing",    icon: Mail,         label: "Emailing",   permission: ["lead.send_email", "lead.manage_templates"] },
-    { id: "reports",     icon: BarChart2,    label: "Reports",    permission: ["lead.view_reports", "lead.view_all"] },
-    { id: "chat",        icon: MessageSquare, label: "Chat",      permission: ["chat.view", "lead.view_own", "lead.view_all"] },
+    { id: "all_meetings", icon: Users,       label: "All Meetings", permission: ["lead.view_all"], hidden: isSalesMarketingProfileOnly },
+    { id: "proposal_requests", icon: FileText, label: "Proposal Requests", permission: ["proposals.view"], hidden: isSalesMarketingProfileOnly },
+    { id: "incentives",  icon: BadgePercent, label: "Incentives", permission: ["lead.view_all"], hidden: isSalesMarketingProfileOnly },
+    { id: "emailing",    icon: Mail,         label: "Emailing",   permission: ["lead.send_email", "lead.manage_templates"], hidden: isSalesMarketingProfileOnly },
+    { id: "reports",     icon: BarChart2,    label: "Reports",    permission: ["lead.view_reports", "lead.view_all"], hidden: isSalesMarketingProfileOnly },
+    { id: "chat",        icon: MessageSquare, label: "Chat",      permission: "chat.view", hidden: isSalesMarketingProfileOnly },
   ];
 
-  const VIEW_BTNS = ALL_VIEW_BTNS.filter(btn => !btn.permission || hasPermission(btn.permission));
-  const currentWorkspaceLabel = VIEW_BTNS.find(button => button.id === view)?.label || "Lead Management";
+  const VIEW_BTNS = ALL_VIEW_BTNS.filter(btn => !btn.hidden && (!btn.permission || hasPermission(btn.permission)));
 
   useEffect(() => {
     if (VIEW_BTNS.length > 0 && !VIEW_BTNS.some(button => button.id === view)) {
@@ -7959,32 +8920,14 @@ export default function LeadManagement() {
   return (
     <div className="lm-root">
       {/* ── Header ── */}
-      {isHeaderCollapsed ? (
-        <div className="lm-header-collapsed" role="region" aria-label="Lead Management navigation collapsed">
-          <div className="lm-header-collapsed__context">
-            <span>Lead Management</span>
-            <ChevronRight size={14} aria-hidden="true" />
-            <strong>{currentWorkspaceLabel}</strong>
-          </div>
-          <button
-            type="button"
-            className="lm-header-toggle lm-header-toggle--show"
-            onClick={() => setHeaderCollapsed(false)}
-            aria-expanded="false"
-          >
-            <ChevronDown size={16} aria-hidden="true" />
-            <span>Show navigation</span>
-          </button>
-        </div>
-      ) : (
-        <div className="lm-header" id="lead-management-header-content">
+      <div className="lm-header" id="lead-management-header-content">
           <div className="lm-header__left">
             <button className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => router.push("/admindashboard/")}>
               <ArrowLeft size={16} /> Back
             </button>
             <div>
               <h1 className="lm-title">Lead Management</h1>
-              <p className="lm-subtitle">{view === "my_profile" ? "Your private lead workspace" : `${total} lead${total !== 1 ? "s" : ""} in pipeline`}</p>
+              <p className="lm-subtitle">{view === "my_profile" ? "Your private lead workspace" : view === "all_meetings" ? "All users' created meetings" : `${total} lead${total !== 1 ? "s" : ""} in pipeline`}</p>
             </div>
           </div>
           <div className="lm-header__right">
@@ -7996,26 +8939,23 @@ export default function LeadManagement() {
                 </button>
               ))}
             </div>
-            {!['my_profile', 'chat', 'incentives'].includes(view) && <button className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => fetchLeads(true)} disabled={refreshing}>
+            {!['my_profile', 'chat', 'incentives', 'all_meetings', 'proposal_requests'].includes(view) && <button className="lm-btn lm-btn--ghost lm-btn--sm" onClick={() => fetchLeads(true)} disabled={refreshing}>
               <RefreshCw size={15} className={refreshing ? "spin" : ""} />
             </button>}
             <button
               type="button"
               className="lm-header-toggle"
-              onClick={() => setHeaderCollapsed(true)}
-              aria-expanded="true"
-              aria-controls="lead-management-header-content"
-              title="Hide the upper navigation"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Exit full screen" : "Full screen"}
             >
-              <Minimize2 size={15} aria-hidden="true" />
-              <span>Hide header</span>
+              {isFullscreen ? <Minimize2 size={15} aria-hidden="true" /> : <Maximize2 size={15} aria-hidden="true" />}
+              <span>{isFullscreen ? "Exit full screen" : "Full screen"}</span>
             </button>
           </div>
         </div>
-      )}
 
       {/* ── Stats ── */}
-      {!['my_profile', 'chat', 'incentives'].includes(view) && <div className="lm-stats">
+      {!['my_profile', 'chat', 'incentives', 'all_meetings', 'proposal_requests'].includes(view) && <div className="lm-stats">
         <StatCard label="Total Leads" value={summaryStats.total ?? leads.length} icon={BarChart2} color="#6366f1" />
         <StatCard label="Converted" value={summaryStats.converted} icon={TrendingUp} color="#16a34a" />
         <StatCard label="High Priority" value={summaryStats.high_priority ?? summaryStats.critical_priority} icon={AlertCircle} color="#f97316" />
@@ -8065,7 +9005,11 @@ export default function LeadManagement() {
           onCallLogged={(call) => { updateLeadWithCall(call); if (canListLeads) fetchLeads(true); }}
         />
       ) : view === "incentives" ? (
-        <IncentiveManagementView onViewLead={setViewLead} />
+        <IncentiveView leads={leads} onViewLead={setViewLead} onOpenProfile={setProfileUser} />
+      ) : view === "all_meetings" ? (
+        <AllMeetingsView onViewLead={setViewLead} />
+      ) : view === "proposal_requests" ? (
+        <AllProposalRequestsView onViewLead={setViewLead} />
       ) : view === "reports" ? (
         <ReportsView />
       ) : view === "chat" ? (

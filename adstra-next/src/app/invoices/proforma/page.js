@@ -15,7 +15,7 @@ import { useAuth } from "@/Context/AuthContext";
 import { useModal } from "@/Context/ModalContext";
 
 export default function ProformaInvoiceList() {
-  const { user } = useAuth();
+  const { loading: authLoading, hasPermission } = useAuth();
   const { showAlert, showConfirm } = useModal();
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
@@ -34,10 +34,17 @@ export default function ProformaInvoiceList() {
   const router = useRouter();
 
   const API_BASE = API_BASE_URL;
+  const canView = hasPermission("proforma_invoices.view");
+  const canCreate = hasPermission("proforma_invoices.create");
+  const canUpdate = hasPermission("proforma_invoices.update");
+  const canDelete = hasPermission("proforma_invoices.delete");
+  const canRestore = hasPermission("proforma_invoices.restore");
+  const canManageSettings = hasPermission("settings.update");
 
   useEffect(() => {
-    fetchInvoices();
-  }, []);
+    if (!authLoading && canView) fetchInvoices();
+    else if (!authLoading) setIsLoading(false);
+  }, [authLoading, canView]);
 
   useEffect(() => {
     filterInvoices();
@@ -61,6 +68,10 @@ export default function ProformaInvoiceList() {
   };
 
   const handleStatusChange = (invoiceId, newStatus) => {
+    if (!canUpdate) {
+      showAlert("Permission Denied", "You do not have permission to update proforma invoices.", "error");
+      return;
+    }
     setUpdatingStatus((prev) => ({ ...prev, [invoiceId]: true }));
     axios
       .patch(`${API_BASE}/invoice/status/${invoiceId}/`, { status: newStatus })
@@ -83,6 +94,10 @@ export default function ProformaInvoiceList() {
   };
 
   const handleDeleteInvoice = (invoiceId, invoiceNo) => {
+    if (!canDelete) {
+      showAlert("Permission Denied", "You do not have permission to delete proforma invoices.", "error");
+      return;
+    }
     showConfirm(
       "Confirm Trash",
       `Move proforma ${invoiceNo} to trash?`,
@@ -124,6 +139,10 @@ export default function ProformaInvoiceList() {
   };
 
   const handleRestoreInvoice = (invoiceId) => {
+    if (!canRestore) {
+      showAlert("Permission Denied", "You do not have permission to restore proforma invoices.", "error");
+      return;
+    }
     axios
       .patch(`${API_BASE}/invoice/restore/${invoiceId}/`)
       .then(() => {
@@ -139,6 +158,10 @@ export default function ProformaInvoiceList() {
   };
 
   const handleHardDeleteInvoice = (invoiceId, invoiceNo) => {
+    if (!canDelete) {
+      showAlert("Permission Denied", "You do not have permission to delete proforma invoices.", "error");
+      return;
+    }
     showConfirm(
       "Permanent Delete",
       `Are you sure you want to permanently delete proforma ${invoiceNo}? This action cannot be undone.`,
@@ -270,6 +293,20 @@ export default function ProformaInvoiceList() {
     return matchesSearch && matchesDate;
   });
 
+  if (!authLoading && !canView) {
+    return (
+      <div className="layout-container">
+        <main className="layout-content" style={{ display: "grid", placeItems: "center" }}>
+          <div className="empty-state">
+            <h3>Access denied</h3>
+            <p>You do not have permission to view proforma invoices.</p>
+            <button className="btn-create" onClick={() => router.push("/admindashboard/")}>Back to Dashboard</button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="layout-container">
       <aside className="layout-sidebar">
@@ -284,13 +321,15 @@ export default function ProformaInvoiceList() {
         </div>
 
         <div className="sidebar-controls" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <Link href="/invoices/proforma/create/" className="btn-create full-width">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Create Proforma
-          </Link>
+          {canCreate && (
+            <Link href="/invoices/proforma/create/" className="btn-create full-width">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Create Proforma
+            </Link>
+          )}
 
           <button className="btn-download full-width" onClick={downloadPDF}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -343,7 +382,7 @@ export default function ProformaInvoiceList() {
           </div>
 
           <div className="divider" style={{ marginTop: "auto" }}></div>
-          {(user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson" || user?.is_staff || user?.is_superuser) && (
+          {canManageSettings && (
             <button className="btn-settings full-width" onClick={() => setShowSettings(true)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -352,16 +391,18 @@ export default function ProformaInvoiceList() {
               Settings
             </button>
           )}
-          <button className="btn-trash full-width" onClick={fetchTrashInvoices}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-              <path d="M10 11v6"></path>
-              <path d="M14 11v6"></path>
-              <path d="M9 6V4h6v2"></path>
-            </svg>
-            Trash / Bin
-          </button>
+          {(canDelete || canRestore) && (
+            <button className="btn-trash full-width" onClick={fetchTrashInvoices}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+                <path d="M9 6V4h6v2"></path>
+              </svg>
+              Trash / Bin
+            </button>
+          )}
         </div>
       </aside>
 
@@ -425,7 +466,7 @@ export default function ProformaInvoiceList() {
                       <td>{inv.proposal ? <><span className="purpose-text">{inv.proposal.purpose}</span><br/><small className="text-muted">{inv.proposal.proposal_no}</small></> : <span className="text-muted">Direct</span>}</td>
                       <td><span className="amount">₹{Number(inv.total_amount).toLocaleString("en-IN")}</span></td>
                       <td>
-                        <select value={inv.status} disabled={updatingStatus[inv.id]} onChange={(e) => handleStatusChange(inv.id, e.target.value)} className={`status-select status-select--${inv.status?.replace('_', '-')}`}>
+                        <select value={inv.status} disabled={updatingStatus[inv.id] || !canUpdate} onChange={(e) => handleStatusChange(inv.id, e.target.value)} className={`status-select status-select--${inv.status?.replace('_', '-')}`}>
                           <option value="unpaid">Unpaid</option>
                           <option value="partially_paid">Partially Paid</option>
                           <option value="paid">Paid</option>
@@ -434,12 +475,12 @@ export default function ProformaInvoiceList() {
                       </td>
                       <td style={{ display: "flex", gap: "6px" }}>
                         <button className="btn-action" onClick={() => router.push(`/invoices/result/?invoiceID=${inv.invoice_no}`)} title="View"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
-                        {(user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson" || user?.is_staff || user?.is_superuser) && (
+                        {canUpdate && (
                           <button className="btn-action btn-action--edit" onClick={() => router.push(`/invoices/edit/?id=${inv.id}`)} title="Edit">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                           </button>
                         )}
-                        <button className="btn-action btn-action--danger" onClick={() => handleDeleteInvoice(inv.id, inv.invoice_no)} title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>
+                        {canDelete && <button className="btn-action btn-action--danger" onClick={() => handleDeleteInvoice(inv.id, inv.invoice_no)} title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>}
                       </td>
                     </motion.tr>
                   ))
@@ -467,8 +508,8 @@ export default function ProformaInvoiceList() {
                           <td>{inv.invoice_no}</td>
                           <td>{inv.client?.name}</td>
                           <td style={{ display: "flex", gap: "8px" }}>
-                            <button className="btn btn-sm btn-success" onClick={() => handleRestoreInvoice(inv.id)}>Restore</button>
-                            <button className="btn btn-sm btn-danger" onClick={() => handleHardDeleteInvoice(inv.id, inv.invoice_no)}>Delete</button>
+                            {canRestore && <button className="btn btn-sm btn-success" onClick={() => handleRestoreInvoice(inv.id)}>Restore</button>}
+                            {canDelete && <button className="btn btn-sm btn-danger" onClick={() => handleHardDeleteInvoice(inv.id, inv.invoice_no)}>Delete</button>}
                           </td>
                         </tr>
                       ))}
@@ -481,7 +522,7 @@ export default function ProformaInvoiceList() {
         </div>
       )}
 
-      {showSettings && (user?.username?.toLowerCase() === "wilson" || user?.fullname?.toLowerCase() === "wilson" || user?.is_staff || user?.is_superuser) && (
+      {showSettings && canManageSettings && (
         <div className="status-modal-overlay" onClick={() => setShowSettings(false)} style={{ zIndex: 2000 }}>
           <div className="status-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '95%' }}>
             <div className="status-modal-header">

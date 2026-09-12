@@ -108,7 +108,7 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
         >
           <div className="row">
             {Object.keys(predefinedServices).map((service) => (
-              <div key={service} className="col-sm-6 mb-2">
+              <div key={service} className="col-12 mb-2">
                 <div className="form-check">
                   <input
                     type="checkbox"
@@ -132,73 +132,70 @@ export default function ServiceTable({ services, onChange, onServiceSelect }) {
         </div>
       </div>
 
-      {/* Items table */}
-      <table className="table table-bordered">
-        <thead className="table-dark">
-          <tr>
-            <th>Description</th>
-            <th>Qty</th>
-            <th>Rate</th>
-            <th>Amount</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {services.map((item, idx) => (
-            <tr key={idx}>
-              <td>
-                <input
-                  className="form-control"
-                  value={item.description}
-                  onChange={(e) =>
-                    handleItemChange(idx, "description", e.target.value)
-                  }
-                  ref={idx === services.length - 1 ? lastInputRef : null}
-                />
-                {/* Optional: show category tag */}
-                {item.category && (
-                  <small className="text-muted">Category: {item.category}</small>
-                )}
-              </td>
-              <td>
+      {/* Items List */}
+      <div className="mb-3">
+        {services.map((item, idx) => (
+          <div key={idx} className="border p-2 mb-2 rounded bg-light position-relative shadow-sm">
+            <button
+              className="btn btn-sm btn-outline-danger position-absolute"
+              style={{ top: "8px", right: "8px", padding: "2px 6px" }}
+              onClick={() => removeItem(idx)}
+              title="Remove Item"
+            >
+              ❌
+            </button>
+            <div className="mb-2" style={{ paddingRight: "35px" }}>
+              <input
+                className="form-control form-control-sm"
+                placeholder="Description"
+                value={item.description}
+                onChange={(e) =>
+                  handleItemChange(idx, "description", e.target.value)
+                }
+                ref={idx === services.length - 1 ? lastInputRef : null}
+              />
+              {item.category && (
+                <small className="text-muted d-block mt-1" style={{ fontSize: "11px" }}>Category: {item.category}</small>
+              )}
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <div style={{ width: "65px" }}>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control form-control-sm"
                   value={item.quantity}
                   min={1}
+                  title="Qty"
                   onFocus={(e) => e.target.select()}
                   onBlur={(e) => { if (e.target.value === "") handleItemChange(idx, "quantity", 1); }}
                   onChange={(e) =>
                     handleItemChange(idx, "quantity", e.target.value)
                   }
                 />
-              </td>
-              <td>
+              </div>
+              <span className="text-muted small">x</span>
+              <div style={{ flex: 1 }}>
                 <input
                   type="number"
-                  className="form-control"
+                  className="form-control form-control-sm"
                   value={item.rate}
                   min={0}
+                  title="Rate"
                   onFocus={(e) => e.target.select()}
                   onBlur={(e) => { if (e.target.value === "") handleItemChange(idx, "rate", 0); }}
                   onChange={(e) =>
                     handleItemChange(idx, "rate", e.target.value)
                   }
                 />
-              </td>
-              <td>₹{parseFloat(item.amount || 0).toFixed(2)}</td>
-              <td>
-                <button
-                  className="btn btn-sm btn-danger"
-                  onClick={() => removeItem(idx)}
-                >
-                  ❌
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </div>
+              <div className="text-end" style={{ minWidth: "75px" }}>
+                <strong style={{ fontSize: "13px" }}>₹{parseFloat(item.amount || 0).toFixed(2)}</strong>
+              </div>
+            </div>
+          </div>
+        ))}
+        {services.length === 0 && <div className="text-center p-3 text-muted border rounded">No services added yet</div>}
+      </div>
 
       <button className="btn btn-outline-primary mb-3" onClick={addItem}>
         ➕ Add Item

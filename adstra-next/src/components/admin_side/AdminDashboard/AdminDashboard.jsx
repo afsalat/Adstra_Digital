@@ -132,7 +132,7 @@ Are you sure you want to continue with logout?`,
   const menuItems = [
     "Home",
     ...(hasAnyPermission(["clients.view", "proposals.view", "invoices.view", "transactions.view"]) ? ["Finance"] : []),
-    ...(hasAnyPermission(["lead.view_own", "lead.view_all"]) ? ["CRM"] : []),
+    ...(hasAnyPermission(["lead.view_my_profile", "lead.view_own", "lead.view_all"]) ? ["CRM"] : []),
     "Profile",
     ...(hasPermission("users.view") ? ["Team"] : []),
     ...(hasPermission("settings.view") ? ["Settings"] : []),
@@ -295,7 +295,7 @@ Are you sure you want to continue with logout?`,
             <>
               {/* Lead Management */}
               {renderFeatureCard({
-                anyPermission: ["lead.view_own", "lead.view_all"],
+                anyPermission: ["lead.view_my_profile", "lead.view_own", "lead.view_all"],
                 href: "/leadmanagement/",
                 color: "emerald",
                 icon: <UserRoundPlus size={28} />,

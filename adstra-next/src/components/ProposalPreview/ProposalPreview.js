@@ -11,6 +11,9 @@ export default function ProposalPreview({
   services = [],
   sections: propSections = [],
   headerData = {},
+  totalPages = 1,
+  currentPage = 1,
+  settingsUpdatedAt,
 }) {
   const [settings, setSettings] = useState(null);
 
@@ -22,7 +25,7 @@ export default function ProposalPreview({
         console.error("Settings Fetch Error:", err);
       }
     });
-  }, []);
+  }, [settingsUpdatedAt]);
 
   // Convert numbers to words
   function numberToWords(num) {
@@ -253,14 +256,14 @@ export default function ProposalPreview({
   );
 
   return (
-    <div id="proposal-preview-pdf" className="proposal-preview-wrapper text-[15px] text-gray-800 leading-relaxed no-shadow">
+    <div className="proposal-preview-wrapper leading-relaxed no-shadow" style={{ fontSize: '15px', color: '#1f2937' }}>
       <div className="pdf-page">
         {/* Boxed GST Style Proposal Content */}
-        <div style={{ border: '2px solid black', fontFamily: 'Arial, sans-serif', color: 'black', background: 'white' }}>
+        <div style={{ fontFamily: 'Arial, sans-serif', color: 'black', background: 'white', border: '1.5px solid black', boxSizing: 'border-box' }}>
           
           {/* Top Bar */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid black', fontSize: '10px', fontWeight: 'bold' }}>
-            <span>Page No. 1 of 1</span>
+          <div data-proposal-block="topbar" data-page-break-avoid="true" style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid black', fontSize: '10px', fontWeight: 'bold' }}>
+            <span>Page No. {currentPage} of {totalPages}</span>
             <span style={{ fontSize: '22px', letterSpacing: '4px', fontWeight: '900' }}>
               PROPOSAL
             </span>
@@ -268,7 +271,7 @@ export default function ProposalPreview({
           </div>
 
           {/* Row 1: Proposal Details and Logo */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid black' }}>
+          <div data-proposal-block="details" data-page-break-avoid="true" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid black' }}>
             <div style={{ fontSize: '11px' }}>
               <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '8px' }}>Quotation Details:</div>
               <table style={{ borderCollapse: 'collapse' }}>
@@ -304,7 +307,7 @@ export default function ProposalPreview({
           </div>
 
           {/* Row 2: From & To */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid black' }}>
+          <div data-proposal-block="fromto" data-page-break-avoid="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid black' }}>
             <div style={{ padding: '8px', borderRight: '1px solid black', fontSize: '10px' }}>
               <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>From:</div>
               <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{settings?.name || "Adstra Digital"}</div>
@@ -321,29 +324,45 @@ export default function ProposalPreview({
             </div>
             <div style={{ padding: '8px', fontSize: '11px' }}>
               <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>To:</div>
-              <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>{headerData?.billTo?.name || "Client Name"}</div>
-              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word' }}>{headerData?.billTo?.address || "—"}</div>
-              {headerData?.billTo?.gstin && headerData?.billTo?.gstin !== "N/A" && (
-                <div><strong>GSTIN:</strong> {headerData.billTo.gstin}</div>
+              {headerData?.billTo?.company_name && (
+                <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '2px' }}>{headerData.billTo.company_name}</div>
+              )}
+              {headerData?.billTo?.name && (
+                <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '2px' }}>{headerData.billTo.name}</div>
+              )}
+              {(!headerData?.billTo?.company_name && !headerData?.billTo?.name) && (
+                <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '2px' }}>Client Name</div>
+              )}
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4', wordBreak: 'break-word', marginTop: '4px' }}>{headerData?.billTo?.address || "—"}</div>
+              <div style={{ marginTop: '4px' }}>
+                {headerData?.billTo?.gstin && headerData?.billTo?.gstin !== "N/A" && (
+                  <span><strong>GSTIN:</strong> {headerData.billTo.gstin} </span>
+                )}
+                {headerData?.billTo?.lut && (
+                  <span><strong>LUT:</strong> {headerData.billTo.lut}</span>
+                )}
+              </div>
+              {headerData?.billTo?.contact && (
+                <div style={{ wordBreak: 'break-word', marginTop: '2px' }}><strong>Mobile:</strong> {headerData.billTo.contact}</div>
               )}
               {headerData?.billTo?.email && (
-                <div><strong>Email:</strong> {headerData.billTo.email}</div>
+                <div style={{ wordBreak: 'break-word', marginTop: '2px' }}><strong>Email:</strong> {headerData.billTo.email}</div>
               )}
             </div>
           </div>
 
           {/* Purpose */}
           {headerData?.purpose && (
-            <div style={{ padding: '8px', borderBottom: '1px solid black', fontSize: '11px' }}>
+            <div data-proposal-block="purpose" data-page-break-avoid="true" style={{ padding: '8px', borderBottom: '1px solid black', fontSize: '11px' }}>
               <strong>Purpose:</strong> {headerData.purpose}
             </div>
           )}
 
           {/* Intro Sections */}
           {introSections.length > 0 && (
-            <div style={{ padding: '12px', borderBottom: '1px solid black', fontSize: '12px', lineHeight: '1.5' }}>
+            <div style={{ borderBottom: '1px solid black' }}>
               {introSections.map((sec, i) => (
-                <div key={i} style={{ marginBottom: i < introSections.length - 1 ? '12px' : '0' }}>
+                <div key={sec.id || `intro-${i}`} data-proposal-block={sec.id ? `section-${sec.id}` : `intro-${i}`} data-page-break-avoid="true" style={{ padding: '12px', fontSize: '12px', lineHeight: '1.5' }}>
                   <h4 style={{ fontWeight: 'bold', fontSize: '14px', margin: '0 0 6px 0', color: '#111' }}>{sec.title}</h4>
                   <div style={{ color: '#333' }}>
                     {renderSectionContent(sec.content)}
@@ -355,10 +374,10 @@ export default function ProposalPreview({
 
           {/* Items/Services Table Section */}
           {services.length > 0 && (
-            <div style={{ borderBottom: '1px solid black' }}>
+            <div data-proposal-block="services" style={{ borderBottom: '1px solid black' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid black', backgroundColor: '#f9fafb' }}>
+                  <tr data-page-break-avoid="true" style={{ borderBottom: '1px solid black', backgroundColor: '#f9fafb' }}>
                     <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '40px' }}>Sr.</th>
                     <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'left' }}>Item / Service Description</th>
                     <th style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center', width: '60px' }}>Qty</th>
@@ -370,7 +389,7 @@ export default function ProposalPreview({
                 <tbody>
                   {Object.entries(groupedServices).map(([category, items], groupIdx) => (
                     <React.Fragment key={category || groupIdx}>
-                      <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
+                      <tr data-page-break-avoid="true" style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
                         <td colSpan={6} style={{ padding: '4px 8px', borderBottom: '1px solid #eee', fontSize: '10px' }}>
                           {category}
                         </td>
@@ -382,7 +401,7 @@ export default function ProposalPreview({
                         const base = rate * qty;
                         const gstAmt = (base * gst) / 100;
                         return (
-                          <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                          <tr key={idx} data-page-break-avoid="true" style={{ borderBottom: '1px solid #eee' }}>
                             <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{idx + 1}</td>
                             <td style={{ borderRight: '1px solid black', padding: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{item.description}</td>
                             <td style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'center' }}>{qty.toFixed(2)}</td>
@@ -397,15 +416,15 @@ export default function ProposalPreview({
                 </tbody>
                 <tfoot>
                   {/* Financial Breakdown */}
-                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                  <tr data-page-break-avoid="true" style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
                     <td colSpan="5" style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Sub Total</td>
                     <td style={{ padding: '6px', textAlign: 'right' }}>{subtotal.toFixed(2)}</td>
                   </tr>
-                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
+                  <tr data-page-break-avoid="true" style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
                     <td colSpan="5" style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right' }}>Total Tax (GST)</td>
                     <td style={{ padding: '6px', textAlign: 'right' }}>{totalGST.toFixed(2)}</td>
                   </tr>
-                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>
+                  <tr data-page-break-avoid="true" style={{ borderTop: '1px solid black', fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>
                     <td colSpan="5" style={{ borderRight: '1px solid black', padding: '6px', textAlign: 'right', fontSize: '13px' }}>Grand Total (Rs)</td>
                     <td style={{ padding: '6px', textAlign: 'right', fontSize: '14px' }}>{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   </tr>
@@ -416,16 +435,16 @@ export default function ProposalPreview({
 
           {/* Amount in words */}
           {total > 0 && (
-            <div style={{ padding: '8px', borderBottom: '1px solid black', fontSize: '11px' }}>
+            <div data-proposal-block="amount-words" data-page-break-avoid="true" style={{ padding: '8px', borderBottom: '1px solid black', fontSize: '11px' }}>
               <span style={{ fontWeight: 'bold' }}>Rs.</span> {numberToWords(total)}
             </div>
           )}
 
           {/* Other Sections (Conclusions / details) */}
           {otherSections.length > 0 && (
-            <div style={{ padding: '12px', borderBottom: '1px solid black', fontSize: '12px', lineHeight: '1.5', pageBreakBefore: 'always', breakBefore: 'always' }}>
+            <div style={{ pageBreakBefore: 'always', breakBefore: 'always' }}>
               {otherSections.map((sec, i) => (
-                <div key={i} style={{ marginBottom: i < otherSections.length - 1 ? '12px' : '0' }}>
+                <div key={sec.id || `section-${i}`} data-proposal-block={sec.id ? `section-${sec.id}` : `section-${i}`} data-page-break-avoid="true" style={{ padding: '12px', borderBottom: '1px solid black', fontSize: '12px', lineHeight: '1.5' }}>
                   <h4 style={{ fontWeight: 'bold', fontSize: '14px', margin: '0 0 4px 0', color: '#111' }}>{sec.title}</h4>
                   <div style={{ color: '#333' }}>
                     {renderSectionContent(sec.content)}
@@ -436,7 +455,7 @@ export default function ProposalPreview({
           )}
 
           {/* Footer Section: Terms, Bank Details, Signatory */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', fontSize: '10px' }}>
+          <div data-proposal-block="footer" data-page-break-avoid="true" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', fontSize: '10px' }}>
             <div style={{ padding: '8px', borderRight: '1px solid black' }}>
               <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>Terms and Conditions:</div>
               <ul style={{ paddingLeft: '15px', margin: '0', listStyleType: 'disc', fontSize: '9px' }}>
@@ -473,7 +492,7 @@ export default function ProposalPreview({
             </div>
           </div>
 
-          <div style={{ padding: '4px', borderTop: '1px solid black', textAlign: 'center', fontSize: '9px', color: '#666' }}>
+          <div data-proposal-block="disclaimer" data-page-break-avoid="true" style={{ padding: '4px', borderTop: '1px solid black', textAlign: 'center', fontSize: '9px', color: '#666' }}>
             This is a computer-generated proposal. No signature is required.
           </div>
 

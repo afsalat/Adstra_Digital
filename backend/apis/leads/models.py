@@ -17,6 +17,8 @@ from .choices import (
     APPROVAL_STATUS_CHOICES,
     CALL_DIRECTION_CHOICES,
     CALL_OUTCOME_CHOICES,
+    CONTACT_NUMBER_LABEL_CHOICES,
+    CONTACT_NUMBER_TYPE_CHOICES,
     CONVERSION_TYPE_CHOICES,
     DEMO_OUTCOME_CHOICES,
     DOCUMENT_TYPE_CHOICES,
@@ -304,10 +306,11 @@ class Lead(models.Model):
         return super().clean_fields(exclude=exclude)
 
     def clean(self):
-        if self.lead_type == "PRODUCT" and not self.product:
-            raise ValidationError({"product": "Product is required for a product lead."})
-        if self.lead_type == "SERVICE" and not self.service:
-            raise ValidationError({"service": "Service is required for a service lead."})
+        if not self.target_customer_id and not getattr(self, "_skip_offering_validation", False):
+            if self.lead_type == "PRODUCT" and not self.product:
+                raise ValidationError({"product": "Product is required for a product lead."})
+            if self.lead_type == "SERVICE" and not self.service:
+                raise ValidationError({"service": "Service is required for a service lead."})
         if not any([self.customer_name, self.company_name, self.contact_person]):
             raise ValidationError("At least one customer, company, or contact name is required.")
 
@@ -339,6 +342,44 @@ class Lead(models.Model):
 
     def __str__(self):
         return f"{self.lead_number} - {self.company_name or self.customer_name or self.contact_person}"
+
+
+class ContactNumber(models.Model):
+    target_customer = models.ForeignKey(
+        TargetCustomer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contact_numbers",
+    )
+    lead = models.ForeignKey(
+        "Lead",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contact_numbers",
+    )
+    number_type = models.CharField(max_length=20, choices=CONTACT_NUMBER_TYPE_CHOICES, default="PHONE")
+    label = models.CharField(max_length=20, choices=CONTACT_NUMBER_LABEL_CHOICES, default="COMPANY")
+    number = models.CharField(max_length=32, validators=[validate_phone])
+    contact_name = models.CharField(max_length=255, blank=True)
+    is_primary = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-is_primary", "id"]
+
+    def clean(self):
+        if not self.target_customer_id and not self.lead_id:
+            raise ValidationError("Contact number must be linked to either a target customer or a lead.")
+
+    def save(self, *args, **kwargs):
+        self.number = normalize_phone(self.number)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_number_type_display()} ({self.get_label_display()}): {self.number}"
 
 
 class LeadAssignmentHistory(models.Model):
@@ -462,6 +503,7 @@ class LeadMeeting(models.Model):
     scheduled_start = models.DateTimeField(db_index=True)
     scheduled_end = models.DateTimeField()
     location = models.CharField(max_length=500, blank=True)
+    map_link = models.URLField(blank=True)
     meeting_link = models.URLField(blank=True)
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1000,3 +1042,77 @@ class SalesTeamConfig(models.Model):
 
     def __str__(self):
         return f"SalesTeamConfig ({len(self.selected_designations or [])} designations)"
+
+
+class IncentiveUserConfig(models.Model):
+    """Stores per-user incentive rate (%) and monthly target amount."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="incentive_config",
+    )
+    incentive_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10,
+        help_text="Percentage of net conversion revenue paid as incentive.",
+    )
+    monthly_target = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Monthly sales target in INR (optional).",
+    )
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"IncentiveConfig({self.user_id}) rate={self.incentive_rate}%"
+
+
+PAYOUT_STATUS_CHOICES = [
+    ("PENDING", "Pending"),
+    ("APPROVED", "Approved"),
+    ("PAID", "Paid"),
+]
+
+
+class IncentivePayout(models.Model):
+    """Monthly incentive payout record per user (persisted, admin-approved)."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="incentive_payouts",
+    )
+    month = models.DateField(help_text="First day of the payout month (YYYY-MM-01).")
+    gross_revenue = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    discount_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    net_revenue = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    deal_count = models.PositiveIntegerField(default=0)
+    incentive_rate = models.DecimalField(max_digits=5, decimal_places=2, default=10)
+    incentive_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    target_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    payout_status = models.CharField(
+        max_length=20,
+        choices=PAYOUT_STATUS_CHOICES,
+        default="PENDING",
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_incentive_payouts",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("user", "month")]
+        ordering = ["-month", "user__fullname"]
+
+    def __str__(self):
+        return f"Payout({self.user_id}, {self.month}, {self.payout_status})"

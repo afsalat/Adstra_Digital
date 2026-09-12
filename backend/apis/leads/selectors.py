@@ -261,6 +261,17 @@ def apply_lead_filters(
         if target_list_filter:
             filters &= target_list_filter
 
+    client_values = _parameter_values(params, "customer") or _parameter_values(params, "client")
+    if client_values:
+        client_filter = Q()
+        client_ids = [int(v) for v in client_values if v.isdigit()]
+        if client_ids:
+            client_filter |= Q(customer_id__in=client_ids[:100])
+        if any(v.casefold() in {"none", "null", "unassigned"} for v in client_values):
+            client_filter |= Q(customer__isnull=True)
+        if client_filter:
+            filters &= client_filter
+
     do_not_call = _parse_bool(_parameter(params, "do_not_call"))
     if do_not_call is not None:
         filters &= Q(target_customer__do_not_call=do_not_call)
