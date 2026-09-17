@@ -929,9 +929,6 @@ function StageListingTable({
               <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 160 }}>
                 {stageId === "published" ? "Published At" : stageId === "post_schedule" ? "Scheduled At" : "Timing"}
               </th>
-              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 170 }}>
-                Workflow Notes
-              </th>
               <th style={{ padding: "14px 18px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 220, textAlign: "right" }}>
                 Actions
               </th>
@@ -1177,22 +1174,7 @@ function StageListingTable({
                     )}
                   </td>
 
-                  {/* 6. Workflow Notes */}
-                  <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
-                    {post.script_notes ? (
-                      <div style={{ fontSize: "0.76rem", color: "#334155", lineHeight: 1.4 }}>
-                        <strong style={{ color: "#4f46e5" }}>Hook:</strong> {post.script_notes}
-                      </div>
-                    ) : post.designer_notes ? (
-                      <div style={{ fontSize: "0.76rem", color: "#db2777", lineHeight: 1.4 }}>
-                        <strong style={{ color: "#ec4899" }}>Design:</strong> {post.designer_notes}
-                      </div>
-                    ) : (
-                      <span style={{ color: "#cbd5e1", fontSize: "0.8rem" }}>—</span>
-                    )}
-                  </td>
-
-                  {/* 7. Actions */}
+                  {/* 6. Actions */}
                   <td style={{ padding: "14px 18px", verticalAlign: "middle", textAlign: "right" }}>
                     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
                       {/* Stage 1: Scripts */}
