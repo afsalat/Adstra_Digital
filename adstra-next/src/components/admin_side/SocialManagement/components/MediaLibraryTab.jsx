@@ -32,6 +32,7 @@ import {
   FileUp,
   Tag,
   AlertCircle,
+  Pencil,
 } from "lucide-react";
 
 export default function MediaLibraryTab({
@@ -53,6 +54,19 @@ export default function MediaLibraryTab({
   const [uploadModal, setUploadModal] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+
+  // Edit Form State
+  const [editModal, setEditModal] = useState(false);
+  const [editingAsset, setEditingAsset] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editClientId, setEditClientId] = useState("");
+  const [editFolder, setEditFolder] = useState("Brand Assets");
+  const [editIsCustomFolder, setEditIsCustomFolder] = useState(false);
+  const [editCustomFolder, setEditCustomFolder] = useState("");
+  const [editAssetType, setEditAssetType] = useState("image");
+  const [editTags, setEditTags] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
   // Upload Form State
   const [uploadMode, setUploadMode] = useState("file"); // 'file' | 'url'
@@ -224,6 +238,108 @@ export default function MediaLibraryTab({
       alert("Failed to delete asset: " + (err.response?.data?.detail || err.message));
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Download asset file
+  const handleDownloadAsset = async (asset, e) => {
+    e?.stopPropagation();
+    const url = getAssetUrl(asset);
+    if (!url) return;
+
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      const ext = asset.file_format ? `.${asset.file_format.toLowerCase()}` : "";
+      const safeTitle = (asset.title || "asset").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `${safeTitle}${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = asset.title || "asset";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+  };
+
+  // Open edit modal for an asset
+  const handleOpenEdit = (asset, e) => {
+    e?.stopPropagation();
+    setEditingAsset(asset);
+    setEditTitle(asset.title || "");
+    setEditClientId(asset.client_profile || (clients[0]?.id || ""));
+    setEditFolder(asset.folder || "Brand Assets");
+    setEditIsCustomFolder(false);
+    setEditCustomFolder("");
+    setEditAssetType(asset.asset_type || "image");
+    setEditTags(Array.isArray(asset.tags) ? asset.tags.join(", ") : "");
+    setEditError("");
+    setEditModal(true);
+  };
+
+  // Save edited asset
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingAsset) return;
+    setEditError("");
+
+    if (!editTitle.trim()) {
+      setEditError("Please provide an asset title.");
+      return;
+    }
+
+    const finalFolder = editIsCustomFolder ? (editCustomFolder.trim() || "General") : editFolder;
+    const parsedTags = editTags
+      ? editTags.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean)
+      : [];
+
+    setSavingEdit(true);
+    try {
+      const payload = {
+        client_profile: editClientId,
+        title: editTitle.trim(),
+        asset_type: editAssetType,
+        folder: finalFolder,
+        tags: parsedTags,
+      };
+
+      const res = await axios.patch(`${API_BASE_URL}/social/media/${editingAsset.id}/`, payload);
+      
+      // Update preview if currently viewing this asset
+      if (previewAsset?.id === editingAsset.id) {
+        setPreviewAsset((prev) => ({ ...prev, ...res.data }));
+      }
+
+      setEditModal(false);
+      setEditingAsset(null);
+      onRefresh?.();
+    } catch (err) {
+      const errData = err.response?.data;
+      let errMsg = "Failed to update asset details.";
+      if (typeof errData === "string") {
+        errMsg = errData;
+      } else if (errData && typeof errData === "object") {
+        const errorList = [];
+        for (const [key, val] of Object.entries(errData)) {
+          const valText = Array.isArray(val) ? val.join(" ") : String(val);
+          errorList.push(key !== "detail" && key !== "non_field_errors" ? `${key}: ${valText}` : valText);
+        }
+        if (errorList.length > 0) errMsg = errorList.join(" | ");
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      setEditError(errMsg);
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -885,7 +1001,7 @@ export default function MediaLibraryTab({
                   )}
 
                   {/* Actions Strip */}
-                  <div style={{ marginTop: "auto", display: "flex", gap: 6, paddingTop: 8, borderTop: "1px solid #f1f5f9" }}>
+                  <div style={{ marginTop: "auto", display: "flex", gap: 5, paddingTop: 8, borderTop: "1px solid #f1f5f9" }}>
                     <button
                       type="button"
                       onClick={() => onOpenCreateWithAsset?.(url)}
@@ -907,7 +1023,49 @@ export default function MediaLibraryTab({
                         transition: "all 0.15s ease",
                       }}
                     >
-                      <Share2 size={12} /> Use in Post
+                      <Share2 size={12} /> Use
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleDownloadAsset(asset, e)}
+                      title="Download asset"
+                      style={{
+                        padding: "6px 8px",
+                        borderRadius: 7,
+                        background: "#f0f9ff",
+                        color: "#0284c7",
+                        border: "1px solid #bae6fd",
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Download size={13} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenEdit(asset, e)}
+                      title="Edit asset details"
+                      style={{
+                        padding: "6px 8px",
+                        borderRadius: 7,
+                        background: "#f8fafc",
+                        color: "#475569",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Pencil size={13} />
                     </button>
 
                     <button
@@ -1059,7 +1217,7 @@ export default function MediaLibraryTab({
                       {asset.created_at ? new Date(asset.created_at).toLocaleDateString() : "—"}
                     </td>
                     <td style={{ padding: "10px 16px", textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: 6 }}>
+                      <div style={{ display: "inline-flex", gap: 5 }}>
                         <button
                           type="button"
                           onClick={() => onOpenCreateWithAsset?.(url)}
@@ -1067,6 +1225,22 @@ export default function MediaLibraryTab({
                           style={{ padding: "5px 10px", borderRadius: 6, background: "#eef2ff", color: "#4f46e5", border: "1px solid #c7d2fe", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                         >
                           <Share2 size={12} /> Use
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDownloadAsset(asset, e)}
+                          title="Download"
+                          style={{ padding: "5px 8px", borderRadius: 6, background: "#f0f9ff", color: "#0284c7", border: "1px solid #bae6fd", cursor: "pointer" }}
+                        >
+                          <Download size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenEdit(asset, e)}
+                          title="Edit"
+                          style={{ padding: "5px 8px", borderRadius: 6, background: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1", cursor: "pointer" }}
+                        >
+                          <Pencil size={12} />
                         </button>
                         <button
                           type="button"
@@ -1124,12 +1298,34 @@ export default function MediaLibraryTab({
                   {previewAsset.title}
                 </h4>
               </div>
-              <button
-                onClick={() => setPreviewAsset(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}
-              >
-                <X size={20} color="#64748b" />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenEdit(previewAsset, e)}
+                  title="Edit Asset"
+                  style={{
+                    background: "#f1f5f9",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 7,
+                    padding: "5px 10px",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    color: "#334155",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
+                  <Pencil size={13} /> Edit
+                </button>
+                <button
+                  onClick={() => setPreviewAsset(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}
+                >
+                  <X size={20} color="#64748b" />
+                </button>
+              </div>
             </div>
 
             <div
@@ -1297,28 +1493,73 @@ export default function MediaLibraryTab({
                     <Share2 size={15} /> Create Post with this Asset
                   </button>
 
-                  <a
-                    href={getAssetUrl(previewAsset)}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={(e) => handleDownloadAsset(previewAsset, e)}
                     style={{
-                      padding: "8px 16px",
+                      padding: "9px 16px",
                       borderRadius: 8,
-                      background: "#f8fafc",
-                      color: "#334155",
-                      border: "1px solid #cbd5e1",
-                      fontWeight: 700,
-                      fontSize: "0.82rem",
+                      background: "#0284c7",
+                      color: "#ffffff",
+                      border: "none",
+                      fontWeight: 800,
+                      fontSize: "0.85rem",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 6,
-                      textDecoration: "none",
                     }}
                   >
-                    <ExternalLink size={14} /> Open High-Res in New Tab
-                  </a>
+                    <Download size={15} /> Download Asset
+                  </button>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenEdit(previewAsset, e)}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: "#f8fafc",
+                        color: "#334155",
+                        border: "1px solid #cbd5e1",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Pencil size={14} /> Edit Details
+                    </button>
+
+                    <a
+                      href={getAssetUrl(previewAsset)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: "#f8fafc",
+                        color: "#334155",
+                        border: "1px solid #cbd5e1",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <ExternalLink size={14} /> Open High-Res
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1606,6 +1847,198 @@ export default function MediaLibraryTab({
                 >
                   {uploading ? <RefreshCw size={14} className="spin-icon" /> : <Upload size={14} />}
                   <span>{uploading ? "Uploading..." : "Save to Library"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* 7. Edit Client Asset Modal */}
+      {editModal && editingAsset && (
+        <div className="social-modal-overlay">
+          <div className="social-modal-content" style={{ maxWidth: 540, width: "92vw", borderRadius: 16 }}>
+            <div className="social-modal-header" style={{ padding: "16px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Pencil size={18} color="#4f46e5" />
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+                  Edit Client Asset Information
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditModal(false);
+                  setEditingAsset(null);
+                }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}
+              >
+                <X size={20} color="#64748b" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit}>
+              <div className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 14, padding: "18px 20px" }}>
+                {editError && (
+                  <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "10px 12px", borderRadius: 8, fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 8 }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                    <span>{editError}</span>
+                  </div>
+                )}
+
+                {/* Current Asset Thumbnail Preview */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 8, background: "#0f172a", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {getAssetUrl(editingAsset) ? (
+                      <img src={getAssetUrl(editingAsset)} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    ) : (
+                      <ImageIcon size={20} color="#94a3b8" />
+                    )}
+                  </div>
+                  <div style={{ overflow: "hidden", flex: 1 }}>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {editingAsset.title}
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>
+                      {editingAsset.file_format || "PNG"} • {formatBytes(editingAsset.file_size_bytes)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Client Brand Profile */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    Target Client Brand Profile *
+                  </label>
+                  <select
+                    value={editClientId}
+                    onChange={(e) => setEditClientId(e.target.value)}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem", background: "#fff" }}
+                  >
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Asset Title */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    Asset Title / Identifier *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="e.g. Master Brand Logo (Vector Transparent)"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem", outline: "none" }}
+                  />
+                </div>
+
+                {/* Asset Classification & Folder Selection */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                      Asset Classification
+                    </label>
+                    <select
+                      value={editAssetType}
+                      onChange={(e) => setEditAssetType(e.target.value)}
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem", background: "#fff" }}
+                    >
+                      <option value="image">Image / Graphic</option>
+                      <option value="reel">Reel / Short (Vertical)</option>
+                      <option value="video">Long Video</option>
+                      <option value="logo">Brand Logo</option>
+                      <option value="carousel">Carousel Asset</option>
+                      <option value="document">Document / PDF</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569" }}>
+                        Folder
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setEditIsCustomFolder(!editIsCustomFolder)}
+                        style={{ border: "none", background: "none", color: "#4f46e5", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", padding: 0 }}
+                      >
+                        {editIsCustomFolder ? "Pick Existing" : "+ New Folder"}
+                      </button>
+                    </div>
+
+                    {editIsCustomFolder ? (
+                      <input
+                        type="text"
+                        value={editCustomFolder}
+                        onChange={(e) => setEditCustomFolder(e.target.value)}
+                        placeholder="e.g. Brand Refresh 2026"
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #4f46e5", fontSize: "0.85rem", outline: "none" }}
+                      />
+                    ) : (
+                      <select
+                        value={editFolder}
+                        onChange={(e) => setEditFolder(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem", background: "#fff" }}
+                      >
+                        {allFolders.map((f) => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    Tags (Comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editTags}
+                    onChange={(e) => setEditTags(e.target.value)}
+                    placeholder="e.g. logo, dark, header, vector"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem", outline: "none" }}
+                  />
+                </div>
+              </div>
+
+              <div className="social-modal-footer" style={{ padding: "14px 20px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModal(false);
+                    setEditingAsset(null);
+                  }}
+                  style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.84rem" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  style={{
+                    padding: "8px 22px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#4f46e5",
+                    color: "#fff",
+                    fontWeight: 800,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    opacity: savingEdit ? 0.7 : 1,
+                  }}
+                >
+                  {savingEdit ? <RefreshCw size={14} className="spin-icon" /> : <Check size={14} />}
+                  <span>{savingEdit ? "Saving Changes..." : "Save Changes"}</span>
                 </button>
               </div>
             </form>
