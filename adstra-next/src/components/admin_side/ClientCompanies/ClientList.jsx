@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./ClientList.css";
-import { Edit, Eye, Plus, ArrowLeft, X, Trash2, Search } from "lucide-react";
+import { Edit, Eye, Plus, ArrowLeft, X, Trash2, Search, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
 import { useModal } from "@/Context/ModalContext";
@@ -118,7 +118,10 @@ const ClientList = () => {
     return (
         <div className="client-list-container">
             <div className="header-actions">
-                <h2>🏢 Client Companies</h2>
+                <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Building2 size={22} color="#4f46e5" />
+                    <span>Client Companies</span>
+                </h2>
                 <div className="search-container">
                     <Search size={18} className="search-icon" />
                     <input
@@ -255,7 +258,10 @@ const ClientList = () => {
                         <button className="close-popup" onClick={() => setShowDetails(false)}>
                             <X size={18} />
                         </button>
-                        <h3>🏢 Client Details</h3>
+                        <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Building2 size={20} color="#4f46e5" />
+                            <span>Client Details</span>
+                        </h3>
                         <div className="details-content">
                             <p><strong>Company Name:</strong> {selectedClient.company_name || "—"}</p>
                             <p><strong>Contact Person:</strong> {selectedClient.name}</p>

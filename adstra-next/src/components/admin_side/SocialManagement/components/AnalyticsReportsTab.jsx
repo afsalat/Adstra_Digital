@@ -294,8 +294,12 @@ export default function AnalyticsReportsTab({
                 </div>
 
                 <div style={{ display: "flex", gap: 20, alignItems: "center", fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
-                  <span>❤️ 1,840</span>
-                  <span>💬 124</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <Heart size={14} color="#e11d48" fill="#e11d48" /> 1,840
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <MessageSquare size={14} color="#64748b" /> 124
+                  </span>
                   <span style={{ color: "#10b981", background: "#ecfdf5", padding: "4px 8px", borderRadius: 6 }}>
                     6.4% ER
                   </span>

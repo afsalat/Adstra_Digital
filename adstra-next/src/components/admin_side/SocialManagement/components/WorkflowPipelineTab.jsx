@@ -58,7 +58,7 @@ const WORKFLOW_STAGES = [
     icon: CheckCircle2,
     statuses: ["script_approval"],
     hasLoopback: true,
-    loopbackLabel: "If not better ➔ Rejected back to Script",
+    loopbackLabel: "If not better → Rejected back to Script",
   },
   {
     id: "designing",
@@ -93,7 +93,7 @@ const WORKFLOW_STAGES = [
     icon: Eye,
     statuses: ["client_review"],
     hasLoopback: true,
-    loopbackLabel: "If rejected ➔ Loops back to Designing",
+    loopbackLabel: "If rejected → Loops back to Designing",
   },
   {
     id: "approved",
@@ -286,11 +286,11 @@ export default function WorkflowPipelineTab({
             }}
           >
             <option value="all">All Formats (Image, Video, Reel)</option>
-            <option value="image">📷 Single Image</option>
-            <option value="video">🎥 Long Video</option>
-            <option value="reel">📱 Reel / Short</option>
-            <option value="carousel">📑 Carousel</option>
-            <option value="text">📝 Text</option>
+            <option value="image">Single Image</option>
+            <option value="video">Long Video</option>
+            <option value="reel">Reel / Short</option>
+            <option value="carousel">Carousel</option>
+            <option value="text">Text</option>
           </select>
         </div>
 
@@ -522,8 +522,8 @@ export default function WorkflowPipelineTab({
                         {stage.shortName}
                       </span>
                       {post.client_feedback && (
-                        <div style={{ fontSize: "0.68rem", color: "#ef4444", marginTop: 2, fontWeight: 700 }}>
-                          ⚠️ Has Revision Notes
+                        <div style={{ fontSize: "0.68rem", color: "#ef4444", marginTop: 2, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                          <AlertTriangle size={11} color="#ef4444" /> Has Revision Notes
                         </div>
                       )}
                     </div>
@@ -585,7 +585,7 @@ export default function WorkflowPipelineTab({
                             cursor: "pointer",
                           }}
                         >
-                          Submit Approval ➔
+                          Submit Approval →
                         </button>
                       )}
 
@@ -640,10 +640,13 @@ export default function WorkflowPipelineTab({
                             borderRadius: 6,
                             fontSize: "0.72rem",
                             fontWeight: 700,
-                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 4,
                           }}
                         >
-                          Publish Now 🚀
+                          <Send size={12} /> Publish Now
                         </button>
                       )}
                     </div>
@@ -682,11 +685,11 @@ export default function WorkflowPipelineTab({
                 <div>
                   <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
                     {modalAction.type === "reject_script" && "Reject Script (Send Back to Stage 1)"}
-                    {modalAction.type === "approve_script" && "Approve Script ➔ Move to Designing"}
-                    {modalAction.type === "design_ready" && "Design Complete ➔ Move to Team QA Review"}
-                    {modalAction.type === "send_client" && "Team QA Approved ➔ Move to Client Review"}
+                    {modalAction.type === "approve_script" && "Approve Script → Move to Designing"}
+                    {modalAction.type === "design_ready" && "Design Complete → Move to Team QA Review"}
+                    {modalAction.type === "send_client" && "Team QA Approved → Move to Client Review"}
                     {modalAction.type === "client_changes" && "Client Revisions (Send Back to Designing)"}
-                    {modalAction.type === "client_approve" && "Client Approved ➔ Move to Schedule"}
+                    {modalAction.type === "client_approve" && "Client Approved → Move to Schedule"}
                     {modalAction.type === "edit_notes" && "Workflow Post Details & Assets"}
                   </h3>
                   <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b" }}>
@@ -853,7 +856,7 @@ export default function WorkflowPipelineTab({
                       onClick={() => handleTransition(modalAction.post, "designing", "advance", actionNotes || "Script approved, ready for design", { designer_notes: editDesignerNotes, media_urls: editMediaUrl ? [editMediaUrl] : modalAction.post.media_urls })}
                       style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                     >
-                      Approve ➔ Designing
+                      Approve → Designing
                     </button>
                   </div>
                 )}
@@ -864,7 +867,7 @@ export default function WorkflowPipelineTab({
                     onClick={() => handleTransition(modalAction.post, "team_review", "advance", actionNotes || "Creative design attached, ready for QA", { designer_notes: editDesignerNotes, media_urls: editMediaUrl ? [editMediaUrl] : modalAction.post.media_urls })}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    Mark Ready for Team QA ➔
+                    Mark Ready for Team QA →
                   </button>
                 )}
 
@@ -882,7 +885,7 @@ export default function WorkflowPipelineTab({
                       onClick={() => handleTransition(modalAction.post, "client_review", "advance", actionNotes || "Team QA passed, sent to client review")}
                       style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                     >
-                      Send to Client Review ➔
+                      Send to Client Review →
                     </button>
                   </div>
                 )}
@@ -915,7 +918,7 @@ export default function WorkflowPipelineTab({
                     onClick={() => handleTransition(modalAction.post, "approved", "advance", actionNotes || "Client approved design & copy", { scheduled_at: editScheduledAt ? new Date(editScheduledAt).toISOString() : modalAction.post.scheduled_at })}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    Approve ➔ Schedule Post
+                    Approve → Schedule Post
                   </button>
                 )}
 
@@ -1101,7 +1104,7 @@ function PostPipelineCard({
               onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
               style={{ flex: 1.3, padding: "5px 8px", borderRadius: 6, border: "none", background: "#4f46e5", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
-              Submit ➔
+              Submit →
             </button>
           </>
         )}
@@ -1119,7 +1122,7 @@ function PostPipelineCard({
               onClick={() => onOpenModal(post, "approve_script")}
               style={{ flex: 1.3, padding: "5px 8px", borderRadius: 6, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
-              Approve ➔ Design
+              Approve → Design
             </button>
           </>
         )}
@@ -1137,7 +1140,7 @@ function PostPipelineCard({
               onClick={() => onOpenModal(post, "design_ready")}
               style={{ flex: 1.4, padding: "5px 8px", borderRadius: 6, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
-              Design Ready ➔ QA
+              Design Ready → QA
             </button>
           </>
         )}
@@ -1155,7 +1158,7 @@ function PostPipelineCard({
               onClick={() => onOpenModal(post, "send_client")}
               style={{ flex: 1.4, padding: "5px 8px", borderRadius: 6, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
             >
-              QA Pass ➔ Client
+              QA Pass → Client
             </button>
           </>
         )}
@@ -1180,7 +1183,7 @@ function PostPipelineCard({
               onClick={() => onOpenModal(post, "client_approve")}
               style={{ flex: 1.2, padding: "5px 8px", borderRadius: 6, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
-              Approve ➔
+              Approve →
             </button>
           </>
         )}
@@ -1196,9 +1199,9 @@ function PostPipelineCard({
             </button>
             <button
               onClick={() => onPublishNow(post)}
-              style={{ flex: 1.3, padding: "5px 8px", borderRadius: 6, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
+              style={{ flex: 1.3, padding: "5px 8px", borderRadius: 6, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}
             >
-              Publish Now 🚀
+              <Send size={12} /> Publish Now
             </button>
           </>
         )}

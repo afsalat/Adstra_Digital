@@ -333,7 +333,12 @@ const TeamPanel = () => {
                   <div key={u.id} className={`dept-member-item ${u.is_team_lead ? 'lead' : ''}`}>
                     <div className="mini-avatar">{u.fullname?.[0] || u.username[0]}</div>
                     <div className="mini-info">
-                      <span className="mini-name">{u.fullname || u.username} {u.is_team_lead && "⭐"}</span>
+                      <span className="mini-name">
+                        {u.fullname || u.username}{" "}
+                        {u.is_team_lead && (
+                          <Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: "inline", verticalAlign: "middle", marginLeft: 3 }} />
+                        )}
+                      </span>
                       <span className="mini-role">{u.designation}</span>
                     </div>
                   </div>

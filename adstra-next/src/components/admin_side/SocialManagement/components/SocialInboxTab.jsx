@@ -19,6 +19,7 @@ import {
   Filter,
   Check,
   X,
+  Zap,
 } from "lucide-react";
 
 export default function SocialInboxTab({
@@ -336,8 +337,8 @@ export default function SocialInboxTab({
 
             {/* Quick canned replies */}
             <div style={{ padding: "8px 20px", background: "#f8fafc", borderTop: "1px solid #f1f5f9", display: "flex", gap: 8, overflowX: "auto" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748b", alignSelf: "center", whiteSpace: "nowrap" }}>
-                ⚡ Quick Replies:
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748b", alignSelf: "center", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Zap size={13} color="#f59e0b" /> Quick Replies:
               </span>
               {cannedReplies.map((canned, i) => (
                 <button

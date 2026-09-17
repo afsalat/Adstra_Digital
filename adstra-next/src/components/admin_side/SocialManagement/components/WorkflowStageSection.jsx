@@ -78,7 +78,7 @@ export default function WorkflowStageSection({
           bgLight: "#f5f3ff",
           icon: CheckCircle2,
           statuses: ["script_approval"],
-          loopbackNote: "↩ Rejections return to Stage 1 (Scripts)",
+          loopbackNote: "↺ Rejections return to Stage 1 (Scripts)",
         };
       case "designing":
         return {
@@ -89,7 +89,7 @@ export default function WorkflowStageSection({
           bgLight: "#fdf2f8",
           icon: Palette,
           statuses: ["designing"],
-          loopbackNote: "↩ Receives revision requests from Client Review & Team QA",
+          loopbackNote: "↺ Receives revision requests from Client Review & Team QA",
         };
       case "team_review":
         return {
@@ -110,7 +110,7 @@ export default function WorkflowStageSection({
           bgLight: "#fff7ed",
           icon: Eye,
           statuses: ["client_review"],
-          loopbackNote: "↩ Client changes loop back to Stage 3 (Scheduled / Designing)",
+          loopbackNote: "↺ Client changes loop back to Stage 3 (Scheduled / Designing)",
         };
       case "post_schedule":
         return {
@@ -395,11 +395,11 @@ export default function WorkflowStageSection({
                 }}
               >
                 <option value="all">All Formats (Image, Video, Reel)</option>
-                <option value="image">📷 Single Image</option>
-                <option value="video">🎥 Long Video</option>
-                <option value="reel">📱 Reel / Short</option>
-                <option value="carousel">📑 Carousel</option>
-                <option value="text">📝 Text</option>
+                <option value="image">Single Image</option>
+                <option value="video">Long Video</option>
+                <option value="reel">Reel / Short</option>
+                <option value="carousel">Carousel</option>
+                <option value="text">Text</option>
               </select>
             </div>
 
@@ -506,11 +506,11 @@ export default function WorkflowStageSection({
                 <div>
                   <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
                     {modalAction.type === "reject_script" && "Reject Script (Loopback to Stage 1: Scripts)"}
-                    {modalAction.type === "approve_script" && "Approve Script ➔ Move to Scheduled / Designing"}
-                    {modalAction.type === "design_ready" && "Design Complete ➔ Move to Team QA Review"}
-                    {modalAction.type === "send_client" && "Team QA Passed ➔ Move to Client Review"}
+                    {modalAction.type === "approve_script" && "Approve Script → Move to Scheduled / Designing"}
+                    {modalAction.type === "design_ready" && "Design Complete → Move to Team QA Review"}
+                    {modalAction.type === "send_client" && "Team QA Passed → Move to Client Review"}
                     {modalAction.type === "client_changes" && "Client Revisions (Loopback to Stage 3: Designing)"}
-                    {modalAction.type === "client_approve" && "Client Approved ➔ Move to Approved / Post Schedule"}
+                    {modalAction.type === "client_approve" && "Client Approved → Move to Approved / Post Schedule"}
                     {modalAction.type === "edit_notes" && "Edit Post Details & Workflow Notes"}
                   </h3>
                   <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
@@ -677,7 +677,7 @@ export default function WorkflowStageSection({
                       onClick={() => handleTransition(modalAction.post, "designing", "advance", actionNotes || "Script approved, ready for design", { designer_notes: editDesignerNotes, media_urls: editMediaUrl ? [editMediaUrl] : modalAction.post.media_urls })}
                       style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                     >
-                      Approve ➔ Move to Designing
+                      Approve → Move to Designing
                     </button>
                   </div>
                 )}
@@ -688,7 +688,7 @@ export default function WorkflowStageSection({
                     onClick={() => handleTransition(modalAction.post, "team_review", "advance", actionNotes || "Creative design attached, ready for QA", { designer_notes: editDesignerNotes, media_urls: editMediaUrl ? [editMediaUrl] : modalAction.post.media_urls })}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    Mark Ready for Team QA ➔
+                    Mark Ready for Team QA →
                   </button>
                 )}
 
@@ -706,7 +706,7 @@ export default function WorkflowStageSection({
                       onClick={() => handleTransition(modalAction.post, "client_review", "advance", actionNotes || "Team QA passed, sent to client review")}
                       style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                     >
-                      Send to Client Review ➔
+                      Send to Client Review →
                     </button>
                   </div>
                 )}
@@ -739,7 +739,7 @@ export default function WorkflowStageSection({
                     onClick={() => handleTransition(modalAction.post, "approved", "advance", actionNotes || "Client approved design & copy", { scheduled_at: editScheduledAt ? new Date(editScheduledAt).toISOString() : modalAction.post.scheduled_at })}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    Approve ➔ Schedule Post
+                    Approve → Schedule Post
                   </button>
                 )}
 
@@ -1026,7 +1026,7 @@ function StageListingTable({
                             onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#4f46e5", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Submit ➔
+                            Submit →
                           </button>
                         </>
                       )}
@@ -1044,7 +1044,7 @@ function StageListingTable({
                             onClick={() => onOpenModal(post, "approve_script")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Approve ➔ Design
+                            Approve → Design
                           </button>
                         </>
                       )}
@@ -1062,7 +1062,7 @@ function StageListingTable({
                             onClick={() => onOpenModal(post, "design_ready")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Ready for QA ➔
+                            Ready for QA →
                           </button>
                         </>
                       )}
@@ -1080,7 +1080,7 @@ function StageListingTable({
                             onClick={() => onOpenModal(post, "send_client")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            QA Pass ➔ Client
+                            QA Pass → Client
                           </button>
                         </>
                       )}
@@ -1106,7 +1106,7 @@ function StageListingTable({
                             onClick={() => onOpenModal(post, "client_approve")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Approved ➔
+                            Approved →
                           </button>
                         </>
                       )}
@@ -1122,9 +1122,9 @@ function StageListingTable({
                           </button>
                           <button
                             onClick={() => onPublishNow(post)}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
                           >
-                            Publish Now 🚀
+                            <Send size={12} /> Publish Now
                           </button>
                         </>
                       )}

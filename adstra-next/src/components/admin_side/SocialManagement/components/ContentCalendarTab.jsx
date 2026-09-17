@@ -35,7 +35,6 @@ const FESTIVALS_AND_HOLIDAYS = [
 const PRIORITY_CONFIG = {
   urgent: {
     label: "Urgent",
-    dot: "🔴",
     badgeColor: "#dc2626",
     badgeBg: "#fef2f2",
     badgeBorder: "#fca5a5",
@@ -43,7 +42,6 @@ const PRIORITY_CONFIG = {
   },
   high: {
     label: "High",
-    dot: "🟠",
     badgeColor: "#ea580c",
     badgeBg: "#fff7ed",
     badgeBorder: "#fed7aa",
@@ -51,7 +49,6 @@ const PRIORITY_CONFIG = {
   },
   medium: {
     label: "Medium",
-    dot: "🔵",
     badgeColor: "#0284c7",
     badgeBg: "#f0f9ff",
     badgeBorder: "#bae6fd",
@@ -59,7 +56,6 @@ const PRIORITY_CONFIG = {
   },
   low: {
     label: "Low",
-    dot: "🟢",
     badgeColor: "#16a34a",
     badgeBg: "#f0fdf4",
     badgeBorder: "#bbf7d0",
@@ -512,7 +508,18 @@ export default function ContentCalendarTab({
                           gap: 2,
                         }}
                       >
-                        {cell.posts.some((p) => p.priority === "urgent") ? "🔴 " : cell.posts.some((p) => p.priority === "high") ? "🟠 " : ""}
+                        {cell.posts.some((p) => p.priority === "urgent" || p.priority === "high") && (
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: cell.posts.some((p) => p.priority === "urgent") ? "#dc2626" : "#ea580c",
+                              display: "inline-block",
+                              marginRight: 2,
+                            }}
+                          />
+                        )}
                         {cell.posts.length}
                       </span>
                     )}
@@ -533,9 +540,13 @@ export default function ContentCalendarTab({
                         textOverflow: "ellipsis",
                         maxWidth: "calc(100% - 32px)",
                         border: "1px solid #fde68a",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
                       }}
                     >
-                      🎉 {cell.festival.name}
+                      <Sparkles size={11} color="#b45309" style={{ flexShrink: 0 }} />
+                      <span>{cell.festival.name}</span>
                     </span>
                   )}
                 </div>
@@ -739,7 +750,7 @@ export default function ContentCalendarTab({
                   gap: 10,
                 }}
               >
-                <span style={{ fontSize: "1.25rem" }}>🎉</span>
+                <Sparkles size={22} color="#d97706" style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: "0.84rem", fontWeight: 800, color: "#92400e" }}>
                     Festival / Holiday Milestone: {selectedDayDetail.festival.name}
@@ -782,9 +793,13 @@ export default function ContentCalendarTab({
                       borderRadius: 6,
                       fontSize: "0.74rem",
                       fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    🔴 Urgent: {dayPriorityCounts.urgent}
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626" }} />
+                    Urgent: {dayPriorityCounts.urgent}
                   </span>
                   <span
                     style={{
@@ -795,9 +810,13 @@ export default function ContentCalendarTab({
                       borderRadius: 6,
                       fontSize: "0.74rem",
                       fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    🟠 High: {dayPriorityCounts.high}
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ea580c" }} />
+                    High: {dayPriorityCounts.high}
                   </span>
                   <span
                     style={{
@@ -808,9 +827,13 @@ export default function ContentCalendarTab({
                       borderRadius: 6,
                       fontSize: "0.74rem",
                       fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    🔵 Medium: {dayPriorityCounts.medium}
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0284c7" }} />
+                    Medium: {dayPriorityCounts.medium}
                   </span>
                   <span
                     style={{
@@ -821,9 +844,13 @@ export default function ContentCalendarTab({
                       borderRadius: 6,
                       fontSize: "0.74rem",
                       fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    🟢 Low: {dayPriorityCounts.low}
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a" }} />
+                    Low: {dayPriorityCounts.low}
                   </span>
                 </div>
 
@@ -842,10 +869,10 @@ export default function ContentCalendarTab({
                     }}
                   >
                     <option value="all">All Priorities</option>
-                    <option value="urgent">🔴 Urgent Only</option>
-                    <option value="high">🟠 High Only</option>
-                    <option value="medium">🔵 Medium Only</option>
-                    <option value="low">🟢 Low Only</option>
+                    <option value="urgent">Urgent Only</option>
+                    <option value="high">High Only</option>
+                    <option value="medium">Medium Only</option>
+                    <option value="low">Low Only</option>
                   </select>
 
                   <select
@@ -1015,10 +1042,10 @@ export default function ContentCalendarTab({
                                 }}
                                 title="Click to change priority for this post"
                               >
-                                <option value="urgent">🔴 Urgent</option>
-                                <option value="high">🟠 High</option>
-                                <option value="medium">🔵 Medium</option>
-                                <option value="low">🟢 Low</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
                               </select>
                             </div>
                           </div>
@@ -1244,12 +1271,20 @@ export default function ContentCalendarTab({
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 4,
+                      gap: 6,
                       fontWeight: 800,
                       color: PRIORITY_CONFIG[selectedPostDetail.priority || "medium"]?.badgeColor || "#0284c7",
                     }}
                   >
-                    {PRIORITY_CONFIG[selectedPostDetail.priority || "medium"]?.dot || "🔵"}{" "}
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: PRIORITY_CONFIG[selectedPostDetail.priority || "medium"]?.badgeColor || "#0284c7",
+                        flexShrink: 0,
+                      }}
+                    />
                     {PRIORITY_CONFIG[selectedPostDetail.priority || "medium"]?.label || "Medium"}
                   </span>
                 </div>

@@ -32,16 +32,22 @@ import {
   Lock,
   Flame,
   Check,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Youtube,
+  ClipboardList,
 } from "lucide-react";
+import { XIcon, GoogleIcon, TikTokIcon, renderPlatformIcon } from "./PlatformIcons";
 
 const PLATFORM_CONFIG = {
-  instagram: { label: "Instagram Business", color: "#e1306c", icon: "📸" },
-  facebook: { label: "Facebook Page", color: "#1877f2", icon: "📘" },
-  linkedin: { label: "LinkedIn Company", color: "#0a66c2", icon: "💼" },
-  youtube: { label: "YouTube Channel", color: "#ff0000", icon: "▶️" },
-  x: { label: "X / Twitter", color: "#000000", icon: "✖️" },
-  google_business: { label: "Google Business", color: "#0f9d58", icon: "📍" },
-  tiktok: { label: "TikTok", color: "#000000", icon: "🎵" },
+  instagram: { label: "Instagram Business", color: "#e1306c", icon: <Instagram size={18} /> },
+  facebook: { label: "Facebook Page", color: "#1877f2", icon: <Facebook size={18} /> },
+  linkedin: { label: "LinkedIn Company", color: "#0a66c2", icon: <Linkedin size={18} /> },
+  youtube: { label: "YouTube Channel", color: "#ff0000", icon: <Youtube size={18} /> },
+  x: { label: "X / Twitter", color: "#000000", icon: <XIcon size={16} /> },
+  google_business: { label: "Google Business", color: "#0f9d58", icon: <GoogleIcon size={18} /> },
+  tiktok: { label: "TikTok", color: "#000000", icon: <TikTokIcon size={18} /> },
 };
 
 export default function SocialSettingsTab({
@@ -486,7 +492,7 @@ export default function SocialSettingsTab({
                 </thead>
                 <tbody>
                   {filteredAccounts.map((acc) => {
-                    const platConfig = PLATFORM_CONFIG[acc.platform] || { label: acc.platform, color: "#64748b", icon: "🌐" };
+                    const platConfig = PLATFORM_CONFIG[acc.platform] || { label: acc.platform, color: "#64748b", icon: renderPlatformIcon(acc.platform, { size: 18 }) };
                     const isExpiring = acc.status === "token_expiring";
                     const isDisconnected = acc.status === "disconnected" || !acc.is_active;
                     const clientObj = clients.find((c) => c.id === acc.client_profile);
@@ -501,7 +507,7 @@ export default function SocialSettingsTab({
                         {/* Platform */}
                         <td style={{ padding: "14px 20px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <span style={{ fontSize: "1.2rem" }}>{platConfig.icon}</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{platConfig.icon}</span>
                             <div>
                               <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem" }}>
                                 {platConfig.label}
@@ -927,10 +933,10 @@ export default function SocialSettingsTab({
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 {[
-                  { id: "urgent", label: "🔴 Urgent", color: "#dc2626" },
-                  { id: "high", label: "🟠 High", color: "#ea580c" },
-                  { id: "medium", label: "🔵 Medium", color: "#0284c7" },
-                  { id: "low", label: "🟢 Low", color: "#16a34a" },
+                  { id: "urgent", label: "Urgent", color: "#dc2626" },
+                  { id: "high", label: "High", color: "#ea580c" },
+                  { id: "medium", label: "Medium", color: "#0284c7" },
+                  { id: "low", label: "Low", color: "#16a34a" },
                 ].map((p) => (
                   <button
                     key={p.id}
@@ -945,9 +951,21 @@ export default function SocialSettingsTab({
                       border: `1.5px solid ${workflowPrefs.defaultPriority === p.id ? p.color : "#cbd5e1"}`,
                       background: workflowPrefs.defaultPriority === p.id ? "#ffffff" : "transparent",
                       color: workflowPrefs.defaultPriority === p.id ? p.color : "#64748b",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
                     }}
                   >
-                    {p.label}
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: p.color,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span>{p.label}</span>
                   </button>
                 ))}
               </div>
@@ -1057,7 +1075,7 @@ export default function SocialSettingsTab({
                   Urgent Post Fast-Track Workflow
                 </div>
                 <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                  Allow posts marked 🔴 Urgent to skip script review directly to Designing & Scheduling
+                  Allow posts marked Urgent to skip script review directly to Designing & Scheduling
                 </div>
               </div>
               <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
@@ -1334,8 +1352,9 @@ export default function SocialSettingsTab({
               }}
             >
               <div>
-                <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span>💬</span> WhatsApp Instant Client Approval Alerts
+                <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 8 }}>
+                  <MessageSquare size={16} color="#16a34a" />
+                  <span>WhatsApp Instant Client Approval Alerts</span>
                 </div>
                 <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
                   Sends client a WhatsApp notification containing their secure one-click approval link
@@ -1369,8 +1388,9 @@ export default function SocialSettingsTab({
               }}
             >
               <div>
-                <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span>📧</span> Internal Email Review Notifications
+                <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 8 }}>
+                  <Mail size={16} color="#2563eb" />
+                  <span>Internal Email Review Notifications</span>
                 </div>
                 <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
                   Notify copywriters when scripts are approved; notify designers when drafts are assigned
@@ -1404,8 +1424,9 @@ export default function SocialSettingsTab({
               }}
             >
               <div>
-                <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span>📋</span> Morning Social Media Digest
+                <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 8 }}>
+                  <ClipboardList size={16} color="#4f46e5" />
+                  <span>Morning Social Media Digest</span>
                 </div>
                 <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
                   Sends a daily summary at 08:30 AM with all content scheduled for today across clients
@@ -1472,7 +1493,10 @@ export default function SocialSettingsTab({
                         cursor: "pointer",
                       }}
                     >
-                      {config.icon} {config.label.split(" ")[0]}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        {config.icon}
+                        <span>{config.label.split(" ")[0]}</span>
+                      </span>
                     </button>
                   ))}
                 </div>

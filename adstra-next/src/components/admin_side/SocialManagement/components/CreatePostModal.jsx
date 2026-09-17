@@ -33,16 +33,24 @@ import {
   Play,
   Search,
   Music2,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Youtube,
+  Star,
+  Lightbulb,
+  Smile,
 } from "lucide-react";
+import { XIcon, GoogleIcon, TikTokIcon, renderPlatformIcon } from "./PlatformIcons";
 
 const ALL_PLATFORMS = [
-  { id: "instagram", label: "Instagram", color: "#e1306c", icon: "📸" },
-  { id: "facebook", label: "Facebook", color: "#1877f2", icon: "📘" },
-  { id: "linkedin", label: "LinkedIn", color: "#0a66c2", icon: "💼" },
-  { id: "youtube", label: "YouTube", color: "#ff0000", icon: "▶️" },
-  { id: "x", label: "X / Twitter", color: "#000000", icon: "✖️" },
-  { id: "google_business", label: "Google Business", color: "#0f9d58", icon: "📍" },
-  { id: "tiktok", label: "TikTok", color: "#000000", icon: "🎵" },
+  { id: "instagram", label: "Instagram", color: "#e1306c", icon: <Instagram size={14} /> },
+  { id: "facebook", label: "Facebook", color: "#1877f2", icon: <Facebook size={14} /> },
+  { id: "linkedin", label: "LinkedIn", color: "#0a66c2", icon: <Linkedin size={14} /> },
+  { id: "youtube", label: "YouTube", color: "#ff0000", icon: <Youtube size={14} /> },
+  { id: "x", label: "X / Twitter", color: "#000000", icon: <XIcon size={13} /> },
+  { id: "google_business", label: "Google Business", color: "#0f9d58", icon: <GoogleIcon size={14} /> },
+  { id: "tiktok", label: "TikTok", color: "#000000", icon: <TikTokIcon size={14} /> },
 ];
 
 const PLATFORM_MAP = ALL_PLATFORMS.reduce((acc, curr) => {
@@ -168,7 +176,7 @@ function PlatformFeedPreview({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", fontWeight: 700, color: "#1a73e8" }}>
-            <span style={{ fontSize: "1rem" }}>📍</span>
+            <GoogleIcon size={16} />
             <span>Google Business Profile</span>
           </div>
           <span
@@ -211,7 +219,14 @@ function PlatformFeedPreview({
               <CheckCircle2 size={13} color="#1a73e8" fill="#1a73e8" />
             </div>
             <div style={{ fontSize: "0.72rem", color: "#5f6368", display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
-              <span style={{ color: "#e37400", fontWeight: 700 }}>4.9 ★★★★★</span>
+              <span style={{ color: "#e37400", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                <span>4.9</span>
+                <span style={{ display: "inline-flex", gap: 1 }}>
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={11} fill="#e37400" color="#e37400" />
+                  ))}
+                </span>
+              </span>
               <span>(128)</span>
               <span>•</span>
               <span>{location || "Digital marketing agency"}</span>
@@ -382,8 +397,59 @@ function PlatformFeedPreview({
 
         {/* Reactions Counter */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", fontSize: "0.74rem", color: "#65676b" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span>👍❤️😮</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  background: "#1877f2",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  border: "1.5px solid #ffffff",
+                  zIndex: 3,
+                }}
+              >
+                <ThumbsUp size={10} fill="#ffffff" />
+              </span>
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  background: "#e11d48",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  border: "1.5px solid #ffffff",
+                  marginLeft: -5,
+                  zIndex: 2,
+                }}
+              >
+                <Heart size={10} fill="#ffffff" />
+              </span>
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  background: "#f59e0b",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  border: "1.5px solid #ffffff",
+                  marginLeft: -5,
+                  zIndex: 1,
+                }}
+              >
+                <Smile size={10} fill="#ffffff" />
+              </span>
+            </div>
             <span>384</span>
           </div>
           <div>48 comments · 16 shares</div>
@@ -588,8 +654,59 @@ function PlatformFeedPreview({
 
         {/* LinkedIn Reactions Counter */}
         <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#00000099" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-            <span>👏💡❤️</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span
+                style={{
+                  width: 17,
+                  height: 17,
+                  borderRadius: "50%",
+                  background: "#0a66c2",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  border: "1.5px solid #ffffff",
+                  zIndex: 3,
+                }}
+              >
+                <ThumbsUp size={9} fill="#ffffff" />
+              </span>
+              <span
+                style={{
+                  width: 17,
+                  height: 17,
+                  borderRadius: "50%",
+                  background: "#f59e0b",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  border: "1.5px solid #ffffff",
+                  marginLeft: -4,
+                  zIndex: 2,
+                }}
+              >
+                <Lightbulb size={9} fill="#ffffff" />
+              </span>
+              <span
+                style={{
+                  width: 17,
+                  height: 17,
+                  borderRadius: "50%",
+                  background: "#dc2626",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  border: "1.5px solid #ffffff",
+                  marginLeft: -4,
+                  zIndex: 1,
+                }}
+              >
+                <Heart size={9} fill="#ffffff" />
+              </span>
+            </div>
             <span>462</span>
           </div>
           <div>38 comments · 14 reposts</div>
@@ -1496,10 +1613,10 @@ export default function CreatePostModal({
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                 {[
-                  { id: "urgent", label: "🔴 Urgent", color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
-                  { id: "high", label: "🟠 High", color: "#ea580c", bg: "#fff7ed", border: "#fdba74" },
-                  { id: "medium", label: "🔵 Medium", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
-                  { id: "low", label: "🟢 Low", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+                  { id: "urgent", label: "Urgent", color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
+                  { id: "high", label: "High", color: "#ea580c", bg: "#fff7ed", border: "#fdba74" },
+                  { id: "medium", label: "Medium", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
+                  { id: "low", label: "Low", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
                 ].map((pr) => {
                   const isSelected = priority === pr.id;
                   return (
@@ -1519,11 +1636,20 @@ export default function CreatePostModal({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: 4,
+                        gap: 6,
                         transition: "all 0.15s ease",
                       }}
                     >
-                      {pr.label}
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: pr.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{pr.label}</span>
                     </button>
                   );
                 })}
@@ -1616,7 +1742,7 @@ export default function CreatePostModal({
                 ? [...new Set(clientAccounts.map((a) => a.platform))]
                 : ["instagram", "facebook", "linkedin"]
               ).map((plat) => {
-                const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: "📱", color: "#0f172a" };
+                const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: renderPlatformIcon(plat, { size: 14 }), color: "#0f172a" };
                 const isActive = activePreviewPlatform === plat;
                 return (
                   <button

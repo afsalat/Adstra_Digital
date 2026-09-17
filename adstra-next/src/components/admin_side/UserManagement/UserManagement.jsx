@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./UserManagement.css";
-import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound, Search, MessageCircle, QrCode } from "lucide-react";
+import { Edit, Eye, ShieldOff, Plus, ArrowLeft, X, KeyRound, Search, MessageCircle, QrCode, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
 import { useModal } from "@/Context/ModalContext";
@@ -253,7 +253,10 @@ const UserList = () => {
   return (
     <div className="user-list-container">
       <div className="header-actions">
-        <h2>👥 User Management</h2>
+        <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Users size={22} color="#4f46e5" />
+          <span>User Management</span>
+        </h2>
         <div className="search-container">
           <Search size={18} className="search-icon" />
           <input
@@ -428,7 +431,7 @@ const UserList = () => {
                     });
                     const pass = res.data?.generated_password;
                     showAlert(
-                      "🆕 User Created",
+                      "User Created",
                       <div>
                         <p>Credentials have been emailed to <strong>{formData.email}</strong>.</p>
                         {pass && (
