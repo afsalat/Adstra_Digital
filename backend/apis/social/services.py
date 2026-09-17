@@ -129,3 +129,51 @@ def generate_ai_content(prompt, tone='Professional', language='en', platform='in
         'language': language,
         'tone': tone,
     }
+
+
+CLIENT_PALETTE = [
+    '#4f46e5', '#0ea5e9', '#ec4899', '#8b5cf6', '#10b981',
+    '#f59e0b', '#06b6d4', '#f43f5e', '#6366f1', '#14b8a6',
+    '#3b82f6', '#84cc16', '#d946ef', '#e11d48', '#0284c7',
+]
+
+
+def sync_proposal_clients():
+    """Ensure every Client Company from proposal.Client has a corresponding SocialClientProfile."""
+    from apis.proposal.models import Client as ProposalClient
+    from django.utils.text import slugify
+
+    for idx, c in enumerate(ProposalClient.objects.all().order_by('id')):
+        display_name = (c.company_name or c.name or f"Client Company {c.id}").strip()
+        if display_name.lower() == 'adstra_digital':
+            display_name = 'Adstra Digital'
+
+        profile = SocialClientProfile.objects.filter(client=c).first()
+        if not profile:
+            candidate_slug = slugify(display_name) or f"client-{c.id}"
+            profile = SocialClientProfile.objects.filter(slug=candidate_slug).first()
+            if profile:
+                profile.client = c
+                profile.name = display_name
+                profile.save(update_fields=['client', 'name'])
+            else:
+                slug = candidate_slug
+                counter = 1
+                while SocialClientProfile.objects.filter(slug=slug).exists():
+                    slug = f"{candidate_slug}-{counter}"
+                    counter += 1
+                color = CLIENT_PALETTE[idx % len(CLIENT_PALETTE)]
+                SocialClientProfile.objects.create(
+                    client=c,
+                    name=display_name,
+                    slug=slug,
+                    primary_color=color,
+                    client_email=c.email or '',
+                    client_contact=c.contact or '',
+                    notes=f"Synced from Client Companies table (ID #{c.id})",
+                )
+        else:
+            if profile.name != display_name and display_name:
+                profile.name = display_name
+                profile.save(update_fields=['name'])
+

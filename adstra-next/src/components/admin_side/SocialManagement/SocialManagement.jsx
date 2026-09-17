@@ -148,7 +148,7 @@ function SocialManagementInner() {
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
             >
-              <option value="all">All Clients & Brands</option>
+              <option value="all">All Client Companies</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}

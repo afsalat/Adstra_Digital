@@ -32,6 +32,7 @@ from apis.social.services import (
     convert_inbox_to_crm_lead,
     record_approval_action,
     generate_ai_content,
+    sync_proposal_clients,
 )
 from apis.leads.serializers import LeadSerializer
 
@@ -138,6 +139,13 @@ class SocialClientProfileViewSet(viewsets.ModelViewSet):
     queryset = SocialClientProfile.objects.all().order_by('name')
     serializer_class = SocialClientProfileSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        try:
+            sync_proposal_clients()
+        except Exception:
+            pass
+        return SocialClientProfile.objects.all().order_by('name')
 
 
 class SocialAccountViewSet(viewsets.ModelViewSet):

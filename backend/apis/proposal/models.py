@@ -80,3 +80,15 @@ class ProposalService(models.Model):
     rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     gst = models.DecimalField(max_digits=5, decimal_places=2, default=0, null=True, blank=True)
+
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Client)
+def sync_client_to_social_profile(sender, instance, **kwargs):
+    try:
+        from apis.social.services import sync_proposal_clients
+        sync_proposal_clients()
+    except Exception:
+        pass

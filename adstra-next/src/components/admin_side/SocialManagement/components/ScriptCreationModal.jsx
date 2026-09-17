@@ -570,7 +570,7 @@ export default function ScriptCreationModal({
                     marginBottom: 5,
                   }}
                 >
-                  Client Profile *
+                  Client Company *
                 </label>
                 <select
                   value={clientId}

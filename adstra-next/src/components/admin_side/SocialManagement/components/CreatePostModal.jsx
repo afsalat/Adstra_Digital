@@ -1497,7 +1497,7 @@ export default function CreatePostModal({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                  Client Profile *
+                  Client Company *
                 </label>
                 <select
                   value={clientId}
