@@ -256,12 +256,21 @@ export default function MediaLibraryTab({
 
     try {
       if (uploadMode === "file" && selectedFile) {
+        // Truncate overly long filenames (>70 chars) to prevent server/storage path overflow
+        let safeFileName = selectedFile.name;
+        if (safeFileName.length > 70) {
+          const lastDot = safeFileName.lastIndexOf(".");
+          const ext = lastDot !== -1 ? safeFileName.substring(lastDot) : "";
+          const nameOnly = lastDot !== -1 ? safeFileName.substring(0, lastDot) : safeFileName;
+          safeFileName = `${nameOnly.substring(0, 50)}_${Date.now().toString().slice(-4)}${ext}`;
+        }
+
         const formData = new FormData();
         formData.append("client_profile", uploadClientId);
         formData.append("title", assetTitle.trim());
         formData.append("asset_type", assetType);
         formData.append("folder", finalFolder);
-        formData.append("file", selectedFile);
+        formData.append("file", selectedFile, safeFileName);
         formData.append("file_size_bytes", selectedFile.size);
         formData.append("file_format", selectedFile.name.split(".").pop()?.toUpperCase() || "JPG");
         formData.append("approval_status", "approved");
@@ -295,11 +304,21 @@ export default function MediaLibraryTab({
       setCustomFolderName("");
       onRefresh?.();
     } catch (err) {
-      setUploadError(
-        err.response?.data?.detail ||
-        JSON.stringify(err.response?.data) ||
-        "Error saving asset to client library."
-      );
+      const errData = err.response?.data;
+      let errMsg = "Error saving asset to client library.";
+      if (typeof errData === "string") {
+        errMsg = errData;
+      } else if (errData && typeof errData === "object") {
+        const errorList = [];
+        for (const [key, val] of Object.entries(errData)) {
+          const valText = Array.isArray(val) ? val.join(" ") : String(val);
+          errorList.push(key !== "detail" && key !== "non_field_errors" ? `${key}: ${valText}` : valText);
+        }
+        if (errorList.length > 0) errMsg = errorList.join(" | ");
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      setUploadError(errMsg);
     } finally {
       setUploading(false);
     }

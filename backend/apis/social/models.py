@@ -144,7 +144,7 @@ class SocialMediaAsset(models.Model):
     )
     title = models.CharField(max_length=255)
     asset_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default='image')
-    file = models.FileField(upload_to='social_media/%Y/%m/', null=True, blank=True)
+    file = models.FileField(upload_to='social_media/%Y/%m/', max_length=500, null=True, blank=True)
     file_url = models.CharField(max_length=600, blank=True)
     file_size_bytes = models.PositiveIntegerField(default=0)
     file_format = models.CharField(max_length=20, blank=True)
