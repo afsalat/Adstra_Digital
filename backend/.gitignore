@@ -29,3 +29,11 @@ passenger.log
 
 # Ignore SQLite databases
 *.sqlite3
+*.sqlite3-journal
+db.sqlite3
+
+# Ignore Django migrations
+*/migrations/*
+!*/migrations/__init__.py
+migrations/*
+!migrations/__init__.py

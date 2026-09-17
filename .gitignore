@@ -38,7 +38,17 @@ yarn-error.log*
 htmlcov/
 .pytest_cache/
 *.sqlite3
+*.sqlite3-journal
 db.sqlite3
+backend/db.sqlite3
+
+# Django migrations
+*/migrations/*
+!*/migrations/__init__.py
+**/migrations/*
+!**/migrations/__init__.py
+backend/apis/*/migrations/*
+!backend/apis/*/migrations/__init__.py
 backend.zip
 out.zip
 .meta-panel-trigger
