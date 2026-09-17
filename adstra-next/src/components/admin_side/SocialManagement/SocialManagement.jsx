@@ -31,6 +31,7 @@ import TeamDesignationTreeTab from "./components/TeamDesignationTreeTab";
 import SocialSettingsTab from "./components/SocialSettingsTab";
 import CreatePostModal from "./components/CreatePostModal";
 import AIAssistantModal from "./components/AIAssistantModal";
+import ClientCompanySearchSelect from "./components/ClientCompanySearchSelect";
 
 function SocialManagementInner() {
   const router = useRouter();
@@ -141,21 +142,15 @@ function SocialManagementInner() {
         </div>
 
         <div className="social-header-right">
-          {/* Client Filter Switcher */}
-          <div className="social-client-picker">
-            <Building2 size={16} color="#64748b" />
-            <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-            >
-              <option value="all">All Client Companies</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Searchable Client Company Switcher */}
+          <ClientCompanySearchSelect
+            clients={clients}
+            value={selectedClientId}
+            onChange={(newId) => setSelectedClientId(newId)}
+            allowAll={true}
+            allLabel="All Client Companies"
+            variant="header"
+          />
 
           {/* AI Content Studio button */}
           <button

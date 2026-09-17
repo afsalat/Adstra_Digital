@@ -47,6 +47,7 @@ import {
   Info,
 } from "lucide-react";
 import { XIcon, GoogleIcon, TikTokIcon, renderPlatformIcon } from "./PlatformIcons";
+import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
 
 const ALL_PLATFORMS = [
   { id: "instagram", label: "Instagram", color: "#e1306c", icon: <Instagram size={14} /> },
@@ -1499,15 +1500,14 @@ export default function CreatePostModal({
                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
                   Client Company *
                 </label>
-                <select
+                <ClientCompanySearchSelect
+                  clients={clients}
                   value={clientId}
-                  onChange={(e) => handleClientChange(e.target.value)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: "0.88rem", fontWeight: 600, background: "#fff" }}
-                >
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => handleClientChange(val)}
+                  allowAll={false}
+                  placeholder="Search & select client company..."
+                  variant="form"
+                />
               </div>
 
               <div>

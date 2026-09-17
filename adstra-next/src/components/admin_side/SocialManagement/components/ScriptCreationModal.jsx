@@ -28,6 +28,7 @@ import {
   Building,
   AlertTriangle,
 } from "lucide-react";
+import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
 
 export default function ScriptCreationModal({
   isOpen,
@@ -572,26 +573,14 @@ export default function ScriptCreationModal({
                 >
                   Client Company *
                 </label>
-                <select
+                <ClientCompanySearchSelect
+                  clients={clients}
                   value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "9px 12px",
-                    borderRadius: 10,
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "0.88rem",
-                    fontWeight: 700,
-                    background: "#ffffff",
-                    outline: "none",
-                  }}
-                >
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setClientId(val)}
+                  allowAll={false}
+                  placeholder="Search & select client company..."
+                  variant="form"
+                />
               </div>
 
               {/* Format Switcher (Handwritten notes: Poster/Image, Carousel, Videos/Reel) */}
