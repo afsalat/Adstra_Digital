@@ -31,6 +31,7 @@ import {
   Calendar,
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
+import ScriptCreationModal from "./ScriptCreationModal";
 
 export default function WorkflowStageSection({
   stageId, // 'scripts' | 'script_approval' | 'designing' | 'team_review' | 'client_review' | 'post_schedule' | 'published'
@@ -45,6 +46,10 @@ export default function WorkflowStageSection({
   const [formatFilter, setFormatFilter] = useState("all");
   const [viewMode, setViewMode] = useState("listing"); // 'listing' | 'calendar'
   const [copiedToken, setCopiedToken] = useState(null);
+
+  // Script Creation Modal State (Stage 1: Scripts)
+  const [scriptModalOpen, setScriptModalOpen] = useState(false);
+  const [activeScriptPost, setActiveScriptPost] = useState(null);
 
   // Modal State for Action / Feedback / Loopback
   const [modalAction, setModalAction] = useState(null);
@@ -327,7 +332,14 @@ export default function WorkflowStageSection({
           </div>
 
           <button
-            onClick={onOpenCreatePost}
+            onClick={() => {
+              if (stageId === "scripts") {
+                setActiveScriptPost(null);
+                setScriptModalOpen(true);
+              } else {
+                onOpenCreatePost();
+              }
+            }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -447,7 +459,10 @@ export default function WorkflowStageSection({
               </p>
               {stageId === "scripts" && (
                 <button
-                  onClick={onOpenCreatePost}
+                  onClick={() => {
+                    setActiveScriptPost(null);
+                    setScriptModalOpen(true);
+                  }}
                   style={{
                     marginTop: 6,
                     background: "#4f46e5",
@@ -474,6 +489,10 @@ export default function WorkflowStageSection({
               onCopyLink={copyPublicLink}
               copiedToken={copiedToken}
               onOpenModal={openActionModal}
+              onOpenScriptModal={(post) => {
+                setActiveScriptPost(post);
+                setScriptModalOpen(true);
+              }}
             />
           )}
         </>
@@ -758,6 +777,21 @@ export default function WorkflowStageSection({
         </div>
       )}
 
+      {/* 5. SCRIPT CREATION / EDIT MODAL */}
+      {scriptModalOpen && (
+        <ScriptCreationModal
+          isOpen={scriptModalOpen}
+          onClose={() => {
+            setScriptModalOpen(false);
+            setActiveScriptPost(null);
+          }}
+          clients={clients}
+          selectedClientId={selectedClientId}
+          initialData={activeScriptPost}
+          onSuccess={onRefresh}
+        />
+      )}
+
     </div>
   );
 }
@@ -772,6 +806,7 @@ function StageListingTable({
   onCopyLink,
   copiedToken,
   onOpenModal,
+  onOpenScriptModal,
 }) {
   return (
     <div
@@ -866,7 +901,13 @@ function StageListingTable({
 
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div
-                          onClick={() => onOpenModal(post, "edit_notes")}
+                          onClick={() => {
+                            if ((stageId === "scripts" || stageId === "script_approval") && onOpenScriptModal) {
+                              onOpenScriptModal(post);
+                            } else {
+                              onOpenModal(post, "edit_notes");
+                            }
+                          }}
                           style={{
                             fontWeight: 800,
                             fontSize: "0.88rem",
@@ -1017,10 +1058,10 @@ function StageListingTable({
                       {stageId === "scripts" && (
                         <>
                           <button
-                            onClick={() => onOpenModal(post, "edit_notes")}
+                            onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
                             style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Edit
+                            Edit Script
                           </button>
                           <button
                             onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
@@ -1034,6 +1075,12 @@ function StageListingTable({
                       {/* Stage 2: Script Approval */}
                       {stageId === "script_approval" && (
                         <>
+                          <button
+                            onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
+                            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                          >
+                            View Script
+                          </button>
                           <button
                             onClick={() => onOpenModal(post, "reject_script")}
                             style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ef4444", background: "#fff", color: "#dc2626", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}

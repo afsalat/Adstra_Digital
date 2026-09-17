@@ -245,6 +245,7 @@ class SocialPost(models.Model):
         related_name='created_social_posts'
     )
     checklist = models.JSONField(default=list, blank=True)
+    script_data = models.JSONField(default=dict, blank=True)
     client_approval_token = models.CharField(max_length=64, blank=True, db_index=True)
     client_feedback = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
