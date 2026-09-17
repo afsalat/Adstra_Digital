@@ -20,7 +20,8 @@ import {
   Receipt,
   Scroll,
   ArrowRight,
-  LogOut
+  LogOut,
+  Share2
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
@@ -302,6 +303,17 @@ Are you sure you want to continue with logout?`,
                 title: "Lead Management",
                 description: "Capture, qualify, and follow up with new business leads.",
                 action: "Manage Leads",
+              })}
+
+              {/* Social Media Management */}
+              {renderFeatureCard({
+                anyPermission: ["social.view", "social.manage", "lead.view_all", "lead.view_own", "lead.view_my_profile"],
+                href: "/socialmanagement/",
+                color: "indigo",
+                icon: <Share2 size={28} />,
+                title: "Social Media Management",
+                description: "Omnichannel content calendar, approval workflows, multi-client scheduling & inbox.",
+                action: "Open Social Suite",
               })}
             </>
           )}

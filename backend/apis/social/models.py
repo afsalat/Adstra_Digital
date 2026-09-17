@@ -176,15 +176,20 @@ class SocialPost(models.Model):
     ]
 
     STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('internal_review', 'Internal Review'),
+        ('script', 'Script'),
+        ('script_approval', 'Script Approval'),
+        ('designing', 'Scheduled / Designing'),
+        ('team_review', 'Team Review / Ready'),
         ('client_review', 'Client Review'),
-        ('approved', 'Approved'),
-        ('scheduled', 'Scheduled'),
+        ('approved', 'Approved / Post Schedule'),
+        ('published', 'Published / Posted'),
+        # Backward compatibility aliases
+        ('draft', 'Draft / Script'),
+        ('internal_review', 'Team Review'),
+        ('scheduled', 'Approved / Post Schedule'),
         ('publishing', 'Publishing'),
-        ('published', 'Published'),
         ('failed', 'Failed'),
-        ('rejected', 'Rejected'),
+        ('rejected', 'Rejected / Revisions'),
     ]
 
     client_profile = models.ForeignKey(
@@ -211,7 +216,17 @@ class SocialPost(models.Model):
     media_assets = models.ManyToManyField(SocialMediaAsset, blank=True, related_name='posts')
     scheduled_at = models.DateTimeField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=30, default='draft', choices=STATUS_CHOICES)
+    PRIORITY_CHOICES = [
+        ('urgent', 'Urgent'),
+        ('high', 'High'),
+        ('medium', 'Medium'),
+        ('low', 'Low'),
+    ]
+
+    status = models.CharField(max_length=30, default='script', choices=STATUS_CHOICES)
+    priority = models.CharField(max_length=20, default='medium', choices=PRIORITY_CHOICES)
+    script_notes = models.TextField(blank=True)
+    designer_notes = models.TextField(blank=True)
     is_template = models.BooleanField(default=False)
     recurring_rule = models.CharField(max_length=50, blank=True)
     failure_reason = models.TextField(blank=True)

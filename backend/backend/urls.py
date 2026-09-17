@@ -33,6 +33,7 @@ urlpatterns = [
     path('blogs/', include('apis.blogs.urls')),
     path('leads/', include(('apis.leads.urls', 'leads'), namespace='leads_compat')),
     path('chat/', include('apis.chat.urls')),
+    path('social/', include('apis.social.urls')),
     path('', include('apis.leads.root_urls')),
 
     # API-prefixed paths for frontend /api compatibility
@@ -45,6 +46,7 @@ urlpatterns = [
     path('api/blogs/', include('apis.blogs.urls')),
     path('api/leads/', include(('apis.leads.urls', 'leads'), namespace='leads')),
     path('api/chat/', include('apis.chat.urls')),
+    path('api/social/', include('apis.social.urls')),
     path('api/', include('apis.leads.root_urls')),
 
     path('robots.txt', robots_txt, name='robots_txt'),

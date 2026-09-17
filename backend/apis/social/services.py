@@ -37,7 +37,7 @@ def convert_inbox_to_crm_lead(inbox_message, user=None, custom_data=None):
         campaign=inbox_message.post_context or f"{inbox_message.client_profile.name} Campaign",
         product=product_interest,
         address=handle_info,
-        stage='NEW',
+        current_stage='NEW',
         temperature='WARM' if inbox_message.sender_phone else 'COLD',
         priority='HIGH' if inbox_message.sender_phone else 'MEDIUM',
     )
