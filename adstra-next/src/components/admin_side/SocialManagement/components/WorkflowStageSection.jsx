@@ -928,25 +928,25 @@ function StageListingTable({
       }}
     >
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
+        <table style={{ width: "100%", minWidth: 1060, borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
           <thead>
             <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-              <th style={{ padding: "14px 18px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 280 }}>
+              <th style={{ padding: "14px 20px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 260 }}>
                 Post & Content
               </th>
-              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 140 }}>
+              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 160, whiteSpace: "nowrap" }}>
                 Client
               </th>
-              <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 90 }}>
+              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 90, whiteSpace: "nowrap" }}>
                 Format
               </th>
-              <th style={{ padding: "14px 14px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 130 }}>
+              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 210, whiteSpace: "nowrap" }}>
                 Platforms
               </th>
-              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 160 }}>
+              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 140, whiteSpace: "nowrap" }}>
                 {stageId === "published" ? "Published At" : stageId === "post_schedule" ? "Scheduled At" : "Timing"}
               </th>
-              <th style={{ padding: "14px 18px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 220, textAlign: "right" }}>
+              <th style={{ padding: "14px 20px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 380, textAlign: "right", whiteSpace: "nowrap" }}>
                 Actions
               </th>
             </tr>
@@ -967,7 +967,7 @@ function StageListingTable({
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   {/* 1. Post & Content */}
-                  <td style={{ padding: "14px 18px", verticalAlign: "middle" }}>
+                  <td style={{ padding: "14px 20px", verticalAlign: "middle" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       {/* Thumbnail or Stage Icon */}
                       {post.media_urls?.[0] ? (
@@ -1080,7 +1080,7 @@ function StageListingTable({
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
-                            maxWidth: 320,
+                            maxWidth: 480,
                           }}
                         >
                           {post.primary_caption || post.script_notes || "No draft caption"}
@@ -1100,7 +1100,7 @@ function StageListingTable({
                               fontSize: "0.72rem",
                               fontWeight: 700,
                               marginTop: 4,
-                              maxWidth: 320,
+                              maxWidth: 480,
                             }}
                           >
                             <AlertTriangle size={12} style={{ flexShrink: 0 }} />
@@ -1114,7 +1114,7 @@ function StageListingTable({
                   </td>
 
                   {/* 2. Client */}
-                  <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
+                  <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                     <span
                       style={{
                         fontSize: "0.76rem",
@@ -1132,7 +1132,7 @@ function StageListingTable({
                   </td>
 
                   {/* 3. Format */}
-                  <td style={{ padding: "14px 12px", verticalAlign: "middle" }}>
+                  <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                     <span
                       style={{
                         fontSize: "0.72rem",
@@ -1151,8 +1151,8 @@ function StageListingTable({
                   </td>
 
                   {/* 4. Platforms */}
-                  <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
-                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "nowrap" }}>
                       {(post.platforms || ["instagram"]).map((plat) => (
                         <span
                           key={plat}
@@ -1161,9 +1161,10 @@ function StageListingTable({
                             fontWeight: 700,
                             color: "#334155",
                             background: "#f1f5f9",
-                            padding: "2px 6px",
+                            padding: "2px 7px",
                             borderRadius: 4,
                             textTransform: "capitalize",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {plat}
@@ -1173,7 +1174,7 @@ function StageListingTable({
                   </td>
 
                   {/* 5. Timing / Schedule */}
-                  <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
+                  <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                     {post.scheduled_at ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#0284c7", whiteSpace: "nowrap" }}>
                         <Clock size={13} />
@@ -1192,7 +1193,7 @@ function StageListingTable({
                   </td>
 
                   {/* 6. Actions */}
-                  <td style={{ padding: "14px 18px", verticalAlign: "middle", textAlign: "right" }}>
+                  <td style={{ padding: "14px 20px", verticalAlign: "middle", textAlign: "right", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
                       {/* Timeline Graph Button for Every Post */}
                       <button
