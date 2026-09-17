@@ -156,6 +156,7 @@ export default function DedicatedSocialSection({
           stageId={socialSubTab}
           posts={posts}
           clients={clients}
+          mediaAssets={mediaAssets}
           selectedClientId={selectedClientId}
           onRefresh={onRefresh}
           onOpenCreatePost={onOpenCreatePost}

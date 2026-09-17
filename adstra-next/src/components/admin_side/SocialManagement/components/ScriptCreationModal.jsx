@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import {
@@ -27,6 +27,11 @@ import {
   Check,
   Building,
   AlertTriangle,
+  FolderArchive,
+  Search,
+  Folder,
+  Boxes,
+  Eye,
 } from "lucide-react";
 import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
 
@@ -34,6 +39,7 @@ export default function ScriptCreationModal({
   isOpen,
   onClose,
   clients = [],
+  mediaAssets = [],
   selectedClientId = "all",
   initialData = null,
   onSuccess,
@@ -80,6 +86,119 @@ export default function ScriptCreationModal({
   const [contactDetails, setContactDetails] = useState(
     initialData?.script_data?.for_designers?.contact_details || ""
   );
+
+  // Client Asset Storage & Multi-Select Integration
+  const [clientAssets, setClientAssets] = useState(
+    Array.isArray(mediaAssets) && mediaAssets.length > 0
+      ? mediaAssets.filter((a) => String(a.client_profile) === String(clientId))
+      : []
+  );
+  const [loadingAssets, setLoadingAssets] = useState(false);
+
+  // Multi-selected asset IDs (Array of asset IDs e.g. [1, 5, 8])
+  const [selectedAssetIds, setSelectedAssetIds] = useState(() => {
+    if (initialData?.media_assets && Array.isArray(initialData.media_assets)) {
+      return initialData.media_assets.map((a) => (typeof a === "object" ? a.id : a));
+    }
+    if (initialData?.script_data?.for_designers?.selected_asset_ids) {
+      return initialData.script_data.for_designers.selected_asset_ids;
+    }
+    return [];
+  });
+
+  // Asset Picker Modal State
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+  const [assetSearchQuery, setAssetSearchQuery] = useState("");
+  const [assetFolderFilter, setAssetFolderFilter] = useState("all");
+  const [assetTypeFilter, setAssetTypeFilter] = useState("all");
+
+  // Fetch client assets dynamically whenever clientId changes
+  useEffect(() => {
+    if (!clientId) return;
+    let isMounted = true;
+    setLoadingAssets(true);
+    axios
+      .get(`${API_BASE_URL}/social/media/?client_id=${clientId}`)
+      .then((res) => {
+        if (isMounted) {
+          setClientAssets(res.data || []);
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading client assets:", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingAssets(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [clientId]);
+
+  // Sync selected assets when initialData changes
+  useEffect(() => {
+    if (initialData?.media_assets && Array.isArray(initialData.media_assets)) {
+      setSelectedAssetIds(initialData.media_assets.map((a) => (typeof a === "object" ? a.id : a)));
+    } else if (initialData?.script_data?.for_designers?.selected_asset_ids) {
+      setSelectedAssetIds(initialData.script_data.for_designers.selected_asset_ids);
+    }
+  }, [initialData]);
+
+  // Toggle single asset in multi-selection
+  const handleToggleAsset = (assetId) => {
+    setSelectedAssetIds((prev) =>
+      prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]
+    );
+  };
+
+  // Select all currently filtered assets
+  const handleSelectAllFiltered = (filteredList) => {
+    const idsToAdd = filteredList.map((a) => a.id);
+    setSelectedAssetIds((prev) => Array.from(new Set([...prev, ...idsToAdd])));
+  };
+
+  // Deselect currently filtered assets
+  const handleDeselectAllFiltered = (filteredList) => {
+    const idsToRemove = new Set(filteredList.map((a) => a.id));
+    setSelectedAssetIds((prev) => prev.filter((id) => !idsToRemove.has(id)));
+  };
+
+  // Available unique folders for the current client's assets
+  const availableFolders = useMemo(() => {
+    const folders = new Set();
+    clientAssets.forEach((a) => {
+      if (a.folder) folders.add(a.folder);
+    });
+    return Array.from(folders);
+  }, [clientAssets]);
+
+  // Filtered assets inside the modal picker
+  const filteredModalAssets = useMemo(() => {
+    return clientAssets.filter((a) => {
+      if (assetFolderFilter !== "all" && a.folder !== assetFolderFilter) return false;
+      if (assetTypeFilter !== "all" && a.asset_type !== assetTypeFilter) return false;
+      if (assetSearchQuery.trim()) {
+        const q = assetSearchQuery.toLowerCase();
+        const matchesTitle = a.title?.toLowerCase().includes(q);
+        const matchesTags = Array.isArray(a.tags) && a.tags.some((t) => t.toLowerCase().includes(q));
+        const matchesFolder = a.folder?.toLowerCase().includes(q);
+        return matchesTitle || matchesTags || matchesFolder;
+      }
+      return true;
+    });
+  }, [clientAssets, assetFolderFilter, assetTypeFilter, assetSearchQuery]);
+
+  // Selected asset objects
+  const selectedAssetsList = useMemo(() => {
+    const matched = clientAssets.filter((a) => selectedAssetIds.includes(a.id));
+    if (matched.length > 0) return matched;
+    if (initialData?.script_data?.for_designers?.selected_assets) {
+      return initialData.script_data.for_designers.selected_assets.filter((a) =>
+        selectedAssetIds.includes(a.id)
+      );
+    }
+    return [];
+  }, [clientAssets, selectedAssetIds, initialData]);
 
   // Carousel Slides Manager: array of { slide_num, headline, visual_text, content_text }
   const [carouselSlides, setCarouselSlides] = useState(() => {
@@ -324,7 +443,16 @@ export default function ScriptCreationModal({
 
     setSubmitting(true);
 
-    // Build structured script_data according to the handwritten requirements
+    // Gather full attached assets and URLs from multi-select
+    const attachedAssets = selectedAssetsList;
+    const attachedUrls = attachedAssets
+      .map((a) => a.file_url || a.file)
+      .filter(Boolean);
+    const assetNames = attachedAssets
+      .map((a) => `${a.title} [${(a.asset_type || "asset").toUpperCase()}]`)
+      .join(", ");
+
+    // Build structured script_data according to the requirements
     const scriptData = {
       format, // 'poster' | 'carousel' | 'video'
       video_type: format === "video" ? videoType : null,
@@ -334,6 +462,14 @@ export default function ScriptCreationModal({
         visual_content_text: visualContentText,
         cta,
         logo_assets: logoAssets,
+        selected_asset_ids: selectedAssetIds,
+        selected_assets: attachedAssets.map((a) => ({
+          id: a.id,
+          title: a.title,
+          asset_type: a.asset_type,
+          url: a.file_url || a.file,
+          folder: a.folder,
+        })),
         contact_details: contactDetails,
         music_reference: musicReference,
         clips,
@@ -427,6 +563,8 @@ export default function ScriptCreationModal({
       primary_caption: description,
       hashtags,
       location,
+      media_assets: selectedAssetIds,
+      media_urls: attachedUrls.length > 0 ? attachedUrls : (initialData?.media_urls || []),
       script_notes: formattedScriptNotes,
       designer_notes: formattedDesignerNotes,
       script_data: scriptData,
@@ -448,6 +586,273 @@ export default function ScriptCreationModal({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const renderClientAssetsSelector = (theme = {
+    labelColor: "#581c87",
+    accentColor: "#7c3aed",
+    borderColor: "#d8b4fe",
+    bgLight: "#faf5ff",
+  }) => {
+    return (
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 12,
+          border: `1.5px solid ${theme.borderColor}`,
+          padding: "14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
+        {/* Header with Title & Action Button */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <FolderArchive size={16} color={theme.accentColor} />
+              <label style={{ fontSize: "0.8rem", fontWeight: 800, color: theme.labelColor }}>
+                Logo & Client Assets (Connected to Asset Storage)
+              </label>
+              {selectedAssetIds.length > 0 && (
+                <span
+                  style={{
+                    background: theme.accentColor,
+                    color: "#ffffff",
+                    borderRadius: 10,
+                    padding: "1px 8px",
+                    fontSize: "0.7rem",
+                    fontWeight: 800,
+                  }}
+                >
+                  {selectedAssetIds.length} Selected
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>
+              Multi-select brand logos, product photos, or creative assets from {selectedClient?.name || "Client"}'s storage
+            </div>
+          </div>
+
+          {/* Button to open multi-select asset picker modal */}
+          <button
+            type="button"
+            onClick={() => setAssetPickerOpen(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: theme.bgLight,
+              color: theme.accentColor,
+              border: `1.5px solid ${theme.borderColor}`,
+              padding: "6px 13px",
+              borderRadius: 8,
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <Plus size={14} /> Browse & Multi-Select Assets ({clientAssets.length})
+          </button>
+        </div>
+
+        {/* Attached Assets Visual List / Grid */}
+        {selectedAssetsList.length > 0 ? (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: theme.labelColor }}>
+                Attached Assets for Designer ({selectedAssetsList.length}):
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedAssetIds([])}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#ef4444",
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Clear All
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+                gap: 8,
+                maxHeight: 180,
+                overflowY: "auto",
+                padding: 6,
+                background: theme.bgLight,
+                borderRadius: 8,
+                border: `1px solid ${theme.borderColor}`,
+              }}
+            >
+              {selectedAssetsList.map((asset) => {
+                const previewUrl = asset.file_url || asset.file;
+                return (
+                  <div
+                    key={asset.id}
+                    style={{
+                      position: "relative",
+                      background: "#ffffff",
+                      borderRadius: 8,
+                      border: `1px solid ${theme.borderColor}`,
+                      padding: 6,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <div
+                      style={{
+                        width: "100%",
+                        height: 60,
+                        borderRadius: 6,
+                        background: "#f8fafc",
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "1px solid #f1f5f9",
+                      }}
+                    >
+                      {previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt={asset.title}
+                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                        />
+                      ) : (
+                        <FileText size={22} color="#94a3b8" />
+                      )}
+                    </div>
+
+                    {/* Title & Badge */}
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        title={asset.title}
+                        style={{
+                          fontSize: "0.7rem",
+                          fontWeight: 700,
+                          color: "#1e293b",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {asset.title}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                        <span
+                          style={{
+                            background: "#ede9fe",
+                            color: "#6d28d9",
+                            padding: "1px 4px",
+                            borderRadius: 4,
+                            fontSize: "0.62rem",
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {asset.asset_type || "Asset"}
+                        </span>
+                        {asset.folder && (
+                          <span
+                            style={{
+                              fontSize: "0.62rem",
+                              color: "#64748b",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {asset.folder}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Remove button */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAsset(asset.id)}
+                      title="Remove asset from script"
+                      style={{
+                        position: "absolute",
+                        top: 3,
+                        right: 3,
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: "#fee2e2",
+                        color: "#dc2626",
+                        border: "none",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div
+            onClick={() => setAssetPickerOpen(true)}
+            style={{
+              padding: "12px",
+              borderRadius: 8,
+              border: `1.5px dashed ${theme.borderColor}`,
+              background: theme.bgLight,
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <div style={{ fontSize: "0.76rem", color: theme.accentColor, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+              <Plus size={13} /> Click to Multi-Select Client Logos, Creatives & Guidelines
+            </div>
+            <div style={{ fontSize: "0.68rem", color: "#64748b", marginTop: 2 }}>
+              {clientAssets.length} assets available in {selectedClient?.name || "Client"}'s library
+            </div>
+          </div>
+        )}
+
+        {/* Placement & Additional Link Input */}
+        <div>
+          <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: theme.labelColor, marginBottom: 3 }}>
+            Placement Notes & Additional Links for Designer (Optional)
+          </label>
+          <input
+            type="text"
+            value={logoAssets}
+            onChange={(e) => setLogoAssets(e.target.value)}
+            placeholder="e.g. White logo top right, feature attached product photo #1 in center, cyan brand accent..."
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: `1px solid ${theme.borderColor}`,
+              fontSize: "0.82rem",
+              outline: "none",
+              background: "#fff",
+            }}
+          />
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -805,19 +1210,13 @@ export default function ScriptCreationModal({
                     />
                   </div>
 
-                  {/* Logo, assets */}
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#581c87", marginBottom: 4 }}>
-                      Logo, assets (Logo file / link / placement)
-                    </label>
-                    <input
-                      type="text"
-                      value={logoAssets}
-                      onChange={(e) => setLogoAssets(e.target.value)}
-                      placeholder="e.g. Client white logo top right, brand icon pack drive link, cyan brand accent..."
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
-                    />
-                  </div>
+                  {/* Logo, Client Assets & Multi-Select Integration */}
+                  {renderClientAssetsSelector({
+                    labelColor: "#581c87",
+                    accentColor: "#7c3aed",
+                    borderColor: "#d8b4fe",
+                    bgLight: "#faf5ff",
+                  })}
 
                   {/* Contact details */}
                   <div>
@@ -1003,19 +1402,13 @@ export default function ScriptCreationModal({
                     />
                   </div>
 
-                  {/* Logo, contacts, assets */}
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>
-                      Logo, contacts, assets (Brand guidelines & footer info)
-                    </label>
-                    <input
-                      type="text"
-                      value={logoAssets}
-                      onChange={(e) => setLogoAssets(e.target.value)}
-                      placeholder="e.g. Client logo on every slide, swipe arrow bottom right, contact website on final slide..."
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
-                    />
-                  </div>
+                  {/* Logo, Client Assets & Multi-Select Integration */}
+                  {renderClientAssetsSelector({
+                    labelColor: "#3730a3",
+                    accentColor: "#4f46e5",
+                    borderColor: "#c7d2fe",
+                    bgLight: "#f5f3ff",
+                  })}
                 </>
               )}
 
@@ -1100,19 +1493,13 @@ export default function ScriptCreationModal({
                         />
                       </div>
 
-                      {/* Logo, assets and CTA or contact */}
-                      <div>
-                        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#9f1239", marginBottom: 4 }}>
-                          Logo, assets and CTA or contact
-                        </label>
-                        <input
-                          type="text"
-                          value={logoAssets}
-                          onChange={(e) => setLogoAssets(e.target.value)}
-                          placeholder="e.g. Watermark logo top right, CTA at outro: 'Book free session - 9876543210'"
-                          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
-                        />
-                      </div>
+                      {/* Logo, Client Assets & Multi-Select Integration */}
+                      {renderClientAssetsSelector({
+                        labelColor: "#9f1239",
+                        accentColor: "#e11d48",
+                        borderColor: "#fda4af",
+                        bgLight: "#fff1f2",
+                      })}
                     </>
                   )}
 
@@ -1265,19 +1652,13 @@ export default function ScriptCreationModal({
                         </div>
                       </div>
 
-                      {/* Logo, assets and CTA or contact */}
-                      <div>
-                        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#9f1239", marginBottom: 4 }}>
-                          Logo, assets and CTA or contact
-                        </label>
-                        <input
-                          type="text"
-                          value={logoAssets}
-                          onChange={(e) => setLogoAssets(e.target.value)}
-                          placeholder="e.g. Animated logo reveal at end, CTA button 'Visit adstradigital.com', phone badge"
-                          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
-                        />
-                      </div>
+                      {/* Logo, Client Assets & Multi-Select Integration */}
+                      {renderClientAssetsSelector({
+                        labelColor: "#9f1239",
+                        accentColor: "#e11d48",
+                        borderColor: "#fda4af",
+                        bgLight: "#fff1f2",
+                      })}
                     </>
                   )}
                 </>
@@ -1521,6 +1902,564 @@ export default function ScriptCreationModal({
           </div>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* ASSET PICKER MODAL: MULTI-SELECT CLIENT ASSETS               */}
+      {/* ============================================================ */}
+      {assetPickerOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1200,
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setAssetPickerOpen(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              width: "100%",
+              maxWidth: 960,
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              border: "1px solid #e2e8f0",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "16px 22px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: "#e0e7ff",
+                    color: "#4f46e5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <FolderArchive size={22} />
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+                      Select Assets for {selectedClient?.name || "Client"}
+                    </h3>
+                    <span
+                      style={{
+                        background: "#e0e7ff",
+                        color: "#4338ca",
+                        padding: "2px 8px",
+                        borderRadius: 12,
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {selectedAssetIds.length} Selected
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.76rem", color: "#64748b", marginTop: 2 }}>
+                    Multi-select logos, guidelines, creatives, and media files to provide directly to the design team
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssetPickerOpen(false)}
+                style={{
+                  background: "#f1f5f9",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#64748b",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Filter, Search & Bulk Actions Bar */}
+            <div
+              style={{
+                padding: "12px 22px",
+                borderBottom: "1px solid #f1f5f9",
+                background: "#ffffff",
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                {/* Search Input */}
+                <div style={{ position: "relative", flex: "1 1 240px" }}>
+                  <Search
+                    size={15}
+                    color="#94a3b8"
+                    style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
+                  />
+                  <input
+                    type="text"
+                    value={assetSearchQuery}
+                    onChange={(e) => setAssetSearchQuery(e.target.value)}
+                    placeholder="Search by title, tag, or folder..."
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px 8px 32px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.82rem",
+                      outline: "none",
+                    }}
+                  />
+                  {assetSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setAssetSearchQuery("")}
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#94a3b8",
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Format Filter Dropdown */}
+                <select
+                  value={assetTypeFilter}
+                  onChange={(e) => setAssetTypeFilter(e.target.value)}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.82rem",
+                    outline: "none",
+                    background: "#fff",
+                    color: "#334155",
+                    fontWeight: 600,
+                  }}
+                >
+                  <option value="all">All Formats</option>
+                  <option value="logo">Brand Logos</option>
+                  <option value="image">Images & Creatives</option>
+                  <option value="reel">Reels & Videos</option>
+                  <option value="video">Videos</option>
+                  <option value="carousel">Carousel Assets</option>
+                  <option value="document">Documents & PDFs</option>
+                </select>
+
+                {/* Quick Selection Buttons */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllFiltered(filteredModalAssets)}
+                    disabled={filteredModalAssets.length === 0}
+                    style={{
+                      padding: "7px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #c7d2fe",
+                      background: "#e0e7ff",
+                      color: "#4338ca",
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      cursor: filteredModalAssets.length === 0 ? "not-allowed" : "pointer",
+                      opacity: filteredModalAssets.length === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    Select All ({filteredModalAssets.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeselectAllFiltered(filteredModalAssets)}
+                    disabled={filteredModalAssets.length === 0}
+                    style={{
+                      padding: "7px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      background: "#f8fafc",
+                      color: "#64748b",
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Deselect
+                  </button>
+                </div>
+              </div>
+
+              {/* Folder Filter Pills */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  overflowX: "auto",
+                  paddingBottom: 4,
+                  alignItems: "center",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setAssetFolderFilter("all")}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 20,
+                    border: assetFolderFilter === "all" ? "1.5px solid #4f46e5" : "1px solid #e2e8f0",
+                    background: assetFolderFilter === "all" ? "#4f46e5" : "#f8fafc",
+                    color: assetFolderFilter === "all" ? "#ffffff" : "#475569",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  All Folders ({clientAssets.length})
+                </button>
+                {availableFolders.map((folder) => {
+                  const count = clientAssets.filter((a) => a.folder === folder).length;
+                  const isSelected = assetFolderFilter === folder;
+                  return (
+                    <button
+                      key={folder}
+                      type="button"
+                      onClick={() => setAssetFolderFilter(folder)}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: 20,
+                        border: isSelected ? "1.5px solid #4f46e5" : "1px solid #e2e8f0",
+                        background: isSelected ? "#4f46e5" : "#f8fafc",
+                        color: isSelected ? "#ffffff" : "#475569",
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <Folder size={12} /> {folder} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Assets Grid List */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: 18,
+                background: "#f8fafc",
+                minHeight: 280,
+                maxHeight: 460,
+              }}
+            >
+              {loadingAssets ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b" }}>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>Loading client assets...</div>
+                </div>
+              ) : filteredModalAssets.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 20px",
+                    background: "#ffffff",
+                    borderRadius: 12,
+                    border: "1px dashed #cbd5e1",
+                  }}
+                >
+                  <Boxes size={36} color="#94a3b8" style={{ margin: "0 auto 10px auto" }} />
+                  <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#1e293b" }}>
+                    No Assets Found
+                  </div>
+                  <div style={{ fontSize: "0.76rem", color: "#64748b", marginTop: 4 }}>
+                    {clientAssets.length === 0
+                      ? `${selectedClient?.name || "Client"} does not have any assets uploaded yet in Client Assets Storage.`
+                      : "No assets match your search or filter criteria. Try resetting filters."}
+                  </div>
+                  {clientAssets.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAssetSearchQuery("");
+                        setAssetFolderFilter("all");
+                        setAssetTypeFilter("all");
+                      }}
+                      style={{
+                        marginTop: 12,
+                        padding: "6px 14px",
+                        borderRadius: 8,
+                        border: "1px solid #cbd5e1",
+                        background: "#fff",
+                        color: "#4f46e5",
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Reset Filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  {filteredModalAssets.map((asset) => {
+                    const isSelected = selectedAssetIds.includes(asset.id);
+                    const previewUrl = asset.file_url || asset.file;
+                    const isVideo = asset.asset_type === "reel" || asset.asset_type === "video";
+                    return (
+                      <div
+                        key={asset.id}
+                        onClick={() => handleToggleAsset(asset.id)}
+                        style={{
+                          background: "#ffffff",
+                          borderRadius: 10,
+                          border: isSelected ? "2px solid #4f46e5" : "1px solid #e2e8f0",
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          position: "relative",
+                          boxShadow: isSelected
+                            ? "0 4px 12px rgba(79, 70, 229, 0.18)"
+                            : "0 1px 3px rgba(0, 0, 0, 0.05)",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {/* Checkbox badge overlay */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 8,
+                            right: 8,
+                            zIndex: 10,
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            border: isSelected ? "none" : "2px solid #cbd5e1",
+                            background: isSelected ? "#4f46e5" : "rgba(255, 255, 255, 0.9)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.2)",
+                          }}
+                        >
+                          {isSelected && <Check size={14} color="#ffffff" strokeWidth={3} />}
+                        </div>
+
+                        {/* Format tag badge */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 8,
+                            left: 8,
+                            zIndex: 10,
+                            background: "rgba(15, 23, 42, 0.75)",
+                            backdropFilter: "blur(2px)",
+                            color: "#ffffff",
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                            fontSize: "0.62rem",
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          {asset.asset_type || "asset"}
+                        </div>
+
+                        {/* Thumbnail / Preview container */}
+                        <div
+                          style={{
+                            width: "100%",
+                            height: 110,
+                            background: "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            overflow: "hidden",
+                            position: "relative",
+                          }}
+                        >
+                          {previewUrl && !isVideo ? (
+                            <img
+                              src={previewUrl}
+                              alt={asset.title}
+                              style={{ width: "100%", height: "100%", objectFit: "contain", padding: 4 }}
+                            />
+                          ) : previewUrl && isVideo ? (
+                            <div style={{ position: "relative", width: "100%", height: "100%" }}>
+                              <video
+                                src={previewUrl}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                muted
+                              />
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  background: "rgba(0,0,0,0.3)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Video size={24} color="#ffffff" />
+                              </div>
+                            </div>
+                          ) : (
+                            <FileText size={32} color="#94a3b8" />
+                          )}
+                        </div>
+
+                        {/* Asset Info */}
+                        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 3 }}>
+                          <div
+                            title={asset.title}
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                              color: "#1e293b",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {asset.title}
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.68rem", color: "#64748b" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                              <Folder size={11} /> {asset.folder || "General"}
+                            </span>
+                            {asset.file_format && (
+                              <span style={{ fontWeight: 700, textTransform: "uppercase" }}>
+                                {asset.file_format}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom Footer */}
+            <div
+              style={{
+                padding: "14px 22px",
+                borderTop: "1px solid #e2e8f0",
+                background: "#ffffff",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1e293b" }}>
+                  {selectedAssetIds.length} asset{selectedAssetIds.length === 1 ? "" : "s"} selected
+                </span>
+                {selectedAssetIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAssetIds([])}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#ef4444",
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setAssetPickerOpen(false)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#475569",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAssetPickerOpen(false)}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#4f46e5",
+                    color: "#ffffff",
+                    fontSize: "0.82rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(79, 70, 229, 0.3)",
+                  }}
+                >
+                  Attach Selected Assets ({selectedAssetIds.length})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

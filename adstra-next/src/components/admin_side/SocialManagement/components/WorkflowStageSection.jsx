@@ -37,6 +37,7 @@ export default function WorkflowStageSection({
   stageId, // 'scripts' | 'script_approval' | 'designing' | 'team_review' | 'client_review' | 'post_schedule' | 'published'
   posts = [],
   clients = [],
+  mediaAssets = [],
   selectedClientId = "all",
   onRefresh,
   onOpenCreatePost,
@@ -765,6 +766,7 @@ export default function WorkflowStageSection({
             setActiveScriptPost(null);
           }}
           clients={clients}
+          mediaAssets={mediaAssets}
           selectedClientId={selectedClientId}
           initialData={activeScriptPost}
           onSuccess={onRefresh}
