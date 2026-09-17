@@ -40,6 +40,9 @@ import {
   Linkedin,
   Youtube,
   ClipboardList,
+  MapPin,
+  Briefcase,
+  FileText,
 } from "lucide-react";
 import { XIcon, GoogleIcon, TikTokIcon, renderPlatformIcon } from "./PlatformIcons";
 
@@ -72,6 +75,7 @@ export default function SocialSettingsTab({
 
   // Client Profile Edit State
   const [editingClient, setEditingClient] = useState(null);
+  const [brandSettingsTab, setBrandSettingsTab] = useState("general"); // 'general' | 'company' | 'strategy' | 'social'
   const [clientSaving, setClientSaving] = useState(false);
   const [creatingClientModal, setCreatingClientModal] = useState(false);
   const [clientStatusFilter, setClientStatusFilter] = useState("all"); // 'all' | 'active' | 'inactive'
@@ -263,13 +267,24 @@ export default function SocialSettingsTab({
           editingClient.target_monthly_posts === ""
             ? 0
             : Math.max(0, parseInt(editingClient.target_monthly_posts, 10) || 0),
-        package_tier: editingClient.package_tier,
-        approval_policy: editingClient.approval_policy,
-        primary_color: editingClient.primary_color,
-        brand_tagline: editingClient.brand_tagline,
-        client_email: editingClient.client_email,
-        client_contact: editingClient.client_contact,
-        notes: editingClient.notes,
+        package_tier: editingClient.package_tier || "Growth Package",
+        approval_policy: editingClient.approval_policy || "client_required",
+        primary_color: editingClient.primary_color || "#4f46e5",
+        secondary_color: editingClient.secondary_color || "#06b6d4",
+        logo_url: editingClient.logo_url || "",
+        brand_tagline: editingClient.brand_tagline || "",
+        client_email: editingClient.client_email || "",
+        client_contact: editingClient.client_contact || "",
+        contact_person: editingClient.contact_person || "",
+        industry: editingClient.industry || "",
+        website_url: editingClient.website_url || "",
+        address: editingClient.address || "",
+        target_audience: editingClient.target_audience || "",
+        brand_tone: editingClient.brand_tone || "",
+        key_usps: editingClient.key_usps || "",
+        brand_guidelines: editingClient.brand_guidelines || "",
+        social_handles: editingClient.social_handles || {},
+        notes: editingClient.notes || "",
         is_active: editingClient.is_active !== false,
       });
       setEditingClient(null);
@@ -1790,200 +1805,672 @@ export default function SocialSettingsTab({
         <div className="social-modal-overlay" onClick={() => setEditingClient(null)}>
           <div
             className="social-modal-content"
-            style={{ maxWidth: 580 }}
+            style={{ maxWidth: 700, width: "95vw", maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="social-modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Building2 size={20} color="#4f46e5" />
-                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>
-                  Edit Brand Settings: {editingClient.name}
-                </h3>
+            {/* Modal Header */}
+            <div className="social-modal-header" style={{ padding: "16px 22px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: editingClient.primary_color ? `${editingClient.primary_color}18` : "#e0e7ff",
+                    color: editingClient.primary_color || "#4f46e5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Building2 size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.12rem", fontWeight: 800, color: "#0f172a" }}>
+                    Edit Brand Settings: {editingClient.name}
+                  </h3>
+                  <div style={{ fontSize: "0.76rem", color: "#64748b", marginTop: 2 }}>
+                    Manage company identity, creative strategy, target audience, and social plan
+                  </div>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setEditingClient(null)}
-                style={{ background: "none", border: "none", cursor: "pointer" }}
+                style={{
+                  background: "#f1f5f9",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#64748b",
+                }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveClient} className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {/* Visibility & Active Status Card */}
+            {/* Sub-Tab Navigation Bar */}
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                padding: "10px 22px",
+                borderBottom: "1px solid #e2e8f0",
+                background: "#ffffff",
+                overflowX: "auto",
+              }}
+            >
+              {[
+                { id: "general", label: "Plan & Brand Identity", icon: <Sliders size={14} /> },
+                { id: "company", label: "Company & Contact", icon: <Building2 size={14} /> },
+                { id: "strategy", label: "Creative Strategy & Guidelines", icon: <Target size={14} /> },
+                { id: "social", label: "Social Handles & Notes", icon: <Share2 size={14} /> },
+              ].map((tab) => {
+                const isSelected = brandSettingsTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setBrandSettingsTab(tab.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "7px 14px",
+                      borderRadius: 8,
+                      border: isSelected ? "1.5px solid #4f46e5" : "1px solid #e2e8f0",
+                      background: isSelected ? "#eef2ff" : "#f8fafc",
+                      color: isSelected ? "#4f46e5" : "#64748b",
+                      fontSize: "0.78rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {tab.icon} {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handleSaveClient} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+              <div className="social-modal-body" style={{ flex: 1, overflowY: "auto", padding: "18px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
+                
+                {/* ======================================================== */}
+                {/* TAB 1: PLAN & BRAND IDENTITY                             */}
+                {/* ======================================================== */}
+                {brandSettingsTab === "general" && (
+                  <>
+                    {/* Visibility & Active Status Card */}
+                    <div
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: 10,
+                        background: editingClient.is_active !== false ? "#f0fdf4" : "#fef2f2",
+                        border: `1px solid ${editingClient.is_active !== false ? "#bbf7d0" : "#fecaca"}`,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: "0.85rem", color: editingClient.is_active !== false ? "#166534" : "#991b1b", display: "flex", alignItems: "center", gap: 6 }}>
+                          {editingClient.is_active !== false ? <CheckCircle2 size={15} /> : <EyeOff size={15} />}
+                          <span>Status: {editingClient.is_active !== false ? "Active & Visible" : "Deactivated (Hidden)"}</span>
+                        </div>
+                        <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                          {editingClient.is_active !== false
+                            ? "Client is selectable in header switcher, calendars, scripts, and post creation."
+                            : "Client is hidden from all Social Media module selectors and calendar views."}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingClient({
+                            ...editingClient,
+                            is_active: editingClient.is_active === false,
+                          })
+                        }
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          padding: "6px 14px",
+                          borderRadius: 8,
+                          border: "none",
+                          fontWeight: 700,
+                          fontSize: "0.78rem",
+                          cursor: "pointer",
+                          background: editingClient.is_active !== false ? "#e11d48" : "#16a34a",
+                          color: "#ffffff",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {editingClient.is_active !== false ? (
+                          <>
+                            <EyeOff size={13} /> Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={13} /> Activate
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Monthly Quota & Package Tier */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Monthly Target Posts Quota
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editingClient.target_monthly_posts ?? ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, target_monthly_posts: e.target.value })}
+                          placeholder="e.g. 20"
+                          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Package Tier
+                        </label>
+                        <input
+                          type="text"
+                          value={editingClient.package_tier || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, package_tier: e.target.value })}
+                          placeholder="e.g. Growth Package / Enterprise Tier"
+                          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Approval Policy */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Approval Policy Requirement
+                      </label>
+                      <select
+                        value={editingClient.approval_policy || "client_required"}
+                        onChange={(e) => setEditingClient({ ...editingClient, approval_policy: e.target.value })}
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem", fontWeight: 600 }}
+                      >
+                        <option value="client_required">Client Review Required (Standard)</option>
+                        <option value="internal_only">Internal Team Review Only</option>
+                        <option value="auto_approved">Direct Auto-Publish</option>
+                      </select>
+                    </div>
+
+                    {/* Brand Tagline */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Brand Tagline / Slogan
+                      </label>
+                      <input
+                        type="text"
+                        value={editingClient.brand_tagline || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, brand_tagline: e.target.value })}
+                        placeholder="e.g. Elevating Daily Fashion for Modern Youth"
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                      />
+                    </div>
+
+                    {/* Brand Color Palettes */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Primary Brand Hex Color
+                        </label>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <input
+                            type="color"
+                            value={editingClient.primary_color || "#4f46e5"}
+                            onChange={(e) => setEditingClient({ ...editingClient, primary_color: e.target.value })}
+                            style={{ width: 42, height: 38, border: "none", borderRadius: 6, cursor: "pointer" }}
+                          />
+                          <input
+                            type="text"
+                            value={editingClient.primary_color || "#4f46e5"}
+                            onChange={(e) => setEditingClient({ ...editingClient, primary_color: e.target.value })}
+                            style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Secondary / Accent Brand Color
+                        </label>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <input
+                            type="color"
+                            value={editingClient.secondary_color || "#06b6d4"}
+                            onChange={(e) => setEditingClient({ ...editingClient, secondary_color: e.target.value })}
+                            style={{ width: 42, height: 38, border: "none", borderRadius: 6, cursor: "pointer" }}
+                          />
+                          <input
+                            type="text"
+                            value={editingClient.secondary_color || "#06b6d4"}
+                            onChange={(e) => setEditingClient({ ...editingClient, secondary_color: e.target.value })}
+                            style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Brand Logo URL */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Brand Logo URL / Image Link
+                      </label>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <input
+                          type="text"
+                          value={editingClient.logo_url || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, logo_url: e.target.value })}
+                          placeholder="https://... or link from Client Assets storage"
+                          style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                        />
+                        {editingClient.logo_url && (
+                          <div
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 8,
+                              border: "1px solid #e2e8f0",
+                              background: "#f8fafc",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              overflow: "hidden",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <img
+                              src={editingClient.logo_url}
+                              alt="Logo"
+                              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                              onError={(e) => (e.currentTarget.style.display = "none")}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ======================================================== */}
+                {/* TAB 2: COMPANY & CONTACT DETAILS                         */}
+                {/* ======================================================== */}
+                {brandSettingsTab === "company" && (
+                  <>
+                    {/* Industry & Website */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Industry / Business Category
+                        </label>
+                        <input
+                          type="text"
+                          list="industry-options"
+                          value={editingClient.industry || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, industry: e.target.value })}
+                          placeholder="e.g. Fashion & Retail / Healthcare"
+                          style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                        />
+                        <datalist id="industry-options">
+                          <option value="Fashion & Apparel Retail" />
+                          <option value="Food & Beverage / Restaurant" />
+                          <option value="Healthcare & Ayurvedic Medicine" />
+                          <option value="Hospitality, Hotels & Tourism" />
+                          <option value="Technology, AI & SaaS" />
+                          <option value="Education & Coaching Academy" />
+                          <option value="E-commerce & D2C Brands" />
+                          <option value="Real Estate & Architecture" />
+                          <option value="Finance & Professional Services" />
+                        </datalist>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Official Website URL
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="url"
+                            value={editingClient.website_url || ""}
+                            onChange={(e) => setEditingClient({ ...editingClient, website_url: e.target.value })}
+                            placeholder="https://www.clientwebsite.com"
+                            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                          <Globe size={14} color="#94a3b8" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact Person */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Contact Person & Role
+                      </label>
+                      <div style={{ position: "relative" }}>
+                        <input
+                          type="text"
+                          value={editingClient.contact_person || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, contact_person: e.target.value })}
+                          placeholder="e.g. Rahul Sharma (Managing Director / Marketing Lead)"
+                          style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                        />
+                        <Users size={14} color="#94a3b8" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                      </div>
+                    </div>
+
+                    {/* Email & Phone */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Client Email (for approvals & reports)
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="email"
+                            value={editingClient.client_email || ""}
+                            onChange={(e) => setEditingClient({ ...editingClient, client_email: e.target.value })}
+                            placeholder="e.g. approvals@company.com"
+                            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                          <Mail size={14} color="#94a3b8" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          WhatsApp / Phone Contact
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="text"
+                            value={editingClient.client_contact || ""}
+                            onChange={(e) => setEditingClient({ ...editingClient, client_contact: e.target.value })}
+                            placeholder="e.g. +91 98765 43210"
+                            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                          <Phone size={14} color="#94a3b8" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Business Address */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Registered / Business Address
+                      </label>
+                      <div style={{ position: "relative" }}>
+                        <textarea
+                          rows={2}
+                          value={editingClient.address || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
+                          placeholder="e.g. 2nd Floor, Corporate Tower, Infopark Kochi, Kerala - 682042"
+                          style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", resize: "vertical" }}
+                        />
+                        <MapPin size={14} color="#94a3b8" style={{ position: "absolute", left: 10, top: 12 }} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ======================================================== */}
+                {/* TAB 3: CREATIVE STRATEGY & GUIDELINES                    */}
+                {/* ======================================================== */}
+                {brandSettingsTab === "strategy" && (
+                  <>
+                    <div style={{ background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 10, padding: "10px 14px", fontSize: "0.76rem", color: "#5b21b6" }}>
+                      💡 <strong>Team Creative Briefing</strong>: Information entered here is directly referenced by scriptwriters and graphic designers when creating social content.
+                    </div>
+
+                    {/* Brand Tone of Voice */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Brand Tone of Voice & Personality
+                      </label>
+                      <input
+                        type="text"
+                        value={editingClient.brand_tone || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, brand_tone: e.target.value })}
+                        placeholder="e.g. Youthful, High-Energy, Trendy, Conversational Malayalam + English mix, Empathetic & Inspiring"
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                      />
+                    </div>
+
+                    {/* Target Audience & Demographics */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Target Audience & Demographics
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editingClient.target_audience || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, target_audience: e.target.value })}
+                        placeholder="e.g. Men & Women aged 18–35 in Kerala. Fashion-conscious college students and working professionals seeking affordable, premium daily ethnic and western wear."
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", resize: "vertical" }}
+                      />
+                    </div>
+
+                    {/* Key USPs & Core Value Propositions */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Core USPs & Key Selling Points (To feature in hooks & CTAs)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editingClient.key_usps || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, key_usps: e.target.value })}
+                        placeholder="e.g. • 100% Genuine, authentic fabrics sourced directly&#10;• 48-Hour express delivery across South India&#10;• Easy 7-day hassle-free replacement&#10;• Transparent pricing with zero hidden charges"
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", resize: "vertical" }}
+                      />
+                    </div>
+
+                    {/* Brand Guidelines & Dos / Don'ts */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Brand Guidelines & Content Dos / Don'ts (Rules for designers & copywriters)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editingClient.brand_guidelines || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, brand_guidelines: e.target.value })}
+                        placeholder="e.g. DO: Use natural daylight photography, bold sans-serif headlines, high-contrast cyan brand accents.&#10;DON'T: Avoid overly saturated stock photos, never use comic fonts, no misleading price claims."
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", resize: "vertical" }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ======================================================== */}
+                {/* TAB 4: SOCIAL PROFILES & NOTES                           */}
+                {/* ======================================================== */}
+                {brandSettingsTab === "social" && (
+                  <>
+                    <div style={{ fontSize: "0.76rem", color: "#64748b", marginBottom: 2 }}>
+                      Add public social profile handles and URLs for quick cross-referencing and live tagging:
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {/* Instagram */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Instagram Handle
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="text"
+                            value={editingClient.social_handles?.instagram || ""}
+                            onChange={(e) =>
+                              setEditingClient({
+                                ...editingClient,
+                                social_handles: {
+                                  ...(editingClient.social_handles || {}),
+                                  instagram: e.target.value,
+                                },
+                              })
+                            }
+                            placeholder="@brandhandle"
+                            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                          <Instagram size={14} color="#e1306c" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                        </div>
+                      </div>
+
+                      {/* Facebook */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          Facebook Page URL / Handle
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="text"
+                            value={editingClient.social_handles?.facebook || ""}
+                            onChange={(e) =>
+                              setEditingClient({
+                                ...editingClient,
+                                social_handles: {
+                                  ...(editingClient.social_handles || {}),
+                                  facebook: e.target.value,
+                                },
+                              })
+                            }
+                            placeholder="facebook.com/brandpage"
+                            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                          <Facebook size={14} color="#1877f2" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                        </div>
+                      </div>
+
+                      {/* LinkedIn */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          LinkedIn Company URL
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="text"
+                            value={editingClient.social_handles?.linkedin || ""}
+                            onChange={(e) =>
+                              setEditingClient({
+                                ...editingClient,
+                                social_handles: {
+                                  ...(editingClient.social_handles || {}),
+                                  linkedin: e.target.value,
+                                },
+                              })
+                            }
+                            placeholder="linkedin.com/company/brand"
+                            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                          <Linkedin size={14} color="#0a66c2" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                        </div>
+                      </div>
+
+                      {/* YouTube */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                          YouTube Channel
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="text"
+                            value={editingClient.social_handles?.youtube || ""}
+                            onChange={(e) =>
+                              setEditingClient({
+                                ...editingClient,
+                                social_handles: {
+                                  ...(editingClient.social_handles || {}),
+                                  youtube: e.target.value,
+                                },
+                              })
+                            }
+                            placeholder="youtube.com/@brandchannel"
+                            style={{ width: "100%", padding: "9px 12px 9px 32px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                          />
+                          <Youtube size={14} color="#ff0000" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Internal Account Notes */}
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                        Internal Agency Notes & Strategic Directives
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editingClient.notes || ""}
+                        onChange={(e) => setEditingClient({ ...editingClient, notes: e.target.value })}
+                        placeholder="e.g. Client focusing on Onam festive reels campaign. Target 10 reels + 10 single posters per month. Main contact WhatsApp for quick approvals."
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", resize: "vertical" }}
+                      />
+                    </div>
+                  </>
+                )}
+
+              </div>
+
+              {/* Modal Footer with Actions */}
               <div
                 style={{
-                  padding: "12px 16px",
-                  borderRadius: 10,
-                  background: editingClient.is_active !== false ? "#f0fdf4" : "#fef2f2",
-                  border: `1px solid ${editingClient.is_active !== false ? "#bbf7d0" : "#fecaca"}`,
+                  padding: "14px 22px",
+                  borderTop: "1px solid #e2e8f0",
+                  background: "#ffffff",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  gap: 12,
                 }}
               >
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: "0.85rem", color: editingClient.is_active !== false ? "#166534" : "#991b1b", display: "flex", alignItems: "center", gap: 6 }}>
-                    {editingClient.is_active !== false ? <CheckCircle2 size={15} /> : <EyeOff size={15} />}
-                    <span>Status: {editingClient.is_active !== false ? "Active & Visible" : "Deactivated (Hidden)"}</span>
-                  </div>
-                  <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
-                    {editingClient.is_active !== false
-                      ? "Client is selectable in header switcher, calendars, scripts, and post creation."
-                      : "Client is hidden from all Social Media module selectors and calendar views."}
-                  </div>
+                <div style={{ fontSize: "0.76rem", color: "#64748b" }}>
+                  Active section: <strong style={{ color: "#334155" }}>{brandSettingsTab === "general" ? "Plan & Brand Identity" : brandSettingsTab === "company" ? "Company & Contact" : brandSettingsTab === "strategy" ? "Creative Strategy" : "Social Profiles & Notes"}</strong>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setEditingClient({
-                      ...editingClient,
-                      is_active: editingClient.is_active === false,
-                    })
-                  }
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                    padding: "6px 14px",
-                    borderRadius: 8,
-                    border: "none",
-                    fontWeight: 700,
-                    fontSize: "0.78rem",
-                    cursor: "pointer",
-                    background: editingClient.is_active !== false ? "#e11d48" : "#16a34a",
-                    color: "#ffffff",
-                    flexShrink: 0,
-                  }}
-                >
-                  {editingClient.is_active !== false ? (
-                    <>
-                      <EyeOff size={13} /> Deactivate
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={13} /> Activate
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                    Monthly Target Posts Quota
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingClient.target_monthly_posts ?? ""}
-                    onChange={(e) => setEditingClient({ ...editingClient, target_monthly_posts: e.target.value })}
-                    placeholder="e.g. 20"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                    Package Tier
-                  </label>
-                  <input
-                    type="text"
-                    value={editingClient.package_tier || ""}
-                    onChange={(e) => setEditingClient({ ...editingClient, package_tier: e.target.value })}
-                    placeholder="e.g. Growth Package"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                  Approval Policy Requirement
-                </label>
-                <select
-                  value={editingClient.approval_policy || "client_required"}
-                  onChange={(e) => setEditingClient({ ...editingClient, approval_policy: e.target.value })}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem", fontWeight: 600 }}
-                >
-                  <option value="client_required">Client Review Required (Standard)</option>
-                  <option value="internal_only">Internal Team Review Only</option>
-                  <option value="auto_approved">Direct Auto-Publish</option>
-                </select>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                    Client Email (for approvals)
-                  </label>
-                  <input
-                    type="email"
-                    value={editingClient.client_email || ""}
-                    onChange={(e) => setEditingClient({ ...editingClient, client_email: e.target.value })}
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                    WhatsApp / Phone Contact
-                  </label>
-                  <input
-                    type="text"
-                    value={editingClient.client_contact || ""}
-                    onChange={(e) => setEditingClient({ ...editingClient, client_contact: e.target.value })}
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                  Primary Brand Hex Color
-                </label>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    type="color"
-                    value={editingClient.primary_color || "#4f46e5"}
-                    onChange={(e) => setEditingClient({ ...editingClient, primary_color: e.target.value })}
-                    style={{ width: 42, height: 38, border: "none", borderRadius: 6, cursor: "pointer" }}
-                  />
-                  <input
-                    type="text"
-                    value={editingClient.primary_color || "#4f46e5"}
-                    onChange={(e) => setEditingClient({ ...editingClient, primary_color: e.target.value })}
-                    style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditingClient(null)}
+                    style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", color: "#475569", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={clientSaving}
+                    style={{
+                      padding: "8px 20px",
+                      borderRadius: 8,
+                      background: "#4f46e5",
+                      color: "#fff",
+                      border: "none",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      fontSize: "0.84rem",
+                      boxShadow: "0 2px 8px rgba(79, 70, 229, 0.3)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Save size={14} />
+                    {clientSaving ? "Saving Settings..." : "Save Brand Settings"}
+                  </button>
                 </div>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                  Brand Tagline
-                </label>
-                <input
-                  type="text"
-                  value={editingClient.brand_tagline || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, brand_tagline: e.target.value })}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setEditingClient(null)}
-                  style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={clientSaving}
-                  style={{ padding: "8px 18px", borderRadius: 8, background: "#4f46e5", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
-                >
-                  {clientSaving ? "Saving..." : "Save Brand Settings"}
-                </button>
               </div>
             </form>
           </div>
