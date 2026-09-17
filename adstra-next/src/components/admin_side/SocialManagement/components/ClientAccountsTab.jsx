@@ -31,7 +31,10 @@ export default function ClientAccountsTab({
     setSaving(true);
     try {
       await axios.patch(`${API_BASE_URL}/social/clients/${editingClient.id}/`, {
-        target_monthly_posts: editingClient.target_monthly_posts,
+        target_monthly_posts:
+          editingClient.target_monthly_posts === ""
+            ? 0
+            : Math.max(0, parseInt(editingClient.target_monthly_posts, 10) || 0),
         package_tier: editingClient.package_tier,
         approval_policy: editingClient.approval_policy,
         primary_color: editingClient.primary_color,
@@ -212,8 +215,10 @@ export default function ClientAccountsTab({
                     </label>
                     <input
                       type="number"
-                      value={editingClient.target_monthly_posts}
+                      min="0"
+                      value={editingClient.target_monthly_posts ?? ""}
                       onChange={(e) => setEditingClient({ ...editingClient, target_monthly_posts: e.target.value })}
+                      placeholder="e.g. 20"
                       style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1" }}
                     />
                   </div>
