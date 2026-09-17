@@ -952,7 +952,6 @@ export default function CreatePostModal({
   );
   const [clientAccounts, setClientAccounts] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
-  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
 
   const [title, setTitle] = useState(initialData?.title || "");
   const [postType, setPostType] = useState(initialData?.post_type || "image");
@@ -1188,7 +1187,7 @@ export default function CreatePostModal({
               </div>
             </div>
 
-            {/* Dynamic Platform Selectors Based On Connected Channels */}
+            {/* Platform Selector in Exactly 2 Clean Lines */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569" }}>
@@ -1196,11 +1195,18 @@ export default function CreatePostModal({
                 </label>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
-                    {selectedPlatforms.length} platform{selectedPlatforms.length === 1 ? "" : "s"} selected
+                    {selectedPlatforms.length} of {ALL_PLATFORMS.length} selected
                   </span>
                   <button
                     type="button"
-                    onClick={() => setShowAllPlatforms(!showAllPlatforms)}
+                    onClick={() => {
+                      if (selectedPlatforms.length === ALL_PLATFORMS.length) {
+                        setSelectedPlatforms(["instagram"]);
+                        setActivePreviewPlatform("instagram");
+                      } else {
+                        setSelectedPlatforms(ALL_PLATFORMS.map((p) => p.id));
+                      }
+                    }}
                     style={{
                       background: "none",
                       border: "none",
@@ -1211,117 +1217,155 @@ export default function CreatePostModal({
                       padding: "0 4px",
                     }}
                   >
-                    {showAllPlatforms ? "Show Connected Only" : "+ Other Platforms"}
+                    {selectedPlatforms.length === ALL_PLATFORMS.length ? "Reset" : "Select All"}
                   </button>
                 </div>
               </div>
 
-              {/* Dynamic Connected Channels for this client */}
-              {clientAccounts.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {clientAccounts.map((acc) => {
-                    const platConfig = PLATFORM_MAP[acc.platform] || {
-                      label: acc.platform,
-                      color: "#64748b",
-                      icon: "🌐",
-                    };
-                    const active = selectedPlatforms.includes(acc.platform);
-
-                    return (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        onClick={() => togglePlatform(acc.platform)}
-                        title={`Publish to ${platConfig.label} (${acc.account_name})`}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: 9,
-                          fontSize: "0.78rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          border: `1.5px solid ${active ? platConfig.color : "#cbd5e1"}`,
-                          background: active
-                            ? acc.platform === "instagram"
-                              ? "#fdf2f8"
-                              : acc.platform === "facebook" || acc.platform === "linkedin"
-                              ? "#eff6ff"
-                              : "#f8fafc"
-                            : "#ffffff",
-                          color: active ? (platConfig.color === "#000000" ? "#0f172a" : platConfig.color) : "#64748b",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 7,
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        <span style={{ fontSize: "0.95rem" }}>{platConfig.icon}</span>
-                        <div style={{ textAlign: "left", lineHeight: 1.15 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                            <span>{platConfig.label}</span>
-                            {active && <CheckCircle2 size={13} color={platConfig.color} />}
+              {/* Line 1: 4 platforms */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                {[
+                  ALL_PLATFORMS.find((p) => p.id === "google_business") || ALL_PLATFORMS[5],
+                  ALL_PLATFORMS.find((p) => p.id === "instagram") || ALL_PLATFORMS[0],
+                  ALL_PLATFORMS.find((p) => p.id === "x") || ALL_PLATFORMS[4],
+                  ALL_PLATFORMS.find((p) => p.id === "youtube") || ALL_PLATFORMS[3],
+                ].map((p) => {
+                  const active = selectedPlatforms.includes(p.id);
+                  const matchingAcc = clientAccounts.find((a) => a.platform === p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePlatform(p.id)}
+                      title={
+                        matchingAcc
+                          ? `Connected: ${matchingAcc.username || matchingAcc.account_name}`
+                          : `${p.label} (Draft channel)`
+                      }
+                      style={{
+                        flex: "1 1 0",
+                        minWidth: 0,
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: `1.5px solid ${active ? p.color : "#cbd5e1"}`,
+                        background: active
+                          ? p.id === "instagram"
+                            ? "#fdf2f8"
+                            : p.id === "google_business"
+                            ? "#f0fdf4"
+                            : p.id === "youtube"
+                            ? "#fef2f2"
+                            : "#f8fafc"
+                          : "#ffffff",
+                        color: active
+                          ? p.color === "#000000"
+                            ? "#0f172a"
+                            : p.color
+                          : "#64748b",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 5,
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, overflow: "hidden" }}>
+                        <span style={{ fontSize: "0.92rem", flexShrink: 0 }}>{p.icon}</span>
+                        <div style={{ textAlign: "left", minWidth: 0, overflow: "hidden" }}>
+                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontSize: "0.74rem", fontWeight: 700 }}>
+                            {p.label}
                           </div>
-                          {acc.username && (
-                            <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 500 }}>
-                              {acc.username}
+                          {matchingAcc?.username && (
+                            <div style={{ fontSize: "0.62rem", color: "#64748b", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1 }}>
+                              {matchingAcc.username}
                             </div>
                           )}
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                      </div>
+                      {active && (
+                        <CheckCircle2
+                          size={12}
+                          color={p.color === "#000000" ? "#0f172a" : p.color}
+                          style={{ flexShrink: 0 }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
-              {/* If no connected channels exist for this client */}
-              {clientAccounts.length === 0 && !loadingAccounts && (
-                <div style={{ padding: "10px 14px", background: "#fffbeb", borderRadius: 8, border: "1px solid #fef3c7", marginBottom: 8 }}>
-                  <div style={{ fontSize: "0.76rem", color: "#92400e", fontWeight: 600 }}>
-                    ⚠️ No live social channels connected for {selectedClient?.name || "this client"}. Select draft targets below:
-                  </div>
-                </div>
-              )}
-
-              {/* Other/All platforms available if toggled OR if no connected channels */}
-              {(showAllPlatforms || clientAccounts.length === 0) && (
-                <div style={{ marginTop: clientAccounts.length > 0 ? 8 : 0 }}>
-                  {clientAccounts.length > 0 && (
-                    <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600, marginBottom: 4 }}>
-                      Other Draft Platforms:
-                    </div>
-                  )}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {ALL_PLATFORMS.filter(
-                      (p) => !clientAccounts.some((a) => a.platform === p.id)
-                    ).map((p) => {
-                      const active = selectedPlatforms.includes(p.id);
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => togglePlatform(p.id)}
-                          style={{
-                            padding: "5px 10px",
-                            borderRadius: 7,
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            border: `1px solid ${active ? p.color : "#cbd5e1"}`,
-                            background: active ? "#f1f5f9" : "#ffffff",
-                            color: active ? p.color : "#64748b",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 5,
-                          }}
-                        >
-                          <span>{p.icon}</span>
-                          <span>{p.label}</span>
-                          {active && <CheckCircle2 size={12} color={p.color} />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* Line 2: 3 platforms */}
+              <div style={{ display: "flex", gap: 6 }}>
+                {[
+                  ALL_PLATFORMS.find((p) => p.id === "facebook") || ALL_PLATFORMS[1],
+                  ALL_PLATFORMS.find((p) => p.id === "linkedin") || ALL_PLATFORMS[2],
+                  ALL_PLATFORMS.find((p) => p.id === "tiktok") || ALL_PLATFORMS[6],
+                ].map((p) => {
+                  const active = selectedPlatforms.includes(p.id);
+                  const matchingAcc = clientAccounts.find((a) => a.platform === p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePlatform(p.id)}
+                      title={
+                        matchingAcc
+                          ? `Connected: ${matchingAcc.username || matchingAcc.account_name}`
+                          : `${p.label} (Draft channel)`
+                      }
+                      style={{
+                        flex: "1 1 0",
+                        minWidth: 0,
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: `1.5px solid ${active ? p.color : "#cbd5e1"}`,
+                        background: active
+                          ? p.id === "facebook" || p.id === "linkedin"
+                            ? "#eff6ff"
+                            : "#f8fafc"
+                          : "#ffffff",
+                        color: active
+                          ? p.color === "#000000"
+                            ? "#0f172a"
+                            : p.color
+                          : "#64748b",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 5,
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, overflow: "hidden" }}>
+                        <span style={{ fontSize: "0.92rem", flexShrink: 0 }}>{p.icon}</span>
+                        <div style={{ textAlign: "left", minWidth: 0, overflow: "hidden" }}>
+                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontSize: "0.74rem", fontWeight: 700 }}>
+                            {p.label}
+                          </div>
+                          {matchingAcc?.username && (
+                            <div style={{ fontSize: "0.62rem", color: "#64748b", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1 }}>
+                              {matchingAcc.username}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {active && (
+                        <CheckCircle2
+                          size={12}
+                          color={p.color === "#000000" ? "#0f172a" : p.color}
+                          style={{ flexShrink: 0 }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Post Title */}
