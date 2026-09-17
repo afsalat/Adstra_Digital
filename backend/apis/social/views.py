@@ -45,10 +45,10 @@ class SocialDashboardView(APIView):
         days = int(request.query_params.get('days', 30))
 
         client_qs = SocialClientProfile.objects.filter(is_active=True)
-        account_qs = SocialAccount.objects.filter(is_active=True)
-        post_qs = SocialPost.objects.all()
-        analytics_qs = SocialDailyAnalytics.objects.all()
-        inbox_qs = SocialInboxMessage.objects.all()
+        account_qs = SocialAccount.objects.filter(is_active=True, client_profile__is_active=True)
+        post_qs = SocialPost.objects.filter(client_profile__is_active=True)
+        analytics_qs = SocialDailyAnalytics.objects.filter(client_profile__is_active=True)
+        inbox_qs = SocialInboxMessage.objects.filter(client_profile__is_active=True)
 
         if client_id and client_id != 'all':
             account_qs = account_qs.filter(client_profile_id=client_id)
@@ -165,6 +165,8 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
         client_id = self.request.query_params.get('client_id')
         if client_id and client_id != 'all':
             qs = qs.filter(client_profile_id=client_id)
+        else:
+            qs = qs.filter(client_profile__is_active=True)
         return qs
 
     @action(detail=True, methods=['post'])
@@ -198,6 +200,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         if client_id and client_id != 'all':
             qs = qs.filter(client_profile_id=client_id)
+        else:
+            qs = qs.filter(client_profile__is_active=True)
         if post_status and post_status != 'all':
             qs = qs.filter(status=post_status)
         if platform and platform != 'all':
@@ -402,6 +406,8 @@ class SocialMediaAssetViewSet(viewsets.ModelViewSet):
         asset_type = self.request.query_params.get('type')
         if client_id and client_id != 'all':
             qs = qs.filter(client_profile_id=client_id)
+        else:
+            qs = qs.filter(client_profile__is_active=True)
         if folder and folder != 'all':
             qs = qs.filter(folder=folder)
         if asset_type and asset_type != 'all':
@@ -419,6 +425,8 @@ class SocialCampaignViewSet(viewsets.ModelViewSet):
         client_id = self.request.query_params.get('client_id')
         if client_id and client_id != 'all':
             qs = qs.filter(client_profile_id=client_id)
+        else:
+            qs = qs.filter(client_profile__is_active=True)
         return qs
 
 
@@ -434,6 +442,8 @@ class SocialInboxViewSet(viewsets.ModelViewSet):
         platform = self.request.query_params.get('platform')
         if client_id and client_id != 'all':
             qs = qs.filter(client_profile_id=client_id)
+        else:
+            qs = qs.filter(client_profile__is_active=True)
         if msg_status and msg_status != 'all':
             qs = qs.filter(status=msg_status)
         if platform and platform != 'all':
