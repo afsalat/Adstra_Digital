@@ -31,6 +31,7 @@ class SocialClientProfile(models.Model):
             ('client_required', 'Client Review Required'),
         ]
     )
+    is_active = models.BooleanField(default=True, db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

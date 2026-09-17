@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
 import API_BASE_URL from "@/utils/apiBase";
@@ -103,6 +103,21 @@ function SocialManagementInner() {
     fetchData();
   }, [fetchData]);
 
+  // Active client companies only (exclude deactivated ones)
+  const activeClients = useMemo(() => {
+    return clients.filter((c) => c.is_active !== false);
+  }, [clients]);
+
+  // If currently selected client gets deactivated, fall back to "all"
+  useEffect(() => {
+    if (selectedClientId !== "all" && activeClients.length > 0) {
+      const isSelectedActive = activeClients.some((c) => String(c.id) === String(selectedClientId));
+      if (!isSelectedActive) {
+        setSelectedClientId("all");
+      }
+    }
+  }, [activeClients, selectedClientId]);
+
   const handleOpenCreateWithAsset = (mediaUrl) => {
     setPrefilledPostData({
       media_urls: [mediaUrl],
@@ -142,9 +157,9 @@ function SocialManagementInner() {
         </div>
 
         <div className="social-header-right">
-          {/* Searchable Client Company Switcher */}
+          {/* Searchable Client Company Switcher - Active Clients */}
           <ClientCompanySearchSelect
-            clients={clients}
+            clients={activeClients}
             value={selectedClientId}
             onChange={(newId) => setSelectedClientId(newId)}
             allowAll={true}
@@ -354,7 +369,7 @@ function SocialManagementInner() {
         {activeMainModule === "overview" && (
           <FullOverviewDashboardTab
             dashboardData={dashboardData}
-            clients={clients}
+            clients={activeClients}
             onNavigateTab={setActiveMainModule}
           />
         )}
@@ -362,7 +377,7 @@ function SocialManagementInner() {
         {activeMainModule === "social" && (
           <DedicatedSocialSection
             posts={posts}
-            clients={clients}
+            clients={activeClients}
             accounts={accounts}
             mediaAssets={mediaAssets}
             inboxMessages={inboxMessages}
@@ -380,7 +395,7 @@ function SocialManagementInner() {
         {activeMainModule === "assets" && (
           <MediaLibraryTab
             mediaAssets={mediaAssets}
-            clients={clients}
+            clients={activeClients}
             selectedClientId={selectedClientId}
             onRefresh={fetchData}
             onOpenCreateWithAsset={handleOpenCreateWithAsset}
@@ -390,7 +405,7 @@ function SocialManagementInner() {
         {activeMainModule === "campaigns" && (
           <CampaignsTab
             campaigns={campaigns}
-            clients={clients}
+            clients={activeClients}
             onRefresh={fetchData}
           />
         )}
@@ -398,7 +413,7 @@ function SocialManagementInner() {
         {activeMainModule === "reports" && (
           <AnalyticsReportsTab
             selectedClientId={selectedClientId}
-            clients={clients}
+            clients={activeClients}
           />
         )}
 
@@ -424,7 +439,7 @@ function SocialManagementInner() {
             setCreateModalOpen(false);
             setPrefilledPostData(null);
           }}
-          clients={clients}
+          clients={activeClients}
           accounts={accounts}
           selectedClientId={selectedClientId}
           initialData={prefilledPostData}

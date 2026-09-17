@@ -12,6 +12,7 @@ export default function ClientCompanySearchSelect({
   placeholder = "Search & select client company...",
   variant = "form", // 'form' | 'header'
   disabled = false,
+  showInactive = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,17 +22,23 @@ export default function ClientCompanySearchSelect({
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
+  // Active clients filter
+  const availableClients = useMemo(() => {
+    if (showInactive) return clients;
+    return clients.filter((c) => c.is_active !== false);
+  }, [clients, showInactive]);
+
   // Find currently selected client object
   const selectedItem = useMemo(() => {
     if (allowAll && (value === "all" || value === "" || value === null || value === undefined)) {
       return { id: "all", name: allLabel, primary_color: "#4f46e5" };
     }
-    return clients.find((c) => String(c.id) === String(value)) || null;
-  }, [clients, value, allowAll, allLabel]);
+    return availableClients.find((c) => String(c.id) === String(value)) || null;
+  }, [availableClients, value, allowAll, allLabel]);
 
   // Filter list based on search term (suggestions)
   const filteredClients = useMemo(() => {
-    let list = [...clients];
+    let list = [...availableClients];
     if (allowAll) {
       list = [{ id: "all", name: allLabel, primary_color: "#4f46e5", isAll: true }, ...list];
     }
@@ -44,7 +51,7 @@ export default function ClientCompanySearchSelect({
       const contactMatch = c.client_contact?.toLowerCase().includes(term);
       return nameMatch || emailMatch || contactMatch;
     });
-  }, [clients, searchTerm, allowAll, allLabel]);
+  }, [availableClients, searchTerm, allowAll, allLabel]);
 
   // Close dropdown on click outside
   useEffect(() => {

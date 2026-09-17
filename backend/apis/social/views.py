@@ -44,7 +44,7 @@ class SocialDashboardView(APIView):
         client_id = request.query_params.get('client_id')
         days = int(request.query_params.get('days', 30))
 
-        client_qs = SocialClientProfile.objects.all()
+        client_qs = SocialClientProfile.objects.filter(is_active=True)
         account_qs = SocialAccount.objects.filter(is_active=True)
         post_qs = SocialPost.objects.all()
         analytics_qs = SocialDailyAnalytics.objects.all()
@@ -145,7 +145,14 @@ class SocialClientProfileViewSet(viewsets.ModelViewSet):
             sync_proposal_clients()
         except Exception:
             pass
-        return SocialClientProfile.objects.all().order_by('name')
+        qs = SocialClientProfile.objects.all().order_by('name')
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            if is_active.lower() in ('true', '1'):
+                qs = qs.filter(is_active=True)
+            elif is_active.lower() in ('false', '0'):
+                qs = qs.filter(is_active=False)
+        return qs
 
 
 class SocialAccountViewSet(viewsets.ModelViewSet):

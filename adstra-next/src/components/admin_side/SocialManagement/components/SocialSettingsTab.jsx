@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import {
@@ -13,6 +13,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
+  Eye,
+  EyeOff,
+  Search,
   Plus,
   Power,
   ExternalLink,
@@ -71,6 +74,8 @@ export default function SocialSettingsTab({
   const [editingClient, setEditingClient] = useState(null);
   const [clientSaving, setClientSaving] = useState(false);
   const [creatingClientModal, setCreatingClientModal] = useState(false);
+  const [clientStatusFilter, setClientStatusFilter] = useState("all"); // 'all' | 'active' | 'inactive'
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [newClientData, setNewClientData] = useState({
     name: "",
     slug: "",
@@ -81,7 +86,26 @@ export default function SocialSettingsTab({
     client_email: "",
     client_contact: "",
     brand_tagline: "",
+    is_active: true,
   });
+
+  const activeCount = useMemo(() => clients.filter((c) => c.is_active !== false).length, [clients]);
+  const inactiveCount = useMemo(() => clients.filter((c) => c.is_active === false).length, [clients]);
+
+  const filteredClientProfiles = useMemo(() => {
+    return clients.filter((c) => {
+      if (clientStatusFilter === "active" && c.is_active === false) return false;
+      if (clientStatusFilter === "inactive" && c.is_active !== false) return false;
+      if (clientSearchQuery.trim()) {
+        const q = clientSearchQuery.toLowerCase().trim();
+        const matchesName = c.name?.toLowerCase().includes(q);
+        const matchesEmail = c.client_email?.toLowerCase().includes(q);
+        const matchesContact = c.client_contact?.toLowerCase().includes(q);
+        return matchesName || matchesEmail || matchesContact;
+      }
+      return true;
+    });
+  }, [clients, clientStatusFilter, clientSearchQuery]);
 
   // Workflow Preferences State (stored in localStorage for persistence)
   const [workflowPrefs, setWorkflowPrefs] = useState({
@@ -210,6 +234,23 @@ export default function SocialSettingsTab({
     }
   };
 
+  // Toggle Client Active / Inactive (Instant Visibility Switch)
+  const handleToggleClientActive = async (client) => {
+    setActionLoading(`toggle-${client.id}`);
+    try {
+      const nextActive = client.is_active === false;
+      await axios.patch(`${API_BASE_URL}/social/clients/${client.id}/`, {
+        is_active: nextActive,
+      });
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error("Error updating client status:", err);
+      alert("Error updating client visibility status.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Save Existing Client Profile
   const handleSaveClient = async (e) => {
     e.preventDefault();
@@ -229,6 +270,7 @@ export default function SocialSettingsTab({
         client_email: editingClient.client_email,
         client_contact: editingClient.client_contact,
         notes: editingClient.notes,
+        is_active: editingClient.is_active !== false,
       });
       setEditingClient(null);
       if (onRefresh) onRefresh();
@@ -670,29 +712,78 @@ export default function SocialSettingsTab({
                 Client Brand Configurations & Retainers
               </h3>
               <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#64748b" }}>
-                Configure monthly post quotas, package tiers, approval policies, and brand design guidelines.
+                Configure visibility status, monthly post quotas, package tiers, approval policies, and brand design guidelines.
               </p>
             </div>
 
-            <button
-              onClick={() => setCreatingClientModal(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                background: "#4f46e5",
-                color: "#ffffff",
-                border: "none",
-                padding: "9px 16px",
-                borderRadius: 9,
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 6px rgba(79, 70, 229, 0.2)",
-              }}
-            >
-              <Plus size={16} /> + Add Client Brand
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {/* Search input */}
+              <div style={{ position: "relative" }}>
+                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                <input
+                  type="text"
+                  placeholder="Search brands..."
+                  value={clientSearchQuery}
+                  onChange={(e) => setClientSearchQuery(e.target.value)}
+                  style={{
+                    padding: "7px 12px 7px 30px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.8rem",
+                    width: 170,
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Status Filter Tabs */}
+              <div style={{ display: "flex", background: "#f1f5f9", padding: 3, borderRadius: 8 }}>
+                {[
+                  { id: "all", label: `All (${clients.length})` },
+                  { id: "active", label: `Active (${activeCount})` },
+                  { id: "inactive", label: `Inactive (${inactiveCount})` },
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setClientStatusFilter(st.id)}
+                    style={{
+                      border: "none",
+                      background: clientStatusFilter === st.id ? "#ffffff" : "transparent",
+                      color: clientStatusFilter === st.id ? "#0f172a" : "#64748b",
+                      padding: "5px 10px",
+                      borderRadius: 6,
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: clientStatusFilter === st.id ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                      transition: "all 0.12s ease",
+                    }}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCreatingClientModal(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#4f46e5",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "8px 15px",
+                  borderRadius: 8,
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(79, 70, 229, 0.2)",
+                }}
+              >
+                <Plus size={16} /> + Add Client Brand
+              </button>
+            </div>
           </div>
 
           {/* Client Brands Listing Table */}
@@ -716,144 +807,250 @@ export default function SocialSettingsTab({
                     Client Contact
                   </th>
                   <th style={{ padding: "14px 20px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>
-                    Settings
+                    Settings & Visibility
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {clients.map((c) => (
-                  <tr
-                    key={c.id}
-                    style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.12s ease" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    {/* Brand Name */}
-                    <td style={{ padding: "14px 20px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div
-                          style={{
-                            width: 38,
-                            height: 38,
-                            borderRadius: 10,
-                            background: c.primary_color || "#4f46e5",
-                            color: "#fff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontWeight: 800,
-                            fontSize: "1rem",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {c.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.9rem" }}>
-                            {c.name}
-                          </div>
-                          {c.brand_tagline && (
-                            <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                              {c.brand_tagline}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Monthly Quota */}
-                    <td style={{ padding: "14px 16px" }}>
-                      <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem" }}>
-                        {c.target_monthly_posts ?? 20}
-                      </span>
-                      <span style={{ fontSize: "0.72rem", color: "#64748b", marginLeft: 4 }}>
-                        posts/mo
-                      </span>
-                    </td>
-
-                    {/* Package Tier */}
-                    <td style={{ padding: "14px 16px" }}>
-                      <span
-                        style={{
-                          background: "#eff6ff",
-                          color: "#1d4ed8",
-                          border: "1px solid #bfdbfe",
-                          padding: "4px 10px",
-                          borderRadius: 6,
-                          fontSize: "0.76rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {c.package_tier || "Growth Package"}
-                      </span>
-                    </td>
-
-                    {/* Approval Policy */}
-                    <td style={{ padding: "14px 16px" }}>
-                      <span
-                        style={{
-                          background: c.approval_policy === "auto_approved"
-                            ? "#ecfdf5"
-                            : c.approval_policy === "internal_only"
-                            ? "#fef3c7"
-                            : "#fff7ed",
-                          color: c.approval_policy === "auto_approved"
-                            ? "#047857"
-                            : c.approval_policy === "internal_only"
-                            ? "#b45309"
-                            : "#c2410c",
-                          padding: "4px 9px",
-                          borderRadius: 6,
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                      >
-                        {c.approval_policy === "auto_approved"
-                          ? "Direct Publish"
-                          : c.approval_policy === "internal_only"
-                          ? "Internal Review Only"
-                          : "Client Review Required"}
-                      </span>
-                    </td>
-
-                    {/* Contact info */}
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontSize: "0.78rem", color: "#334155" }}>
-                        {c.client_email || "No email on file"}
-                      </div>
-                      {c.client_contact && (
-                        <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                          {c.client_contact}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Action */}
-                    <td style={{ padding: "14px 20px", textAlign: "right" }}>
-                      <button
-                        onClick={() => setEditingClient({ ...c })}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 5,
-                          background: "#f8fafc",
-                          border: "1px solid #cbd5e1",
-                          color: "#334155",
-                          padding: "6px 12px",
-                          borderRadius: 8,
-                          fontSize: "0.78rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Edit2 size={13} /> Edit Config
-                      </button>
+                {filteredClientProfiles.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: "40px 20px", textAlign: "center", color: "#64748b" }}>
+                      No client brands found matching current filters.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredClientProfiles.map((c) => {
+                    const isActive = c.is_active !== false;
+                    const isToggling = actionLoading === `toggle-${c.id}`;
+
+                    return (
+                      <tr
+                        key={c.id}
+                        style={{
+                          borderBottom: "1px solid #f1f5f9",
+                          background: isActive ? "transparent" : "#fcfcfd",
+                          transition: "background 0.12s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = isActive ? "#f8fafc" : "#f1f5f9")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = isActive ? "transparent" : "#fcfcfd")}
+                      >
+                        {/* Brand Name */}
+                        <td style={{ padding: "14px 20px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div
+                              style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 10,
+                                background: c.primary_color || "#4f46e5",
+                                color: "#fff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: 800,
+                                fontSize: "1rem",
+                                flexShrink: 0,
+                                opacity: isActive ? 1 : 0.65,
+                              }}
+                            >
+                              {c.name.charAt(0)}
+                            </div>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 800, color: isActive ? "#0f172a" : "#64748b", fontSize: "0.9rem" }}>
+                                  {c.name}
+                                </span>
+                                {isActive ? (
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                      background: "#ecfdf5",
+                                      color: "#047857",
+                                      border: "1px solid #a7f3d0",
+                                      padding: "1px 6px",
+                                      borderRadius: 5,
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    <CheckCircle2 size={10} /> Active
+                                  </span>
+                                ) : (
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                      background: "#fef2f2",
+                                      color: "#b91c1c",
+                                      border: "1px solid #fecaca",
+                                      padding: "1px 6px",
+                                      borderRadius: 5,
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    <EyeOff size={10} /> Inactive
+                                  </span>
+                                )}
+                              </div>
+                              {c.brand_tagline && (
+                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                                  {c.brand_tagline}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Monthly Quota */}
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{ fontWeight: 800, color: isActive ? "#0f172a" : "#64748b", fontSize: "0.95rem" }}>
+                            {c.target_monthly_posts ?? 20}
+                          </span>
+                          <span style={{ fontSize: "0.72rem", color: "#64748b", marginLeft: 4 }}>
+                            posts/mo
+                          </span>
+                        </td>
+
+                        {/* Package Tier */}
+                        <td style={{ padding: "14px 16px" }}>
+                          <span
+                            style={{
+                              background: isActive ? "#eff6ff" : "#f1f5f9",
+                              color: isActive ? "#1d4ed8" : "#64748b",
+                              border: `1px solid ${isActive ? "#bfdbfe" : "#cbd5e1"}`,
+                              padding: "4px 10px",
+                              borderRadius: 6,
+                              fontSize: "0.76rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {c.package_tier || "Growth Package"}
+                          </span>
+                        </td>
+
+                        {/* Approval Policy */}
+                        <td style={{ padding: "14px 16px" }}>
+                          <span
+                            style={{
+                              background: c.approval_policy === "auto_approved"
+                                ? "#ecfdf5"
+                                : c.approval_policy === "internal_only"
+                                ? "#fef3c7"
+                                : "#fff7ed",
+                              color: c.approval_policy === "auto_approved"
+                                ? "#047857"
+                                : c.approval_policy === "internal_only"
+                                ? "#b45309"
+                                : "#c2410c",
+                              padding: "4px 9px",
+                              borderRadius: 6,
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              opacity: isActive ? 1 : 0.7,
+                            }}
+                          >
+                            {c.approval_policy === "auto_approved"
+                              ? "Direct Publish"
+                              : c.approval_policy === "internal_only"
+                              ? "Internal Review Only"
+                              : "Client Review Required"}
+                          </span>
+                        </td>
+
+                        {/* Contact info */}
+                        <td style={{ padding: "14px 16px" }}>
+                          <div style={{ fontSize: "0.78rem", color: isActive ? "#334155" : "#64748b" }}>
+                            {c.client_email || "No email on file"}
+                          </div>
+                          {c.client_contact && (
+                            <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                              {c.client_contact}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Action */}
+                        <td style={{ padding: "14px 20px", textAlign: "right" }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                            {/* Activate / Deactivate Toggle Button */}
+                            {isActive ? (
+                              <button
+                                onClick={() => handleToggleClientActive(c)}
+                                disabled={isToggling}
+                                title="Deactivate and hide this client from Social Media module"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  background: "#fff1f2",
+                                  border: "1px solid #fecdd3",
+                                  color: "#e11d48",
+                                  padding: "6px 12px",
+                                  borderRadius: 8,
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  cursor: isToggling ? "wait" : "pointer",
+                                  transition: "all 0.12s ease",
+                                }}
+                              >
+                                <EyeOff size={13} /> {isToggling ? "Updating..." : "Deactivate"}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleToggleClientActive(c)}
+                                disabled={isToggling}
+                                title="Activate and show this client in Social Media module"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  background: "#f0fdf4",
+                                  border: "1px solid #86efac",
+                                  color: "#15803d",
+                                  padding: "6px 12px",
+                                  borderRadius: 8,
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  cursor: isToggling ? "wait" : "pointer",
+                                  transition: "all 0.12s ease",
+                                }}
+                              >
+                                <CheckCircle2 size={13} /> {isToggling ? "Updating..." : "Activate"}
+                              </button>
+                            )}
+
+                            {/* Edit Config */}
+                            <button
+                              onClick={() => setEditingClient({ ...c })}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                background: "#f8fafc",
+                                border: "1px solid #cbd5e1",
+                                color: "#334155",
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Edit2 size={13} /> Edit Config
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -1612,6 +1809,66 @@ export default function SocialSettingsTab({
             </div>
 
             <form onSubmit={handleSaveClient} className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Visibility & Active Status Card */}
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  background: editingClient.is_active !== false ? "#f0fdf4" : "#fef2f2",
+                  border: `1px solid ${editingClient.is_active !== false ? "#bbf7d0" : "#fecaca"}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: "0.85rem", color: editingClient.is_active !== false ? "#166534" : "#991b1b", display: "flex", alignItems: "center", gap: 6 }}>
+                    {editingClient.is_active !== false ? <CheckCircle2 size={15} /> : <EyeOff size={15} />}
+                    <span>Status: {editingClient.is_active !== false ? "Active & Visible" : "Deactivated (Hidden)"}</span>
+                  </div>
+                  <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                    {editingClient.is_active !== false
+                      ? "Client is selectable in header switcher, calendars, scripts, and post creation."
+                      : "Client is hidden from all Social Media module selectors and calendar views."}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditingClient({
+                      ...editingClient,
+                      is_active: editingClient.is_active === false,
+                    })
+                  }
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "6px 14px",
+                    borderRadius: 8,
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: "0.78rem",
+                    cursor: "pointer",
+                    background: editingClient.is_active !== false ? "#e11d48" : "#16a34a",
+                    color: "#ffffff",
+                    flexShrink: 0,
+                  }}
+                >
+                  {editingClient.is_active !== false ? (
+                    <>
+                      <EyeOff size={13} /> Deactivate
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={13} /> Activate
+                    </>
+                  )}
+                </button>
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>

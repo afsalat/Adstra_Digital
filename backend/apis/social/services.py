@@ -170,6 +170,7 @@ def sync_proposal_clients():
                     primary_color=color,
                     client_email=c.email or '',
                     client_contact=c.contact or '',
+                    is_active=True,
                     notes=f"Synced from Client Companies table (ID #{c.id})",
                 )
         else:
