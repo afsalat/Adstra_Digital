@@ -588,7 +588,7 @@ export default function ScriptCreationModal({
       } else {
         await axios.post(`${API_BASE_URL}/social/posts/`, payload);
       }
-      onSuccess();
+      if (onSuccess) onSuccess(targetStatus);
       onClose();
     } catch (err) {
       alert(err.response?.data?.error || "Error saving script. Please check all required fields.");

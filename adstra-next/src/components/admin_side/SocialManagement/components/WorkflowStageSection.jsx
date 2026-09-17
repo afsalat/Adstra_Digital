@@ -45,6 +45,7 @@ export default function WorkflowStageSection({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [formatFilter, setFormatFilter] = useState("all");
+  const [scriptSubFilter, setScriptSubFilter] = useState("all"); // 'all' | 'draft' | 'under_review' | 'revision'
   const [viewMode, setViewMode] = useState("listing"); // 'listing' | 'calendar'
   const [copiedToken, setCopiedToken] = useState(null);
 
@@ -72,7 +73,7 @@ export default function WorkflowStageSection({
           color: "#4f46e5",
           bgLight: "#eef2ff",
           icon: FileText,
-          statuses: ["script", "draft"],
+          statuses: ["script", "draft", "script_approval"],
           ctaLabel: "+ New Script / Idea",
         };
       case "script_approval":
@@ -151,6 +152,26 @@ export default function WorkflowStageSection({
     }
   }, [stageId]);
 
+  // Sub-counts for Stage 1 Scripts filter pills
+  const scriptSubCounts = useMemo(() => {
+    if (stageId !== "scripts") return { all: 0, drafts: 0, underReview: 0, revision: 0 };
+    const clientFiltered = posts.filter(
+      (p) => selectedClientId === "all" || String(p.client_profile) === String(selectedClientId)
+    );
+    return {
+      all: clientFiltered.filter(
+        (p) =>
+          ["script", "draft", "script_approval"].includes(p.status) ||
+          (p.status === "rejected" && p.client_feedback?.toLowerCase().includes("script"))
+      ).length,
+      drafts: clientFiltered.filter((p) => ["script", "draft"].includes(p.status)).length,
+      underReview: clientFiltered.filter((p) => p.status === "script_approval").length,
+      revision: clientFiltered.filter(
+        (p) => p.status === "rejected" && p.client_feedback?.toLowerCase().includes("script")
+      ).length,
+    };
+  }, [posts, selectedClientId, stageId]);
+
   // Filter posts belonging to this stage
   const stagePosts = useMemo(() => {
     return posts.filter((p) => {
@@ -169,6 +190,13 @@ export default function WorkflowStageSection({
         return false;
       }
 
+      // Script Sub-Filter in Stage 1
+      if (stageId === "scripts" && scriptSubFilter !== "all") {
+        if (scriptSubFilter === "draft" && !["script", "draft"].includes(p.status)) return false;
+        if (scriptSubFilter === "under_review" && p.status !== "script_approval") return false;
+        if (scriptSubFilter === "revision" && p.status !== "rejected") return false;
+      }
+
       // Format filter
       if (formatFilter !== "all" && p.post_type !== formatFilter) {
         return false;
@@ -184,7 +212,7 @@ export default function WorkflowStageSection({
       }
       return true;
     });
-  }, [posts, stageMeta, stageId, selectedClientId, formatFilter, searchQuery]);
+  }, [posts, stageMeta, stageId, selectedClientId, scriptSubFilter, formatFilter, searchQuery]);
 
   // Transition Handler
   const handleTransition = async (post, targetStage, actionType, notes = "", extraData = {}) => {
@@ -414,6 +442,82 @@ export default function WorkflowStageSection({
                 <option value="carousel">Carousel</option>
                 <option value="text">Text</option>
               </select>
+
+              {/* Stage 1: Quick Sub-Filters for Drafts vs Under Approval */}
+              {stageId === "scripts" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 3, background: "#f8fafc", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                  <button
+                    type="button"
+                    onClick={() => setScriptSubFilter("all")}
+                    style={{
+                      padding: "5px 11px",
+                      borderRadius: 7,
+                      border: "none",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: scriptSubFilter === "all" ? "#4f46e5" : "transparent",
+                      color: scriptSubFilter === "all" ? "#ffffff" : "#64748b",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    All Scripts ({scriptSubCounts.all})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScriptSubFilter("draft")}
+                    style={{
+                      padding: "5px 11px",
+                      borderRadius: 7,
+                      border: "none",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: scriptSubFilter === "draft" ? "#4f46e5" : "transparent",
+                      color: scriptSubFilter === "draft" ? "#ffffff" : "#64748b",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Drafts ({scriptSubCounts.drafts})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScriptSubFilter("under_review")}
+                    style={{
+                      padding: "5px 11px",
+                      borderRadius: 7,
+                      border: "none",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: scriptSubFilter === "under_review" ? "#7c3aed" : "transparent",
+                      color: scriptSubFilter === "under_review" ? "#ffffff" : "#64748b",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Under Approval ({scriptSubCounts.underReview})
+                  </button>
+                  {scriptSubCounts.revision > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setScriptSubFilter("revision")}
+                      style={{
+                        padding: "5px 11px",
+                        borderRadius: 7,
+                        border: "none",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        background: scriptSubFilter === "revision" ? "#dc2626" : "transparent",
+                        color: scriptSubFilter === "revision" ? "#ffffff" : "#64748b",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      Needs Revision ({scriptSubCounts.revision})
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={{ fontSize: "0.82rem", color: "#64748b", fontWeight: 600 }}>
@@ -469,6 +573,7 @@ export default function WorkflowStageSection({
               onCopyLink={copyPublicLink}
               copiedToken={copiedToken}
               onOpenModal={openActionModal}
+              onNavigateStage={onNavigateStage}
               onOpenScriptModal={(post) => {
                 setActiveScriptPost(post);
                 setScriptModalOpen(true);
@@ -769,7 +874,9 @@ export default function WorkflowStageSection({
           mediaAssets={mediaAssets}
           selectedClientId={selectedClientId}
           initialData={activeScriptPost}
-          onSuccess={onRefresh}
+          onSuccess={(savedStatus) => {
+            if (onRefresh) onRefresh();
+          }}
         />
       )}
 
@@ -787,6 +894,7 @@ function StageListingTable({
   onCopyLink,
   copiedToken,
   onOpenModal,
+  onNavigateStage,
   onOpenScriptModal,
 }) {
   return (
@@ -895,9 +1003,58 @@ function StageListingTable({
                             color: "#0f172a",
                             cursor: "pointer",
                             marginBottom: 2,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
                           }}
                         >
-                          {post.title || "Untitled Post"}
+                          <span>{post.title || "Untitled Post"}</span>
+                          {stageId === "scripts" && (
+                            post.status === "script_approval" ? (
+                              <span
+                                style={{
+                                  background: "#f5f3ff",
+                                  color: "#7c3aed",
+                                  border: "1px solid #ddd6fe",
+                                  fontSize: "0.68rem",
+                                  padding: "2px 7px",
+                                  borderRadius: 8,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                ● Under Approval
+                              </span>
+                            ) : post.status === "rejected" ? (
+                              <span
+                                style={{
+                                  background: "#fef2f2",
+                                  color: "#dc2626",
+                                  border: "1px solid #fecaca",
+                                  fontSize: "0.68rem",
+                                  padding: "2px 7px",
+                                  borderRadius: 8,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                ● Needs Revision
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  background: "#f1f5f9",
+                                  color: "#475569",
+                                  border: "1px solid #cbd5e1",
+                                  fontSize: "0.68rem",
+                                  padding: "2px 7px",
+                                  borderRadius: 8,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                ● Draft
+                              </span>
+                            )
+                          )}
                         </div>
                         <div
                           style={{
@@ -1044,12 +1201,48 @@ function StageListingTable({
                           >
                             Edit Script
                           </button>
-                          <button
-                            onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#4f46e5", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            Submit →
-                          </button>
+                          {post.status === "script_approval" ? (
+                            <button
+                              onClick={() => (onNavigateStage ? onNavigateStage("script_approval") : null)}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                border: "1px solid #c4b5fd",
+                                background: "#f5f3ff",
+                                color: "#7c3aed",
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              View in Approval →
+                            </button>
+                          ) : post.status === "rejected" ? (
+                            <button
+                              onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                border: "none",
+                                background: "#ea580c",
+                                color: "#fff",
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              Revise Script →
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
+                              style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#4f46e5", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                            >
+                              Submit →
+                            </button>
+                          )}
                         </>
                       )}
 
