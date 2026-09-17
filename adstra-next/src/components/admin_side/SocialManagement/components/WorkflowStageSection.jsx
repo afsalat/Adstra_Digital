@@ -356,7 +356,7 @@ export default function WorkflowStageSection({
               boxShadow: `0 4px 12px ${stageMeta.color}40`,
             }}
           >
-            <Plus size={16} /> {stageId === "scripts" ? "+ New Script" : "+ Create Post"}
+            {stageId === "scripts" ? "+ New Script" : "+ Create Post"}
           </button>
         </div>
       </div>
