@@ -16,6 +16,7 @@ import {
   FileText,
   Smartphone,
   Eye,
+  EyeOff,
   Send,
   Save,
   CheckCircle2,
@@ -1117,6 +1118,7 @@ export default function CreatePostModal({
   );
   const [isTemplate, setIsTemplate] = useState(false);
   const [activePreviewPlatform, setActivePreviewPlatform] = useState("instagram");
+  const [showPreview, setShowPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Format-specific dynamic states
@@ -1416,7 +1418,14 @@ export default function CreatePostModal({
 
   return (
     <div className="social-modal-overlay">
-      <div className="social-modal-content" style={{ maxWidth: 1040, maxHeight: "94vh" }}>
+      <div
+        className="social-modal-content"
+        style={{
+          maxWidth: showPreview ? 1080 : 760,
+          maxHeight: "94vh",
+          transition: "max-width 0.2s ease",
+        }}
+      >
         
         {/* Header */}
         <div className="social-modal-header">
@@ -1435,6 +1444,30 @@ export default function CreatePostModal({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Live Feed Preview Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowPreview((prev) => !prev)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 14px",
+                borderRadius: 10,
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                border: showPreview ? "1.5px solid #4f46e5" : "1.5px solid #cbd5e1",
+                background: showPreview ? "#eef2ff" : "#ffffff",
+                color: showPreview ? "#4f46e5" : "#475569",
+                boxShadow: showPreview ? "0 2px 8px rgba(79, 70, 229, 0.15)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {showPreview ? <EyeOff size={15} /> : <Eye size={15} />}
+              <span>{showPreview ? "Hide Preview" : "Show Preview"}</span>
+            </button>
+
             <button
               onClick={onOpenAiStudio}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #8b5cf6, #6366f1)", color: "#fff", border: "none", padding: "7px 14px", borderRadius: 10, fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}
@@ -1447,8 +1480,15 @@ export default function CreatePostModal({
           </div>
         </div>
 
-        {/* Body: Two columns (Editor on left, Live Feed Preview on right) */}
-        <div className="social-modal-body" style={{ display: "grid", gridTemplateColumns: "1.25fr 0.95fr", gap: 28 }}>
+        {/* Body: Two columns if showPreview is true, single column if false */}
+        <div
+          className="social-modal-body"
+          style={{
+            display: "grid",
+            gridTemplateColumns: showPreview ? "1.25fr 0.95fr" : "1fr",
+            gap: 28,
+          }}
+        >
           
           {/* Left Column: Form Controls */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -2531,85 +2571,108 @@ export default function CreatePostModal({
 
           </div>
 
-          {/* Right Column: Live Feed Preview */}
-          <div>
-            {/* Header Title Row */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.84rem", fontWeight: 700, color: "#1e293b", whiteSpace: "nowrap" }}>
-                <Eye size={16} color="#4f46e5" /> Live Device Feed Preview
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
-                <span>Previewing:</span>
-                <span style={{ fontWeight: 700, color: PLATFORM_MAP[activePreviewPlatform]?.color === "#000000" ? "#0f172a" : PLATFORM_MAP[activePreviewPlatform]?.color || "#4f46e5" }}>
-                  {PLATFORM_MAP[activePreviewPlatform]?.label || activePreviewPlatform}
-                </span>
-              </div>
-            </div>
-
-            {/* Platform Switcher Tabs Bar (Full Width) */}
-            <div
-              style={{
-                display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
-                marginBottom: 12,
-                padding: "2px 0",
-              }}
-            >
-              {(selectedPlatforms.length > 0
-                ? selectedPlatforms
-                : clientAccounts.length > 0
-                ? [...new Set(clientAccounts.map((a) => a.platform))]
-                : ["instagram", "facebook", "linkedin"]
-              ).map((plat) => {
-                const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: renderPlatformIcon(plat, { size: 14 }), color: "#0f172a" };
-                const isActive = activePreviewPlatform === plat;
-                return (
+          {/* Right Column: Live Feed Preview (Toggled by Top Button) */}
+          {showPreview && (
+            <div>
+              {/* Header Title Row */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.84rem", fontWeight: 700, color: "#1e293b", whiteSpace: "nowrap" }}>
+                  <Eye size={16} color="#4f46e5" /> Live Device Feed Preview
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
+                    <span>Previewing:</span>
+                    <span style={{ fontWeight: 700, color: PLATFORM_MAP[activePreviewPlatform]?.color === "#000000" ? "#0f172a" : PLATFORM_MAP[activePreviewPlatform]?.color || "#4f46e5" }}>
+                      {PLATFORM_MAP[activePreviewPlatform]?.label || activePreviewPlatform}
+                    </span>
+                  </div>
                   <button
-                    key={plat}
                     type="button"
-                    onClick={() => setActivePreviewPlatform(plat)}
+                    onClick={() => setShowPreview(false)}
                     style={{
-                      padding: "5px 11px",
-                      borderRadius: 8,
-                      fontSize: "0.74rem",
+                      background: "#f1f5f9",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 6,
+                      padding: "3px 8px",
+                      fontSize: "0.72rem",
                       fontWeight: 700,
-                      textTransform: "capitalize",
-                      border: isActive ? `1.5px solid ${pConfig.color}` : "1.5px solid #e2e8f0",
+                      color: "#64748b",
                       cursor: "pointer",
-                      background: isActive ? (pConfig.color === "#000000" ? "#0f172a" : pConfig.color) : "#ffffff",
-                      color: isActive ? "#ffffff" : "#475569",
                       display: "flex",
                       alignItems: "center",
-                      gap: 5,
-                      boxShadow: isActive ? `0 2px 8px ${pConfig.color}40` : "none",
-                      transition: "all 0.15s ease",
-                      whiteSpace: "nowrap",
+                      gap: 4,
                     }}
                   >
-                    <span>{pConfig.icon}</span>
-                    <span>{pConfig.label || plat}</span>
+                    <EyeOff size={12} /> Hide
                   </button>
-                );
-              })}
+                </div>
+              </div>
+
+              {/* Platform Switcher Tabs Bar (Full Width) */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  flexWrap: "wrap",
+                  marginBottom: 12,
+                  padding: "2px 0",
+                }}
+              >
+                {(selectedPlatforms.length > 0
+                  ? selectedPlatforms
+                  : clientAccounts.length > 0
+                  ? [...new Set(clientAccounts.map((a) => a.platform))]
+                  : ["instagram", "facebook", "linkedin"]
+                ).map((plat) => {
+                  const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: renderPlatformIcon(plat, { size: 14 }), color: "#0f172a" };
+                  const isActive = activePreviewPlatform === plat;
+                  return (
+                    <button
+                      key={plat}
+                      type="button"
+                      onClick={() => setActivePreviewPlatform(plat)}
+                      style={{
+                        padding: "5px 11px",
+                        borderRadius: 8,
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        textTransform: "capitalize",
+                        border: isActive ? `1.5px solid ${pConfig.color}` : "1.5px solid #e2e8f0",
+                        cursor: "pointer",
+                        background: isActive ? (pConfig.color === "#000000" ? "#0f172a" : pConfig.color) : "#ffffff",
+                        color: isActive ? "#ffffff" : "#475569",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        boxShadow: isActive ? `0 2px 8px ${pConfig.color}40` : "none",
+                        transition: "all 0.15s ease",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <span>{pConfig.icon}</span>
+                      <span>{pConfig.label || plat}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic Native Platform Feed Preview */}
+              <PlatformFeedPreview
+                platform={activePreviewPlatform}
+                client={selectedClient}
+                account={clientAccounts.find((a) => a.platform === activePreviewPlatform)}
+                primaryCaption={primaryCaption}
+                hashtags={hashtags}
+                location={location}
+                firstComment={firstComment}
+                mediaUrl={previewMediaUrl}
+                postType={postType}
+                title={postType === "video" && videoHeadline ? videoHeadline : title}
+                carouselCount={previewCarouselCount}
+              />
+
             </div>
-
-            {/* Dynamic Native Platform Feed Preview */}
-            <PlatformFeedPreview
-              platform={activePreviewPlatform}
-              client={selectedClient}
-              account={clientAccounts.find((a) => a.platform === activePreviewPlatform)}
-              primaryCaption={primaryCaption}
-              hashtags={hashtags}
-              location={location}
-              firstComment={firstComment}
-              mediaUrl={previewMediaUrl}
-              postType={postType}
-              title={postType === "video" && videoHeadline ? videoHeadline : title}
-              carouselCount={previewCarouselCount}
-            />
-
-          </div>
+          )}
 
         </div>
 
