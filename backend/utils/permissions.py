@@ -85,6 +85,12 @@ PERMISSIONS = {
     "blogs.update": "Update blog posts",
     "blogs.delete": "Delete blog posts",
     "blogs.keywords": "Manage blog interlinks",
+    "social.view": "View social media management",
+    "social.manage": "Manage social accounts and campaigns",
+    "social.create_post": "Create social media posts",
+    "social.approve_post": "Approve social media posts",
+    "social.inbox": "Manage social inbox and leads",
+    "social.analytics": "View social media analytics and reports",
 }
 
 
@@ -105,6 +111,12 @@ ROLE_PERMISSIONS = {
         "clients.create",
         "clients.update",
         "clients.delete",
+        "social.view",
+        "social.manage",
+        "social.create_post",
+        "social.approve_post",
+        "social.inbox",
+        "social.analytics",
         "lead.view_own",
         "lead.view_all",
         "lead.create",

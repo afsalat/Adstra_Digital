@@ -25,7 +25,7 @@ if not JWT_SECRET:
     else:
         raise ImproperlyConfigured('JWT_SECRET environment variable is required when DEBUG is False.')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'adstradigital.com', 'www.adstradigital.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver', 'adstradigital.com', 'www.adstradigital.com']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'apis.blogs',
     'apis.leads',
     'apis.chat',
+    'apis.social',
 ]
 
 MIDDLEWARE = [

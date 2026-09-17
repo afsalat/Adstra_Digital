@@ -82,7 +82,7 @@ class SocialDashboardView(APIView):
         for p_code, p_name in SocialAccount.PLATFORM_CHOICES:
             p_accounts = account_qs.filter(platform=p_code)
             p_followers = sum(a.followers_count for a in p_accounts)
-            p_posts = post_qs.filter(platforms__contains=[p_code]).count()
+            p_posts = post_qs.filter(platforms__icontains=p_code).count()
             if p_accounts.exists() or p_posts > 0:
                 platforms_data.append({
                     'platform': p_code,
@@ -186,7 +186,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         if post_status and post_status != 'all':
             qs = qs.filter(status=post_status)
         if platform and platform != 'all':
-            qs = qs.filter(platforms__contains=[platform])
+            qs = qs.filter(platforms__icontains=platform)
         if search:
             qs = qs.filter(
                 Q(title__icontains=search) |
@@ -257,6 +257,76 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         return Response(SocialPostSerializer(post).data)
 
     @action(detail=True, methods=['post'])
+    def transition_stage(self, request, pk=None):
+        post = self.get_object()
+        target_stage = request.data.get('target_stage')
+        action_type = request.data.get('action_type', 'advance')
+        notes = request.data.get('notes', '')
+        actor = request.data.get('actor_name')
+        if not actor:
+            user = request.user if request.user.is_authenticated else None
+            actor = getattr(user, 'fullname', '') or getattr(user, 'username', 'Team Member')
+
+        # Handle explicit action types if target_stage is not directly provided
+        if not target_stage:
+            if action_type == 'reject':
+                if post.status == 'script_approval':
+                    target_stage = 'script'
+                elif post.status in ['team_review', 'client_review']:
+                    target_stage = 'designing'
+                else:
+                    target_stage = 'script'
+            elif action_type == 'advance':
+                stage_flow = {
+                    'script': 'script_approval',
+                    'draft': 'script_approval',
+                    'script_approval': 'designing',
+                    'designing': 'team_review',
+                    'team_review': 'client_review',
+                    'internal_review': 'client_review',
+                    'client_review': 'approved',
+                    'approved': 'published',
+                    'scheduled': 'published',
+                }
+                target_stage = stage_flow.get(post.status, 'script_approval')
+
+        if not target_stage:
+            return Response({'error': 'Target stage could not be determined.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update optional script or designer notes if provided
+        if 'script_notes' in request.data:
+            post.script_notes = request.data.get('script_notes')
+        if 'designer_notes' in request.data:
+            post.designer_notes = request.data.get('designer_notes')
+        if 'media_urls' in request.data:
+            post.media_urls = request.data.get('media_urls')
+        if 'scheduled_at' in request.data and request.data.get('scheduled_at'):
+            post.scheduled_at = request.data.get('scheduled_at')
+
+        prev_status = post.status
+        post.status = target_stage
+
+        if target_stage == 'published':
+            post.published_at = timezone.now()
+
+        if action_type == 'reject' or 'reject' in notes.lower():
+            post.client_feedback = notes
+        elif target_stage in ['approved', 'published']:
+            post.client_feedback = ''
+
+        post.save()
+
+        # Audit History logging
+        action_label = f"Stage changed: {prev_status} -> {target_stage}"
+        if action_type == 'reject':
+            action_label = f"Rejected: Returned to {target_stage.replace('_', ' ').title()}"
+        elif action_type == 'advance':
+            action_label = f"Advanced to {target_stage.replace('_', ' ').title()}"
+
+        record_approval_action(post, action_label, actor, 'Workflow Engine', notes or f"Moved from {prev_status} to {target_stage}")
+        return Response(SocialPostSerializer(post).data)
+
+    @action(detail=True, methods=['post'])
     def publish_now(self, request, pk=None):
         post = self.get_object()
         post.status = 'published'
@@ -295,11 +365,12 @@ class PublicClientReviewView(APIView):
             record_approval_action(post, 'client_approved', reviewer_name, 'Client', notes or 'Approved by client')
             return Response({'status': 'approved', 'message': 'Post approved successfully! Thank you.'})
         elif action_type == 'request_changes':
-            post.status = 'rejected'
+            # Per workflow diagram: Client Review rejection loops back to Scheduled / Designing
+            post.status = 'designing'
             post.client_feedback = notes
             post.save(update_fields=['status', 'client_feedback'])
-            record_approval_action(post, 'client_changes_requested', reviewer_name, 'Client', notes or 'Changes requested by client')
-            return Response({'status': 'changes_requested', 'message': 'Feedback received. Our creative team will update the post.'})
+            record_approval_action(post, 'client_changes_requested', reviewer_name, 'Client', notes or 'Changes requested by client (Returned to Designing)')
+            return Response({'status': 'changes_requested', 'message': 'Feedback received. Creative team will revise in Scheduled / Designing.'})
         
         return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
 
