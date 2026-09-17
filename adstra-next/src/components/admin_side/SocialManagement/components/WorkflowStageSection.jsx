@@ -457,27 +457,6 @@ export default function WorkflowStageSection({
                   ? "Click '+ New Script' to draft your next viral hook and content angle."
                   : `Posts will appear here as they advance from previous stages.`}
               </p>
-              {stageId === "scripts" && (
-                <button
-                  onClick={() => {
-                    setActiveScriptPost(null);
-                    setScriptModalOpen(true);
-                  }}
-                  style={{
-                    marginTop: 6,
-                    background: "#4f46e5",
-                    color: "#fff",
-                    border: "none",
-                    padding: "9px 20px",
-                    borderRadius: 10,
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Plus size={16} style={{ marginRight: 4 }} /> Draft First Script
-                </button>
-              )}
             </div>
           ) : (
             <StageListingTable
