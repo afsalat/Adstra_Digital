@@ -21,6 +21,18 @@ import {
   CheckCircle2,
   Share2,
   AlertTriangle,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  Repeat2,
+  ThumbsUp,
+  ThumbsDown,
+  MoreHorizontal,
+  ExternalLink,
+  Globe,
+  Play,
+  Search,
+  Music2,
 } from "lucide-react";
 
 const ALL_PLATFORMS = [
@@ -37,6 +49,889 @@ const PLATFORM_MAP = ALL_PLATFORMS.reduce((acc, curr) => {
   acc[curr.id] = curr;
   return acc;
 }, {});
+
+function PlatformFeedPreview({
+  platform,
+  client,
+  account,
+  primaryCaption,
+  hashtags,
+  location,
+  firstComment,
+  mediaUrl,
+  postType,
+  title,
+}) {
+  const clientName = client?.name || "Adstra Digital";
+  const clientInitial = clientName ? clientName.charAt(0).toUpperCase() : "A";
+  const accountHandle = account?.username
+    ? (account.username.startsWith("@") ? account.username : `@${account.username}`)
+    : `@${clientName.toLowerCase().replace(/[^a-z0-9_]/g, "")}`;
+  const accountDisplayName = account?.account_name || clientName;
+
+  const renderMedia = (customHeight = 240, rounded = false, aspect = "cover") => (
+    <div
+      style={{
+        width: "100%",
+        height: customHeight,
+        background: "#0f172a",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        position: "relative",
+        borderRadius: rounded ? 10 : 0,
+      }}
+    >
+      {mediaUrl ? (
+        <img
+          src={mediaUrl}
+          alt="Post Preview"
+          style={{ width: "100%", height: "100%", objectFit: aspect }}
+        />
+      ) : (
+        <div style={{ color: "#94a3b8", textAlign: "center", padding: 20 }}>
+          <ImageIcon size={34} style={{ marginBottom: 6 }} />
+          <p style={{ fontSize: "0.78rem", margin: 0 }}>No media attached</p>
+        </div>
+      )}
+
+      {postType === "carousel" && (
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            background: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(4px)",
+            color: "#ffffff",
+            padding: "3px 8px",
+            borderRadius: 12,
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <Layers size={11} /> 1/3
+        </div>
+      )}
+
+      {(postType === "reel" || postType === "video") && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(4px)",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          }}
+        >
+          <Play size={20} fill="#ffffff" style={{ marginLeft: 2 }} />
+        </div>
+      )}
+    </div>
+  );
+
+  // 1. GOOGLE BUSINESS PREVIEW
+  if (platform === "google_business") {
+    return (
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          border: "1px solid #dadce0",
+          boxShadow: "0 4px 16px rgba(60,64,67,0.12)",
+          overflow: "hidden",
+          fontFamily: "'Roboto', system-ui, sans-serif",
+        }}
+      >
+        {/* Google Maps Search Bar Badge */}
+        <div
+          style={{
+            background: "#f8f9fa",
+            borderBottom: "1px solid #ebebeb",
+            padding: "8px 14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", fontWeight: 700, color: "#1a73e8" }}>
+            <span style={{ fontSize: "1rem" }}>📍</span>
+            <span>Google Business Profile</span>
+          </div>
+          <span
+            style={{
+              background: "#e8f0fe",
+              color: "#1a73e8",
+              fontSize: "0.68rem",
+              fontWeight: 800,
+              padding: "2px 8px",
+              borderRadius: 6,
+              letterSpacing: 0.4,
+            }}
+          >
+            UPDATE
+          </span>
+        </div>
+
+        {/* Business Profile Header */}
+        <div style={{ padding: "12px 14px 10px", display: "flex", gap: 10, alignItems: "center" }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#1a73e8",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "0.95rem",
+              boxShadow: "0 2px 6px rgba(26,115,232,0.3)",
+            }}
+          >
+            {clientInitial}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#202124", display: "flex", alignItems: "center", gap: 4 }}>
+              <span>{accountDisplayName}</span>
+              <CheckCircle2 size={13} color="#1a73e8" fill="#1a73e8" />
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "#5f6368", display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
+              <span style={{ color: "#e37400", fontWeight: 700 }}>4.9 ★★★★★</span>
+              <span>(128)</span>
+              <span>•</span>
+              <span>{location || "Digital marketing agency"}</span>
+            </div>
+            <div style={{ fontSize: "0.68rem", color: "#70757a", marginTop: 1 }}>
+              Posted on Google • Just now
+            </div>
+          </div>
+        </div>
+
+        {/* 16:9 Banner Media */}
+        <div style={{ padding: "0 14px" }}>
+          {renderMedia(190, true, "cover")}
+        </div>
+
+        {/* Post Content */}
+        <div style={{ padding: "12px 14px 14px" }}>
+          {title && (
+            <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#202124", marginBottom: 6, lineHeight: 1.3 }}>
+              {title}
+            </div>
+          )}
+
+          <div style={{ fontSize: "0.82rem", lineHeight: 1.5, color: "#3c4043", maxHeight: 110, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+            {primaryCaption || "Share important updates, new services, product launches, or seasonal promotions directly with customers searching on Google Maps and Google Search..."}
+          </div>
+
+          {location && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8, fontSize: "0.74rem", color: "#1a73e8", fontWeight: 600 }}>
+              <MapPin size={12} /> {location}
+            </div>
+          )}
+
+          {/* Google CTA Button */}
+          <div style={{ marginTop: 14 }}>
+            <button
+              type="button"
+              style={{
+                width: "100%",
+                background: "#1a73e8",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 22,
+                padding: "9px 16px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                cursor: "pointer",
+                boxShadow: "0 2px 6px rgba(26,115,232,0.3)",
+              }}
+            >
+              <span>Learn More</span>
+              <ExternalLink size={14} />
+            </button>
+          </div>
+
+          {/* Footer view on Google Search */}
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #f1f3f4", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.72rem", color: "#70757a" }}>
+            <span>View on Google Maps</span>
+            <span style={{ color: "#1a73e8", fontWeight: 600, cursor: "pointer" }}>Share Update</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. FACEBOOK PREVIEW
+  if (platform === "facebook") {
+    return (
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          border: "1px solid #ced0d4",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+          overflow: "hidden",
+          fontFamily: "'Segoe UI', Helvetica, Arial, sans-serif",
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#1877f2",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "0.95rem",
+            }}
+          >
+            {clientInitial}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#050505" }}>{accountDisplayName}</span>
+              <CheckCircle2 size={13} color="#1877f2" fill="#1877f2" />
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "#65676b", display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
+              <span>Sponsored</span>
+              <span>·</span>
+              <Globe size={11} />
+            </div>
+          </div>
+          <div style={{ color: "#65676b", cursor: "pointer" }}>
+            <MoreHorizontal size={18} />
+          </div>
+        </div>
+
+        {/* Facebook Caption is ABOVE the media */}
+        <div style={{ padding: "4px 16px 10px" }}>
+          <div style={{ fontSize: "0.85rem", lineHeight: 1.45, color: "#050505", maxHeight: 90, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+            {primaryCaption || "Your engaging post caption will appear here in real-time..."}
+          </div>
+          {hashtags && (
+            <div style={{ marginTop: 6, fontSize: "0.78rem", color: "#1877f2", fontWeight: 600 }}>
+              {hashtags}
+            </div>
+          )}
+        </div>
+
+        {/* Media Container */}
+        {renderMedia(220, false, "cover")}
+
+        {/* Facebook Link Strip */}
+        <div
+          style={{
+            background: "#f0f2f5",
+            padding: "10px 14px",
+            borderTop: "1px solid #e4e6eb",
+            borderBottom: "1px solid #e4e6eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ flex: 1, paddingRight: 10 }}>
+            <div style={{ fontSize: "0.68rem", color: "#65676b", textTransform: "uppercase", fontWeight: 600 }}>
+              ADSTRADIGITAL.COM
+            </div>
+            <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#050505", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {title || clientName}
+            </div>
+          </div>
+          <button
+            type="button"
+            style={{
+              background: "#e4e6eb",
+              color: "#050505",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 12px",
+              fontSize: "0.76rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Learn More
+          </button>
+        </div>
+
+        {/* Reactions Counter */}
+        <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", fontSize: "0.74rem", color: "#65676b" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span>👍❤️😮</span>
+            <span>384</span>
+          </div>
+          <div>48 comments · 16 shares</div>
+        </div>
+
+        {/* Actions Strip */}
+        <div style={{ borderTop: "1px solid #ced0d4", margin: "0 12px", padding: "6px 0", display: "flex", justifyContent: "space-around" }}>
+          <button type="button" style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#65676b", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", padding: "6px 12px", borderRadius: 6 }}>
+            <ThumbsUp size={15} /> Like
+          </button>
+          <button type="button" style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#65676b", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", padding: "6px 12px", borderRadius: 6 }}>
+            <MessageCircle size={15} /> Comment
+          </button>
+          <button type="button" style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#65676b", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", padding: "6px 12px", borderRadius: 6 }}>
+            <Share2 size={15} /> Share
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. X / TWITTER PREVIEW
+  if (platform === "x" || platform === "twitter") {
+    return (
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          border: "1px solid #eff3f4",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+          padding: "16px",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        }}
+      >
+        {/* Top Header */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#0f1419",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "0.95rem",
+              flexShrink: 0,
+            }}
+          >
+            {clientInitial}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap", overflow: "hidden" }}>
+                <span style={{ fontWeight: 800, fontSize: "0.88rem", color: "#0f1419", whiteSpace: "nowrap" }}>
+                  {clientName}
+                </span>
+                <CheckCircle2 size={13} color="#1d9bf0" fill="#1d9bf0" />
+                <span style={{ fontSize: "0.78rem", color: "#536471", whiteSpace: "nowrap" }}>
+                  {accountHandle} · Just now
+                </span>
+              </div>
+              <span style={{ fontSize: "0.95rem", fontWeight: 900, color: "#0f1419" }}>𝕏</span>
+            </div>
+
+            {/* Tweet Text (FIRST!) */}
+            <div style={{ marginTop: 8, fontSize: "0.88rem", lineHeight: 1.45, color: "#0f1419", whiteSpace: "pre-wrap" }}>
+              {primaryCaption || "What's happening? Share instant company updates, thought leadership, or industry takes with the world..."}
+            </div>
+
+            {hashtags && (
+              <div style={{ marginTop: 6, fontSize: "0.82rem", color: "#1d9bf0", fontWeight: 500 }}>
+                {hashtags}
+              </div>
+            )}
+
+            {/* Rounded Media Card */}
+            <div style={{ marginTop: 12, borderRadius: 14, overflow: "hidden", border: "1px solid #cfd9de" }}>
+              {renderMedia(200, false, "cover")}
+            </div>
+
+            {/* Views Line */}
+            <div style={{ marginTop: 12, fontSize: "0.74rem", color: "#536471" }}>
+              11:42 AM · Sep 17, 2026 · <strong style={{ color: "#0f1419" }}>14.8K</strong> Views
+            </div>
+
+            <div style={{ height: 1, background: "#eff3f4", margin: "10px 0 8px" }} />
+
+            {/* X Action Buttons */}
+            <div style={{ display: "flex", justifyContent: "space-between", color: "#536471", fontSize: "0.74rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <MessageCircle size={15} /> <span>42</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Repeat2 size={15} /> <span>118</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Heart size={15} /> <span>894</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Bookmark size={15} /> <span>76</span>
+              </div>
+              <div>
+                <Share2 size={15} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. LINKEDIN PREVIEW
+  if (platform === "linkedin") {
+    return (
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          border: "1px solid #e0e0e0",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+          overflow: "hidden",
+          fontFamily: "-apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: "12px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 6,
+              background: "#0a66c2",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "1rem",
+            }}
+          >
+            {clientInitial}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#000000e6" }}>{clientName}</span>
+              <span style={{ fontSize: "0.72rem", color: "#00000099" }}>• 1st</span>
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "#00000099" }}>14,850 followers</div>
+            <div style={{ fontSize: "0.68rem", color: "#00000099", display: "flex", alignItems: "center", gap: 3 }}>
+              <span>Promoted</span>
+              <span>•</span>
+              <Globe size={10} />
+            </div>
+          </div>
+          <button
+            type="button"
+            style={{
+              background: "none",
+              border: "1px solid #0a66c2",
+              color: "#0a66c2",
+              borderRadius: 16,
+              padding: "3px 12px",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              cursor: "pointer",
+            }}
+          >
+            + Follow
+          </button>
+        </div>
+
+        {/* Text is ABOVE Media */}
+        <div style={{ padding: "4px 16px 10px" }}>
+          <div style={{ fontSize: "0.84rem", lineHeight: 1.5, color: "#000000e6", maxHeight: 95, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+            {primaryCaption || "Drive B2B growth, share leadership insights, and connect with key decision-makers across industries..."}
+          </div>
+          {hashtags && (
+            <div style={{ marginTop: 6, fontSize: "0.78rem", color: "#0a66c2", fontWeight: 600 }}>
+              {hashtags}
+            </div>
+          )}
+        </div>
+
+        {/* Media */}
+        {renderMedia(210, false, "cover")}
+
+        {/* Article/Link Banner */}
+        <div style={{ background: "#f3f2ef", padding: "10px 16px", borderBottom: "1px solid #e0e0e0" }}>
+          <div style={{ fontSize: "0.68rem", color: "#00000099", textTransform: "uppercase" }}>
+            adstradigital.com • 3 min read
+          </div>
+          <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#000000e6", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {title || `${clientName} | Strategic Growth Solutions`}
+          </div>
+        </div>
+
+        {/* LinkedIn Reactions Counter */}
+        <div style={{ padding: "8px 16px", display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#00000099" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <span>👏💡❤️</span>
+            <span>462</span>
+          </div>
+          <div>38 comments · 14 reposts</div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ borderTop: "1px solid #e0e0e0", margin: "0 12px", padding: "6px 0", display: "flex", justifyContent: "space-around" }}>
+          <button type="button" style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#00000099", fontWeight: 600, fontSize: "0.76rem", cursor: "pointer", padding: "6px 10px", borderRadius: 4 }}>
+            <ThumbsUp size={14} /> Like
+          </button>
+          <button type="button" style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#00000099", fontWeight: 600, fontSize: "0.76rem", cursor: "pointer", padding: "6px 10px", borderRadius: 4 }}>
+            <MessageCircle size={14} /> Comment
+          </button>
+          <button type="button" style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#00000099", fontWeight: 600, fontSize: "0.76rem", cursor: "pointer", padding: "6px 10px", borderRadius: 4 }}>
+            <Repeat2 size={14} /> Repost
+          </button>
+          <button type="button" style={{ background: "none", border: "none", display: "flex", alignItems: "center", gap: 6, color: "#00000099", fontWeight: 600, fontSize: "0.76rem", cursor: "pointer", padding: "6px 10px", borderRadius: 4 }}>
+            <Send size={14} /> Send
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 5. YOUTUBE PREVIEW
+  if (platform === "youtube") {
+    return (
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: 16,
+          border: "1px solid #e5e5e5",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+          padding: "16px",
+          fontFamily: "'Roboto', system-ui, sans-serif",
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#ff0000",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "0.95rem",
+            }}
+          >
+            {clientInitial}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0f0f0f", display: "flex", alignItems: "center", gap: 4 }}>
+              <span>{clientName}</span>
+              <CheckCircle2 size={12} color="#606060" fill="#606060" />
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "#606060" }}>Community post • 2 hours ago</div>
+          </div>
+          <div style={{ color: "#606060" }}>
+            <MoreHorizontal size={18} />
+          </div>
+        </div>
+
+        {/* Text is ABOVE media */}
+        <div style={{ margin: "12px 0 10px", fontSize: "0.85rem", lineHeight: 1.45, color: "#0f0f0f", whiteSpace: "pre-wrap" }}>
+          {primaryCaption || "Stay connected with your YouTube subscribers and audience through community updates, polls, and video releases..."}
+        </div>
+        {hashtags && (
+          <div style={{ marginBottom: 10, fontSize: "0.78rem", color: "#065fd4", fontWeight: 500 }}>
+            {hashtags}
+          </div>
+        )}
+
+        {/* 16:9 Thumbnail Media */}
+        <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #e5e5e5" }}>
+          {renderMedia(200, false, "cover")}
+        </div>
+
+        {/* YouTube Community Action Bar */}
+        <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 20, color: "#606060", fontSize: "0.78rem", fontWeight: 600 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <ThumbsUp size={16} /> <span>2.4K</span>
+          </div>
+          <div>
+            <ThumbsDown size={16} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <MessageCircle size={16} /> <span>168</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+            <Share2 size={16} /> <span>Share</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 6. TIKTOK PREVIEW
+  if (platform === "tiktok") {
+    return (
+      <div
+        style={{
+          background: "#000000",
+          borderRadius: 16,
+          boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+          overflow: "hidden",
+          position: "relative",
+          minHeight: 440,
+          color: "#ffffff",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        }}
+      >
+        {/* Full-height Media */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
+          {renderMedia(440, false, "cover")}
+        </div>
+
+        {/* Top Header */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)",
+          }}
+        >
+          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#ff0050", background: "rgba(0,0,0,0.5)", padding: "2px 6px", borderRadius: 4 }}>
+            LIVE
+          </span>
+          <div style={{ display: "flex", gap: 14, fontSize: "0.85rem", fontWeight: 700 }}>
+            <span style={{ color: "rgba(255,255,255,0.6)" }}>Following</span>
+            <span style={{ color: "#ffffff", borderBottom: "2px solid #ffffff", paddingBottom: 2 }}>For You</span>
+          </div>
+          <Search size={16} color="#ffffff" />
+        </div>
+
+        {/* Right Floating Stack */}
+        <div
+          style={{
+            position: "absolute",
+            right: 12,
+            bottom: 70,
+            zIndex: 3,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+          }}
+        >
+          {/* Avatar with plus badge */}
+          <div style={{ position: "relative" }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", border: "2px solid #ffffff", background: "#ff0050", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.85rem" }}>
+              {clientInitial}
+            </div>
+            <div style={{ position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%)", width: 16, height: 16, borderRadius: "50%", background: "#fe2c55", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 900 }}>
+              +
+            </div>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <Heart size={24} fill="#ffffff" color="#ffffff" />
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, marginTop: 2 }}>24.8K</div>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <MessageCircle size={24} fill="#ffffff" color="#ffffff" />
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, marginTop: 2 }}>1,420</div>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <Bookmark size={24} fill="#ffffff" color="#ffffff" />
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, marginTop: 2 }}>950</div>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <Share2 size={24} color="#ffffff" />
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, marginTop: 2 }}>Share</div>
+          </div>
+
+          {/* Vinyl record spinning */}
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#222", border: "4px solid #111", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Music2 size={14} color="#ffffff" />
+          </div>
+        </div>
+
+        {/* Bottom Content Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 2,
+            padding: "24px 70px 14px 14px",
+            background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)",
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#ffffff" }}>
+            {accountHandle}
+          </div>
+          <div style={{ fontSize: "0.78rem", lineHeight: 1.35, color: "#ffffff", marginTop: 4, maxHeight: 60, overflowY: "auto" }}>
+            {primaryCaption || "Create viral short-form video hooks that capture attention instantly..."}
+          </div>
+          <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#ffffff", marginTop: 4 }}>
+            #fyp #viral {hashtags}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "rgba(255,255,255,0.85)", marginTop: 6 }}>
+            <Music2 size={12} />
+            <span>Original Sound - {clientName}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 7. DEFAULT / INSTAGRAM PREVIEW
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        borderRadius: 16,
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 10px 25px rgba(0,0,0,0.06)",
+        overflow: "hidden",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      }}
+    >
+      {/* Profile Header with Gradient Ring */}
+      <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #f1f5f9" }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+            padding: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: "50%",
+              background: "#ffffff",
+              padding: 1.5,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #4f46e5, #0ea5e9)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontWeight: 800,
+                fontSize: "0.85rem",
+              }}
+            >
+              {clientInitial}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.84rem", color: "#262626", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {accountHandle.replace(/^@/, "")}
+          </div>
+          <div style={{ fontSize: "0.7rem", color: "#8e8e8e" }}>
+            {location || "Sponsored"}
+          </div>
+        </div>
+
+        <div style={{ color: "#262626", cursor: "pointer" }}>
+          <MoreHorizontal size={16} />
+        </div>
+      </div>
+
+      {/* Media */}
+      {renderMedia(260, false, "cover")}
+
+      {/* Instagram Actions Strip */}
+      <div style={{ padding: "12px 14px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 14, color: "#262626" }}>
+            <Heart size={22} style={{ cursor: "pointer" }} />
+            <MessageCircle size={22} style={{ cursor: "pointer" }} />
+            <Send size={20} style={{ cursor: "pointer" }} />
+          </div>
+          <Bookmark size={22} color="#262626" style={{ cursor: "pointer" }} />
+        </div>
+
+        {/* Likes */}
+        <div style={{ fontSize: "0.78rem", color: "#262626", marginBottom: 6 }}>
+          Liked by <strong>tech_trends</strong> and <strong>1,248 others</strong>
+        </div>
+
+        {/* Caption */}
+        <div style={{ fontSize: "0.82rem", lineHeight: 1.45, color: "#262626", maxHeight: 95, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+          <strong style={{ marginRight: 6 }}>{accountHandle.replace(/^@/, "")}</strong>
+          {primaryCaption || "Your engaging post caption will appear here in real-time..."}
+        </div>
+
+        {hashtags && (
+          <div style={{ marginTop: 6, fontSize: "0.78rem", color: "#00376b", fontWeight: 600 }}>
+            {hashtags}
+          </div>
+        )}
+
+        <div style={{ marginTop: 6, fontSize: "0.74rem", color: "#8e8e8e", cursor: "pointer" }}>
+          View all 24 comments
+        </div>
+
+        {firstComment && (
+          <div style={{ marginTop: 6, padding: "6px 10px", background: "#f8fafc", borderRadius: 6, fontSize: "0.74rem", color: "#475569" }}>
+            <strong>Pinned:</strong> {firstComment}
+          </div>
+        )}
+
+        <div style={{ marginTop: 6, fontSize: "0.65rem", color: "#8e8e8e", textTransform: "uppercase", letterSpacing: 0.4 }}>
+          2 HOURS AGO
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CreatePostModal({
   isOpen,
@@ -156,10 +1051,15 @@ export default function CreatePostModal({
   const togglePlatform = (pId) => {
     if (selectedPlatforms.includes(pId)) {
       if (selectedPlatforms.length > 1) {
-        setSelectedPlatforms(selectedPlatforms.filter((p) => p !== pId));
+        const next = selectedPlatforms.filter((p) => p !== pId);
+        setSelectedPlatforms(next);
+        if (activePreviewPlatform === pId) {
+          setActivePreviewPlatform(next[0] || "instagram");
+        }
       }
     } else {
       setSelectedPlatforms([...selectedPlatforms, pId]);
+      setActivePreviewPlatform(pId);
     }
   };
 
@@ -647,32 +1547,35 @@ export default function CreatePostModal({
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
                 <Eye size={16} /> Live Device Feed Preview
               </div>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                 {(selectedPlatforms.length > 0
                   ? selectedPlatforms
                   : clientAccounts.length > 0
                   ? [...new Set(clientAccounts.map((a) => a.platform))]
                   : ["instagram", "facebook", "linkedin"]
                 ).map((plat) => {
-                  const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: "📱" };
+                  const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: "📱", color: "#0f172a" };
+                  const isActive = activePreviewPlatform === plat;
                   return (
                     <button
                       key={plat}
                       type="button"
                       onClick={() => setActivePreviewPlatform(plat)}
                       style={{
-                        padding: "4px 9px",
-                        borderRadius: 6,
-                        fontSize: "0.72rem",
+                        padding: "5px 11px",
+                        borderRadius: 8,
+                        fontSize: "0.74rem",
                         fontWeight: 700,
                         textTransform: "capitalize",
-                        border: "none",
+                        border: isActive ? `1.5px solid ${pConfig.color}` : "1.5px solid #e2e8f0",
                         cursor: "pointer",
-                        background: activePreviewPlatform === plat ? "#0f172a" : "#f1f5f9",
-                        color: activePreviewPlatform === plat ? "#ffffff" : "#64748b",
+                        background: isActive ? (pConfig.color === "#000000" ? "#0f172a" : pConfig.color) : "#ffffff",
+                        color: isActive ? "#ffffff" : "#475569",
                         display: "flex",
                         alignItems: "center",
-                        gap: 4,
+                        gap: 5,
+                        boxShadow: isActive ? `0 2px 8px ${pConfig.color}40` : "none",
+                        transition: "all 0.15s ease",
                       }}
                     >
                       <span>{pConfig.icon}</span>
@@ -683,67 +1586,19 @@ export default function CreatePostModal({
               </div>
             </div>
 
-            {/* Mock Phone Frame */}
-            <div style={{ background: "#ffffff", borderRadius: 16, border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-              
-              {/* Profile Header */}
-              <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #f1f5f9" }}>
-                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, #4f46e5, #0ea5e9)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "0.9rem" }}>
-                  {selectedClient.name ? selectedClient.name.charAt(0) : "A"}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0f172a" }}>
-                    {selectedClient.name || "Adstra Digital"}
-                  </div>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                    {location ? location : (activePreviewPlatform === "linkedin" ? "Sponsored • 1st" : "Sponsored")}
-                  </div>
-                </div>
-              </div>
-
-              {/* Media Container */}
-              <div style={{ width: "100%", height: 260, background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                {mediaUrl ? (
-                  <img
-                    src={mediaUrl}
-                    alt="Preview"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <div style={{ color: "#94a3b8", textAlign: "center", padding: 20 }}>
-                    <ImageIcon size={36} style={{ marginBottom: 8 }} />
-                    <p style={{ fontSize: "0.8rem", margin: 0 }}>No media attached</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Feed Text and Action Strip */}
-              <div style={{ padding: "14px 16px" }}>
-                <div style={{ display: "flex", gap: 14, marginBottom: 10, color: "#334155" }}>
-                  <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>❤️ 1.2k</span>
-                  <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>💬 148</span>
-                  <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>🔁 84</span>
-                </div>
-
-                <div style={{ fontSize: "0.84rem", lineHeight: 1.5, color: "#1e293b", maxHeight: 110, overflowY: "auto", whiteSpace: "pre-wrap" }}>
-                  <strong style={{ marginRight: 6 }}>{selectedClient.name || "Brand"}</strong>
-                  {primaryCaption || "Your engaging post caption will appear here in real-time..."}
-                </div>
-
-                {hashtags && (
-                  <div style={{ marginTop: 8, fontSize: "0.78rem", color: "#4f46e5", fontWeight: 600 }}>
-                    {hashtags}
-                  </div>
-                )}
-
-                {firstComment && (
-                  <div style={{ marginTop: 8, padding: "6px 10px", background: "#f8fafc", borderRadius: 6, fontSize: "0.75rem", color: "#475569" }}>
-                    <strong>Pinned Comment:</strong> {firstComment}
-                  </div>
-                )}
-              </div>
-
-            </div>
+            {/* Dynamic Native Platform Feed Preview */}
+            <PlatformFeedPreview
+              platform={activePreviewPlatform}
+              client={selectedClient}
+              account={clientAccounts.find((a) => a.platform === activePreviewPlatform)}
+              primaryCaption={primaryCaption}
+              hashtags={hashtags}
+              location={location}
+              firstComment={firstComment}
+              mediaUrl={mediaUrl}
+              postType={postType}
+              title={title}
+            />
 
           </div>
 
