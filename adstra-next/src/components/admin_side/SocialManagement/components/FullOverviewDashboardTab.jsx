@@ -15,6 +15,7 @@ import {
   Sparkles,
   Building2,
   ArrowUpRight,
+  FolderArchive,
 } from "lucide-react";
 
 export default function FullOverviewDashboardTab({
@@ -168,6 +169,19 @@ export default function FullOverviewDashboardTab({
           <div>
             <div style={{ fontWeight: 800, fontSize: "0.92rem", color: "#0f172a" }}>Social Management</div>
             <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Calendar, Posts, Approvals</div>
+          </div>
+        </div>
+
+        <div
+          onClick={() => onNavigateTab("assets")}
+          style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <FolderArchive size={22} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "0.92rem", color: "#0f172a" }}>Client Assets</div>
+            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Logos, Reels, Creatives & Docs</div>
           </div>
         </div>
 

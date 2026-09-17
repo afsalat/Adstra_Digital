@@ -19,10 +19,12 @@ import {
   Network,
   RefreshCw,
   Settings,
+  FolderArchive,
 } from "lucide-react";
 
 import FullOverviewDashboardTab from "./components/FullOverviewDashboardTab";
 import DedicatedSocialSection from "./components/DedicatedSocialSection";
+import MediaLibraryTab from "./components/MediaLibraryTab";
 import CampaignsTab from "./components/CampaignsTab";
 import AnalyticsReportsTab from "./components/AnalyticsReportsTab";
 import TeamDesignationTreeTab from "./components/TeamDesignationTreeTab";
@@ -56,7 +58,7 @@ function SocialManagementInner() {
   // Sync tab from URL if it changes
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    if (tabParam && ["overview", "social", "campaigns", "reports", "team_tree", "settings"].includes(tabParam)) {
+    if (tabParam && ["overview", "social", "assets", "campaigns", "reports", "team_tree", "settings"].includes(tabParam)) {
       setActiveMainModule(tabParam);
     }
   }, [searchParams]);
@@ -236,7 +238,30 @@ function SocialManagementInner() {
           <Share2 size={18} /> Social Media Management
         </button>
 
-        {/* 3. Campaign (Campin) */}
+        {/* 3. Client Assets */}
+        <button
+          className={`social-nav-tab-item ${activeMainModule === "assets" ? "active" : ""}`}
+          onClick={() => setActiveMainModule("assets")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "12px 20px",
+            borderRadius: 12,
+            fontSize: "0.9rem",
+            fontWeight: 800,
+            cursor: "pointer",
+            border: "none",
+            background: activeMainModule === "assets" ? "#0f172a" : "transparent",
+            color: activeMainModule === "assets" ? "#ffffff" : "#475569",
+            transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <FolderArchive size={18} /> Client Assets
+        </button>
+
+        {/* 4. Campaigns */}
         <button
           className={`social-nav-tab-item ${activeMainModule === "campaigns" ? "active" : ""}`}
           onClick={() => setActiveMainModule("campaigns")}
@@ -354,6 +379,16 @@ function SocialManagementInner() {
             }}
             onOpenCreateWithAsset={handleOpenCreateWithAsset}
             onOpenAiStudio={() => setAiModalOpen(true)}
+          />
+        )}
+
+        {activeMainModule === "assets" && (
+          <MediaLibraryTab
+            mediaAssets={mediaAssets}
+            clients={clients}
+            selectedClientId={selectedClientId}
+            onRefresh={fetchData}
+            onOpenCreateWithAsset={handleOpenCreateWithAsset}
           />
         )}
 
