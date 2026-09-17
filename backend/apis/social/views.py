@@ -242,10 +242,24 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         actor_role = self.request.data.get('actor_role') or 'Content Creator'
         notes = self.request.data.get('notes') or self.request.data.get('update_reason')
 
-        # If post had revision feedback or script was revised
-        if prev_feedback or prev_caption != post.primary_caption or notes:
-            action = 'reworked' if (prev_feedback or prev_status in ['script', 'designing']) else 'updated'
-            reason = notes or ('Script & copy revised based on feedback' if prev_caption != post.primary_caption else 'Post details updated')
+        # If post was rejected and is now resubmitted for approval
+        if prev_feedback and post.status == 'script_approval':
+            action = 'Script Reworked & Resubmitted'
+            reason = notes or 'Script reworked addressing critique and resubmitted for approval'
+            post.client_feedback = ''
+            post.save(update_fields=['client_feedback'])
+            record_approval_action(post, action, actor_name, actor_role, reason)
+        elif prev_feedback and post.status in ['script', 'draft']:
+            action = 'Script Rework Draft Saved'
+            reason = notes or 'Script revisions drafted by author'
+            record_approval_action(post, action, actor_name, actor_role, reason)
+        elif prev_status == 'script' and post.status == 'script_approval':
+            action = 'Submitted for Script Approval'
+            reason = notes or 'Submitted script for internal review'
+            record_approval_action(post, action, actor_name, actor_role, reason)
+        elif prev_caption != post.primary_caption or notes:
+            action = 'Script / Content Updated'
+            reason = notes or ('Script & copy revised' if prev_caption != post.primary_caption else 'Post details updated')
             record_approval_action(post, action, actor_name, actor_role, reason)
 
     @action(detail=True, methods=['post'])
@@ -345,6 +359,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             post.scheduled_at = request.data.get('scheduled_at')
 
         prev_status = post.status
+        prev_feedback = post.client_feedback
         post.status = target_stage
 
         if target_stage == 'published':
@@ -352,7 +367,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         if action_type == 'reject' or 'reject' in notes.lower():
             post.client_feedback = notes
-        elif target_stage in ['approved', 'published']:
+        elif target_stage in ['script_approval', 'team_review', 'client_review', 'approved', 'published']:
+            # Resubmitted or approved: clear previous loopback critique
             post.client_feedback = ''
 
         post.save()
@@ -374,17 +390,29 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                 actor_role = actor_role or "Reviewer"
         elif action_type == 'advance':
             if target_stage == 'script_approval':
-                action_label = "Submitted for Script Approval"
-                actor_role = actor_role or "Content Creator"
+                if prev_feedback:
+                    action_label = "Script Reworked & Resubmitted"
+                    actor_role = actor_role or "Content Creator"
+                else:
+                    action_label = "Submitted for Script Approval"
+                    actor_role = actor_role or "Content Creator"
             elif target_stage == 'designing':
                 action_label = "Script Approved → Moved to Designing"
                 actor_role = actor_role or "Content Reviewer"
             elif target_stage == 'team_review':
-                action_label = "Design Completed → Sent to Team QA"
-                actor_role = actor_role or "Graphic Designer"
+                if prev_feedback:
+                    action_label = "Creative Assets Revised & Resubmitted"
+                    actor_role = actor_role or "Graphic Designer"
+                else:
+                    action_label = "Design Completed → Sent to Team QA"
+                    actor_role = actor_role or "Graphic Designer"
             elif target_stage == 'client_review':
-                action_label = "Team QA Approved → Sent to Client"
-                actor_role = actor_role or "QA Lead"
+                if prev_feedback:
+                    action_label = "Client Revisions Completed"
+                    actor_role = actor_role or "Account Lead"
+                else:
+                    action_label = "Team QA Approved → Sent to Client"
+                    actor_role = actor_role or "QA Lead"
             elif target_stage in ['approved', 'post_schedule', 'scheduled']:
                 action_label = "Client Approved & Scheduled"
                 actor_role = actor_role or "Account Lead"

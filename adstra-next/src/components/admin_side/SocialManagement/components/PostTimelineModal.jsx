@@ -51,12 +51,32 @@ function formatEventDate(dateString) {
   }
 }
 
-function getEventStyle(action = "", notes = "") {
-  const act = (action || "").toLowerCase();
-  const not = (notes || "").toLowerCase();
+function formatEventTitle(action = "") {
+  if (!action) return "Workflow Milestone";
+  const lower = action.toLowerCase().trim();
+  if (lower === "created") return "Post & Script Drafted";
+  if (lower === "submitted_review") return "Submitted for Script Approval";
+  if (lower === "reworked") return "Script Reworked & Resubmitted";
+  if (lower === "updated") return "Post Content Updated";
+  if (lower === "changes_requested") return "Revisions Requested";
+  if (lower === "approved") return "Post Approved";
+  return action;
+}
 
-  // Rejections / Rework requested
-  if (act.includes("reject") || act.includes("change") || not.includes("reject") || act.includes("loopback")) {
+function getEventStyle(action = "", notes = "") {
+  const act = (action || "").toLowerCase().trim();
+  const not = (notes || "").toLowerCase().trim();
+
+  // 1. Rejections / Critique / Rework requested
+  if (
+    act.includes("reject") ||
+    act.includes("rework requested") ||
+    act.includes("changes requested") ||
+    act.includes("needs work") ||
+    act.includes("needs revision") ||
+    act.includes("loopback") ||
+    not.includes("reject")
+  ) {
     return {
       type: "rejection",
       color: "#dc2626", // Red 600
@@ -69,8 +89,12 @@ function getEventStyle(action = "", notes = "") {
     };
   }
 
-  // Reworked / Updated
-  if (act.includes("rework") || act.includes("update") || act.includes("revise") || not.includes("rework") || not.includes("revise")) {
+  // 2. Reworked / Revised / Resubmitted
+  if (
+    act.includes("rework") ||
+    act.includes("revise") ||
+    act.includes("resubmit")
+  ) {
     return {
       type: "rework",
       color: "#d97706", // Amber 600
@@ -79,12 +103,40 @@ function getEventStyle(action = "", notes = "") {
       badgeColor: "#92400e",
       badgeBg: "#fef3c7",
       badgeLabel: "Reworked & Resubmitted",
-      icon: FileEdit,
+      icon: RotateCcw,
     };
   }
 
-  // Approved
-  if (act.includes("approv") || act.includes("pass") || act.includes("scheduled")) {
+  // 3. Submissions for Review / Hand-offs
+  // Must be checked before 'approved', because 'Advanced to Script Approval' contains 'approv' and 'advance'
+  if (
+    act.includes("submit") ||
+    act.includes("to script approval") ||
+    act.includes("to team review") ||
+    act.includes("to client review") ||
+    act.includes("sent to") ||
+    act.includes("ready for qa") ||
+    act.includes("script approval")
+  ) {
+    return {
+      type: "submitted",
+      color: "#7c3aed", // Violet 600
+      bgColor: "#f5f3ff",
+      borderColor: "#ddd6fe",
+      badgeColor: "#5b21b6",
+      badgeBg: "#ede9fe",
+      badgeLabel: "Submitted for Review",
+      icon: Send,
+    };
+  }
+
+  // 4. Approved
+  if (
+    act.includes("approved") ||
+    act.includes("sign-off") ||
+    act.includes("passed") ||
+    act.includes("scheduled")
+  ) {
     return {
       type: "approved",
       color: "#16a34a", // Green 600
@@ -97,7 +149,7 @@ function getEventStyle(action = "", notes = "") {
     };
   }
 
-  // Published
+  // 5. Published
   if (act.includes("publish")) {
     return {
       type: "published",
@@ -111,7 +163,7 @@ function getEventStyle(action = "", notes = "") {
     };
   }
 
-  // Created / Draft
+  // 6. Created / Draft
   if (act.includes("creat") || act.includes("draft")) {
     return {
       type: "created",
@@ -125,30 +177,30 @@ function getEventStyle(action = "", notes = "") {
     };
   }
 
-  // Submitted for Review
-  if (act.includes("submit")) {
+  // 7. QA Checkpoint / Inspection
+  if (act.includes("checkpoint") || act.includes("qa") || act.includes("verified")) {
     return {
-      type: "submitted",
-      color: "#7c3aed", // Violet 600
-      bgColor: "#f5f3ff",
-      borderColor: "#ddd6fe",
-      badgeColor: "#5b21b6",
-      badgeBg: "#ede9fe",
-      badgeLabel: "Submitted for Review",
-      icon: Send,
+      type: "checkpoint",
+      color: "#2563eb", // Blue 600
+      bgColor: "#eff6ff",
+      borderColor: "#bfdbfe",
+      badgeColor: "#1e40af",
+      badgeBg: "#dbeafe",
+      badgeLabel: "QA Checkpoint",
+      icon: ShieldAlert,
     };
   }
 
-  // Default Advanced / Transferred
+  // 8. Default Advanced / Transferred
   return {
     type: "transition",
-    color: "#16a34a",
-    bgColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
-    badgeColor: "#166534",
-    badgeBg: "#dcfce7",
+    color: "#0284c7", // Sky 600
+    bgColor: "#f0f9ff",
+    borderColor: "#bae6fd",
+    badgeColor: "#0369a1",
+    badgeBg: "#e0f2fe",
     badgeLabel: "Stage Advanced",
-    icon: CheckCircle2,
+    icon: ArrowRight,
   };
 }
 
@@ -583,7 +635,7 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
                         style={{
                           width: 3,
                           flex: 1,
-                          background: "#16a34a", // Solid green connecting line for completed journey
+                          background: "#cbd5e1", // Clean slate connecting line for timeline track
                           minHeight: 36,
                           margin: "4px 0",
                           borderRadius: 2,
@@ -614,7 +666,7 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
                             color: "#0f172a",
                           }}
                         >
-                          {item.action || "Milestone"}
+                          {formatEventTitle(item.action)}
                         </h4>
 
                         {/* Action Badge */}
@@ -705,8 +757,12 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
                             ? "Critique / Rejection Reason:"
                             : styleMeta.type === "rework"
                             ? "Rework & Revision Details:"
+                            : styleMeta.type === "submitted"
+                            ? "Submission Brief / Notes:"
                             : styleMeta.type === "approved"
                             ? "Approval Notes:"
+                            : styleMeta.type === "checkpoint"
+                            ? "QA Checkpoint Details:"
                             : "Reason / Details:"}
                         </div>
                         <p

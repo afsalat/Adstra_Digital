@@ -204,10 +204,23 @@ export default function WorkflowPipelineTab({
   const handleTransition = async (post, targetStage, actionType, notes = "", extraData = {}) => {
     setSubmittingAction(true);
     try {
+      const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+      let actorName = "Creative Team";
+      let actorRole = "Team Member";
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          actorName = parsed.fullname || parsed.name || parsed.username || actorName;
+          actorRole = parsed.role || actorRole;
+        } catch (err) {}
+      }
+
       await axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
         target_stage: targetStage,
         action_type: actionType,
         notes: notes || actionNotes,
+        actor_name: actorName,
+        actor_role: actorRole,
         ...extraData,
       });
       setModalAction(null);

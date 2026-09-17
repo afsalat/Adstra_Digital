@@ -31,7 +31,7 @@ export default function DedicatedSocialSection({
   const counts = {
     scripts: posts.filter((p) =>
       ["script", "draft"].includes(p.status) ||
-      (p.status === "rejected" && p.client_feedback?.toLowerCase().includes("script"))
+      (p.status === "rejected" && (!p.client_feedback || p.client_feedback.toLowerCase().includes("script")))
     ).length,
     script_approval: posts.filter((p) => p.status === "script_approval").length,
     designing: posts.filter((p) => p.status === "designing").length,

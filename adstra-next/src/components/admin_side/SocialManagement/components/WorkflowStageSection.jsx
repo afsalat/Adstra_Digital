@@ -167,12 +167,15 @@ export default function WorkflowStageSection({
       all: clientFiltered.filter(
         (p) =>
           ["script", "draft", "script_approval"].includes(p.status) ||
-          (p.status === "rejected" && p.client_feedback?.toLowerCase().includes("script"))
+          p.status === "rejected" ||
+          Boolean(p.client_feedback)
       ).length,
-      drafts: clientFiltered.filter((p) => ["script", "draft"].includes(p.status)).length,
+      drafts: clientFiltered.filter(
+        (p) => ["script", "draft"].includes(p.status) && !p.client_feedback
+      ).length,
       underReview: clientFiltered.filter((p) => p.status === "script_approval").length,
       revision: clientFiltered.filter(
-        (p) => p.status === "rejected" && p.client_feedback?.toLowerCase().includes("script")
+        (p) => p.status === "rejected" || Boolean(p.client_feedback)
       ).length,
     };
   }, [posts, selectedClientId, stageId]);
@@ -197,9 +200,9 @@ export default function WorkflowStageSection({
 
       // Script Sub-Filter in Stage 1
       if (stageId === "scripts" && scriptSubFilter !== "all") {
-        if (scriptSubFilter === "draft" && !["script", "draft"].includes(p.status)) return false;
+        if (scriptSubFilter === "draft" && (!["script", "draft"].includes(p.status) || Boolean(p.client_feedback))) return false;
         if (scriptSubFilter === "under_review" && p.status !== "script_approval") return false;
-        if (scriptSubFilter === "revision" && p.status !== "rejected") return false;
+        if (scriptSubFilter === "revision" && !(p.status === "rejected" || Boolean(p.client_feedback))) return false;
       }
 
       // Format filter
@@ -223,10 +226,23 @@ export default function WorkflowStageSection({
   const handleTransition = async (post, targetStage, actionType, notes = "", extraData = {}) => {
     setSubmittingAction(true);
     try {
+      const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+      let actorName = "Creative Team";
+      let actorRole = "Team Member";
+      if (userStr) {
+        try {
+          const parsed = JSON.parse(userStr);
+          actorName = parsed.fullname || parsed.name || parsed.username || actorName;
+          actorRole = parsed.role || actorRole;
+        } catch (err) {}
+      }
+
       await axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
         target_stage: targetStage,
         action_type: actionType,
         notes: notes || actionNotes,
+        actor_name: actorName,
+        actor_role: actorRole,
         ...extraData,
       });
       setModalAction(null);
@@ -1042,7 +1058,7 @@ function StageListingTable({
                               >
                                 ● Under Approval
                               </span>
-                            ) : post.status === "rejected" ? (
+                            ) : isRejected ? (
                               <span
                                 style={{
                                   background: "#fef2f2",
@@ -1244,7 +1260,7 @@ function StageListingTable({
                             >
                               View in Approval →
                             </button>
-                          ) : post.status === "rejected" ? (
+                          ) : isRejected ? (
                             <button
                               onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
                               style={{
@@ -1257,9 +1273,12 @@ function StageListingTable({
                                 fontWeight: 800,
                                 cursor: "pointer",
                                 whiteSpace: "nowrap",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
                               }}
                             >
-                              Revise Script →
+                              <RotateCcw size={12} /> Rework Script →
                             </button>
                           ) : (
                             <button

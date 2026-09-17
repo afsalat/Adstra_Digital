@@ -313,6 +313,7 @@ export default function ScriptCreationModal({
     initialData?.script_data?.for_posting?.hashtag || initialData?.hashtags || ""
   );
   const [priority, setPriority] = useState(initialData?.priority || "medium");
+  const [reworkNotes, setReworkNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Auto-sync client change & initialData
@@ -553,6 +554,17 @@ export default function ScriptCreationModal({
         `\nLOGO, ASSETS & CTA: ${logoAssets}`;
     }
 
+    const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+    let actorName = "Creative Team";
+    let actorRole = "Content Creator";
+    if (userStr) {
+      try {
+        const parsed = JSON.parse(userStr);
+        actorName = parsed.fullname || parsed.name || parsed.username || actorName;
+        actorRole = parsed.role || actorRole;
+      } catch (err) {}
+    }
+
     const payload = {
       client_profile: clientId,
       title:
@@ -580,7 +592,15 @@ export default function ScriptCreationModal({
       status: targetStatus, // 'script' (Draft) or 'script_approval' (Review)
       priority,
       platforms: ["instagram", "facebook", "linkedin"],
+      actor_name: actorName,
+      actor_role: actorRole,
+      update_reason: reworkNotes.trim() || undefined,
     };
+
+    // If resubmitting for review from a rejected rework cycle, clear the client feedback
+    if (initialData?.id && targetStatus === "script_approval" && initialData.client_feedback) {
+      payload.client_feedback = "";
+    }
 
     try {
       if (initialData?.id) {
@@ -940,23 +960,48 @@ export default function ScriptCreationModal({
           {initialData?.client_feedback && (
             <div
               style={{
-                background: "#fef2f2",
-                border: "1.5px solid #fca5a5",
-                borderRadius: 12,
-                padding: "12px 16px",
+                background: "#fffbeb",
+                border: "1.5px solid #fde68a",
+                borderRadius: 14,
+                padding: "14px 18px",
                 display: "flex",
-                alignItems: "flex-start",
-                gap: 10,
+                flexDirection: "column",
+                gap: 12,
               }}
             >
-              <AlertTriangle size={18} color="#dc2626" style={{ marginTop: 2, flexShrink: 0 }} />
-              <div>
-                <strong style={{ color: "#991b1b", fontSize: "0.84rem", display: "block", marginBottom: 2 }}>
-                  Reviewer Critique / Revision Notes:
-                </strong>
-                <p style={{ margin: 0, fontSize: "0.82rem", color: "#b91c1c", lineHeight: 1.4 }}>
-                  {initialData.client_feedback}
-                </p>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <AlertTriangle size={20} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: "#92400e", fontSize: "0.88rem", display: "block", marginBottom: 3 }}>
+                    ⚠️ Script Returned for Revision / Rework:
+                  </strong>
+                  <p style={{ margin: 0, fontSize: "0.84rem", color: "#78350f", lineHeight: 1.45 }}>
+                    {initialData.client_feedback}
+                  </p>
+                </div>
+              </div>
+
+              {/* Rework Summary Input Field */}
+              <div style={{ borderTop: "1px dashed #fde68a", paddingTop: 10 }}>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#92400e", marginBottom: 5 }}>
+                  Revision Summary / What was changed: (Optional summary logged to history)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Revised hook with punchier angle and updated CTA..."
+                  value={reworkNotes}
+                  onChange={(e) => setReworkNotes(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "7px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #fcd34d",
+                    background: "#ffffff",
+                    fontSize: "0.82rem",
+                    color: "#1e293b",
+                    outline: "none",
+                  }}
+                />
               </div>
             </div>
           )}
@@ -1864,16 +1909,16 @@ export default function ScriptCreationModal({
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Save as Script Draft */}
+            {/* Save as Script Draft / Rework Draft */}
             <button
               onClick={() => handleSubmit("script")}
               disabled={submitting}
               style={{
                 padding: "9px 18px",
                 borderRadius: 10,
-                border: "1px solid #c7d2fe",
-                background: "#f5f3ff",
-                color: "#4f46e5",
+                border: initialData?.client_feedback ? "1px solid #fde68a" : "1px solid #c7d2fe",
+                background: initialData?.client_feedback ? "#fffbeb" : "#f5f3ff",
+                color: initialData?.client_feedback ? "#b45309" : "#4f46e5",
                 fontWeight: 800,
                 fontSize: "0.85rem",
                 cursor: "pointer",
@@ -1883,10 +1928,14 @@ export default function ScriptCreationModal({
               }}
             >
               <Save size={15} />
-              {submitting ? "Saving..." : "Save as Script Draft"}
+              {submitting
+                ? "Saving..."
+                : initialData?.client_feedback
+                ? "Save Rework Draft"
+                : "Save as Script Draft"}
             </button>
 
-            {/* Submit for Script Approval */}
+            {/* Submit for Script Approval / Resubmit */}
             <button
               onClick={() => handleSubmit("script_approval")}
               disabled={submitting}
@@ -1894,7 +1943,7 @@ export default function ScriptCreationModal({
                 padding: "9px 22px",
                 borderRadius: 10,
                 border: "none",
-                background: "#4f46e5",
+                background: initialData?.client_feedback ? "#ea580c" : "#4f46e5",
                 color: "#fff",
                 fontWeight: 800,
                 fontSize: "0.85rem",
@@ -1902,11 +1951,17 @@ export default function ScriptCreationModal({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                boxShadow: "0 2px 8px rgba(79, 70, 229, 0.3)",
+                boxShadow: initialData?.client_feedback
+                  ? "0 2px 8px rgba(234, 88, 12, 0.3)"
+                  : "0 2px 8px rgba(79, 70, 229, 0.3)",
               }}
             >
-              <Send size={15} />
-              {submitting ? "Submitting..." : "Submit for Script Approval →"}
+              {initialData?.client_feedback ? <RotateCcw size={15} /> : <Send size={15} />}
+              {submitting
+                ? "Submitting..."
+                : initialData?.client_feedback
+                ? "Resubmit for Approval →"
+                : "Submit for Script Approval →"}
             </button>
           </div>
         </div>
