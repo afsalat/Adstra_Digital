@@ -27,10 +27,10 @@ export default function DedicatedSocialSection({
 }) {
   const [socialSubTab, setSocialSubTab] = useState("scripts");
 
-  // Stage counts for badges
+  // Stage counts for badges (1:1 with pipeline stages)
   const counts = {
     scripts: posts.filter((p) =>
-      ["script", "draft", "script_approval"].includes(p.status) ||
+      ["script", "draft"].includes(p.status) ||
       (p.status === "rejected" && p.client_feedback?.toLowerCase().includes("script"))
     ).length,
     script_approval: posts.filter((p) => p.status === "script_approval").length,

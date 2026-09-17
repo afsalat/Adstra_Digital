@@ -73,7 +73,7 @@ export default function WorkflowStageSection({
           color: "#4f46e5",
           bgLight: "#eef2ff",
           icon: FileText,
-          statuses: ["script", "draft", "script_approval"],
+          statuses: ["script", "draft"],
           ctaLabel: "+ New Script / Idea",
         };
       case "script_approval":
@@ -876,6 +876,9 @@ export default function WorkflowStageSection({
           initialData={activeScriptPost}
           onSuccess={(savedStatus) => {
             if (onRefresh) onRefresh();
+            if (savedStatus === "script_approval" && onNavigateStage) {
+              onNavigateStage("script_approval");
+            }
           }}
         />
       )}
