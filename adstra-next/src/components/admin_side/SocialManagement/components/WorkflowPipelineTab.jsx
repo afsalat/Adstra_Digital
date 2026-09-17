@@ -32,7 +32,9 @@ import {
   MessageSquare,
   X,
   ChevronRight,
+  History,
 } from "lucide-react";
+import PostTimelineModal from "./PostTimelineModal";
 
 // The 7 Stages defined in the operational workflow diagram
 const WORKFLOW_STAGES = [
@@ -131,6 +133,7 @@ export default function WorkflowPipelineTab({
   const [formatFilter, setFormatFilter] = useState("all");
   const [activeStageFilter, setActiveStageFilter] = useState("all");
   const [copiedToken, setCopiedToken] = useState(null);
+  const [timelinePost, setTimelinePost] = useState(null);
 
   // Action / Feedback Modal State
   const [modalAction, setModalAction] = useState(null);
@@ -433,6 +436,7 @@ export default function WorkflowPipelineTab({
                         onCopyLink={copyPublicLink}
                         copiedToken={copiedToken}
                         onOpenModal={openActionModal}
+                        onOpenTimeline={(post) => setTimelinePost(post)}
                       />
                     ))
                   )}
@@ -556,6 +560,27 @@ export default function WorkflowPipelineTab({
                     </div>
 
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+                      <button
+                        onClick={() => setTimelinePost(post)}
+                        title="View post lifecycle timeline graph"
+                        style={{
+                          background: "#f8fafc",
+                          border: "1px solid #cbd5e1",
+                          padding: "5px 10px",
+                          borderRadius: 6,
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          color: "#334155",
+                        }}
+                      >
+                        <History size={12} style={{ color: "#16a34a" }} />
+                        Timeline
+                      </button>
+
                       <button
                         onClick={() => openActionModal(post, "edit_notes")}
                         style={{
@@ -937,6 +962,16 @@ export default function WorkflowPipelineTab({
         </div>
       )}
 
+      {/* Post Timeline Stepper Graph Modal */}
+      {timelinePost && (
+        <PostTimelineModal
+          post={timelinePost}
+          isOpen={Boolean(timelinePost)}
+          onClose={() => setTimelinePost(null)}
+          onRefresh={onRefresh}
+        />
+      )}
+
     </div>
   );
 }
@@ -950,6 +985,7 @@ function PostPipelineCard({
   onCopyLink,
   copiedToken,
   onOpenModal,
+  onOpenTimeline,
 }) {
   const isRejectedLoopback = Boolean(post.client_feedback);
 
@@ -987,25 +1023,61 @@ function PostPipelineCard({
           {post.client_name || "Adstra Client"}
         </span>
 
-        <span
-          style={{
-            fontSize: "0.68rem",
-            fontWeight: 700,
-            color: "#64748b",
-            background: "#f8fafc",
-            padding: "2px 6px",
-            borderRadius: 6,
-            border: "1px solid #e2e8f0",
-            textTransform: "uppercase",
-          }}
-        >
-          {post.post_type}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenTimeline && onOpenTimeline(post);
+            }}
+            title="View post lifecycle timeline & history"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 3,
+              background: "#f8fafc",
+              border: "1px solid #cbd5e1",
+              borderRadius: 6,
+              padding: "2px 6px",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "#334155",
+              cursor: "pointer",
+            }}
+          >
+            <History size={11} style={{ color: "#16a34a" }} />
+            Timeline
+          </button>
+          <span
+            style={{
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "#64748b",
+              background: "#f8fafc",
+              padding: "2px 6px",
+              borderRadius: 6,
+              border: "1px solid #e2e8f0",
+              textTransform: "uppercase",
+            }}
+          >
+            {post.post_type}
+          </span>
+        </div>
       </div>
 
       {/* Post Title */}
       <div>
-        <h5 style={{ margin: 0, fontSize: "0.85rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.3 }}>
+        <h5
+          onClick={() => onOpenTimeline && onOpenTimeline(post)}
+          title="Click to view lifecycle timeline graph"
+          style={{
+            margin: 0,
+            fontSize: "0.85rem",
+            fontWeight: 800,
+            color: "#0f172a",
+            lineHeight: 1.3,
+            cursor: "pointer",
+          }}
+        >
           {post.title || "Untitled Concept"}
         </h5>
         <p

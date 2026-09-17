@@ -223,9 +223,30 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
+        actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
+        actor_role = self.request.data.get('actor_role') or 'Content Creator'
         post = serializer.save(created_by=user)
-        actor_name = getattr(user, 'fullname', '') or getattr(user, 'username', 'Team Member')
-        record_approval_action(post, 'created', actor_name, 'Internal Team', 'Post drafted')
+        initial_action = 'submitted_review' if post.status == 'script_approval' else 'created'
+        notes = self.request.data.get('script_notes') or self.request.data.get('notes') or ('Submitted directly for script review' if post.status == 'script_approval' else 'Initial post draft created')
+        record_approval_action(post, initial_action, actor_name, actor_role, notes)
+
+    def perform_update(self, serializer):
+        prev_post = self.get_object()
+        prev_caption = prev_post.primary_caption
+        prev_status = prev_post.status
+        prev_feedback = prev_post.client_feedback
+        post = serializer.save()
+
+        user = self.request.user if self.request.user.is_authenticated else None
+        actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
+        actor_role = self.request.data.get('actor_role') or 'Content Creator'
+        notes = self.request.data.get('notes') or self.request.data.get('update_reason')
+
+        # If post had revision feedback or script was revised
+        if prev_feedback or prev_caption != post.primary_caption or notes:
+            action = 'reworked' if (prev_feedback or prev_status in ['script', 'designing']) else 'updated'
+            reason = notes or ('Script & copy revised based on feedback' if prev_caption != post.primary_caption else 'Post details updated')
+            record_approval_action(post, action, actor_name, actor_role, reason)
 
     @action(detail=True, methods=['post'])
     def reschedule(self, request, pk=None):
@@ -282,6 +303,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         action_type = request.data.get('action_type', 'advance')
         notes = request.data.get('notes', '')
         actor = request.data.get('actor_name')
+        actor_role = request.data.get('actor_role', '')
         if not actor:
             user = request.user if request.user.is_authenticated else None
             actor = getattr(user, 'fullname', '') or getattr(user, 'username', 'Team Member')
@@ -338,11 +360,59 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         # Audit History logging
         action_label = f"Stage changed: {prev_status} -> {target_stage}"
         if action_type == 'reject':
-            action_label = f"Rejected: Returned to {target_stage.replace('_', ' ').title()}"
+            if prev_status == 'script_approval':
+                action_label = "Script Rejected (Rework Requested)"
+                actor_role = actor_role or "Content Reviewer"
+            elif prev_status == 'team_review':
+                action_label = "Team QA Rejected (Rework Requested)"
+                actor_role = actor_role or "QA Lead"
+            elif prev_status == 'client_review':
+                action_label = "Client Requested Changes"
+                actor_role = actor_role or "Client"
+            else:
+                action_label = f"Rejected: Returned to {target_stage.replace('_', ' ').title()}"
+                actor_role = actor_role or "Reviewer"
         elif action_type == 'advance':
-            action_label = f"Advanced to {target_stage.replace('_', ' ').title()}"
+            if target_stage == 'script_approval':
+                action_label = "Submitted for Script Approval"
+                actor_role = actor_role or "Content Creator"
+            elif target_stage == 'designing':
+                action_label = "Script Approved → Moved to Designing"
+                actor_role = actor_role or "Content Reviewer"
+            elif target_stage == 'team_review':
+                action_label = "Design Completed → Sent to Team QA"
+                actor_role = actor_role or "Graphic Designer"
+            elif target_stage == 'client_review':
+                action_label = "Team QA Approved → Sent to Client"
+                actor_role = actor_role or "QA Lead"
+            elif target_stage in ['approved', 'post_schedule', 'scheduled']:
+                action_label = "Client Approved & Scheduled"
+                actor_role = actor_role or "Account Lead"
+            elif target_stage == 'published':
+                action_label = "Published Live"
+                actor_role = actor_role or "Publisher"
+            else:
+                action_label = f"Advanced to {target_stage.replace('_', ' ').title()}"
+                actor_role = actor_role or "Workflow Lead"
+        elif action_type == 'update':
+            action_label = "Post Reworked / Updated"
+            actor_role = actor_role or "Creative Team"
 
-        record_approval_action(post, action_label, actor, 'Workflow Engine', notes or f"Moved from {prev_status} to {target_stage}")
+        record_approval_action(post, action_label, actor, actor_role or "Workflow Team", notes or f"Moved from {prev_status} to {target_stage}")
+        return Response(SocialPostSerializer(post).data)
+
+    @action(detail=True, methods=['post'])
+    def add_timeline_note(self, request, pk=None):
+        post = self.get_object()
+        user = request.user if request.user.is_authenticated else None
+        actor = request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
+        actor_role = request.data.get('actor_role') or 'Team Member'
+        action_name = request.data.get('action') or 'Milestone Note'
+        notes = request.data.get('notes', '').strip()
+        if not notes:
+            return Response({'error': 'Note text is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        record_approval_action(post, action_name, actor, actor_role, notes)
         return Response(SocialPostSerializer(post).data)
 
     @action(detail=True, methods=['post'])

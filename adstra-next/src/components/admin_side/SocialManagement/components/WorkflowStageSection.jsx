@@ -29,9 +29,11 @@ import {
   Sparkles,
   List,
   Calendar,
+  History,
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
+import PostTimelineModal from "./PostTimelineModal";
 
 export default function WorkflowStageSection({
   stageId, // 'scripts' | 'script_approval' | 'designing' | 'team_review' | 'client_review' | 'post_schedule' | 'published'
@@ -52,6 +54,9 @@ export default function WorkflowStageSection({
   // Script Creation Modal State (Stage 1: Scripts)
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
   const [activeScriptPost, setActiveScriptPost] = useState(null);
+
+  // Timeline Stepper Modal State
+  const [timelinePost, setTimelinePost] = useState(null);
 
   // Modal State for Action / Feedback / Loopback
   const [modalAction, setModalAction] = useState(null);
@@ -574,6 +579,7 @@ export default function WorkflowStageSection({
               copiedToken={copiedToken}
               onOpenModal={openActionModal}
               onNavigateStage={onNavigateStage}
+              onOpenTimeline={(post) => setTimelinePost(post)}
               onOpenScriptModal={(post) => {
                 setActiveScriptPost(post);
                 setScriptModalOpen(true);
@@ -883,6 +889,16 @@ export default function WorkflowStageSection({
         />
       )}
 
+      {/* 6. POST TIMELINE & LIFECYCLE STEPPER GRAPH MODAL */}
+      {timelinePost && (
+        <PostTimelineModal
+          post={timelinePost}
+          isOpen={Boolean(timelinePost)}
+          onClose={() => setTimelinePost(null)}
+          onRefresh={onRefresh}
+        />
+      )}
+
     </div>
   );
 }
@@ -899,6 +915,7 @@ function StageListingTable({
   onOpenModal,
   onNavigateStage,
   onOpenScriptModal,
+  onOpenTimeline,
 }) {
   return (
     <div
@@ -1177,6 +1194,29 @@ function StageListingTable({
                   {/* 6. Actions */}
                   <td style={{ padding: "14px 18px", verticalAlign: "middle", textAlign: "right" }}>
                     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
+                      {/* Timeline Graph Button for Every Post */}
+                      <button
+                        onClick={() => onOpenTimeline && onOpenTimeline(post)}
+                        title="View post lifecycle timeline & audit history"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          padding: "6px 11px",
+                          borderRadius: 8,
+                          border: "1px solid #cbd5e1",
+                          background: "#f8fafc",
+                          color: "#334155",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <History size={13} style={{ color: "#16a34a" }} />
+                        Timeline
+                      </button>
+
                       {/* Stage 1: Scripts */}
                       {stageId === "scripts" && (
                         <>
