@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
+import ScriptViewModal from "./ScriptViewModal";
 import PostTimelineModal from "./PostTimelineModal";
 
 export default function WorkflowStageSection({
@@ -54,6 +55,9 @@ export default function WorkflowStageSection({
   // Script Creation Modal State (Stage 1: Scripts)
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
   const [activeScriptPost, setActiveScriptPost] = useState(null);
+
+  // Script Read-Only View & Review Modal State (Stage 2: Script Approval)
+  const [viewingScriptPost, setViewingScriptPost] = useState(null);
 
   // Timeline Stepper Modal State
   const [timelinePost, setTimelinePost] = useState(null);
@@ -596,6 +600,7 @@ export default function WorkflowStageSection({
               onOpenModal={openActionModal}
               onNavigateStage={onNavigateStage}
               onOpenTimeline={(post) => setTimelinePost(post)}
+              onViewScript={(post) => setViewingScriptPost(post)}
               onOpenScriptModal={(post) => {
                 setActiveScriptPost(post);
                 setScriptModalOpen(true);
@@ -915,6 +920,26 @@ export default function WorkflowStageSection({
         />
       )}
 
+      {/* 7. SCRIPT READ-ONLY VIEW & REVIEW MODAL */}
+      {viewingScriptPost && (
+        <ScriptViewModal
+          isOpen={Boolean(viewingScriptPost)}
+          onClose={() => setViewingScriptPost(null)}
+          post={viewingScriptPost}
+          onApprove={(p) =>
+            handleTransition(p, "designing", "advance", "Script approved, ready for visual design")
+          }
+          onReject={(p, reason) =>
+            handleTransition(p, "script", "reject", reason, { script_notes: p.script_notes })
+          }
+          onEdit={(p) => {
+            setActiveScriptPost(p);
+            setScriptModalOpen(true);
+          }}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+        />
+      )}
+
     </div>
   );
 }
@@ -932,6 +957,7 @@ function StageListingTable({
   onNavigateStage,
   onOpenScriptModal,
   onOpenTimeline,
+  onViewScript,
 }) {
   return (
     <div
@@ -1024,7 +1050,9 @@ function StageListingTable({
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div
                           onClick={() => {
-                            if ((stageId === "scripts" || stageId === "script_approval") && onOpenScriptModal) {
+                            if (stageId === "script_approval" && onViewScript) {
+                              onViewScript(post);
+                            } else if (stageId === "scripts" && onOpenScriptModal) {
                               onOpenScriptModal(post);
                             } else {
                               onOpenModal(post, "edit_notes");
@@ -1295,7 +1323,7 @@ function StageListingTable({
                       {stageId === "script_approval" && (
                         <>
                           <button
-                            onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
+                            onClick={() => (onViewScript ? onViewScript(post) : onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
                             style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
                             View Script

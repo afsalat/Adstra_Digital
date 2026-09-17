@@ -35,6 +35,7 @@ import {
   History,
 } from "lucide-react";
 import PostTimelineModal from "./PostTimelineModal";
+import ScriptViewModal from "./ScriptViewModal";
 
 // The 7 Stages defined in the operational workflow diagram
 const WORKFLOW_STAGES = [
@@ -134,6 +135,7 @@ export default function WorkflowPipelineTab({
   const [activeStageFilter, setActiveStageFilter] = useState("all");
   const [copiedToken, setCopiedToken] = useState(null);
   const [timelinePost, setTimelinePost] = useState(null);
+  const [viewingScriptPost, setViewingScriptPost] = useState(null);
 
   // Action / Feedback Modal State
   const [modalAction, setModalAction] = useState(null);
@@ -450,6 +452,7 @@ export default function WorkflowPipelineTab({
                         copiedToken={copiedToken}
                         onOpenModal={openActionModal}
                         onOpenTimeline={(post) => setTimelinePost(post)}
+                        onViewScript={(post) => setViewingScriptPost(post)}
                       />
                     ))
                   )}
@@ -629,7 +632,7 @@ export default function WorkflowPipelineTab({
 
                       {stageId === "script_approval" && (
                         <button
-                          onClick={() => openActionModal(post, "approve_script")}
+                          onClick={() => setViewingScriptPost(post)}
                           style={{
                             background: "#8b5cf6",
                             color: "#fff",
@@ -641,7 +644,7 @@ export default function WorkflowPipelineTab({
                             cursor: "pointer",
                           }}
                         >
-                          Review Script
+                          View Script
                         </button>
                       )}
 
@@ -985,6 +988,25 @@ export default function WorkflowPipelineTab({
         />
       )}
 
+      {/* Script Read-Only View & Review Modal */}
+      {viewingScriptPost && (
+        <ScriptViewModal
+          isOpen={Boolean(viewingScriptPost)}
+          onClose={() => setViewingScriptPost(null)}
+          post={viewingScriptPost}
+          onApprove={(p) =>
+            handleTransition(p, "designing", "advance", "Script approved, ready for visual design")
+          }
+          onReject={(p, reason) =>
+            handleTransition(p, "script", "reject", reason, { script_notes: p.script_notes })
+          }
+          onEdit={(p) => {
+            if (onOpenCreatePost) onOpenCreatePost(p);
+          }}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+        />
+      )}
+
     </div>
   );
 }
@@ -999,6 +1021,7 @@ function PostPipelineCard({
   copiedToken,
   onOpenModal,
   onOpenTimeline,
+  onViewScript,
 }) {
   const isRejectedLoopback = Boolean(post.client_feedback);
 
@@ -1198,16 +1221,22 @@ function PostPipelineCard({
         {stage.id === "script_approval" && (
           <>
             <button
-              onClick={() => onOpenModal(post, "reject_script")}
-              style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid #ef4444", background: "#fff", color: "#dc2626", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+              onClick={() => (onViewScript ? onViewScript(post) : onOpenModal(post, "approve_script"))}
+              style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
-              Reject (↺ Script)
+              View Script
+            </button>
+            <button
+              onClick={() => onOpenModal(post, "reject_script")}
+              style={{ flex: 0.9, padding: "5px 8px", borderRadius: 6, border: "1px solid #ef4444", background: "#fff", color: "#dc2626", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              Reject (↺)
             </button>
             <button
               onClick={() => onOpenModal(post, "approve_script")}
-              style={{ flex: 1.3, padding: "5px 8px", borderRadius: 6, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+              style={{ flex: 1.1, padding: "5px 8px", borderRadius: 6, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
-              Approve → Design
+              Approve →
             </button>
           </>
         )}
