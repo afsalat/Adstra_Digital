@@ -502,6 +502,13 @@ export default function MediaLibraryTab({
           <button
             onClick={() => {
               setUploadError("");
+              const effClientId =
+                selectedClientFilter !== "all"
+                  ? selectedClientFilter
+                  : selectedClientId !== "all"
+                  ? selectedClientId
+                  : clients[0]?.id || "";
+              if (effClientId) setUploadClientId(effClientId);
               setUploadModal(true);
             }}
             style={{

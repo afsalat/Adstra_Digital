@@ -32,6 +32,7 @@ import {
   Folder,
   Boxes,
   Eye,
+  RefreshCw,
 } from "lucide-react";
 import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
 
@@ -112,28 +113,36 @@ export default function ScriptCreationModal({
   const [assetFolderFilter, setAssetFolderFilter] = useState("all");
   const [assetTypeFilter, setAssetTypeFilter] = useState("all");
 
-  // Fetch client assets dynamically whenever clientId changes
-  useEffect(() => {
-    if (!clientId) return;
-    let isMounted = true;
+  // Fetch client assets dynamically
+  const fetchClientAssets = async (targetClientId = clientId) => {
+    if (!targetClientId) return;
     setLoadingAssets(true);
-    axios
-      .get(`${API_BASE_URL}/social/media/?client_id=${clientId}`)
-      .then((res) => {
-        if (isMounted) {
-          setClientAssets(res.data || []);
-        }
-      })
-      .catch((err) => {
-        console.error("Error loading client assets:", err);
-      })
-      .finally(() => {
-        if (isMounted) setLoadingAssets(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [clientId]);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/social/media/?client_id=${targetClientId}`);
+      setClientAssets(res.data || []);
+    } catch (err) {
+      console.error("Error loading client assets:", err);
+    } finally {
+      setLoadingAssets(false);
+    }
+  };
+
+  // Re-fetch assets when clientId changes, modal opens, or picker opens
+  useEffect(() => {
+    if (isOpen && clientId) {
+      fetchClientAssets(clientId);
+    }
+  }, [clientId, isOpen, assetPickerOpen]);
+
+  // Sync clientAssets from parent mediaAssets prop when it updates
+  useEffect(() => {
+    if (Array.isArray(mediaAssets) && mediaAssets.length > 0 && clientId) {
+      const matched = mediaAssets.filter((a) => String(a.client_profile) === String(clientId));
+      if (matched.length > 0) {
+        setClientAssets(matched);
+      }
+    }
+  }, [mediaAssets, clientId]);
 
   // Sync selected assets when initialData changes
   useEffect(() => {
@@ -1985,24 +1994,48 @@ export default function ScriptCreationModal({
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setAssetPickerOpen(false)}
-                style={{
-                  background: "#f1f5f9",
-                  border: "none",
-                  borderRadius: 8,
-                  width: 32,
-                  height: 32,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: "#64748b",
-                }}
-              >
-                <X size={18} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => fetchClientAssets(clientId)}
+                  disabled={loadingAssets}
+                  title="Refresh client assets"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    cursor: "pointer",
+                    color: "#475569",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  <RefreshCw size={13} style={{ animation: loadingAssets ? "spin 1s linear infinite" : "none" }} />
+                  Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAssetPickerOpen(false)}
+                  style={{
+                    background: "#f1f5f9",
+                    border: "none",
+                    borderRadius: 8,
+                    width: 32,
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "#64748b",
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Filter, Search & Bulk Actions Bar */}
