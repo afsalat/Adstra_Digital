@@ -1587,47 +1587,65 @@ export default function CreatePostModal({
 
           {/* Right Column: Live Feed Preview */}
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
-                <Eye size={16} /> Live Device Feed Preview
+            {/* Header Title Row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.84rem", fontWeight: 700, color: "#1e293b", whiteSpace: "nowrap" }}>
+                <Eye size={16} color="#4f46e5" /> Live Device Feed Preview
               </div>
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                {(selectedPlatforms.length > 0
-                  ? selectedPlatforms
-                  : clientAccounts.length > 0
-                  ? [...new Set(clientAccounts.map((a) => a.platform))]
-                  : ["instagram", "facebook", "linkedin"]
-                ).map((plat) => {
-                  const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: "📱", color: "#0f172a" };
-                  const isActive = activePreviewPlatform === plat;
-                  return (
-                    <button
-                      key={plat}
-                      type="button"
-                      onClick={() => setActivePreviewPlatform(plat)}
-                      style={{
-                        padding: "5px 11px",
-                        borderRadius: 8,
-                        fontSize: "0.74rem",
-                        fontWeight: 700,
-                        textTransform: "capitalize",
-                        border: isActive ? `1.5px solid ${pConfig.color}` : "1.5px solid #e2e8f0",
-                        cursor: "pointer",
-                        background: isActive ? (pConfig.color === "#000000" ? "#0f172a" : pConfig.color) : "#ffffff",
-                        color: isActive ? "#ffffff" : "#475569",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 5,
-                        boxShadow: isActive ? `0 2px 8px ${pConfig.color}40` : "none",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      <span>{pConfig.icon}</span>
-                      <span>{pConfig.label || plat}</span>
-                    </button>
-                  );
-                })}
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
+                <span>Previewing:</span>
+                <span style={{ fontWeight: 700, color: PLATFORM_MAP[activePreviewPlatform]?.color === "#000000" ? "#0f172a" : PLATFORM_MAP[activePreviewPlatform]?.color || "#4f46e5" }}>
+                  {PLATFORM_MAP[activePreviewPlatform]?.label || activePreviewPlatform}
+                </span>
               </div>
+            </div>
+
+            {/* Platform Switcher Tabs Bar (Full Width) */}
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                marginBottom: 12,
+                padding: "2px 0",
+              }}
+            >
+              {(selectedPlatforms.length > 0
+                ? selectedPlatforms
+                : clientAccounts.length > 0
+                ? [...new Set(clientAccounts.map((a) => a.platform))]
+                : ["instagram", "facebook", "linkedin"]
+              ).map((plat) => {
+                const pConfig = PLATFORM_MAP[plat] || { label: plat, icon: "📱", color: "#0f172a" };
+                const isActive = activePreviewPlatform === plat;
+                return (
+                  <button
+                    key={plat}
+                    type="button"
+                    onClick={() => setActivePreviewPlatform(plat)}
+                    style={{
+                      padding: "5px 11px",
+                      borderRadius: 8,
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      textTransform: "capitalize",
+                      border: isActive ? `1.5px solid ${pConfig.color}` : "1.5px solid #e2e8f0",
+                      cursor: "pointer",
+                      background: isActive ? (pConfig.color === "#000000" ? "#0f172a" : pConfig.color) : "#ffffff",
+                      color: isActive ? "#ffffff" : "#475569",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      boxShadow: isActive ? `0 2px 8px ${pConfig.color}40` : "none",
+                      transition: "all 0.15s ease",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span>{pConfig.icon}</span>
+                    <span>{pConfig.label || plat}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Dynamic Native Platform Feed Preview */}
