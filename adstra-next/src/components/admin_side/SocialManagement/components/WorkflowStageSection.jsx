@@ -35,6 +35,7 @@ import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
 import ScriptViewModal from "./ScriptViewModal";
 import PostTimelineModal from "./PostTimelineModal";
+import WorkDetailsModal from "./WorkDetailsModal";
 
 export default function WorkflowStageSection({
   stageId, // 'scripts' | 'script_approval' | 'designing' | 'team_review' | 'client_review' | 'post_schedule' | 'published'
@@ -58,6 +59,9 @@ export default function WorkflowStageSection({
 
   // Script Read-Only View & Review Modal State (Stage 2: Script Approval)
   const [viewingScriptPost, setViewingScriptPost] = useState(null);
+
+  // Designer Work Details Modal State (Stage 3: Designing & Production)
+  const [viewingWorkDetailsPost, setViewingWorkDetailsPost] = useState(null);
 
   // Timeline Stepper Modal State
   const [timelinePost, setTimelinePost] = useState(null);
@@ -624,6 +628,7 @@ export default function WorkflowStageSection({
               onNavigateStage={onNavigateStage}
               onOpenTimeline={(post) => setTimelinePost(post)}
               onViewScript={(post) => setViewingScriptPost(post)}
+              onViewWorkDetails={(post) => setViewingWorkDetailsPost(post)}
               onOpenScriptModal={(post) => {
                 setActiveScriptPost(post);
                 setScriptModalOpen(true);
@@ -665,7 +670,34 @@ export default function WorkflowStageSection({
                     {modalAction.type === "send_client" && "Team QA Passed → Move to Client Review"}
                     {modalAction.type === "client_changes" && "Client Revisions (Loopback to Stage 3: Designing)"}
                     {modalAction.type === "client_approve" && "Client Approved → Move to Approved / Post Schedule"}
-                    {modalAction.type === "edit_notes" && "Edit Post Details & Workflow Notes"}
+                    {modalAction.type === "edit_notes" && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                        Edit Post Details & Workflow Notes
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const p = modalAction.post;
+                            setModalAction(null);
+                            setViewingWorkDetailsPost(p);
+                          }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "3px 10px",
+                            borderRadius: 6,
+                            border: "1px solid #c084fc",
+                            background: "#faf5ff",
+                            color: "#7e22ce",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Palette size={12} /> View Work Details
+                        </button>
+                      </span>
+                    )}
                   </h3>
                   <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
                     {modalAction.post.title || "Concept"} • {modalAction.post.client_name || "Adstra Client"}
@@ -998,6 +1030,46 @@ export default function WorkflowStageSection({
         />
       )}
 
+      {/* 8. DESIGNER WORK DETAILS MODAL */}
+      {viewingWorkDetailsPost && (
+        <WorkDetailsModal
+          isOpen={Boolean(viewingWorkDetailsPost)}
+          onClose={() => setViewingWorkDetailsPost(null)}
+          post={viewingWorkDetailsPost}
+          onSaveMedia={async (p, mediaUrl, notes) => {
+            await handleTransition(
+              p,
+              p.status,
+              "advance",
+              "Designer updated creative media asset URL & production notes",
+              {
+                media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
+                designer_notes: notes !== undefined ? notes : p.designer_notes,
+              }
+            );
+            setViewingWorkDetailsPost((prev) => ({
+              ...prev,
+              media_urls: mediaUrl ? [mediaUrl] : prev.media_urls,
+              designer_notes: notes !== undefined ? notes : prev.designer_notes,
+            }));
+          }}
+          onReadyForQA={async (p, mediaUrl, notes) => {
+            await handleTransition(
+              p,
+              "team_review",
+              "advance",
+              "Design assets completed, submitted for QA review",
+              {
+                media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
+                designer_notes: notes !== undefined ? notes : p.designer_notes,
+              }
+            );
+          }}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+          onOpenEditModal={(p) => openActionModal(p, "edit_notes")}
+        />
+      )}
+
     </div>
   );
 }
@@ -1016,6 +1088,7 @@ function StageListingTable({
   onOpenScriptModal,
   onOpenTimeline,
   onViewScript,
+  onViewWorkDetails,
 }) {
   return (
     <div
@@ -1112,6 +1185,8 @@ function StageListingTable({
                               onViewScript(post);
                             } else if (stageId === "scripts" && onOpenScriptModal) {
                               onOpenScriptModal(post);
+                            } else if (onViewWorkDetails) {
+                              onViewWorkDetails(post);
                             } else {
                               onOpenModal(post, "edit_notes");
                             }
@@ -1405,6 +1480,27 @@ function StageListingTable({
                       {stageId === "designing" && (
                         <>
                           <button
+                            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
+                            title="View creative brief, storyboard, brand assets & work instructions in popup"
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "1px solid #c084fc",
+                              background: "#faf5ff",
+                              color: "#7e22ce",
+                              fontSize: "0.76rem",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                            }}
+                          >
+                            <Palette size={13} style={{ color: "#9333ea" }} />
+                            Work Details
+                          </button>
+                          <button
                             onClick={() => onOpenModal(post, "edit_notes")}
                             style={{ padding: "6px 11px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
@@ -1422,6 +1518,27 @@ function StageListingTable({
                       {/* Stage 4: Team Review */}
                       {stageId === "team_review" && (
                         <>
+                          <button
+                            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
+                            title="View designer work details & brief"
+                            style={{
+                              padding: "6px 10px",
+                              borderRadius: 8,
+                              border: "1px solid #cbd5e1",
+                              background: "#fff",
+                              color: "#475569",
+                              fontSize: "0.76rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Palette size={13} style={{ color: "#7c3aed" }} />
+                            Work Details
+                          </button>
                           <button
                             onClick={() => onTransition(post, "designing", "reject", "Team QA requested design adjustments")}
                             style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #f97316", background: "#fff", color: "#ea580c", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}

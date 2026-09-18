@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import PostTimelineModal from "./PostTimelineModal";
 import ScriptViewModal from "./ScriptViewModal";
+import WorkDetailsModal from "./WorkDetailsModal";
 
 // The 7 Stages defined in the operational workflow diagram
 const WORKFLOW_STAGES = [
@@ -136,6 +137,7 @@ export default function WorkflowPipelineTab({
   const [copiedToken, setCopiedToken] = useState(null);
   const [timelinePost, setTimelinePost] = useState(null);
   const [viewingScriptPost, setViewingScriptPost] = useState(null);
+  const [viewingWorkDetailsPost, setViewingWorkDetailsPost] = useState(null);
 
   // Action / Feedback Modal State
   const [modalAction, setModalAction] = useState(null);
@@ -471,6 +473,7 @@ export default function WorkflowPipelineTab({
                         onOpenModal={openActionModal}
                         onOpenTimeline={(post) => setTimelinePost(post)}
                         onViewScript={(post) => setViewingScriptPost(post)}
+                        onViewWorkDetails={(post) => setViewingWorkDetailsPost(post)}
                       />
                     ))
                   )}
@@ -1060,6 +1063,46 @@ export default function WorkflowPipelineTab({
         />
       )}
 
+      {/* Designer Work Details Modal */}
+      {viewingWorkDetailsPost && (
+        <WorkDetailsModal
+          isOpen={Boolean(viewingWorkDetailsPost)}
+          onClose={() => setViewingWorkDetailsPost(null)}
+          post={viewingWorkDetailsPost}
+          onSaveMedia={async (p, mediaUrl, notes) => {
+            await handleTransition(
+              p,
+              p.status,
+              "advance",
+              "Designer updated creative media asset URL & production notes",
+              {
+                media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
+                designer_notes: notes !== undefined ? notes : p.designer_notes,
+              }
+            );
+            setViewingWorkDetailsPost((prev) => ({
+              ...prev,
+              media_urls: mediaUrl ? [mediaUrl] : prev.media_urls,
+              designer_notes: notes !== undefined ? notes : prev.designer_notes,
+            }));
+          }}
+          onReadyForQA={async (p, mediaUrl, notes) => {
+            await handleTransition(
+              p,
+              "team_review",
+              "advance",
+              "Design assets completed, submitted for QA review",
+              {
+                media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
+                designer_notes: notes !== undefined ? notes : p.designer_notes,
+              }
+            );
+          }}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+          onOpenEditModal={(p) => openActionModal(p, "edit_notes")}
+        />
+      )}
+
     </div>
   );
 }
@@ -1075,6 +1118,7 @@ function PostPipelineCard({
   onOpenModal,
   onOpenTimeline,
   onViewScript,
+  onViewWorkDetails,
 }) {
   const isRejectedLoopback = Boolean(post.client_feedback);
 
@@ -1156,8 +1200,16 @@ function PostPipelineCard({
       {/* Post Title */}
       <div>
         <h5
-          onClick={() => onOpenTimeline && onOpenTimeline(post)}
-          title="Click to view lifecycle timeline graph"
+          onClick={() => {
+            if (stage.id === "script_approval" && onViewScript) {
+              onViewScript(post);
+            } else if (onViewWorkDetails && (stage.id === "designing" || stage.id === "team_review")) {
+              onViewWorkDetails(post);
+            } else if (onOpenTimeline) {
+              onOpenTimeline(post);
+            }
+          }}
+          title="Click to view work details"
           style={{
             margin: 0,
             fontSize: "0.85rem",
@@ -1298,16 +1350,22 @@ function PostPipelineCard({
         {stage.id === "designing" && (
           <>
             <button
-              onClick={() => onOpenModal(post, "edit_notes")}
-              style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+              onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
+              style={{ flex: 1.1, padding: "5px 7px", borderRadius: 6, border: "1px solid #c084fc", background: "#faf5ff", color: "#7e22ce", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 }}
             >
-              Edit Assets
+              <Palette size={12} style={{ color: "#9333ea" }} /> Work Details
+            </button>
+            <button
+              onClick={() => onOpenModal(post, "edit_notes")}
+              style={{ flex: 0.9, padding: "5px 6px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              + Media
             </button>
             <button
               onClick={() => onOpenModal(post, "design_ready")}
-              style={{ flex: 1.4, padding: "5px 8px", borderRadius: 6, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+              style={{ flex: 1.2, padding: "5px 7px", borderRadius: 6, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
-              Design Ready → QA
+              Ready QA →
             </button>
           </>
         )}
