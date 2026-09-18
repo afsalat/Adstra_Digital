@@ -350,13 +350,26 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         # Update optional script or designer notes if provided
         if 'script_notes' in request.data:
-            post.script_notes = request.data.get('script_notes')
+            post.script_notes = request.data.get('script_notes') or ''
         if 'designer_notes' in request.data:
-            post.designer_notes = request.data.get('designer_notes')
+            post.designer_notes = request.data.get('designer_notes') or ''
         if 'media_urls' in request.data:
-            post.media_urls = request.data.get('media_urls')
-        if 'scheduled_at' in request.data and request.data.get('scheduled_at'):
-            post.scheduled_at = request.data.get('scheduled_at')
+            media_urls = request.data.get('media_urls')
+            post.media_urls = media_urls if isinstance(media_urls, list) else ([media_urls] if media_urls else [])
+        if 'scheduled_at' in request.data:
+            sched_val = request.data.get('scheduled_at')
+            if sched_val:
+                try:
+                    from django.utils.dateparse import parse_datetime
+                    if isinstance(sched_val, str):
+                        dt = parse_datetime(sched_val)
+                        post.scheduled_at = dt if dt else None
+                    else:
+                        post.scheduled_at = sched_val
+                except Exception:
+                    post.scheduled_at = None
+            else:
+                post.scheduled_at = None
 
         prev_status = post.status
         prev_feedback = post.client_feedback
@@ -371,7 +384,10 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             # Resubmitted or approved: clear previous loopback critique
             post.client_feedback = ''
 
-        post.save()
+        try:
+            post.save()
+        except Exception as e:
+            return Response({'error': f'Failed to update post: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Audit History logging
         action_label = f"Stage changed: {prev_status} -> {target_stage}"
@@ -426,7 +442,16 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             action_label = "Post Reworked / Updated"
             actor_role = actor_role or "Creative Team"
 
-        record_approval_action(post, action_label, actor, actor_role or "Workflow Team", notes or f"Moved from {prev_status} to {target_stage}")
+        try:
+            record_approval_action(
+                post,
+                (action_label or "Stage Updated")[:50],
+                (actor or "Team Member")[:150],
+                (actor_role or "Workflow Team")[:50],
+                notes or f"Moved from {prev_status} to {target_stage}"
+            )
+        except Exception:
+            pass
         return Response(SocialPostSerializer(post).data)
 
     @action(detail=True, methods=['post'])

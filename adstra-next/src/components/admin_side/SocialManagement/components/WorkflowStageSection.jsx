@@ -253,7 +253,25 @@ export default function WorkflowStageSection({
       setActionNotes("");
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Error updating post workflow stage.");
+      console.error("Workflow transition error:", err);
+      let errorMsg = "Error updating post workflow stage.";
+      if (err.response?.data) {
+        if (typeof err.response.data === "string") {
+          const match = err.response.data.match(/<pre class="exception_value">([^<]+)<\/pre>/);
+          errorMsg = match ? match[1] : `Server error (${err.response.status})`;
+        } else if (err.response.data.error) {
+          errorMsg = err.response.data.error;
+        } else if (err.response.data.detail) {
+          errorMsg = err.response.data.detail;
+        } else if (typeof err.response.data === "object") {
+          errorMsg = Object.entries(err.response.data)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+            .join(" | ");
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      alert(errorMsg);
     } finally {
       setSubmittingAction(false);
     }
@@ -872,20 +890,55 @@ export default function WorkflowStageSection({
                 {modalAction.type === "client_approve" && (
                   <button
                     disabled={submittingAction}
-                    onClick={() => handleTransition(modalAction.post, "approved", "advance", actionNotes || "Client approved design & copy", { scheduled_at: editScheduledAt ? new Date(editScheduledAt).toISOString() : modalAction.post.scheduled_at })}
+                    onClick={() => {
+                      let formattedScheduledAt = null;
+                      if (editScheduledAt && editScheduledAt.trim()) {
+                        const d = new Date(editScheduledAt);
+                        if (!isNaN(d.getTime())) {
+                          formattedScheduledAt = d.toISOString();
+                        }
+                      }
+                      handleTransition(
+                        modalAction.post,
+                        "approved",
+                        "advance",
+                        actionNotes || "Client approved design & copy",
+                        { scheduled_at: formattedScheduledAt }
+                      );
+                    }}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    Approve → Schedule Post
+                    {submittingAction ? "Approving..." : "Approve → Schedule Post"}
                   </button>
                 )}
 
                 {modalAction.type === "edit_notes" && (
                   <button
                     disabled={submittingAction}
-                    onClick={() => handleTransition(modalAction.post, modalAction.post.status, "update", "Updated workflow notes", { script_notes: editScriptNotes, designer_notes: editDesignerNotes, media_urls: editMediaUrl ? [editMediaUrl] : modalAction.post.media_urls, scheduled_at: editScheduledAt ? new Date(editScheduledAt).toISOString() : modalAction.post.scheduled_at })}
+                    onClick={() => {
+                      let formattedScheduledAt = null;
+                      if (editScheduledAt && editScheduledAt.trim()) {
+                        const d = new Date(editScheduledAt);
+                        if (!isNaN(d.getTime())) {
+                          formattedScheduledAt = d.toISOString();
+                        }
+                      }
+                      handleTransition(
+                        modalAction.post,
+                        modalAction.post.status,
+                        "update",
+                        "Updated workflow notes",
+                        {
+                          script_notes: editScriptNotes || "",
+                          designer_notes: editDesignerNotes || "",
+                          media_urls: editMediaUrl && editMediaUrl.trim() ? [editMediaUrl.trim()] : [],
+                          scheduled_at: formattedScheduledAt,
+                        }
+                      );
+                    }}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#0f172a", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    Save Changes
+                    {submittingAction ? "Saving..." : "Save Changes"}
                   </button>
                 )}
               </div>
