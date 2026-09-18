@@ -376,12 +376,14 @@ export default function ContentCalendarTab({
           </select>
 
           {/* Create Post Button */}
-          <button
-            onClick={onOpenCreatePost}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "#4f46e5", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}
-          >
-            <Plus size={16} /> Schedule Post
-          </button>
+          {onOpenCreatePost && (
+            <button
+              onClick={onOpenCreatePost}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "#4f46e5", color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              <Plus size={16} /> Schedule Post
+            </button>
+          )}
         </div>
       </div>
 
@@ -692,31 +694,31 @@ export default function ContentCalendarTab({
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button
-                  onClick={() => {
-                    const dateStr = selectedDayDetail.dateStr;
-                    setSelectedDayDetail(null);
-                    if (onOpenCreatePost) {
+                {onOpenCreatePost && (
+                  <button
+                    onClick={() => {
+                      const dateStr = selectedDayDetail.dateStr;
+                      setSelectedDayDetail(null);
                       onOpenCreatePost({ scheduled_at: `${dateStr}T10:00:00` });
-                    }
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    background: "#2563eb",
-                    color: "#ffffff",
-                    border: "none",
-                    padding: "8px 14px",
-                    borderRadius: 9,
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    boxShadow: "0 2px 6px rgba(37,99,235,0.2)",
-                  }}
-                >
-                  <Plus size={15} /> + Schedule for this Day
-                </button>
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "8px 14px",
+                      borderRadius: 9,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 6px rgba(37,99,235,0.2)",
+                    }}
+                  >
+                    <Plus size={15} /> + Schedule for this Day
+                  </button>
+                )}
                 <button
                   onClick={() => setSelectedDayDetail(null)}
                   style={{
@@ -932,14 +934,12 @@ export default function ContentCalendarTab({
                       ? "Schedule a post now to queue graphics, reels, or announcements for this day."
                       : "Switch the priority filter above to view other posts."}
                   </p>
-                  {currentDayPosts.length === 0 && (
+                  {currentDayPosts.length === 0 && onOpenCreatePost && (
                     <button
                       onClick={() => {
                         const dateStr = selectedDayDetail.dateStr;
                         setSelectedDayDetail(null);
-                        if (onOpenCreatePost) {
-                          onOpenCreatePost({ scheduled_at: `${dateStr}T10:00:00` });
-                        }
+                        onOpenCreatePost({ scheduled_at: `${dateStr}T10:00:00` });
                       }}
                       style={{
                         marginTop: 6,

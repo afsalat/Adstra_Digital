@@ -385,32 +385,30 @@ export default function WorkflowStageSection({
             </button>
           </div>
 
-          <button
-            onClick={() => {
-              if (stageId === "scripts") {
+          {stageId === "scripts" && (
+            <button
+              onClick={() => {
                 setActiveScriptPost(null);
                 setScriptModalOpen(true);
-              } else {
-                onOpenCreatePost();
-              }
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: stageMeta.color,
-              color: "#ffffff",
-              border: "none",
-              padding: "9px 18px",
-              borderRadius: 10,
-              fontSize: "0.85rem",
-              fontWeight: 800,
-              cursor: "pointer",
-              boxShadow: `0 4px 12px ${stageMeta.color}40`,
-            }}
-          >
-            {stageId === "scripts" ? "+ New Script" : "+ Create Post"}
-          </button>
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: stageMeta.color,
+                color: "#ffffff",
+                border: "none",
+                padding: "9px 18px",
+                borderRadius: 10,
+                fontSize: "0.85rem",
+                fontWeight: 800,
+                cursor: "pointer",
+                boxShadow: `0 4px 12px ${stageMeta.color}40`,
+              }}
+            >
+              + New Script
+            </button>
+          )}
         </div>
       </div>
 
@@ -421,7 +419,14 @@ export default function WorkflowStageSection({
           clients={clients}
           selectedClientId={selectedClientId}
           onRefresh={onRefresh}
-          onOpenCreatePost={onOpenCreatePost}
+          onOpenCreatePost={
+            stageId === "scripts"
+              ? () => {
+                  setActiveScriptPost(null);
+                  setScriptModalOpen(true);
+                }
+              : undefined
+          }
         />
       ) : (
         <>
