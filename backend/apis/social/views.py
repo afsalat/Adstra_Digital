@@ -395,7 +395,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             if prev_status == 'script_approval':
                 action_label = "Script Rejected (Rework Requested)"
                 actor_role = actor_role or "Content Reviewer"
-            elif prev_status == 'team_review':
+            elif prev_status in ['team_review', 'internal_review']:
                 action_label = "Team QA Rejected (Rework Requested)"
                 actor_role = actor_role or "QA Lead"
             elif prev_status == 'client_review':

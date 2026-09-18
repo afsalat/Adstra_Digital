@@ -683,18 +683,49 @@ export default function WorkflowStageSection({
                     width: 38,
                     height: 38,
                     borderRadius: 10,
-                    background: "#eef2ff",
-                    color: "#4f46e5",
+                    background: modalAction.type === "reject_design" || modalAction.type === "reject_script" ? "#fef2f2" : "#eef2ff",
+                    color: modalAction.type === "reject_design" || modalAction.type === "reject_script" ? "#dc2626" : "#4f46e5",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Sparkles size={18} />
+                  {modalAction.type === "reject_design" || modalAction.type === "reject_script" ? (
+                    <RotateCcw size={18} />
+                  ) : (
+                    <Sparkles size={18} />
+                  )}
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
                     {modalAction.type === "reject_script" && "Reject Script (Loopback to Stage 1: Scripts)"}
+                    {modalAction.type === "reject_design" && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                        Reject Deliverable (Loopback to Stage 3: Designing)
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const p = modalAction.post;
+                            setTimelinePost(p);
+                          }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "3px 9px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            background: "#f8fafc",
+                            color: "#334155",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <History size={12} style={{ color: "#16a34a" }} /> View Timeline
+                        </button>
+                      </span>
+                    )}
                     {modalAction.type === "approve_script" && "Approve Script → Move to Scheduled / Designing"}
                     {modalAction.type === "design_ready" && "Design Complete → Move to Team QA Review"}
                     {modalAction.type === "send_client" && "Team QA Passed → Move to Client Review"}
@@ -1001,6 +1032,7 @@ export default function WorkflowStageSection({
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
                     {modalAction.type === "reject_script" && "Reason for Rejecting Script (Sent back to Copywriter) *"}
+                    {modalAction.type === "reject_design" && "Reason for Rejecting Deliverable (Added to Timeline & Sent to Designer) *"}
                     {modalAction.type === "client_changes" && "Client Requested Changes / Revision Feedback *"}
                     {modalAction.type === "approve_script" && "Approval Remarks (Optional)"}
                     {modalAction.type === "design_ready" && "Design QA Hand-off Notes"}
@@ -1014,6 +1046,8 @@ export default function WorkflowStageSection({
                     placeholder={
                       modalAction.type === "reject_script"
                         ? "Explain why the script is not better and what hook/CTA needs improvement..."
+                        : modalAction.type === "reject_design"
+                        ? "Explain required design changes (e.g. typography issues, color grading, audio sync, brand guidelines)..."
                         : modalAction.type === "client_changes"
                         ? "Specify graphic/copy changes requested by client..."
                         : "Add any internal remarks or notes..."
@@ -1027,6 +1061,12 @@ export default function WorkflowStageSection({
                       outline: "none",
                     }}
                   />
+                  {modalAction.type === "reject_design" && (
+                    <div style={{ marginTop: 6, fontSize: "0.73rem", color: "#64748b", display: "flex", alignItems: "center", gap: 5 }}>
+                      <Clock size={12} style={{ color: "#6366f1" }} />
+                      <span>This reason will be recorded on the post timeline audit trail and displayed as critique notes in Stage 3.</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1059,6 +1099,36 @@ export default function WorkflowStageSection({
                     }}
                   >
                     <RotateCcw size={14} /> Loopback to Scripts
+                  </button>
+                )}
+
+                {modalAction.type === "reject_design" && (
+                  <button
+                    disabled={submittingAction || !actionNotes.trim()}
+                    onClick={() =>
+                      handleTransition(
+                        modalAction.post,
+                        "designing",
+                        "reject",
+                        actionNotes,
+                        { designer_notes: modalAction.post.designer_notes }
+                      )
+                    }
+                    style={{
+                      padding: "8px 20px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "#dc2626",
+                      color: "#fff",
+                      fontSize: "0.82rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <RotateCcw size={14} /> Reject & Add to Timeline
                   </button>
                 )}
 
@@ -1502,7 +1572,7 @@ function StageListingTable({
                           }}
                         >
                           <span>{post.title || "Untitled Post"}</span>
-                          {stageId === "scripts" && (
+                          {stageId === "scripts" ? (
                             post.status === "script_approval" ? (
                               <span
                                 style={{
@@ -1546,7 +1616,21 @@ function StageListingTable({
                                 ● Draft
                               </span>
                             )
-                          )}
+                          ) : isRejected ? (
+                            <span
+                              style={{
+                                background: "#fef2f2",
+                                color: "#dc2626",
+                                border: "1px solid #fecaca",
+                                fontSize: "0.68rem",
+                                padding: "2px 7px",
+                                borderRadius: 8,
+                                fontWeight: 800,
+                              }}
+                            >
+                              ● Needs Revision (↺ Rejected)
+                            </span>
+                          ) : null}
                         </div>
                         <div
                           style={{
@@ -1564,23 +1648,33 @@ function StageListingTable({
                         {/* Revision feedback tag if looped back */}
                         {isRejected && (
                           <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onOpenTimeline) onOpenTimeline(post);
+                            }}
+                            title="Click to view full revision history & audit timeline"
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: 4,
+                              gap: 5,
                               background: "#fef2f2",
-                              color: "#b91c1c",
-                              padding: "2px 7px",
-                              borderRadius: 4,
-                              fontSize: "0.72rem",
+                              color: "#991b1b",
+                              border: "1px solid #fecaca",
+                              padding: "3px 8px",
+                              borderRadius: 6,
+                              fontSize: "0.74rem",
                               fontWeight: 700,
                               marginTop: 4,
-                              maxWidth: 480,
+                              maxWidth: 520,
+                              cursor: "pointer",
                             }}
                           >
-                            <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+                            <AlertTriangle size={13} style={{ flexShrink: 0, color: "#dc2626" }} />
                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {post.client_feedback}
+                              <strong>Rejection Reason:</strong> {post.client_feedback}
+                            </span>
+                            <span style={{ fontSize: "0.68rem", color: "#dc2626", marginLeft: 4, textDecoration: "underline" }}>
+                              (View Timeline)
                             </span>
                           </div>
                         )}
@@ -2418,10 +2512,24 @@ function StageListingTable({
                             Work Details
                           </button>
                           <button
-                            onClick={() => onTransition(post, "designing", "reject", "Team QA requested design adjustments")}
-                            style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid #f97316", background: "#fff", color: "#ea580c", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                            onClick={() => onOpenModal(post, "reject_design")}
+                            title="Reject deliverable and send back to Designing with revision notes"
+                            style={{
+                              padding: "5px 10px",
+                              borderRadius: 8,
+                              border: "1px solid #ef4444",
+                              background: "#fff",
+                              color: "#dc2626",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
                           >
-                            ↺ Back
+                            <RotateCcw size={11} /> Reject
                           </button>
                           <button
                             onClick={() => onTransition(post, "client_review", "advance", "Team QA passed, sent to client review")}
