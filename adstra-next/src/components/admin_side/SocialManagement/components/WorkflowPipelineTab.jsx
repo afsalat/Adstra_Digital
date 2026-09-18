@@ -33,10 +33,16 @@ import {
   X,
   ChevronRight,
   History,
+  Play,
+  Upload,
+  Trash2,
+  Download,
+  ChevronDown,
 } from "lucide-react";
 import PostTimelineModal from "./PostTimelineModal";
 import ScriptViewModal from "./ScriptViewModal";
 import WorkDetailsModal from "./WorkDetailsModal";
+import MediaPreviewModal from "./MediaPreviewModal";
 
 // The 7 Stages defined in the operational workflow diagram
 const WORKFLOW_STAGES = [
@@ -138,6 +144,7 @@ export default function WorkflowPipelineTab({
   const [timelinePost, setTimelinePost] = useState(null);
   const [viewingScriptPost, setViewingScriptPost] = useState(null);
   const [viewingWorkDetailsPost, setViewingWorkDetailsPost] = useState(null);
+  const [previewingMediaPost, setPreviewingMediaPost] = useState(null);
 
   // Action / Feedback Modal State
   const [modalAction, setModalAction] = useState(null);
@@ -252,6 +259,24 @@ export default function WorkflowPipelineTab({
       alert(errorMsg);
     } finally {
       setSubmittingAction(false);
+    }
+  };
+
+  const handleUploadMedia = async (post, file, isReplace = true) => {
+    if (!file) return null;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("replace", isReplace ? "true" : "false");
+    try {
+      const res = await axios.post(`${API_BASE_URL}/social/posts/${post.id}/upload_media/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      onRefresh();
+      return res.data;
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert(err.response?.data?.error || "Failed to upload media deliverable.");
+      return null;
     }
   };
 
@@ -474,6 +499,8 @@ export default function WorkflowPipelineTab({
                         onOpenTimeline={(post) => setTimelinePost(post)}
                         onViewScript={(post) => setViewingScriptPost(post)}
                         onViewWorkDetails={(post) => setViewingWorkDetailsPost(post)}
+                        onPreviewMedia={(post) => setPreviewingMediaPost(post)}
+                        onUploadMedia={handleUploadMedia}
                       />
                     ))
                   )}
@@ -796,8 +823,191 @@ export default function WorkflowPipelineTab({
                 </div>
               )}
 
-              {/* Designer Notes & Media URL */}
-              {(modalAction.type === "edit_notes" || modalAction.type === "design_ready" || modalAction.type === "approve_script") && (
+              {/* Designer Deliverable Upload, Replace & Play (For design_ready and edit_notes) */}
+              {(modalAction.type === "design_ready" || modalAction.type === "edit_notes") && (
+                <div style={{ background: "#fdf2f8", border: "1px solid #fbcfe8", borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#9d174d", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Sparkles size={14} /> Creative Deliverable (Reel / Video / Graphic)
+                    </span>
+                    {editMediaUrl && (
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "2px 8px", borderRadius: 6 }}>
+                        ✓ Deliverable Attached
+                      </span>
+                    )}
+                  </div>
+
+                  {editMediaUrl ? (
+                    <div style={{ background: "#0f172a", borderRadius: 10, overflow: "hidden", padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ maxHeight: 240, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        {(editMediaUrl.toLowerCase().endsWith(".mp4") || editMediaUrl.toLowerCase().endsWith(".mov") || editMediaUrl.toLowerCase().endsWith(".webm") || modalAction.post.post_type === "reel" || modalAction.post.post_type === "video") ? (
+                          <video src={editMediaUrl} controls playsInline style={{ maxHeight: 230, maxWidth: "100%", borderRadius: 6 }} />
+                        ) : (
+                          <img src={editMediaUrl} alt="" style={{ maxHeight: 230, maxWidth: "100%", objectFit: "contain", borderRadius: 6 }} />
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                              input.onchange = async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const res = await handleUploadMedia(modalAction.post, file, true);
+                                  if (res?.file_url) setEditMediaUrl(res.file_url);
+                                }
+                              };
+                              input.click();
+                            }}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: 6,
+                              background: "#334155",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              color: "#fff",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <RotateCcw size={12} /> Replace File
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewingMediaPost({ ...modalAction.post, media_urls: [editMediaUrl] });
+                            }}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: 6,
+                              background: "#ec4899",
+                              border: "none",
+                              color: "#fff",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Play size={11} fill="#fff" /> Full Player
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(editMediaUrl);
+                              alert("Asset link copied to clipboard!");
+                            }}
+                            style={{
+                              padding: "5px 9px",
+                              borderRadius: 6,
+                              background: "#334155",
+                              border: "none",
+                              color: "#cbd5e1",
+                              fontSize: "0.74rem",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                          >
+                            <Copy size={11} /> Copy Link
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditMediaUrl("")}
+                          style={{
+                            padding: "5px 9px",
+                            borderRadius: 6,
+                            background: "rgba(239, 68, 68, 0.2)",
+                            border: "none",
+                            color: "#f87171",
+                            fontSize: "0.72rem",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                        >
+                          <Trash2 size={11} /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                          input.onchange = async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const res = await handleUploadMedia(modalAction.post, file, true);
+                              if (res?.file_url) setEditMediaUrl(res.file_url);
+                            }
+                          };
+                          input.click();
+                        }}
+                        style={{
+                          border: "2px dashed #f472b6",
+                          borderRadius: 10,
+                          background: "#fff",
+                          padding: "18px 14px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          marginBottom: 8,
+                        }}
+                      >
+                        <Upload size={22} style={{ color: "#db2777", margin: "0 auto 4px" }} />
+                        <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#be185d" }}>
+                          Click to Browse or Drag & Drop Finished Deliverable
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>
+                          Supports Reel / Video (.mp4, .mov, .webm) or Graphic (.png, .jpg, .webp)
+                        </div>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={editMediaUrl}
+                        onChange={(e) => setEditMediaUrl(e.target.value)}
+                        placeholder="Or paste cloud asset link (Drive, Canva, Figma)..."
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.8rem", outline: "none" }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: 10 }}>
+                    <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: 3 }}>
+                      Designer / Editor Instructions & Brief
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editDesignerNotes}
+                      onChange={(e) => setEditDesignerNotes(e.target.value)}
+                      placeholder="e.g. 1080x1920 60s Reel rendered with captions and sound design. Ready for review."
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.82rem", outline: "none" }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Script Approval stage brief */}
+              {modalAction.type === "approve_script" && (
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
                     Visual Creative URL (Image / Video URL)
@@ -1103,6 +1313,23 @@ export default function WorkflowPipelineTab({
         />
       )}
 
+      {/* Deliverable Media Play & Preview Modal */}
+      {previewingMediaPost && (
+        <MediaPreviewModal
+          isOpen={Boolean(previewingMediaPost)}
+          onClose={() => setPreviewingMediaPost(null)}
+          post={previewingMediaPost}
+          onRefresh={() => {
+            onRefresh();
+            const updated = posts.find((p) => p.id === previewingMediaPost.id);
+            if (updated) setPreviewingMediaPost(updated);
+          }}
+          onReadyForQA={(p) => {
+            handleTransition(p, "team_review", "advance", "Deliverable inspected and submitted for Team QA review");
+          }}
+        />
+      )}
+
     </div>
   );
 }
@@ -1119,6 +1346,8 @@ function PostPipelineCard({
   onOpenTimeline,
   onViewScript,
   onViewWorkDetails,
+  onPreviewMedia,
+  onUploadMedia,
 }) {
   const isRejectedLoopback = Boolean(post.client_feedback);
 
@@ -1349,21 +1578,59 @@ function PostPipelineCard({
         {/* Stage 3: Designing */}
         {stage.id === "designing" && (
           <>
+            {post.media_urls?.[0] ? (
+              <>
+                <button
+                  onClick={() => onPreviewMedia && onPreviewMedia(post)}
+                  title="Play video reel or view creative deliverable"
+                  style={{ flex: 1, padding: "5px 6px", borderRadius: 6, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+                >
+                  <Play size={11} fill="#ffffff" /> {post.post_type === "reel" || post.post_type === "video" ? "Play" : "View"}
+                </button>
+                <button
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                    input.onchange = (e) => {
+                      const file = e.target.files?.[0];
+                      if (file && onUploadMedia) onUploadMedia(post, file, true);
+                    };
+                    input.click();
+                  }}
+                  title="Replace deliverable file"
+                  style={{ flex: 0.9, padding: "5px 5px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", color: "#475569", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+                >
+                  <RotateCcw size={11} /> Replace
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                  input.onchange = (e) => {
+                    const file = e.target.files?.[0];
+                    if (file && onUploadMedia) onUploadMedia(post, file, true);
+                  };
+                  input.click();
+                }}
+                title="Upload creative deliverable"
+                style={{ flex: 1, padding: "5px 6px", borderRadius: 6, border: "1px dashed #16a34a", background: "#f0fdf4", color: "#15803d", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+              >
+                <Upload size={11} /> Upload
+              </button>
+            )}
             <button
               onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
-              style={{ flex: 1.1, padding: "5px 7px", borderRadius: 6, border: "1px solid #c084fc", background: "#faf5ff", color: "#7e22ce", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+              style={{ flex: 1, padding: "5px 6px", borderRadius: 6, border: "1px solid #c084fc", background: "#faf5ff", color: "#7e22ce", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 }}
             >
-              <Palette size={12} style={{ color: "#9333ea" }} /> Work Details
-            </button>
-            <button
-              onClick={() => onOpenModal(post, "edit_notes")}
-              style={{ flex: 0.9, padding: "5px 6px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
-            >
-              + Media
+              <Palette size={11} style={{ color: "#9333ea" }} /> Details
             </button>
             <button
               onClick={() => onOpenModal(post, "design_ready")}
-              style={{ flex: 1.2, padding: "5px 7px", borderRadius: 6, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+              style={{ flex: 1.1, padding: "5px 6px", borderRadius: 6, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
               Ready QA →
             </button>

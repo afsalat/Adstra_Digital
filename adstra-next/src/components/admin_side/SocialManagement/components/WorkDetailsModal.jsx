@@ -26,7 +26,13 @@ import {
   Link2,
   Edit3,
   FileText,
+  Upload,
+  Play,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
+import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 
 export default function WorkDetailsModal({
   isOpen,
@@ -42,6 +48,9 @@ export default function WorkDetailsModal({
   const [designerNotes, setDesignerNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmittingQA, setIsSubmittingQA] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (post) {
@@ -185,6 +194,46 @@ export default function WorkDetailsModal({
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("replace", "true");
+
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/social/posts/${post.id}/upload_media/`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      if (res.data?.file_url) {
+        setMediaUrl(res.data.file_url);
+        if (post) {
+          post.media_urls = [res.data.file_url];
+        }
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setUploadError(err.response?.data?.error || "Failed to upload file.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveAttachedMedia = () => {
+    if (!confirm("Remove this media asset?")) return;
+    setMediaUrl("");
+    if (post) {
+      post.media_urls = [];
+    }
+  };
+
   const handleReadyQA = async () => {
     if (!onReadyForQA) return;
     setIsSubmittingQA(true);
@@ -236,6 +285,13 @@ export default function WorkDetailsModal({
       }}
       onClick={onClose}
     >
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif"
+        style={{ display: "none" }}
+      />
       <div
         style={{
           background: "#ffffff",
@@ -868,88 +924,214 @@ export default function WorkDetailsModal({
               gap: 12,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
               <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#15803d", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
                 <Link2 size={15} />
-                Creative Asset Submission & Media Link
+                Creative Deliverable: Upload, Replace & Play
               </div>
               <span style={{ fontSize: "0.72rem", color: "#166534", fontWeight: 700 }}>
-                Attach final image/video link
+                {mediaUrl ? "Deliverable Attached" : "Awaiting Final Media"}
               </span>
             </div>
 
-            <div>
-              <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#166534", marginBottom: 4 }}>
-                Visual Creative URL (Image, Video, Google Drive, Canva, or Figma link):
-              </label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="text"
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  placeholder="https://... (e.g. Media file URL or drive link)"
-                  style={{
-                    flex: 1,
-                    padding: "9px 12px",
-                    borderRadius: 8,
-                    border: "1px solid #86efac",
-                    background: "#ffffff",
-                    fontSize: "0.84rem",
-                    outline: "none",
-                  }}
-                />
-                {mediaUrl && (
-                  <a
-                    href={mediaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #86efac",
-                      background: "#ffffff",
-                      color: "#15803d",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      textDecoration: "none",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <ExternalLink size={13} /> Test Link
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* LIVE PREVIEW IF VALID MEDIA URL */}
-            {mediaUrl && (
-              <div style={{ background: "#ffffff", borderRadius: 10, padding: 12, border: "1px solid #bbf7d0" }}>
-                <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#15803d", marginBottom: 6 }}>
-                  Asset Preview:
-                </div>
-                {isVideoAsset(mediaUrl) ? (
-                  <video
-                    src={mediaUrl}
-                    controls
-                    style={{ maxHeight: 240, maxWidth: "100%", borderRadius: 8, background: "#000" }}
-                  />
-                ) : isImageAsset(mediaUrl) ? (
-                  <img
-                    src={mediaUrl}
-                    alt="Design Preview"
-                    style={{ maxHeight: 220, maxWidth: "100%", borderRadius: 8, objectFit: "contain", background: "#f8fafc" }}
-                  />
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#166534" }}>
-                    <ExternalLink size={14} />
-                    <span>External Design Project: <strong>{mediaUrl}</strong></span>
-                  </div>
-                )}
+            {uploadError && (
+              <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c", padding: "8px 12px", borderRadius: 8, fontSize: "0.78rem" }}>
+                {uploadError}
               </div>
             )}
+
+            {/* Direct Upload Box or Attached Preview Card */}
+            {!mediaUrl ? (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: "2px dashed #86efac",
+                  borderRadius: 12,
+                  padding: "26px 20px",
+                  textAlign: "center",
+                  background: "#ffffff",
+                  cursor: isUploading ? "not-allowed" : "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 10,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    background: "#dcfce7",
+                    color: "#15803d",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Upload size={22} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: "0.88rem", color: "#166534", display: "block" }}>
+                    {isUploading ? "Uploading deliverable..." : "Click or Drag & Drop to Upload Deliverable"}
+                  </strong>
+                  <span style={{ fontSize: "0.74rem", color: "#475569" }}>
+                    Supports Reel / Video (.mp4, .mov, .webm) or Graphic (.png, .jpg, .webp)
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: 12,
+                  border: "1px solid #bbf7d0",
+                  padding: 14,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
+                {/* Media Player / Image Display */}
+                <div style={{ background: "#0f172a", borderRadius: 10, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 180, maxHeight: 320 }}>
+                  {isVideoAsset(mediaUrl) ? (
+                    <video
+                      src={mediaUrl}
+                      controls
+                      playsInline
+                      style={{ maxHeight: 320, maxWidth: "100%", borderRadius: 8 }}
+                    />
+                  ) : isImageAsset(mediaUrl) ? (
+                    <img
+                      src={mediaUrl}
+                      alt="Deliverable preview"
+                      style={{ maxHeight: 320, maxWidth: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <div style={{ padding: "20px", color: "#fff", display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem" }}>
+                      <ExternalLink size={16} />
+                      <span>{mediaUrl}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* SHOW OPTIONS & ACTION BUTTONS */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingTop: 6, borderTop: "1px solid #f1f5f9" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      title="Replace current file with an updated version"
+                      style={{
+                        background: "#f0fdf4",
+                        border: "1px solid #86efac",
+                        color: "#15803d",
+                        padding: "6px 12px",
+                        borderRadius: 7,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: isUploading ? "not-allowed" : "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <RotateCcw size={13} />
+                      {isUploading ? "Uploading..." : "Replace Media File"}
+                    </button>
+
+                    <a
+                      href={mediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        background: "#f8fafc",
+                        border: "1px solid #cbd5e1",
+                        color: "#334155",
+                        padding: "6px 10px",
+                        borderRadius: 7,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        textDecoration: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <ExternalLink size={12} /> Open File
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(mediaUrl);
+                        alert("Media link copied to clipboard!");
+                      }}
+                      style={{
+                        background: "#f8fafc",
+                        border: "1px solid #cbd5e1",
+                        color: "#334155",
+                        padding: "6px 10px",
+                        borderRadius: 7,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <Copy size={12} /> Copy Link
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRemoveAttachedMedia}
+                    title="Remove attached deliverable"
+                    style={{
+                      background: "#fef2f2",
+                      border: "1px solid #fca5a5",
+                      color: "#dc2626",
+                      padding: "6px 10px",
+                      borderRadius: 7,
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Trash2 size={13} /> Remove
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Optional External Link Fallback */}
+            <div>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#166534", marginBottom: 3 }}>
+                Or Paste Cloud URL (Google Drive, Canva, Figma):
+              </label>
+              <input
+                type="text"
+                value={mediaUrl}
+                onChange={(e) => setMediaUrl(e.target.value)}
+                placeholder="https://drive.google.com/... or https://www.figma.com/..."
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #86efac",
+                  background: "#ffffff",
+                  fontSize: "0.82rem",
+                  outline: "none",
+                }}
+              />
+            </div>
 
             <div>
               <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#166534", marginBottom: 4 }}>

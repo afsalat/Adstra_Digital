@@ -479,6 +479,82 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         record_approval_action(post, 'published', actor, 'Publisher', 'Post published across platforms')
         return Response(SocialPostSerializer(post).data)
 
+    @action(detail=True, methods=['post'], url_path='upload_media')
+    def upload_media(self, request, pk=None):
+        post = self.get_object()
+        file = request.FILES.get('file') or request.FILES.get('media')
+        if not file:
+            return Response({'error': 'No file was uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import os, re, time
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.conf import settings
+
+        media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
+        if not os.path.exists(media_dir):
+            os.makedirs(media_dir, exist_ok=True)
+
+        base, ext = os.path.splitext(file.name)
+        clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
+        filename = f"{post.id}_{clean_base}_{int(time.time())}{ext}"
+        file_path = os.path.join('social_media', filename)
+        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+
+        file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
+
+        replace = request.data.get('replace', 'true')
+        is_replace = replace in [True, 'true', 'True', '1', 1]
+
+        if is_replace or not post.media_urls:
+            post.media_urls = [file_url]
+        else:
+            if not isinstance(post.media_urls, list):
+                post.media_urls = []
+            post.media_urls.append(file_url)
+
+        post.save(update_fields=['media_urls'])
+
+        user = request.user if request.user.is_authenticated else None
+        actor = getattr(user, 'fullname', '') or getattr(user, 'username', 'Designer')
+        record_approval_action(
+            post,
+            'Media Replaced' if is_replace else 'Media Uploaded',
+            actor,
+            'Graphic Designer',
+            f"Uploaded creative file: {file.name}"
+        )
+
+        return Response({
+            'success': True,
+            'file_url': file_url,
+            'post': SocialPostSerializer(post).data
+        })
+
+    @action(detail=False, methods=['post'], url_path='upload')
+    def upload_generic(self, request):
+        file = request.FILES.get('file') or request.FILES.get('media')
+        if not file:
+            return Response({'error': 'No file was uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import os, re, time
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.conf import settings
+
+        media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
+        if not os.path.exists(media_dir):
+            os.makedirs(media_dir, exist_ok=True)
+
+        base, ext = os.path.splitext(file.name)
+        clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
+        filename = f"media_{clean_base}_{int(time.time())}{ext}"
+        file_path = os.path.join('social_media', filename)
+        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+
+        file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
+        return Response({'url': file_url, 'file_url': file_url})
+
 
 class PublicClientReviewView(APIView):
     permission_classes = [permissions.AllowAny]

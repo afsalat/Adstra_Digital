@@ -30,12 +30,19 @@ import {
   List,
   Calendar,
   History,
+  Play,
+  Upload,
+  ChevronDown,
+  Download,
+  Trash2,
+  Maximize2,
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
 import ScriptViewModal from "./ScriptViewModal";
 import PostTimelineModal from "./PostTimelineModal";
 import WorkDetailsModal from "./WorkDetailsModal";
+import MediaPreviewModal from "./MediaPreviewModal";
 
 export default function WorkflowStageSection({
   stageId, // 'scripts' | 'script_approval' | 'designing' | 'team_review' | 'client_review' | 'post_schedule' | 'published'
@@ -62,6 +69,9 @@ export default function WorkflowStageSection({
 
   // Designer Work Details Modal State (Stage 3: Designing & Production)
   const [viewingWorkDetailsPost, setViewingWorkDetailsPost] = useState(null);
+
+  // Deliverable Media Player & Preview Modal State
+  const [previewingMediaPost, setPreviewingMediaPost] = useState(null);
 
   // Timeline Stepper Modal State
   const [timelinePost, setTimelinePost] = useState(null);
@@ -278,6 +288,24 @@ export default function WorkflowStageSection({
       alert(errorMsg);
     } finally {
       setSubmittingAction(false);
+    }
+  };
+
+  const handleUploadMedia = async (post, file, isReplace = true) => {
+    if (!file) return null;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("replace", isReplace ? "true" : "false");
+    try {
+      const res = await axios.post(`${API_BASE_URL}/social/posts/${post.id}/upload_media/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      onRefresh();
+      return res.data;
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert(err.response?.data?.error || "Failed to upload media deliverable.");
+      return null;
     }
   };
 
@@ -629,6 +657,8 @@ export default function WorkflowStageSection({
               onOpenTimeline={(post) => setTimelinePost(post)}
               onViewScript={(post) => setViewingScriptPost(post)}
               onViewWorkDetails={(post) => setViewingWorkDetailsPost(post)}
+              onPreviewMedia={(post) => setPreviewingMediaPost(post)}
+              onUploadMedia={handleUploadMedia}
               onOpenScriptModal={(post) => {
                 setActiveScriptPost(post);
                 setScriptModalOpen(true);
@@ -741,8 +771,191 @@ export default function WorkflowStageSection({
                 </div>
               )}
 
-              {/* Designer Notes & Media URL */}
-              {(modalAction.type === "edit_notes" || modalAction.type === "design_ready" || modalAction.type === "approve_script") && (
+              {/* Designer Deliverable Upload, Replace & Play (For design_ready and edit_notes) */}
+              {(modalAction.type === "design_ready" || modalAction.type === "edit_notes") && (
+                <div style={{ background: "#fdf2f8", border: "1px solid #fbcfe8", borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#9d174d", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Sparkles size={14} /> Creative Deliverable (Reel / Video / Graphic)
+                    </span>
+                    {editMediaUrl && (
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "2px 8px", borderRadius: 6 }}>
+                        ✓ Deliverable Attached
+                      </span>
+                    )}
+                  </div>
+
+                  {editMediaUrl ? (
+                    <div style={{ background: "#0f172a", borderRadius: 10, overflow: "hidden", padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ maxHeight: 240, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        {(editMediaUrl.toLowerCase().endsWith(".mp4") || editMediaUrl.toLowerCase().endsWith(".mov") || editMediaUrl.toLowerCase().endsWith(".webm") || modalAction.post.post_type === "reel" || modalAction.post.post_type === "video") ? (
+                          <video src={editMediaUrl} controls playsInline style={{ maxHeight: 230, maxWidth: "100%", borderRadius: 6 }} />
+                        ) : (
+                          <img src={editMediaUrl} alt="" style={{ maxHeight: 230, maxWidth: "100%", objectFit: "contain", borderRadius: 6 }} />
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                              input.onchange = async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const res = await handleUploadMedia(modalAction.post, file, true);
+                                  if (res?.file_url) setEditMediaUrl(res.file_url);
+                                }
+                              };
+                              input.click();
+                            }}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: 6,
+                              background: "#334155",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              color: "#fff",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <RotateCcw size={12} /> Replace File
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewingMediaPost({ ...modalAction.post, media_urls: [editMediaUrl] });
+                            }}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: 6,
+                              background: "#ec4899",
+                              border: "none",
+                              color: "#fff",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Play size={11} fill="#fff" /> Full Player
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(editMediaUrl);
+                              alert("Asset link copied to clipboard!");
+                            }}
+                            style={{
+                              padding: "5px 9px",
+                              borderRadius: 6,
+                              background: "#334155",
+                              border: "none",
+                              color: "#cbd5e1",
+                              fontSize: "0.74rem",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                          >
+                            <Copy size={11} /> Copy Link
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditMediaUrl("")}
+                          style={{
+                            padding: "5px 9px",
+                            borderRadius: 6,
+                            background: "rgba(239, 68, 68, 0.2)",
+                            border: "none",
+                            color: "#f87171",
+                            fontSize: "0.72rem",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                        >
+                          <Trash2 size={11} /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                          input.onchange = async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const res = await handleUploadMedia(modalAction.post, file, true);
+                              if (res?.file_url) setEditMediaUrl(res.file_url);
+                            }
+                          };
+                          input.click();
+                        }}
+                        style={{
+                          border: "2px dashed #f472b6",
+                          borderRadius: 10,
+                          background: "#fff",
+                          padding: "18px 14px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          marginBottom: 8,
+                        }}
+                      >
+                        <Upload size={22} style={{ color: "#db2777", margin: "0 auto 4px" }} />
+                        <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#be185d" }}>
+                          Click to Browse or Drag & Drop Finished Deliverable
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>
+                          Supports Reel / Video (.mp4, .mov, .webm) or Graphic (.png, .jpg, .webp)
+                        </div>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={editMediaUrl}
+                        onChange={(e) => setEditMediaUrl(e.target.value)}
+                        placeholder="Or paste cloud asset link (Drive, Canva, Figma)..."
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.8rem", outline: "none" }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: 10 }}>
+                    <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: 3 }}>
+                      Designer / Editor Brief & Notes
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editDesignerNotes}
+                      onChange={(e) => setEditDesignerNotes(e.target.value)}
+                      placeholder="e.g. 1080x1920 60s Reel rendered with captions and sound design. Ready for review."
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.82rem", outline: "none" }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Script Approval stage brief */}
+              {modalAction.type === "approve_script" && (
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
                     Visual Creative URL (Image / Video URL)
@@ -1070,6 +1283,23 @@ export default function WorkflowStageSection({
         />
       )}
 
+      {/* 9. MEDIA PLAY & PREVIEW MODAL */}
+      {previewingMediaPost && (
+        <MediaPreviewModal
+          isOpen={Boolean(previewingMediaPost)}
+          onClose={() => setPreviewingMediaPost(null)}
+          post={previewingMediaPost}
+          onRefresh={() => {
+            onRefresh();
+            const updated = posts.find((p) => p.id === previewingMediaPost.id);
+            if (updated) setPreviewingMediaPost(updated);
+          }}
+          onReadyForQA={(p) => {
+            handleTransition(p, "team_review", "advance", "Deliverable inspected and submitted for Team QA review");
+          }}
+        />
+      )}
+
     </div>
   );
 }
@@ -1089,7 +1319,10 @@ function StageListingTable({
   onOpenTimeline,
   onViewScript,
   onViewWorkDetails,
+  onPreviewMedia,
+  onUploadMedia,
 }) {
+  const [openOptionsPostId, setOpenOptionsPostId] = useState(null);
   return (
     <div
       style={{
@@ -1145,20 +1378,51 @@ function StageListingTable({
                       {/* Thumbnail or Stage Icon */}
                       {post.media_urls?.[0] ? (
                         <div
+                          onClick={() => onPreviewMedia && onPreviewMedia(post)}
                           style={{
                             width: 44,
                             height: 44,
                             borderRadius: 8,
                             overflow: "hidden",
-                            border: "1px solid #e2e8f0",
+                            border: "1px solid #cbd5e1",
                             flexShrink: 0,
+                            position: "relative",
+                            cursor: "pointer",
+                            background: "#0f172a",
                           }}
+                          title="Click to play / view deliverable"
                         >
-                          <img
-                            src={post.media_urls[0]}
-                            alt=""
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
+                          {post.post_type === "reel" ||
+                          post.post_type === "video" ||
+                          (typeof post.media_urls[0] === "string" &&
+                            (post.media_urls[0].toLowerCase().endsWith(".mp4") ||
+                              post.media_urls[0].toLowerCase().endsWith(".webm") ||
+                              post.media_urls[0].toLowerCase().endsWith(".mov"))) ? (
+                            <>
+                              <video
+                                src={post.media_urls[0]}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  background: "rgba(0, 0, 0, 0.4)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Play size={15} fill="#ffffff" color="#ffffff" />
+                              </div>
+                            </>
+                          ) : (
+                            <img
+                              src={post.media_urls[0]}
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          )}
                         </div>
                       ) : (
                         <div
@@ -1479,11 +1743,335 @@ function StageListingTable({
                       {/* Stage 3: Designing */}
                       {stageId === "designing" && (
                         <>
+                          {/* Play / View Deliverable Option */}
+                          {post.media_urls?.[0] ? (
+                            <>
+                              <button
+                                onClick={() => onPreviewMedia && onPreviewMedia(post)}
+                                title="Play video reel or view full creative deliverable"
+                                style={{
+                                  padding: "6px 12px",
+                                  borderRadius: 8,
+                                  border: "none",
+                                  background: "#ec4899",
+                                  color: "#fff",
+                                  fontSize: "0.76rem",
+                                  fontWeight: 800,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  boxShadow: "0 2px 6px rgba(236, 72, 153, 0.3)",
+                                }}
+                              >
+                                <Play size={12} fill="#ffffff" />
+                                {post.post_type === "reel" || post.post_type === "video" ? "Play Reel" : "View Media"}
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  const input = document.createElement("input");
+                                  input.type = "file";
+                                  input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                                  input.onchange = (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file && onUploadMedia) onUploadMedia(post, file, true);
+                                  };
+                                  input.click();
+                                }}
+                                title="Replace current deliverable with a revised version"
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                  border: "1px solid #cbd5e1",
+                                  background: "#ffffff",
+                                  color: "#475569",
+                                  fontSize: "0.76rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                              >
+                                <RotateCcw size={12} /> Replace
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const input = document.createElement("input");
+                                input.type = "file";
+                                input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                                input.onchange = (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file && onUploadMedia) onUploadMedia(post, file, true);
+                                };
+                                input.click();
+                              }}
+                              title="Upload completed creative deliverable (Video/Reel or Graphic)"
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                border: "1px dashed #16a34a",
+                                background: "#f0fdf4",
+                                color: "#15803d",
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                              }}
+                            >
+                              <Upload size={13} /> Upload Work
+                            </button>
+                          )}
+
+                          {/* Options Dropdown for Stage 3 */}
+                          <div style={{ position: "relative", display: "inline-block" }}>
+                            <button
+                              type="button"
+                              onClick={() => setOpenOptionsPostId(openOptionsPostId === post.id ? null : post.id)}
+                              title="Show options"
+                              style={{
+                                padding: "6px 8px",
+                                borderRadius: 8,
+                                border: "1px solid #cbd5e1",
+                                background: openOptionsPostId === post.id ? "#f1f5f9" : "#ffffff",
+                                color: "#475569",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                              }}
+                            >
+                              <span>Options</span>
+                              <ChevronDown size={11} />
+                            </button>
+
+                            {openOptionsPostId === post.id && (
+                              <>
+                                <div
+                                  style={{ position: "fixed", inset: 0, zIndex: 100 }}
+                                  onClick={() => setOpenOptionsPostId(null)}
+                                />
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: "calc(100% + 4px)",
+                                    right: 0,
+                                    zIndex: 101,
+                                    background: "#ffffff",
+                                    borderRadius: 10,
+                                    border: "1px solid #e2e8f0",
+                                    boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1)",
+                                    padding: "6px",
+                                    minWidth: 195,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 2,
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  {post.media_urls?.[0] && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenOptionsPostId(null);
+                                        onPreviewMedia && onPreviewMedia(post);
+                                      }}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        padding: "7px 10px",
+                                        borderRadius: 6,
+                                        border: "none",
+                                        background: "transparent",
+                                        color: "#0f172a",
+                                        fontSize: "0.78rem",
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        width: "100%",
+                                        textAlign: "left",
+                                      }}
+                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                    >
+                                      <Play size={13} style={{ color: "#ec4899" }} fill="#ec4899" />
+                                      <span>Play in Full Player</span>
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenOptionsPostId(null);
+                                      const input = document.createElement("input");
+                                      input.type = "file";
+                                      input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                                      input.onchange = (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file && onUploadMedia) onUploadMedia(post, file, true);
+                                      };
+                                      input.click();
+                                    }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      padding: "7px 10px",
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#0f172a",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                      width: "100%",
+                                      textAlign: "left",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <RotateCcw size={13} style={{ color: "#2563eb" }} />
+                                    <span>{post.media_urls?.[0] ? "Replace Deliverable" : "Upload Deliverable"}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenOptionsPostId(null);
+                                      if (onViewWorkDetails) onViewWorkDetails(post);
+                                    }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      padding: "7px 10px",
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#0f172a",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                      width: "100%",
+                                      textAlign: "left",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <Palette size={13} style={{ color: "#9333ea" }} />
+                                    <span>Work Details & Brief</span>
+                                  </button>
+
+                                  {post.media_urls?.[0] && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenOptionsPostId(null);
+                                          navigator.clipboard.writeText(post.media_urls[0]);
+                                          alert("Media link copied to clipboard!");
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 8,
+                                          padding: "7px 10px",
+                                          borderRadius: 6,
+                                          border: "none",
+                                          background: "transparent",
+                                          color: "#0f172a",
+                                          fontSize: "0.78rem",
+                                          fontWeight: 600,
+                                          cursor: "pointer",
+                                          width: "100%",
+                                          textAlign: "left",
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                      >
+                                        <Copy size={13} style={{ color: "#059669" }} />
+                                        <span>Copy Asset Link</span>
+                                      </button>
+
+                                      <a
+                                        href={post.media_urls[0]}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download
+                                        onClick={() => setOpenOptionsPostId(null)}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 8,
+                                          padding: "7px 10px",
+                                          borderRadius: 6,
+                                          color: "#0f172a",
+                                          fontSize: "0.78rem",
+                                          fontWeight: 600,
+                                          textDecoration: "none",
+                                          cursor: "pointer",
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                      >
+                                        <Download size={13} style={{ color: "#475569" }} />
+                                        <span>Download Deliverable</span>
+                                      </a>
+
+                                      <div style={{ height: 1, background: "#f1f5f9", margin: "3px 0" }} />
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenOptionsPostId(null);
+                                          if (confirm("Remove deliverable media from this post?")) {
+                                            onTransition(post, post.status, "advance", "Removed media deliverable", { media_urls: [] });
+                                          }
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 8,
+                                          padding: "7px 10px",
+                                          borderRadius: 6,
+                                          border: "none",
+                                          background: "transparent",
+                                          color: "#dc2626",
+                                          fontSize: "0.78rem",
+                                          fontWeight: 600,
+                                          cursor: "pointer",
+                                          width: "100%",
+                                          textAlign: "left",
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                      >
+                                        <Trash2 size={13} style={{ color: "#dc2626" }} />
+                                        <span>Remove Deliverable</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+
                           <button
                             onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
                             title="View creative brief, storyboard, brand assets & work instructions in popup"
                             style={{
-                              padding: "6px 12px",
+                              padding: "6px 11px",
                               borderRadius: 8,
                               border: "1px solid #c084fc",
                               background: "#faf5ff",
@@ -1494,21 +2082,26 @@ function StageListingTable({
                               whiteSpace: "nowrap",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: 5,
+                              gap: 4,
                             }}
                           >
                             <Palette size={13} style={{ color: "#9333ea" }} />
                             Work Details
                           </button>
-                          <button
-                            onClick={() => onOpenModal(post, "edit_notes")}
-                            style={{ padding: "6px 11px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            + Media / Brief
-                          </button>
+
                           <button
                             onClick={() => onOpenModal(post, "design_ready")}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: "#ec4899",
+                              color: "#fff",
+                              fontSize: "0.76rem",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
                           >
                             Ready for QA →
                           </button>
@@ -1518,6 +2111,234 @@ function StageListingTable({
                       {/* Stage 4: Team Review */}
                       {stageId === "team_review" && (
                         <>
+                          {post.media_urls?.[0] && (
+                            <button
+                              onClick={() => onPreviewMedia && onPreviewMedia(post)}
+                              title="Play video reel or view creative deliverable"
+                              style={{
+                                padding: "6px 11px",
+                                borderRadius: 8,
+                                border: "none",
+                                background: "#ec4899",
+                                color: "#fff",
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <Play size={12} fill="#ffffff" />
+                              {post.post_type === "reel" || post.post_type === "video" ? "Play" : "View"}
+                            </button>
+                          )}
+
+                          {/* Options Dropdown for Stage 4 */}
+                          <div style={{ position: "relative", display: "inline-block" }}>
+                            <button
+                              type="button"
+                              onClick={() => setOpenOptionsPostId(openOptionsPostId === post.id ? null : post.id)}
+                              title="Show options"
+                              style={{
+                                padding: "6px 8px",
+                                borderRadius: 8,
+                                border: "1px solid #cbd5e1",
+                                background: openOptionsPostId === post.id ? "#f1f5f9" : "#ffffff",
+                                color: "#475569",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                              }}
+                            >
+                              <span>Options</span>
+                              <ChevronDown size={11} />
+                            </button>
+
+                            {openOptionsPostId === post.id && (
+                              <>
+                                <div
+                                  style={{ position: "fixed", inset: 0, zIndex: 100 }}
+                                  onClick={() => setOpenOptionsPostId(null)}
+                                />
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: "calc(100% + 4px)",
+                                    right: 0,
+                                    zIndex: 101,
+                                    background: "#ffffff",
+                                    borderRadius: 10,
+                                    border: "1px solid #e2e8f0",
+                                    boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1)",
+                                    padding: "6px",
+                                    minWidth: 190,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 2,
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  {post.media_urls?.[0] && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenOptionsPostId(null);
+                                        onPreviewMedia && onPreviewMedia(post);
+                                      }}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        padding: "7px 10px",
+                                        borderRadius: 6,
+                                        border: "none",
+                                        background: "transparent",
+                                        color: "#0f172a",
+                                        fontSize: "0.78rem",
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        width: "100%",
+                                        textAlign: "left",
+                                      }}
+                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                    >
+                                      <Play size={13} style={{ color: "#ec4899" }} fill="#ec4899" />
+                                      <span>Play / Full Preview</span>
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenOptionsPostId(null);
+                                      const input = document.createElement("input");
+                                      input.type = "file";
+                                      input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                                      input.onchange = (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file && onUploadMedia) onUploadMedia(post, file, true);
+                                      };
+                                      input.click();
+                                    }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      padding: "7px 10px",
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#0f172a",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                      width: "100%",
+                                      textAlign: "left",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <RotateCcw size={13} style={{ color: "#2563eb" }} />
+                                    <span>Replace Deliverable</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenOptionsPostId(null);
+                                      if (onViewWorkDetails) onViewWorkDetails(post);
+                                    }}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      padding: "7px 10px",
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#0f172a",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                      width: "100%",
+                                      textAlign: "left",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <Palette size={13} style={{ color: "#9333ea" }} />
+                                    <span>Work Details & Brief</span>
+                                  </button>
+
+                                  {post.media_urls?.[0] && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenOptionsPostId(null);
+                                          navigator.clipboard.writeText(post.media_urls[0]);
+                                          alert("Media link copied to clipboard!");
+                                        }}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 8,
+                                          padding: "7px 10px",
+                                          borderRadius: 6,
+                                          border: "none",
+                                          background: "transparent",
+                                          color: "#0f172a",
+                                          fontSize: "0.78rem",
+                                          fontWeight: 600,
+                                          cursor: "pointer",
+                                          width: "100%",
+                                          textAlign: "left",
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                      >
+                                        <Copy size={13} style={{ color: "#059669" }} />
+                                        <span>Copy Asset Link</span>
+                                      </button>
+
+                                      <a
+                                        href={post.media_urls[0]}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download
+                                        onClick={() => setOpenOptionsPostId(null)}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 8,
+                                          padding: "7px 10px",
+                                          borderRadius: 6,
+                                          color: "#0f172a",
+                                          fontSize: "0.78rem",
+                                          fontWeight: 600,
+                                          textDecoration: "none",
+                                          cursor: "pointer",
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                      >
+                                        <Download size={13} style={{ color: "#475569" }} />
+                                        <span>Download Deliverable</span>
+                                      </a>
+                                    </>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+
                           <button
                             onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
                             title="View designer work details & brief"
