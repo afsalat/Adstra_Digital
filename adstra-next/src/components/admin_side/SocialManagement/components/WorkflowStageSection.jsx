@@ -1340,7 +1340,7 @@ function StageListingTable({
                             Reject (↺)
                           </button>
                           <button
-                            onClick={() => onOpenModal(post, "approve_script")}
+                            onClick={() => onTransition(post, "designing", "advance", "Script approved, ready for design")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
                             Approve → Design
@@ -1376,7 +1376,7 @@ function StageListingTable({
                             ↺ Back
                           </button>
                           <button
-                            onClick={() => onOpenModal(post, "send_client")}
+                            onClick={() => onTransition(post, "client_review", "advance", "Team QA passed, sent to client review")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
                             QA Pass → Client
@@ -1402,7 +1402,7 @@ function StageListingTable({
                             ↺ Revisions
                           </button>
                           <button
-                            onClick={() => onOpenModal(post, "client_approve")}
+                            onClick={() => onTransition(post, "approved", "advance", "Client approved design & copy")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
                             Approved →

@@ -1233,7 +1233,7 @@ function PostPipelineCard({
               Reject (↺)
             </button>
             <button
-              onClick={() => onOpenModal(post, "approve_script")}
+              onClick={() => onTransition(post, "designing", "advance", "Script approved, ready for design")}
               style={{ flex: 1.1, padding: "5px 8px", borderRadius: 6, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
               Approve →
@@ -1269,7 +1269,7 @@ function PostPipelineCard({
               ↺ Design
             </button>
             <button
-              onClick={() => onOpenModal(post, "send_client")}
+              onClick={() => onTransition(post, "client_review", "advance", "Team QA passed, sent to client review")}
               style={{ flex: 1.4, padding: "5px 8px", borderRadius: 6, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
             >
               QA Pass → Client
@@ -1294,7 +1294,7 @@ function PostPipelineCard({
               ↺ Client Notes
             </button>
             <button
-              onClick={() => onOpenModal(post, "client_approve")}
+              onClick={() => onTransition(post, "approved", "advance", "Client approved design & copy")}
               style={{ flex: 1.2, padding: "5px 8px", borderRadius: 6, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
             >
               Approve →
