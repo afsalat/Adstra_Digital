@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import {
@@ -1323,6 +1323,41 @@ function StageListingTable({
   onUploadMedia,
 }) {
   const [openOptionsPostId, setOpenOptionsPostId] = useState(null);
+  const [dropdownPos, setDropdownPos] = useState(null);
+
+  useEffect(() => {
+    if (!openOptionsPostId) return;
+    const handleClose = () => {
+      setOpenOptionsPostId(null);
+      setDropdownPos(null);
+    };
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
+    return () => {
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
+    };
+  }, [openOptionsPostId]);
+
+  const toggleOptions = (e, postId) => {
+    e.stopPropagation();
+    if (openOptionsPostId === postId) {
+      setOpenOptionsPostId(null);
+      setDropdownPos(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 280;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+      setDropdownPos({
+        top: openUp ? undefined : rect.bottom + 5,
+        bottom: openUp ? window.innerHeight - rect.top + 5 : undefined,
+        right: Math.max(16, window.innerWidth - rect.right),
+      });
+      setOpenOptionsPostId(postId);
+    }
+  };
+
   return (
     <div
       style={{
@@ -1330,29 +1365,28 @@ function StageListingTable({
         borderRadius: 16,
         border: "1px solid #e2e8f0",
         boxShadow: "0 2px 10px rgba(15, 23, 42, 0.02)",
-        overflow: "hidden",
       }}
     >
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", minWidth: 1060, borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
+        <table style={{ width: "100%", minWidth: 880, borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
           <thead>
             <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-              <th style={{ padding: "14px 20px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 260 }}>
+              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 230 }}>
                 Post & Content
               </th>
-              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 160, whiteSpace: "nowrap" }}>
+              <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 140, whiteSpace: "nowrap" }}>
                 Client
               </th>
-              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 90, whiteSpace: "nowrap" }}>
+              <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 80, whiteSpace: "nowrap" }}>
                 Format
               </th>
-              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 210, whiteSpace: "nowrap" }}>
+              <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 160, whiteSpace: "nowrap" }}>
                 Platforms
               </th>
-              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 140, whiteSpace: "nowrap" }}>
+              <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 120, whiteSpace: "nowrap" }}>
                 {stageId === "published" ? "Published At" : stageId === "post_schedule" ? "Scheduled At" : "Timing"}
               </th>
-              <th style={{ padding: "14px 20px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 380, textAlign: "right", whiteSpace: "nowrap" }}>
+              <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 360, textAlign: "right", whiteSpace: "nowrap" }}>
                 Actions
               </th>
             </tr>
@@ -1634,8 +1668,8 @@ function StageListingTable({
                   </td>
 
                   {/* 6. Actions */}
-                  <td style={{ padding: "14px 20px", verticalAlign: "middle", textAlign: "right", whiteSpace: "nowrap" }}>
-                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
+                  <td style={{ padding: "12px 16px", verticalAlign: "middle", textAlign: "right", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, flexWrap: "nowrap" }}>
                       {/* Timeline Graph Button for Every Post */}
                       <button
                         onClick={() => onOpenTimeline && onOpenTimeline(post)}
@@ -1643,19 +1677,19 @@ function StageListingTable({
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: 5,
-                          padding: "6px 11px",
+                          gap: 4,
+                          padding: "5px 9px",
                           borderRadius: 8,
                           border: "1px solid #cbd5e1",
                           background: "#f8fafc",
                           color: "#334155",
-                          fontSize: "0.75rem",
+                          fontSize: "0.74rem",
                           fontWeight: 700,
                           cursor: "pointer",
                           whiteSpace: "nowrap",
                         }}
                       >
-                        <History size={13} style={{ color: "#16a34a" }} />
+                        <History size={12} style={{ color: "#16a34a" }} />
                         Timeline
                       </button>
 
@@ -1750,22 +1784,22 @@ function StageListingTable({
                                 onClick={() => onPreviewMedia && onPreviewMedia(post)}
                                 title="Play video reel or view full creative deliverable"
                                 style={{
-                                  padding: "6px 12px",
+                                  padding: "5px 10px",
                                   borderRadius: 8,
                                   border: "none",
                                   background: "#ec4899",
                                   color: "#fff",
-                                  fontSize: "0.76rem",
+                                  fontSize: "0.74rem",
                                   fontWeight: 800,
                                   cursor: "pointer",
                                   whiteSpace: "nowrap",
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  gap: 5,
-                                  boxShadow: "0 2px 6px rgba(236, 72, 153, 0.3)",
+                                  gap: 4,
+                                  boxShadow: "0 2px 6px rgba(236, 72, 153, 0.25)",
                                 }}
                               >
-                                <Play size={12} fill="#ffffff" />
+                                <Play size={11} fill="#ffffff" />
                                 {post.post_type === "reel" || post.post_type === "video" ? "Play Reel" : "View Media"}
                               </button>
 
@@ -1782,12 +1816,12 @@ function StageListingTable({
                                 }}
                                 title="Replace current deliverable with a revised version"
                                 style={{
-                                  padding: "6px 10px",
+                                  padding: "5px 9px",
                                   borderRadius: 8,
                                   border: "1px solid #cbd5e1",
                                   background: "#ffffff",
                                   color: "#475569",
-                                  fontSize: "0.76rem",
+                                  fontSize: "0.74rem",
                                   fontWeight: 700,
                                   cursor: "pointer",
                                   whiteSpace: "nowrap",
@@ -1796,7 +1830,7 @@ function StageListingTable({
                                   gap: 4,
                                 }}
                               >
-                                <RotateCcw size={12} /> Replace
+                                <RotateCcw size={11} /> Replace
                               </button>
                             </>
                           ) : (
@@ -1813,37 +1847,37 @@ function StageListingTable({
                               }}
                               title="Upload completed creative deliverable (Video/Reel or Graphic)"
                               style={{
-                                padding: "6px 12px",
+                                padding: "5px 11px",
                                 borderRadius: 8,
                                 border: "1px dashed #16a34a",
                                 background: "#f0fdf4",
                                 color: "#15803d",
-                                fontSize: "0.76rem",
+                                fontSize: "0.74rem",
                                 fontWeight: 800,
                                 cursor: "pointer",
                                 whiteSpace: "nowrap",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 5,
+                                gap: 4,
                               }}
                             >
-                              <Upload size={13} /> Upload Work
+                              <Upload size={12} /> Upload Work
                             </button>
                           )}
 
                           {/* Options Dropdown for Stage 3 */}
-                          <div style={{ position: "relative", display: "inline-block" }}>
+                          <div style={{ display: "inline-block" }}>
                             <button
                               type="button"
-                              onClick={() => setOpenOptionsPostId(openOptionsPostId === post.id ? null : post.id)}
+                              onClick={(e) => toggleOptions(e, post.id)}
                               title="Show options"
                               style={{
-                                padding: "6px 8px",
+                                padding: "5px 8px",
                                 borderRadius: 8,
                                 border: "1px solid #cbd5e1",
                                 background: openOptionsPostId === post.id ? "#f1f5f9" : "#ffffff",
                                 color: "#475569",
-                                fontSize: "0.75rem",
+                                fontSize: "0.74rem",
                                 fontWeight: 700,
                                 cursor: "pointer",
                                 whiteSpace: "nowrap",
@@ -1856,22 +1890,26 @@ function StageListingTable({
                               <ChevronDown size={11} />
                             </button>
 
-                            {openOptionsPostId === post.id && (
+                            {openOptionsPostId === post.id && dropdownPos && (
                               <>
                                 <div
-                                  style={{ position: "fixed", inset: 0, zIndex: 100 }}
-                                  onClick={() => setOpenOptionsPostId(null)}
+                                  style={{ position: "fixed", inset: 0, zIndex: 99998 }}
+                                  onClick={() => {
+                                    setOpenOptionsPostId(null);
+                                    setDropdownPos(null);
+                                  }}
                                 />
                                 <div
                                   style={{
-                                    position: "absolute",
-                                    top: "calc(100% + 4px)",
-                                    right: 0,
-                                    zIndex: 101,
+                                    position: "fixed",
+                                    top: dropdownPos.top,
+                                    bottom: dropdownPos.bottom,
+                                    right: dropdownPos.right,
+                                    zIndex: 99999,
                                     background: "#ffffff",
                                     borderRadius: 10,
-                                    border: "1px solid #e2e8f0",
-                                    boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1)",
+                                    border: "1px solid #cbd5e1",
+                                    boxShadow: "0 12px 30px -4px rgba(15, 23, 42, 0.22), 0 6px 14px -4px rgba(15, 23, 42, 0.12)",
                                     padding: "6px",
                                     minWidth: 195,
                                     display: "flex",
@@ -1885,6 +1923,7 @@ function StageListingTable({
                                       type="button"
                                       onClick={() => {
                                         setOpenOptionsPostId(null);
+                                        setDropdownPos(null);
                                         onPreviewMedia && onPreviewMedia(post);
                                       }}
                                       style={{
@@ -1914,6 +1953,7 @@ function StageListingTable({
                                     type="button"
                                     onClick={() => {
                                       setOpenOptionsPostId(null);
+                                      setDropdownPos(null);
                                       const input = document.createElement("input");
                                       input.type = "file";
                                       input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
@@ -1949,6 +1989,7 @@ function StageListingTable({
                                     type="button"
                                     onClick={() => {
                                       setOpenOptionsPostId(null);
+                                      setDropdownPos(null);
                                       if (onViewWorkDetails) onViewWorkDetails(post);
                                     }}
                                     style={{
@@ -1979,6 +2020,7 @@ function StageListingTable({
                                         type="button"
                                         onClick={() => {
                                           setOpenOptionsPostId(null);
+                                          setDropdownPos(null);
                                           navigator.clipboard.writeText(post.media_urls[0]);
                                           alert("Media link copied to clipboard!");
                                         }}
@@ -2009,7 +2051,10 @@ function StageListingTable({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         download
-                                        onClick={() => setOpenOptionsPostId(null)}
+                                        onClick={() => {
+                                          setOpenOptionsPostId(null);
+                                          setDropdownPos(null);
+                                        }}
                                         style={{
                                           display: "flex",
                                           alignItems: "center",
@@ -2035,6 +2080,7 @@ function StageListingTable({
                                         type="button"
                                         onClick={() => {
                                           setOpenOptionsPostId(null);
+                                          setDropdownPos(null);
                                           if (confirm("Remove deliverable media from this post?")) {
                                             onTransition(post, post.status, "advance", "Removed media deliverable", { media_urls: [] });
                                           }
@@ -2071,12 +2117,12 @@ function StageListingTable({
                             onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
                             title="View creative brief, storyboard, brand assets & work instructions in popup"
                             style={{
-                              padding: "6px 11px",
+                              padding: "5px 10px",
                               borderRadius: 8,
                               border: "1px solid #c084fc",
                               background: "#faf5ff",
                               color: "#7e22ce",
-                              fontSize: "0.76rem",
+                              fontSize: "0.74rem",
                               fontWeight: 800,
                               cursor: "pointer",
                               whiteSpace: "nowrap",
@@ -2085,19 +2131,19 @@ function StageListingTable({
                               gap: 4,
                             }}
                           >
-                            <Palette size={13} style={{ color: "#9333ea" }} />
+                            <Palette size={12} style={{ color: "#9333ea" }} />
                             Work Details
                           </button>
 
                           <button
                             onClick={() => onOpenModal(post, "design_ready")}
                             style={{
-                              padding: "6px 14px",
+                              padding: "5px 12px",
                               borderRadius: 8,
                               border: "none",
                               background: "#ec4899",
                               color: "#fff",
-                              fontSize: "0.76rem",
+                              fontSize: "0.74rem",
                               fontWeight: 800,
                               cursor: "pointer",
                               whiteSpace: "nowrap",
@@ -2116,12 +2162,12 @@ function StageListingTable({
                               onClick={() => onPreviewMedia && onPreviewMedia(post)}
                               title="Play video reel or view creative deliverable"
                               style={{
-                                padding: "6px 11px",
+                                padding: "5px 10px",
                                 borderRadius: 8,
                                 border: "none",
                                 background: "#ec4899",
                                 color: "#fff",
-                                fontSize: "0.76rem",
+                                fontSize: "0.74rem",
                                 fontWeight: 800,
                                 cursor: "pointer",
                                 whiteSpace: "nowrap",
@@ -2130,24 +2176,24 @@ function StageListingTable({
                                 gap: 4,
                               }}
                             >
-                              <Play size={12} fill="#ffffff" />
+                              <Play size={11} fill="#ffffff" />
                               {post.post_type === "reel" || post.post_type === "video" ? "Play" : "View"}
                             </button>
                           )}
 
                           {/* Options Dropdown for Stage 4 */}
-                          <div style={{ position: "relative", display: "inline-block" }}>
+                          <div style={{ display: "inline-block" }}>
                             <button
                               type="button"
-                              onClick={() => setOpenOptionsPostId(openOptionsPostId === post.id ? null : post.id)}
+                              onClick={(e) => toggleOptions(e, post.id)}
                               title="Show options"
                               style={{
-                                padding: "6px 8px",
+                                padding: "5px 8px",
                                 borderRadius: 8,
                                 border: "1px solid #cbd5e1",
                                 background: openOptionsPostId === post.id ? "#f1f5f9" : "#ffffff",
                                 color: "#475569",
-                                fontSize: "0.75rem",
+                                fontSize: "0.74rem",
                                 fontWeight: 700,
                                 cursor: "pointer",
                                 whiteSpace: "nowrap",
@@ -2160,24 +2206,28 @@ function StageListingTable({
                               <ChevronDown size={11} />
                             </button>
 
-                            {openOptionsPostId === post.id && (
+                            {openOptionsPostId === post.id && dropdownPos && (
                               <>
                                 <div
-                                  style={{ position: "fixed", inset: 0, zIndex: 100 }}
-                                  onClick={() => setOpenOptionsPostId(null)}
+                                  style={{ position: "fixed", inset: 0, zIndex: 99998 }}
+                                  onClick={() => {
+                                    setOpenOptionsPostId(null);
+                                    setDropdownPos(null);
+                                  }}
                                 />
                                 <div
                                   style={{
-                                    position: "absolute",
-                                    top: "calc(100% + 4px)",
-                                    right: 0,
-                                    zIndex: 101,
+                                    position: "fixed",
+                                    top: dropdownPos.top,
+                                    bottom: dropdownPos.bottom,
+                                    right: dropdownPos.right,
+                                    zIndex: 99999,
                                     background: "#ffffff",
                                     borderRadius: 10,
-                                    border: "1px solid #e2e8f0",
-                                    boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1)",
+                                    border: "1px solid #cbd5e1",
+                                    boxShadow: "0 12px 30px -4px rgba(15, 23, 42, 0.22), 0 6px 14px -4px rgba(15, 23, 42, 0.12)",
                                     padding: "6px",
-                                    minWidth: 190,
+                                    minWidth: 195,
                                     display: "flex",
                                     flexDirection: "column",
                                     gap: 2,
@@ -2189,6 +2239,7 @@ function StageListingTable({
                                       type="button"
                                       onClick={() => {
                                         setOpenOptionsPostId(null);
+                                        setDropdownPos(null);
                                         onPreviewMedia && onPreviewMedia(post);
                                       }}
                                       style={{
@@ -2218,6 +2269,7 @@ function StageListingTable({
                                     type="button"
                                     onClick={() => {
                                       setOpenOptionsPostId(null);
+                                      setDropdownPos(null);
                                       const input = document.createElement("input");
                                       input.type = "file";
                                       input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
@@ -2253,6 +2305,7 @@ function StageListingTable({
                                     type="button"
                                     onClick={() => {
                                       setOpenOptionsPostId(null);
+                                      setDropdownPos(null);
                                       if (onViewWorkDetails) onViewWorkDetails(post);
                                     }}
                                     style={{
@@ -2283,6 +2336,7 @@ function StageListingTable({
                                         type="button"
                                         onClick={() => {
                                           setOpenOptionsPostId(null);
+                                          setDropdownPos(null);
                                           navigator.clipboard.writeText(post.media_urls[0]);
                                           alert("Media link copied to clipboard!");
                                         }}
@@ -2313,7 +2367,10 @@ function StageListingTable({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         download
-                                        onClick={() => setOpenOptionsPostId(null)}
+                                        onClick={() => {
+                                          setOpenOptionsPostId(null);
+                                          setDropdownPos(null);
+                                        }}
                                         style={{
                                           display: "flex",
                                           alignItems: "center",
@@ -2343,12 +2400,12 @@ function StageListingTable({
                             onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
                             title="View designer work details & brief"
                             style={{
-                              padding: "6px 10px",
+                              padding: "5px 10px",
                               borderRadius: 8,
                               border: "1px solid #cbd5e1",
                               background: "#fff",
                               color: "#475569",
-                              fontSize: "0.76rem",
+                              fontSize: "0.74rem",
                               fontWeight: 700,
                               cursor: "pointer",
                               whiteSpace: "nowrap",
@@ -2357,18 +2414,18 @@ function StageListingTable({
                               gap: 4,
                             }}
                           >
-                            <Palette size={13} style={{ color: "#7c3aed" }} />
+                            <Palette size={12} style={{ color: "#7c3aed" }} />
                             Work Details
                           </button>
                           <button
                             onClick={() => onTransition(post, "designing", "reject", "Team QA requested design adjustments")}
-                            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #f97316", background: "#fff", color: "#ea580c", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                            style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid #f97316", background: "#fff", color: "#ea580c", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
                             ↺ Back
                           </button>
                           <button
                             onClick={() => onTransition(post, "client_review", "advance", "Team QA passed, sent to client review")}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                            style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
                             QA Pass → Client
                           </button>
