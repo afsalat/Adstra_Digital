@@ -42,6 +42,7 @@ export default function WorkDetailsModal({
   onSaveMedia,
   onOpenTimeline,
   onOpenEditModal,
+  isReadOnly = false,
 }) {
   const [copiedBrief, setCopiedBrief] = useState(false);
   const [mediaUrl, setMediaUrl] = useState("");
@@ -942,45 +943,62 @@ export default function WorkDetailsModal({
 
             {/* Direct Upload Box or Attached Preview Card */}
             {!mediaUrl ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  border: "2px dashed #86efac",
-                  borderRadius: 12,
-                  padding: "26px 20px",
-                  textAlign: "center",
-                  background: "#ffffff",
-                  cursor: isUploading ? "not-allowed" : "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 10,
-                  transition: "all 0.15s ease",
-                }}
-              >
+              isReadOnly ? (
                 <div
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "50%",
-                    background: "#dcfce7",
-                    color: "#15803d",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    border: "1px dashed #cbd5e1",
+                    borderRadius: 12,
+                    padding: "24px 20px",
+                    textAlign: "center",
+                    background: "#ffffff",
+                    color: "#64748b",
+                    fontSize: "0.85rem",
                   }}
                 >
-                  <Upload size={22} />
+                  <Film size={22} style={{ color: "#94a3b8", margin: "0 auto 6px", display: "block" }} />
+                  <span>No creative deliverable attached yet.</span>
                 </div>
-                <div>
-                  <strong style={{ fontSize: "0.88rem", color: "#166534", display: "block" }}>
-                    {isUploading ? "Uploading deliverable..." : "Click or Drag & Drop to Upload Deliverable"}
-                  </strong>
-                  <span style={{ fontSize: "0.74rem", color: "#475569" }}>
-                    Supports Reel / Video (.mp4, .mov, .webm) or Graphic (.png, .jpg, .webp)
-                  </span>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    border: "2px dashed #86efac",
+                    borderRadius: 12,
+                    padding: "26px 20px",
+                    textAlign: "center",
+                    background: "#ffffff",
+                    cursor: isUploading ? "not-allowed" : "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "50%",
+                      background: "#dcfce7",
+                      color: "#15803d",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Upload size={22} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: "0.88rem", color: "#166534", display: "block" }}>
+                      {isUploading ? "Uploading deliverable..." : "Click or Drag & Drop to Upload Deliverable"}
+                    </strong>
+                    <span style={{ fontSize: "0.74rem", color: "#475569" }}>
+                      Supports Reel / Video (.mp4, .mov, .webm) or Graphic (.png, .jpg, .webp)
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               <div
                 style={{
@@ -1019,28 +1037,30 @@ export default function WorkDetailsModal({
                 {/* SHOW OPTIONS & ACTION BUTTONS */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingTop: 6, borderTop: "1px solid #f1f5f9" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                      title="Replace current file with an updated version"
-                      style={{
-                        background: "#f0fdf4",
-                        border: "1px solid #86efac",
-                        color: "#15803d",
-                        padding: "6px 12px",
-                        borderRadius: 7,
-                        fontSize: "0.76rem",
-                        fontWeight: 700,
-                        cursor: isUploading ? "not-allowed" : "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                      }}
-                    >
-                      <RotateCcw size={13} />
-                      {isUploading ? "Uploading..." : "Replace Media File"}
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        title="Replace current file with an updated version"
+                        style={{
+                          background: "#f0fdf4",
+                          border: "1px solid #86efac",
+                          color: "#15803d",
+                          padding: "6px 12px",
+                          borderRadius: 7,
+                          fontSize: "0.76rem",
+                          fontWeight: 700,
+                          cursor: isUploading ? "not-allowed" : "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                        }}
+                      >
+                        <RotateCcw size={13} />
+                        {isUploading ? "Uploading..." : "Replace Media File"}
+                      </button>
+                    )}
 
                     <a
                       href={mediaUrl}
@@ -1087,71 +1107,92 @@ export default function WorkDetailsModal({
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleRemoveAttachedMedia}
-                    title="Remove attached deliverable"
-                    style={{
-                      background: "#fef2f2",
-                      border: "1px solid #fca5a5",
-                      color: "#dc2626",
-                      padding: "6px 10px",
-                      borderRadius: 7,
-                      fontSize: "0.76rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <Trash2 size={13} /> Remove
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAttachedMedia}
+                      title="Remove attached deliverable"
+                      style={{
+                        background: "#fef2f2",
+                        border: "1px solid #fca5a5",
+                        color: "#dc2626",
+                        padding: "6px 10px",
+                        borderRadius: 7,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <Trash2 size={13} /> Remove
+                    </button>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Optional External Link Fallback */}
-            <div>
-              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#166534", marginBottom: 3 }}>
-                Or Paste Cloud URL (Google Drive, Canva, Figma):
-              </label>
-              <input
-                type="text"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="https://drive.google.com/... or https://www.figma.com/..."
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "1px solid #86efac",
-                  background: "#ffffff",
-                  fontSize: "0.82rem",
-                  outline: "none",
-                }}
-              />
-            </div>
+            {!isReadOnly && (
+              <div>
+                <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#166534", marginBottom: 3 }}>
+                  Or Paste Cloud URL (Google Drive, Canva, Figma):
+                </label>
+                <input
+                  type="text"
+                  value={mediaUrl}
+                  onChange={(e) => setMediaUrl(e.target.value)}
+                  placeholder="https://drive.google.com/... or https://www.figma.com/..."
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #86efac",
+                    background: "#ffffff",
+                    fontSize: "0.82rem",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            )}
 
             <div>
               <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#166534", marginBottom: 4 }}>
                 Designer Production Notes / Notes for QA:
               </label>
-              <textarea
-                rows={2}
-                value={designerNotes}
-                onChange={(e) => setDesignerNotes(e.target.value)}
-                placeholder="e.g. 1080x1920 60s Reel rendered with captions and sound design. Ready for review."
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "1px solid #86efac",
-                  background: "#ffffff",
-                  fontSize: "0.82rem",
-                  outline: "none",
-                }}
-              />
+              {isReadOnly ? (
+                <div
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    border: "1px solid #bbf7d0",
+                    background: "#ffffff",
+                    fontSize: "0.82rem",
+                    color: designerNotes ? "#0f172a" : "#64748b",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {designerNotes || "No production notes provided."}
+                </div>
+              ) : (
+                <textarea
+                  rows={2}
+                  value={designerNotes}
+                  onChange={(e) => setDesignerNotes(e.target.value)}
+                  placeholder="e.g. 1080x1920 60s Reel rendered with captions and sound design. Ready for review."
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #86efac",
+                    background: "#ffffff",
+                    fontSize: "0.82rem",
+                    outline: "none",
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -1197,7 +1238,7 @@ export default function WorkDetailsModal({
               </button>
             )}
 
-            {onOpenEditModal && (
+            {!isReadOnly && onOpenEditModal && (
               <button
                 type="button"
                 onClick={() => {
@@ -1243,7 +1284,7 @@ export default function WorkDetailsModal({
               Close
             </button>
 
-            {onSaveMedia && (
+            {!isReadOnly && onSaveMedia && (
               <button
                 type="button"
                 disabled={isSaving || isSubmittingQA}
@@ -1267,7 +1308,7 @@ export default function WorkDetailsModal({
               </button>
             )}
 
-            {onReadyForQA && (
+            {!isReadOnly && onReadyForQA && (
               <button
                 type="button"
                 disabled={isSubmittingQA || isSaving}

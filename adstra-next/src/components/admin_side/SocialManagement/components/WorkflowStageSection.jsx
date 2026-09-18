@@ -1305,10 +1305,14 @@ export default function WorkflowStageSection({
           onReject={(p, reason) =>
             handleTransition(p, "script", "reject", reason, { script_notes: p.script_notes })
           }
-          onEdit={(p) => {
-            setActiveScriptPost(p);
-            setScriptModalOpen(true);
-          }}
+          onEdit={
+            stageId === "scripts"
+              ? (p) => {
+                  setActiveScriptPost(p);
+                  setScriptModalOpen(true);
+                }
+              : null
+          }
           onOpenTimeline={(p) => setTimelinePost(p)}
         />
       )}
@@ -1319,37 +1323,50 @@ export default function WorkflowStageSection({
           isOpen={Boolean(viewingWorkDetailsPost)}
           onClose={() => setViewingWorkDetailsPost(null)}
           post={viewingWorkDetailsPost}
-          onSaveMedia={async (p, mediaUrl, notes) => {
-            await handleTransition(
-              p,
-              p.status,
-              "advance",
-              "Designer updated creative media asset URL & production notes",
-              {
-                media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
-                designer_notes: notes !== undefined ? notes : p.designer_notes,
-              }
-            );
-            setViewingWorkDetailsPost((prev) => ({
-              ...prev,
-              media_urls: mediaUrl ? [mediaUrl] : prev.media_urls,
-              designer_notes: notes !== undefined ? notes : prev.designer_notes,
-            }));
-          }}
-          onReadyForQA={async (p, mediaUrl, notes) => {
-            await handleTransition(
-              p,
-              "team_review",
-              "advance",
-              "Design assets completed, submitted for QA review",
-              {
-                media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
-                designer_notes: notes !== undefined ? notes : p.designer_notes,
-              }
-            );
-          }}
+          isReadOnly={["script_approval", "team_review", "internal_review", "client_review"].includes(stageId)}
+          onSaveMedia={
+            ["script_approval", "team_review", "internal_review", "client_review"].includes(stageId)
+              ? undefined
+              : async (p, mediaUrl, notes) => {
+                  await handleTransition(
+                    p,
+                    p.status,
+                    "advance",
+                    "Designer updated creative media asset URL & production notes",
+                    {
+                      media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
+                      designer_notes: notes !== undefined ? notes : p.designer_notes,
+                    }
+                  );
+                  setViewingWorkDetailsPost((prev) => ({
+                    ...prev,
+                    media_urls: mediaUrl ? [mediaUrl] : prev.media_urls,
+                    designer_notes: notes !== undefined ? notes : prev.designer_notes,
+                  }));
+                }
+          }
+          onReadyForQA={
+            ["script_approval", "team_review", "internal_review", "client_review"].includes(stageId)
+              ? undefined
+              : async (p, mediaUrl, notes) => {
+                  await handleTransition(
+                    p,
+                    "team_review",
+                    "advance",
+                    "Design assets completed, submitted for QA review",
+                    {
+                      media_urls: mediaUrl ? [mediaUrl] : p.media_urls,
+                      designer_notes: notes !== undefined ? notes : p.designer_notes,
+                    }
+                  );
+                }
+          }
           onOpenTimeline={(p) => setTimelinePost(p)}
-          onOpenEditModal={(p) => openActionModal(p, "edit_notes")}
+          onOpenEditModal={
+            ["script_approval", "team_review", "internal_review", "client_review"].includes(stageId)
+              ? undefined
+              : (p) => openActionModal(p, "edit_notes")
+          }
         />
       )}
 
@@ -1555,8 +1572,10 @@ function StageListingTable({
                               onOpenScriptModal(post);
                             } else if (onViewWorkDetails) {
                               onViewWorkDetails(post);
-                            } else {
+                            } else if (!["script_approval", "team_review", "internal_review", "client_review"].includes(stageId)) {
                               onOpenModal(post, "edit_notes");
+                            } else if (onOpenTimeline) {
+                              onOpenTimeline(post);
                             }
                           }}
                           style={{
@@ -2364,42 +2383,6 @@ function StageListingTable({
                                     onClick={() => {
                                       setOpenOptionsPostId(null);
                                       setDropdownPos(null);
-                                      const input = document.createElement("input");
-                                      input.type = "file";
-                                      input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
-                                      input.onchange = (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file && onUploadMedia) onUploadMedia(post, file, true);
-                                      };
-                                      input.click();
-                                    }}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      padding: "7px 10px",
-                                      borderRadius: 6,
-                                      border: "none",
-                                      background: "transparent",
-                                      color: "#0f172a",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 600,
-                                      cursor: "pointer",
-                                      width: "100%",
-                                      textAlign: "left",
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <RotateCcw size={13} style={{ color: "#2563eb" }} />
-                                    <span>Replace Deliverable</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenOptionsPostId(null);
-                                      setDropdownPos(null);
                                       if (onViewWorkDetails) onViewWorkDetails(post);
                                     }}
                                     style={{
@@ -2491,7 +2474,7 @@ function StageListingTable({
                           </div>
 
                           <button
-                            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
+                            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenTimeline ? onOpenTimeline(post) : null)}
                             title="View designer work details & brief"
                             style={{
                               padding: "5px 10px",

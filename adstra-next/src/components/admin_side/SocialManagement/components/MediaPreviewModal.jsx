@@ -559,21 +559,23 @@ export default function MediaPreviewModal({
                   <ExternalLink size={13} /> Open Original
                 </a>
 
-                <button
-                  type="button"
-                  onClick={handleRemoveMedia}
-                  title="Delete/Remove this attached file"
-                  style={{
-                    background: "rgba(239, 68, 68, 0.15)",
-                    border: "1px solid rgba(239, 68, 68, 0.3)",
-                    borderRadius: 7,
-                    padding: "6px 10px",
-                    color: "#f87171",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
+                {post?.status === "designing" && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveMedia}
+                    title="Delete/Remove this attached file"
+                    style={{
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      borderRadius: 7,
+                      padding: "6px 10px",
+                      color: "#f87171",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </>
             )}
           </div>
