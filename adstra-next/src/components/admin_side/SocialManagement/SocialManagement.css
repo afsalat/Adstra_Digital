@@ -432,3 +432,80 @@
   border-bottom-left-radius: 20px;
   border-bottom-right-radius: 20px;
 }
+
+/* =============================================================================
+   PRINT MEDIA STYLES
+============================================================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 8mm 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  .no-print *,
+  .social-header-bar,
+  .social-nav-tabs,
+  .social-alert-banner,
+  .dashboard-controls,
+  .filter-select,
+  .btn-action,
+  .cr-toolbar,
+  .cr-graph-tabs,
+  nav,
+  header,
+  aside,
+  .sidebar,
+  button {
+    display: none !important;
+  }
+
+  .social-mgmt-container {
+    background: #ffffff !important;
+    min-height: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #executive-report-document,
+  #executive-report-document *,
+  #campaign-report-document,
+  #campaign-report-document * {
+    visibility: visible !important;
+  }
+
+  .executive-document,
+  .cr-document {
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    background: #ffffff !important;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+

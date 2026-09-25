@@ -17,6 +17,7 @@ import {
   Eye,
   Send,
   X,
+  ExternalLink,
 } from "lucide-react";
 
 // Kerala & Indian Festival/Holiday Calendar Milestones
@@ -1220,7 +1221,7 @@ export default function ContentCalendarTab({
       {/* Post Detail & Reschedule Modal */}
       {selectedPostDetail && (
         <div className="social-modal-overlay">
-          <div className="social-modal-content" style={{ maxWidth: 640 }}>
+          <div className="social-modal-content" style={{ maxWidth: 680 }}>
             <div className="social-modal-header">
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className={`status-pill ${selectedPostDetail.status}`}>
@@ -1237,15 +1238,95 @@ export default function ContentCalendarTab({
 
             <div className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Media Preview if any */}
-              {selectedPostDetail.media_urls?.[0] && (
-                <div style={{ width: "100%", maxHeight: 240, borderRadius: 12, overflow: "hidden", background: "#0f172a" }}>
-                  <img
-                    src={selectedPostDetail.media_urls[0]}
-                    alt="Post media"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                </div>
-              )}
+              {selectedPostDetail.media_urls?.[0] && (() => {
+                const mediaSrc = selectedPostDetail.media_urls[0];
+                const isVideo =
+                  typeof mediaSrc === "string" &&
+                  (mediaSrc.toLowerCase().endsWith(".mp4") ||
+                    mediaSrc.toLowerCase().endsWith(".webm") ||
+                    mediaSrc.toLowerCase().endsWith(".mov") ||
+                    mediaSrc.toLowerCase().includes("video"));
+
+                return (
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      background: "#090d16",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px solid #1e293b",
+                      padding: "8px",
+                      boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    {isVideo ? (
+                      <video
+                        src={mediaSrc}
+                        controls
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "56vh",
+                          width: "auto",
+                          height: "auto",
+                          objectFit: "contain",
+                          display: "block",
+                          borderRadius: 8,
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={mediaSrc}
+                        alt="Post media"
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "56vh",
+                          width: "auto",
+                          height: "auto",
+                          objectFit: "contain",
+                          display: "block",
+                          borderRadius: 8,
+                          cursor: "zoom-in",
+                        }}
+                        onClick={() => window.open(mediaSrc, "_blank")}
+                        title="Click to view full resolution"
+                      />
+                    )}
+
+                    {/* Full view button */}
+                    <a
+                      href={mediaSrc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open full size image in new tab"
+                      style={{
+                        position: "absolute",
+                        top: 14,
+                        right: 14,
+                        background: "rgba(15, 23, 42, 0.8)",
+                        backdropFilter: "blur(6px)",
+                        color: "#ffffff",
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        textDecoration: "none",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                        zIndex: 5,
+                      }}
+                    >
+                      <ExternalLink size={13} /> Full Size
+                    </a>
+                  </div>
+                );
+              })()}
 
               {/* Caption */}
               <div style={{ background: "#f8fafc", padding: 14, borderRadius: 10, border: "1px solid #e2e8f0", fontSize: "0.88rem", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>

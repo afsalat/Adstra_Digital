@@ -812,31 +812,66 @@
    12. PRINT & PDF MEDIA STYLES
 ============================================================================= */
 @media print {
-  body * {
-    visibility: hidden;
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 8mm 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  .no-print *,
+  .social-header-bar,
+  .social-nav-tabs,
+  .dashboard-controls,
+  .cr-toolbar,
+  .cr-graph-tabs,
+  nav,
+  header,
+  aside,
+  .sidebar,
+  button {
+    display: none !important;
+  }
+
+  .social-mgmt-container {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   #campaign-report-document,
-  #campaign-report-document * {
-    visibility: visible;
+  #campaign-report-document *,
+  #executive-report-document,
+  #executive-report-document * {
+    visibility: visible !important;
   }
 
   #campaign-report-document {
-    position: absolute;
-    left: 0;
-    top: 0;
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding: 10mm !important;
+    padding: 0 !important;
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
-  }
-
-  .cr-toolbar,
-  .cr-graph-tabs {
-    display: none !important;
   }
 
   .cr-section,

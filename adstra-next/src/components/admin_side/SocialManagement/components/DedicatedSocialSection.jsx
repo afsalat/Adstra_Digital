@@ -106,6 +106,7 @@ export default function DedicatedSocialSection({
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Sub-navigation pills: The 7 Workflow Sections */}
       <div
+        className="no-print"
         style={{
           display: "flex",
           gap: 8,
