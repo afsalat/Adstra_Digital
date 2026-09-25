@@ -598,11 +598,28 @@ export default function WorkflowPipelineTab({
 
                     <div>
                       {post.media_urls?.[0] ? (
-                        <img
-                          src={post.media_urls[0]}
-                          alt=""
-                          style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: "1px solid #e2e8f0" }}
-                        />
+                        (post.post_type === "reel" ||
+                         post.post_type === "video" ||
+                         (typeof post.media_urls[0] === "string" &&
+                          (post.media_urls[0].toLowerCase().endsWith(".mp4") ||
+                           post.media_urls[0].toLowerCase().endsWith(".webm") ||
+                           post.media_urls[0].toLowerCase().endsWith(".mov")))) ? (
+                          <div style={{ width: 44, height: 44, borderRadius: 8, overflow: "hidden", background: "#0f172a", position: "relative" }}>
+                            <video src={post.media_urls[0]} muted preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Play size={12} fill="#fff" color="#fff" />
+                            </div>
+                          </div>
+                        ) : (
+                          <img
+                            src={post.media_urls[0]}
+                            alt=""
+                            style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: "1px solid #e2e8f0" }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        )
                       ) : (
                         <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontStyle: "italic" }}>
                           Needs Design
@@ -1469,12 +1486,47 @@ function PostPipelineCard({
 
       {/* Media Creative Preview (if present) or Prompt to Add */}
       {post.media_urls?.[0] ? (
-        <div style={{ position: "relative", width: "100%", height: 110, borderRadius: 8, overflow: "hidden" }}>
-          <img
-            src={post.media_urls[0]}
-            alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+        <div style={{ position: "relative", width: "100%", height: 110, borderRadius: 8, overflow: "hidden", background: "#0f172a" }}>
+          {post.post_type === "reel" ||
+          post.post_type === "video" ||
+          (typeof post.media_urls[0] === "string" &&
+            (post.media_urls[0].toLowerCase().endsWith(".mp4") ||
+             post.media_urls[0].toLowerCase().endsWith(".webm") ||
+             post.media_urls[0].toLowerCase().endsWith(".mov"))) ? (
+            <>
+              <video
+                src={post.media_urls[0]}
+                muted
+                preload="metadata"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "rgba(0, 0, 0, 0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  color: "#fff",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                }}
+              >
+                <Play size={16} fill="#ffffff" color="#ffffff" />
+              </div>
+            </>
+          ) : (
+            <img
+              src={post.media_urls[0]}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          )}
         </div>
       ) : (
         stage.id === "designing" && (

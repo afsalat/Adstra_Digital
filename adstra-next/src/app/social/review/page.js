@@ -3,8 +3,31 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
-import API_BASE_URL from "@/utils/apiBase";
-import { CheckCircle2, AlertCircle, Sparkles, Send, Clock, Calendar, Check, X } from "lucide-react";
+import API_BASE_URL, { BASE_URL } from "@/utils/apiBase";
+import { CheckCircle2, AlertCircle, Sparkles, Send, Clock, Calendar, Check, X, Film, ImageIcon, ExternalLink, ChevronLeft, ChevronRight, Download, Share2 } from "lucide-react";
+
+const resolveMediaUrl = (url) => {
+  if (!url || typeof url !== "string") return "";
+  if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const cleanBase = (BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+  const cleanPath = url.startsWith("/") ? url : `/${url}`;
+  return `${cleanBase}${cleanPath}`;
+};
+
+const isVideoMedia = (url, postType) => {
+  if (postType === "reel" || postType === "video") return true;
+  if (!url || typeof url !== "string") return false;
+  const clean = url.split("?")[0].toLowerCase();
+  return (
+    clean.endsWith(".mp4") ||
+    clean.endsWith(".mov") ||
+    clean.endsWith(".webm") ||
+    clean.endsWith(".m4v") ||
+    clean.endsWith(".avi") ||
+    clean.endsWith(".mkv")
+  );
+};
 
 function ReviewContent() {
   const searchParams = useSearchParams();
@@ -17,6 +40,8 @@ function ReviewContent() {
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [actionDone, setActionDone] = useState(null); // 'approved' | 'changes_requested'
+  const [activeMediaIdx, setActiveMediaIdx] = useState(0);
+  const [mediaError, setMediaError] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -86,6 +111,11 @@ function ReviewContent() {
     );
   }
 
+  const mediaList = post.media_urls && Array.isArray(post.media_urls) ? post.media_urls : [];
+  const currentRawMedia = mediaList[activeMediaIdx] || mediaList[0] || "";
+  const currentMediaUrl = resolveMediaUrl(currentRawMedia);
+  const isVideo = isVideoMedia(currentMediaUrl, post.post_type);
+
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", padding: "40px 20px" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
@@ -133,13 +163,88 @@ function ReviewContent() {
 
           {/* Media Preview */}
           <div>
-            <div style={{ borderRadius: 14, overflow: "hidden", background: "#0f172a", border: "1px solid #e2e8f0", minHeight: 340, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {post.media_urls && post.media_urls.length > 0 ? (
-                <img
-                  src={post.media_urls[0]}
-                  alt={post.title || "Post Preview"}
-                  style={{ width: "100%", maxHeight: 440, objectFit: "cover" }}
-                />
+            <div style={{ borderRadius: 14, overflow: "hidden", background: "#0f172a", border: "1px solid #e2e8f0", minHeight: 340, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+              {currentMediaUrl ? (
+                mediaError ? (
+                  <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>
+                    <AlertCircle size={36} color="#f59e0b" style={{ marginBottom: 10, margin: "0 auto" }} />
+                    <p style={{ margin: "10px 0 4px", fontSize: "0.9rem", color: "#e2e8f0", fontWeight: 700 }}>
+                      Media Preview Unavailable
+                    </p>
+                    <p style={{ margin: "0 0 14px", fontSize: "0.8rem", color: "#94a3b8" }}>
+                      Unable to render inline player/image.
+                    </p>
+                    <a
+                      href={currentMediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: "#334155",
+                        color: "#38bdf8",
+                        padding: "6px 14px",
+                        borderRadius: 8,
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        textDecoration: "none",
+                      }}
+                    >
+                      <ExternalLink size={14} /> Open Original Deliverable
+                    </a>
+                  </div>
+                ) : isVideo ? (
+                  <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 340, background: "#020617", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <video
+                      key={currentMediaUrl}
+                      src={currentMediaUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      style={{
+                        width: "100%",
+                        maxHeight: 440,
+                        objectFit: "contain",
+                        borderRadius: 14,
+                        outline: "none",
+                        background: "#000",
+                      }}
+                      onError={() => setMediaError(true)}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 12,
+                        right: 12,
+                        background: "rgba(15, 23, 42, 0.82)",
+                        backdropFilter: "blur(6px)",
+                        color: "#ffffff",
+                        padding: "4px 10px",
+                        borderRadius: 20,
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <Film size={12} color="#ec4899" /> Video Reel
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 340, background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img
+                      key={currentMediaUrl}
+                      src={currentMediaUrl}
+                      alt={post.title || "Post Preview"}
+                      style={{ width: "100%", maxHeight: 440, objectFit: "contain" }}
+                      onError={() => setMediaError(true)}
+                    />
+                  </div>
+                )
               ) : (
                 <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>
                   <Sparkles size={40} style={{ marginBottom: 12, opacity: 0.6 }} />
@@ -147,6 +252,52 @@ function ReviewContent() {
                 </div>
               )}
             </div>
+
+            {/* Carousel navigation if multiple media */}
+            {mediaList.length > 1 && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMediaIdx((prev) => (prev > 0 ? prev - 1 : mediaList.length - 1));
+                    setMediaError(false);
+                  }}
+                  style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 6, padding: "4px 8px", cursor: "pointer", display: "flex", alignItems: "center" }}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569" }}>
+                  {activeMediaIdx + 1} of {mediaList.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMediaIdx((prev) => (prev < mediaList.length - 1 ? prev + 1 : 0));
+                    setMediaError(false);
+                  }}
+                  style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 6, padding: "4px 8px", cursor: "pointer", display: "flex", alignItems: "center" }}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Media Details & Open Action */}
+            {currentMediaUrl && !mediaError && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                <a
+                  href={currentMediaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.76rem", color: "#4f46e5", fontWeight: 700, textDecoration: "none" }}
+                >
+                  <ExternalLink size={13} /> Open full resolution file
+                </a>
+                <span style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800 }}>
+                  {isVideo ? "MP4 / VIDEO" : "IMAGE ASSET"}
+                </span>
+              </div>
+            )}
 
             {/* Target Platforms */}
             <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -156,7 +307,7 @@ function ReviewContent() {
                 </span>
               ))}
               <span style={{ marginLeft: "auto", fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={14} /> Status: <strong style={{ color: "#0f172a" }}>{post.status.replace("_", " ").toUpperCase()}</strong>
+                <Clock size={14} /> Status: <strong style={{ color: "#0f172a" }}>{(post.status || "").replace("_", " ").toUpperCase()}</strong>
               </span>
             </div>
           </div>

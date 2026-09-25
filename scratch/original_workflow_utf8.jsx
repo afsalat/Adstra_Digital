@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
@@ -36,10 +36,6 @@ import {
   Download,
   Trash2,
   Maximize2,
-  Share2,
-  Link,
-  BarChart2,
-  Archive
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
@@ -49,7 +45,7 @@ import WorkDetailsModal from "./WorkDetailsModal";
 import MediaPreviewModal from "./MediaPreviewModal";
 
 export default function WorkflowStageSection({
-  stageId,
+  stageId, // 'scripts' | 'script_approval' | 'designing' | 'team_review' | 'client_review' | 'post_schedule' | 'published'
   posts = [],
   clients = [],
   mediaAssets = [],
@@ -60,10 +56,9 @@ export default function WorkflowStageSection({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [formatFilter, setFormatFilter] = useState("all");
-  const [scriptSubFilter, setScriptSubFilter] = useState("all");
-  const [viewMode, setViewMode] = useState("listing");
+  const [scriptSubFilter, setScriptSubFilter] = useState("all"); // 'all' | 'draft' | 'under_review' | 'revision'
+  const [viewMode, setViewMode] = useState("listing"); // 'listing' | 'calendar'
   const [copiedToken, setCopiedToken] = useState(null);
-  const [showArchived, setShowArchived] = useState(false);
 
   // Script Creation Modal State (Stage 1: Scripts)
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
@@ -88,9 +83,6 @@ export default function WorkflowStageSection({
   const [editDesignerNotes, setEditDesignerNotes] = useState("");
   const [editMediaUrl, setEditMediaUrl] = useState("");
   const [editScheduledAt, setEditScheduledAt] = useState("");
-  const [editLiveUrls, setEditLiveUrls] = useState({});
-  const [editAnalytics, setEditAnalytics] = useState({});
-  const [activeModalTab, setActiveModalTab] = useState('copy');
   const [submittingAction, setSubmittingAction] = useState(false);
 
   // Stage configuration details
@@ -116,7 +108,7 @@ export default function WorkflowStageSection({
           bgLight: "#f5f3ff",
           icon: CheckCircle2,
           statuses: ["script_approval"],
-          loopbackNote: "↺ Rejections return to Stage 1 (Scripts)",
+          loopbackNote: "Γå║ Rejections return to Stage 1 (Scripts)",
         };
       case "designing":
         return {
@@ -127,7 +119,7 @@ export default function WorkflowStageSection({
           bgLight: "#fdf2f8",
           icon: Palette,
           statuses: ["designing"],
-          loopbackNote: "↺ Receives revision requests from Client Review & Team QA",
+          loopbackNote: "Γå║ Receives revision requests from Client Review & Team QA",
         };
       case "team_review":
         return {
@@ -148,7 +140,7 @@ export default function WorkflowStageSection({
           bgLight: "#fff7ed",
           icon: Eye,
           statuses: ["client_review"],
-          loopbackNote: "↺ Client changes loop back to Stage 3 (Scheduled / Designing)",
+          loopbackNote: "Γå║ Client changes loop back to Stage 3 (Scheduled / Designing)",
         };
       case "post_schedule":
         return {
@@ -214,7 +206,7 @@ export default function WorkflowStageSection({
         return false;
       }
       // Stage status filter
-      const isStatusMatch = stageId === "published" && showArchived ? p.status === "archived" : stageMeta.statuses.includes(p.status);
+      const isStatusMatch = stageMeta.statuses.includes(p.status);
       const isFallbackRejected =
         p.status === "rejected" &&
         ((stageId === "scripts" && p.client_feedback?.toLowerCase().includes("script")) ||
@@ -246,7 +238,7 @@ export default function WorkflowStageSection({
       }
       return true;
     });
-  }, [posts, stageMeta, stageId, selectedClientId, scriptSubFilter, formatFilter, searchQuery, showArchived]);
+  }, [posts, stageMeta, stageId, selectedClientId, scriptSubFilter, formatFilter, searchQuery]);
 
   // Transition Handler
   const handleTransition = async (post, targetStage, actionType, notes = "", extraData = {}) => {
@@ -263,7 +255,7 @@ export default function WorkflowStageSection({
         } catch (err) {}
       }
 
-            await axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
+      await axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
         target_stage: targetStage,
         action_type: actionType,
         notes: notes || actionNotes,
@@ -344,8 +336,6 @@ export default function WorkflowStageSection({
     setEditDesignerNotes(post.designer_notes || "");
     setEditMediaUrl(post.media_urls?.[0] || "");
     setEditScheduledAt(post.scheduled_at ? post.scheduled_at.slice(0, 16) : "");
-    setEditLiveUrls(post.live_urls || {});
-    setEditAnalytics(post.analytics || {});
   };
 
   const StageIcon = stageMeta.icon;
@@ -736,15 +726,11 @@ export default function WorkflowStageSection({
                         </button>
                       </span>
                     )}
-                    {modalAction.type === "approve_script" && "Approve Script → Move to Scheduled / Designing"}
-                    {modalAction.type === "design_ready" && "Design Complete → Move to Team QA Review"}
-                    {modalAction.type === "send_client" && "Team QA Passed → Move to Client Review"}
+                    {modalAction.type === "approve_script" && "Approve Script ΓåÆ Move to Scheduled / Designing"}
+                    {modalAction.type === "design_ready" && "Design Complete ΓåÆ Move to Team QA Review"}
+                    {modalAction.type === "send_client" && "Team QA Passed ΓåÆ Move to Client Review"}
                     {modalAction.type === "client_changes" && "Client Revisions (Loopback to Stage 3: Designing)"}
-                    {modalAction.type === "client_approve" && "Client Approved → Move to Approved / Post Schedule"}
-                    
-                    {modalAction.type === "live_urls" && "Update Live Post URLs"}
-                    {modalAction.type === "analytics" && "Track Post Performance / Analytics"}
-                    {modalAction.type === "archive_post" && "Archive Post (Remove from Dashboard)"}
+                    {modalAction.type === "client_approve" && "Client Approved ΓåÆ Move to Approved / Post Schedule"}
                     {modalAction.type === "edit_notes" && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
                         Edit Post Details & Workflow Notes
@@ -775,7 +761,7 @@ export default function WorkflowStageSection({
                     )}
                   </h3>
                   <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
-                    {modalAction.post.title || "Concept"} • {modalAction.post.client_name || "Adstra Client"}
+                    {modalAction.post.title || "Concept"} ΓÇó {modalAction.post.client_name || "Adstra Client"}
                   </p>
                 </div>
               </div>
@@ -790,349 +776,301 @@ export default function WorkflowStageSection({
             {/* Modal Body */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               
-              {/* Show tabs only for complex modals */}
-              {["edit_notes", "design_ready", "client_approve"].includes(modalAction.type) && (
-                <div style={{ display: "flex", gap: 10, borderBottom: "1px solid #e2e8f0", paddingBottom: 8 }}>
-                  <button
-                    onClick={() => setActiveModalTab('copy')}
-                    style={{
-                      background: activeModalTab === 'copy' ? '#eff6ff' : 'transparent',
-                      color: activeModalTab === 'copy' ? '#2563eb' : '#64748b',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: 6,
-                      fontSize: '0.78rem',
-                      fontWeight: activeModalTab === 'copy' ? 800 : 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Copy & Concept
-                  </button>
-                  <button
-                    onClick={() => setActiveModalTab('creative')}
-                    style={{
-                      background: activeModalTab === 'creative' ? '#fdf2f8' : 'transparent',
-                      color: activeModalTab === 'creative' ? '#db2777' : '#64748b',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: 6,
-                      fontSize: '0.78rem',
-                      fontWeight: activeModalTab === 'creative' ? 800 : 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Creative & Design
-                  </button>
-                  <button
-                    onClick={() => setActiveModalTab('publishing')}
-                    style={{
-                      background: activeModalTab === 'publishing' ? '#ecfdf5' : 'transparent',
-                      color: activeModalTab === 'publishing' ? '#059669' : '#64748b',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: 6,
-                      fontSize: '0.78rem',
-                      fontWeight: activeModalTab === 'publishing' ? 800 : 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Publishing & Schedule
-                  </button>
+              {/* Context Summary */}
+              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", marginBottom: 4 }}>
+                  Current Concept / Copy:
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#1e293b", lineHeight: 1.4, maxHeight: 90, overflowY: "auto" }}>
+                  {modalAction.post.primary_caption || modalAction.post.script_notes || "No draft caption available"}
+                </div>
+              </div>
+
+              {/* Script Notes Input */}
+              {(modalAction.type === "edit_notes" || modalAction.type === "reject_script") && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    Script Hook, Outline & Copy Notes
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editScriptNotes}
+                    onChange={(e) => setEditScriptNotes(e.target.value)}
+                    placeholder="Write or refine the hook, angle, or script bullets..."
+                    style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", outline: "none" }}
+                  />
                 </div>
               )}
 
-              {/* TAB: COPY & CONCEPT */}
-              {(!["edit_notes", "design_ready", "client_approve"].includes(modalAction.type) || activeModalTab === 'copy') && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {/* Context Summary */}
-                  <div style={{ background: "#f8fafc", padding: 14, borderRadius: 12, border: "1px solid #e2e8f0" }}>
-                    <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", marginBottom: 4 }}>
-                      Current Concept / Copy:
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#1e293b", lineHeight: 1.4, maxHeight: 90, overflowY: "auto" }}>
-                      {modalAction.post.primary_caption || modalAction.post.script_notes || "No draft caption available"}
-                    </div>
+              {/* Designer Deliverable Upload, Replace & Play (For design_ready and edit_notes) */}
+              {(modalAction.type === "design_ready" || modalAction.type === "edit_notes") && (
+                <div style={{ background: "#fdf2f8", border: "1px solid #fbcfe8", borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#9d174d", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Sparkles size={14} /> Creative Deliverable (Reel / Video / Graphic)
+                    </span>
+                    {editMediaUrl && (
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "2px 8px", borderRadius: 6 }}>
+                        Γ£ô Deliverable Attached
+                      </span>
+                    )}
                   </div>
 
-                  {/* Script Notes Input */}
-                  {(modalAction.type === "edit_notes" || modalAction.type === "reject_script" || modalAction.type === "client_changes" || modalAction.type === "reject_design") && (
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                        {modalAction.type === "reject_design" || modalAction.type === "client_changes" ? "Feedback / Revision Notes" : "Script Hook, Outline & Copy Notes"}
-                      </label>
-                      <textarea
-                        rows={4}
-                        value={editScriptNotes}
-                        onChange={(e) => setEditScriptNotes(e.target.value)}
-                        placeholder="Write or refine the hook, angle, or script bullets..."
-                        style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", outline: "none" }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Archive Post Warning */}
-                  {modalAction.type === "archive_post" && (
-                    <div style={{ padding: 14, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12 }}>
-                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#991b1b" }}>
-                        Are you sure you want to archive this post? It will be removed from the active dashboard view but its data will be retained in the database.
-                      </p>
-                    </div>
-                  )}
-                  
-                  {/* Feedback / Reason Box (For loopbacks or approvals) */}
-                  {!["edit_notes", "live_urls", "analytics", "archive_post", "design_ready", "client_approve"].includes(modalAction.type) && (
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                        {modalAction.type === "reject_script" && "Reason for Rejecting Script (Sent back to Copywriter) *"}
-                        {modalAction.type === "reject_design" && "Reason for Rejecting Deliverable (Added to Timeline & Sent to Designer) *"}
-                        {modalAction.type === "client_changes" && "Client Requested Changes / Revision Feedback *"}
-                        {modalAction.type === "approve_script" && "Approval Remarks (Optional)"}
-                        {modalAction.type === "send_client" && "Instructions for Client"}
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={actionNotes}
-                        onChange={(e) => setActionNotes(e.target.value)}
-                        placeholder={
-                          modalAction.type === "reject_script"
-                            ? "Explain why the script is not better and what hook/CTA needs improvement..."
-                            : modalAction.type === "reject_design"
-                            ? "Explain required design changes (e.g. typography issues, color grading, audio sync, brand guidelines)..."
-                            : modalAction.type === "client_changes"
-                            ? "Specify graphic/copy changes requested by client..."
-                            : "Add any internal remarks or notes..."
-                        }
-                        style={{
-                          width: "100%",
-                          padding: "10px",
-                          borderRadius: 8,
-                          border: "1px solid #cbd5e1",
-                          fontSize: "0.84rem",
-                          outline: "none",
-                        }}
-                      />
-                      {modalAction.type === "reject_design" && (
-                        <div style={{ marginTop: 6, fontSize: "0.73rem", color: "#64748b", display: "flex", alignItems: "center", gap: 5 }}>
-                          <Clock size={12} style={{ color: "#6366f1" }} />
-                          <span>This reason will be recorded on the post timeline audit trail and displayed as critique notes in Stage 3.</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TAB: CREATIVE & DESIGN */}
-              {(!["edit_notes", "design_ready", "client_approve"].includes(modalAction.type) || activeModalTab === 'creative') && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {(modalAction.type === "design_ready" || modalAction.type === "edit_notes" || modalAction.type === "client_approve" || modalAction.type === "approve_script") && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
-                      
-                      {/* Column 1: Media Preview / Upload */}
-                      <div style={{ flex: "1 1 300px", background: "#fdf2f8", border: "1px solid #fbcfe8", borderRadius: 12, padding: 14 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#9d174d", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
-                            <Sparkles size={14} /> Creative Deliverable
-                          </span>
-                          {editMediaUrl && (
-                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "2px 8px", borderRadius: 6 }}>
-                              ✓ Attached
-                            </span>
-                          )}
-                        </div>
-
-                        {editMediaUrl ? (
-                          <div style={{ background: "#0f172a", borderRadius: 10, overflow: "hidden", padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-                            <div style={{ maxHeight: 200, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                              {(editMediaUrl.toLowerCase().endsWith(".mp4") || editMediaUrl.toLowerCase().endsWith(".mov") || editMediaUrl.toLowerCase().endsWith(".webm") || modalAction.post.post_type === "reel" || modalAction.post.post_type === "video") ? (
-                                <video src={editMediaUrl} controls playsInline style={{ maxHeight: 190, maxWidth: "100%", borderRadius: 6 }} />
-                              ) : (
-                                <img src={editMediaUrl} alt="" style={{ maxHeight: 190, maxWidth: "100%", objectFit: "contain", borderRadius: 6 }} />
-                              )}
-                            </div>
-
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 4, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const input = document.createElement("input");
-                                    input.type = "file";
-                                    input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
-                                    input.onchange = async (e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        const res = await handleUploadMedia(modalAction.post, file, true);
-                                        if (res?.file_url) setEditMediaUrl(res.file_url);
-                                      }
-                                    };
-                                    input.click();
-                                  }}
-                                  style={{ padding: "4px 8px", borderRadius: 6, background: "#334155", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
-                                >
-                                  <RotateCcw size={10} /> Replace
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setPreviewingMediaPost({ ...modalAction.post, media_urls: [editMediaUrl] })}
-                                  style={{ padding: "4px 8px", borderRadius: 6, background: "#ec4899", border: "none", color: "#fff", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
-                                >
-                                  <Play size={10} fill="#fff" /> Player
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => { navigator.clipboard.writeText(editMediaUrl); alert("Asset link copied!"); }}
-                                  style={{ padding: "4px 8px", borderRadius: 6, background: "#334155", border: "none", color: "#cbd5e1", fontSize: "0.7rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
-                                >
-                                  <Copy size={10} /> Link
-                                </button>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setEditMediaUrl("")}
-                                style={{ padding: "4px 8px", borderRadius: 6, background: "rgba(239, 68, 68, 0.2)", border: "none", color: "#f87171", fontSize: "0.7rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
-                              >
-                                <Trash2 size={10} />
-                              </button>
-                            </div>
-                          </div>
+                  {editMediaUrl ? (
+                    <div style={{ background: "#0f172a", borderRadius: 10, overflow: "hidden", padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ maxHeight: 240, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        {(editMediaUrl.toLowerCase().endsWith(".mp4") || editMediaUrl.toLowerCase().endsWith(".mov") || editMediaUrl.toLowerCase().endsWith(".webm") || modalAction.post.post_type === "reel" || modalAction.post.post_type === "video") ? (
+                          <video src={editMediaUrl} controls playsInline style={{ maxHeight: 230, maxWidth: "100%", borderRadius: 6 }} />
                         ) : (
-                          <div>
-                            <div
-                              onClick={() => {
-                                const input = document.createElement("input");
-                                input.type = "file";
-                                input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
-                                input.onchange = async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    const res = await handleUploadMedia(modalAction.post, file, true);
-                                    if (res?.file_url) setEditMediaUrl(res.file_url);
-                                  }
-                                };
-                                input.click();
-                              }}
-                              style={{ border: "2px dashed #f472b6", borderRadius: 10, background: "#fff", padding: "18px 14px", textAlign: "center", cursor: "pointer", marginBottom: 8 }}
-                            >
-                              <Upload size={22} style={{ color: "#db2777", margin: "0 auto 4px" }} />
-                              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#be185d" }}>
-                                Browse or Drag & Drop
-                              </div>
-                            </div>
-                            <input
-                              type="text"
-                              value={editMediaUrl}
-                              onChange={(e) => setEditMediaUrl(e.target.value)}
-                              placeholder="Or paste cloud asset link..."
-                              style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.8rem", outline: "none" }}
-                            />
-                          </div>
+                          <img src={editMediaUrl} alt="" style={{ maxHeight: 230, maxWidth: "100%", objectFit: "contain", borderRadius: 6 }} />
                         )}
                       </div>
 
-                      {/* Column 2: Brief / Notes */}
-                      <div style={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: 10 }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: 3 }}>
-                            Designer / Editor Brief & Notes
-                          </label>
-                          <textarea
-                            rows={4}
-                            value={editDesignerNotes}
-                            onChange={(e) => setEditDesignerNotes(e.target.value)}
-                            placeholder="e.g. 1080x1920 60s Reel rendered with captions and sound design..."
-                            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.82rem", outline: "none" }}
-                          />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                              input.onchange = async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const res = await handleUploadMedia(modalAction.post, file, true);
+                                  if (res?.file_url) setEditMediaUrl(res.file_url);
+                                }
+                              };
+                              input.click();
+                            }}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: 6,
+                              background: "#334155",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              color: "#fff",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <RotateCcw size={12} /> Replace File
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewingMediaPost({ ...modalAction.post, media_urls: [editMediaUrl] });
+                            }}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: 6,
+                              background: "#ec4899",
+                              border: "none",
+                              color: "#fff",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Play size={11} fill="#fff" /> Full Player
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(editMediaUrl);
+                              alert("Asset link copied to clipboard!");
+                            }}
+                            style={{
+                              padding: "5px 9px",
+                              borderRadius: 6,
+                              background: "#334155",
+                              border: "none",
+                              color: "#cbd5e1",
+                              fontSize: "0.74rem",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                          >
+                            <Copy size={11} /> Copy Link
+                          </button>
                         </div>
-                        {modalAction.type === "client_approve" && (
-                          <div>
-                            <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: 3 }}>
-                              Final Sign-off Notes (Optional)
-                            </label>
-                            <textarea
-                              rows={2}
-                              value={actionNotes}
-                              onChange={(e) => setActionNotes(e.target.value)}
-                              placeholder="Any final notes from the client..."
-                              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.82rem", outline: "none" }}
-                            />
-                          </div>
-                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setEditMediaUrl("")}
+                          style={{
+                            padding: "5px 9px",
+                            borderRadius: 6,
+                            background: "rgba(239, 68, 68, 0.2)",
+                            border: "none",
+                            color: "#f87171",
+                            fontSize: "0.72rem",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                        >
+                          <Trash2 size={11} /> Remove
+                        </button>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  ) : (
+                    <div>
+                      <div
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                          input.onchange = async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const res = await handleUploadMedia(modalAction.post, file, true);
+                              if (res?.file_url) setEditMediaUrl(res.file_url);
+                            }
+                          };
+                          input.click();
+                        }}
+                        style={{
+                          border: "2px dashed #f472b6",
+                          borderRadius: 10,
+                          background: "#fff",
+                          padding: "18px 14px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          marginBottom: 8,
+                        }}
+                      >
+                        <Upload size={22} style={{ color: "#db2777", margin: "0 auto 4px" }} />
+                        <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#be185d" }}>
+                          Click to Browse or Drag & Drop Finished Deliverable
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>
+                          Supports Reel / Video (.mp4, .mov, .webm) or Graphic (.png, .jpg, .webp)
+                        </div>
+                      </div>
 
-              {/* TAB: PUBLISHING & SCHEDULE */}
-              {(!["edit_notes", "design_ready", "client_approve"].includes(modalAction.type) || activeModalTab === 'publishing') && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  
-                  {/* Schedule Box */}
-                  {(modalAction.type === "edit_notes" || modalAction.type === "client_approve") && (
-                    <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, padding: 14 }}>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#0369a1", marginBottom: 4 }}>
-                        Publish Schedule Date & Time
-                      </label>
                       <input
-                        type="datetime-local"
-                        value={editScheduledAt}
-                        onChange={(e) => setEditScheduledAt(e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.84rem", outline: "none" }}
+                        type="text"
+                        value={editMediaUrl}
+                        onChange={(e) => setEditMediaUrl(e.target.value)}
+                        placeholder="Or paste cloud asset link (Drive, Canva, Figma)..."
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.8rem", outline: "none" }}
                       />
                     </div>
                   )}
 
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
-                    {/* Live URLs */}
-                    {(modalAction.type === "live_urls" || modalAction.type === "edit_notes") && (
-                      <div style={{ flex: "1 1 300px" }}>
-                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                          Platform Live URLs
-                        </label>
-                        {(modalAction.post.platforms && modalAction.post.platforms.length > 0 ? modalAction.post.platforms : ['instagram', 'facebook', 'linkedin']).map((platform) => (
-                          <div key={platform} style={{ marginBottom: 8, display: "flex", alignItems: "center" }}>
-                            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#334155", display: "inline-block", width: 80, textTransform: "capitalize" }}>{platform}</span>
-                            <input
-                              type="text"
-                              value={editLiveUrls[platform] || ""}
-                              onChange={(e) => setEditLiveUrls({ ...editLiveUrls, [platform]: e.target.value })}
-                              placeholder={`Paste live ${platform} URL here...`}
-                              style={{ flex: 1, padding: "6px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.8rem", outline: "none" }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Analytics */}
-                    {(modalAction.type === "analytics" || modalAction.type === "edit_notes") && (
-                      <div style={{ flex: "1 1 300px" }}>
-                        <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                          Basic Post Analytics
-                        </label>
-                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          {['likes', 'comments', 'shares', 'reach'].map(metric => (
-                            <div key={metric} style={{ flex: "1 1 45%" }}>
-                              <span style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "capitalize" }}>{metric}</span>
-                              <input
-                                type="number"
-                                value={editAnalytics[metric] || ""}
-                                onChange={(e) => setEditAnalytics({ ...editAnalytics, [metric]: parseInt(e.target.value) || 0 })}
-                                placeholder={`Total ${metric}`}
-                                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.8rem", outline: "none", marginTop: 2 }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  <div style={{ marginTop: 10 }}>
+                    <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: "#475569", marginBottom: 3 }}>
+                      Designer / Editor Brief & Notes
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editDesignerNotes}
+                      onChange={(e) => setEditDesignerNotes(e.target.value)}
+                      placeholder="e.g. 1080x1920 60s Reel rendered with captions and sound design. Ready for review."
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.82rem", outline: "none" }}
+                    />
                   </div>
                 </div>
               )}
 
-            </div>
-            {/* Modal Buttons */}
+              {/* Script Approval stage brief */}
+              {modalAction.type === "approve_script" && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    Visual Creative URL (Image / Video URL)
+                  </label>
+                  <input
+                    type="text"
+                    value={editMediaUrl}
+                    onChange={(e) => setEditMediaUrl(e.target.value)}
+                    placeholder="https://... or media asset link"
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", outline: "none", marginBottom: 10 }}
+                  />
+
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    Designer / Editor Brief (Aspect ratio, branding notes, video cut directions)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editDesignerNotes}
+                    onChange={(e) => setEditDesignerNotes(e.target.value)}
+                    placeholder="e.g. 1080x1350 vertical carousel, bold yellow highlights, add Adstra logo watermark..."
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", outline: "none" }}
+                  />
+                </div>
+              )}
+
+              {/* Scheduled Date */}
+              {(modalAction.type === "edit_notes" || modalAction.type === "client_approve") && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    Publish Schedule Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={editScheduledAt}
+                    onChange={(e) => setEditScheduledAt(e.target.value)}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.84rem", outline: "none" }}
+                  />
+                </div>
+              )}
+
+              {/* Feedback / Reason Box (For loopbacks or approvals) */}
+              {modalAction.type !== "edit_notes" && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                    {modalAction.type === "reject_script" && "Reason for Rejecting Script (Sent back to Copywriter) *"}
+                    {modalAction.type === "reject_design" && "Reason for Rejecting Deliverable (Added to Timeline & Sent to Designer) *"}
+                    {modalAction.type === "client_changes" && "Client Requested Changes / Revision Feedback *"}
+                    {modalAction.type === "approve_script" && "Approval Remarks (Optional)"}
+                    {modalAction.type === "design_ready" && "Design QA Hand-off Notes"}
+                    {modalAction.type === "send_client" && "Instructions for Client"}
+                    {modalAction.type === "client_approve" && "Final Sign-off Notes"}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    placeholder={
+                      modalAction.type === "reject_script"
+                        ? "Explain why the script is not better and what hook/CTA needs improvement..."
+                        : modalAction.type === "reject_design"
+                        ? "Explain required design changes (e.g. typography issues, color grading, audio sync, brand guidelines)..."
+                        : modalAction.type === "client_changes"
+                        ? "Specify graphic/copy changes requested by client..."
+                        : "Add any internal remarks or notes..."
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.84rem",
+                      outline: "none",
+                    }}
+                  />
+                  {modalAction.type === "reject_design" && (
+                    <div style={{ marginTop: 6, fontSize: "0.73rem", color: "#64748b", display: "flex", alignItems: "center", gap: 5 }}>
+                      <Clock size={12} style={{ color: "#6366f1" }} />
+                      <span>This reason will be recorded on the post timeline audit trail and displayed as critique notes in Stage 3.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Modal Buttons */}
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
                 <button
                   type="button"
@@ -1141,50 +1079,6 @@ export default function WorkflowStageSection({
                 >
                   Cancel
                 </button>
-
-                {modalAction.type === "archive_post" && (
-                  <button
-                    disabled={submittingAction}
-                    onClick={() => handleTransition(modalAction.post, "archived", "advance", "Post archived by user.")}
-                    style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#dc2626", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    <Archive size={14} /> Confirm Archive
-                  </button>
-                )}
-
-                {modalAction.type === "live_urls" && (
-                  <button
-                    disabled={submittingAction}
-                    onClick={async () => {
-                      try {
-                        setSubmittingAction(true);
-                        await axios.patch(`${API_BASE_URL}/social/posts/${modalAction.post.id}/`, { live_urls: editLiveUrls });
-                        onRefresh();
-                        setModalAction(null);
-                      } catch(e) { alert("Failed to update URLs"); } finally { setSubmittingAction(false); }
-                    }}
-                    style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    <Link size={14} /> Save Live URLs
-                  </button>
-                )}
-
-                {modalAction.type === "analytics" && (
-                  <button
-                    disabled={submittingAction}
-                    onClick={async () => {
-                      try {
-                        setSubmittingAction(true);
-                        await axios.patch(`${API_BASE_URL}/social/posts/${modalAction.post.id}/`, { analytics: editAnalytics });
-                        onRefresh();
-                        setModalAction(null);
-                      } catch(e) { alert("Failed to update analytics"); } finally { setSubmittingAction(false); }
-                    }}
-                    style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    <BarChart2 size={14} /> Save Analytics
-                  </button>
-                )}
 
                 {modalAction.type === "reject_script" && (
                   <button
@@ -1245,14 +1139,14 @@ export default function WorkflowStageSection({
                       onClick={() => handleTransition(modalAction.post, "script", "reject", actionNotes || "Script not better, rework hook", { script_notes: editScriptNotes })}
                       style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #ef4444", color: "#dc2626", background: "#fff", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}
                     >
-                      Reject (↺ Scripts)
+                      Reject (Γå║ Scripts)
                     </button>
                     <button
                       disabled={submittingAction}
                       onClick={() => handleTransition(modalAction.post, "designing", "advance", actionNotes || "Script approved, ready for design", { designer_notes: editDesignerNotes, media_urls: editMediaUrl ? [editMediaUrl] : modalAction.post.media_urls })}
                       style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                     >
-                      Approve → Move to Designing
+                      Approve ΓåÆ Move to Designing
                     </button>
                   </div>
                 )}
@@ -1263,7 +1157,7 @@ export default function WorkflowStageSection({
                     onClick={() => handleTransition(modalAction.post, "team_review", "advance", actionNotes || "Creative design attached, ready for QA", { designer_notes: editDesignerNotes, media_urls: editMediaUrl ? [editMediaUrl] : modalAction.post.media_urls })}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#ec4899", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    Mark Ready for Team QA →
+                    Mark Ready for Team QA ΓåÆ
                   </button>
                 )}
 
@@ -1274,14 +1168,14 @@ export default function WorkflowStageSection({
                       onClick={() => handleTransition(modalAction.post, "designing", "reject", actionNotes || "QA failed, design adjustments required")}
                       style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #f97316", color: "#ea580c", background: "#fff", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}
                     >
-                      ↺ Back to Design
+                      Γå║ Back to Design
                     </button>
                     <button
                       disabled={submittingAction}
                       onClick={() => handleTransition(modalAction.post, "client_review", "advance", actionNotes || "Team QA passed, sent to client review")}
                       style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                     >
-                      Send to Client Review →
+                      Send to Client Review ΓåÆ
                     </button>
                   </div>
                 )}
@@ -1329,7 +1223,7 @@ export default function WorkflowStageSection({
                     }}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    {submittingAction ? "Approving..." : "Approve → Schedule Post"}
+                    {submittingAction ? "Approving..." : "Approve ΓåÆ Schedule Post"}
                   </button>
                 )}
 
@@ -1365,6 +1259,7 @@ export default function WorkflowStageSection({
               </div>
             </div>
           </div>
+        </div>
       )}
 
       {/* 5. SCRIPT CREATION / EDIT MODAL */}
@@ -1709,7 +1604,7 @@ function StageListingTable({
                                   fontWeight: 800,
                                 }}
                               >
-                                ● Under Approval
+                                ΓùÅ Under Approval
                               </span>
                             ) : isRejected ? (
                               <span
@@ -1723,7 +1618,7 @@ function StageListingTable({
                                   fontWeight: 800,
                                 }}
                               >
-                                ● Needs Revision
+                                ΓùÅ Needs Revision
                               </span>
                             ) : (
                               <span
@@ -1737,7 +1632,7 @@ function StageListingTable({
                                   fontWeight: 700,
                                 }}
                               >
-                                ● Draft
+                                ΓùÅ Draft
                               </span>
                             )
                           ) : isRejected ? (
@@ -1752,7 +1647,7 @@ function StageListingTable({
                                 fontWeight: 800,
                               }}
                             >
-                              ● Needs Revision (↺ Rejected)
+                              ΓùÅ Needs Revision (Γå║ Rejected)
                             </span>
                           ) : null}
                         </div>
@@ -1868,22 +1763,12 @@ function StageListingTable({
 
                   {/* 5. Timing / Schedule */}
                   <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                    {post.scheduled_at ? (() => {
-                      const isOverdue = new Date(post.scheduled_at) < new Date() && stageId !== "published";
-                      return (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: isOverdue ? "#dc2626" : "#0284c7", whiteSpace: "nowrap" }}>
-                            <Clock size={13} />
-                            {new Date(post.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          </div>
-                          {isOverdue && (
-                            <div style={{ fontSize: "0.7rem", color: "#ef4444", fontWeight: 800, display: "flex", alignItems: "center", gap: 3 }} title="Scheduled time has passed">
-                              <AlertTriangle size={12} /> Is this posted or not?
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })() : post.published_at ? (
+                    {post.scheduled_at ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#0284c7", whiteSpace: "nowrap" }}>
+                        <Clock size={13} />
+                        {new Date(post.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    ) : post.published_at ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#10b981", whiteSpace: "nowrap" }}>
                         <CheckCircle2 size={13} />
                         {new Date(post.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -1945,7 +1830,7 @@ function StageListingTable({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              View in Approval →
+                              View in Approval ΓåÆ
                             </button>
                           ) : isRejected ? (
                             <button
@@ -1965,14 +1850,14 @@ function StageListingTable({
                                 gap: 5,
                               }}
                             >
-                              <RotateCcw size={12} /> Rework Script →
+                              <RotateCcw size={12} /> Rework Script ΓåÆ
                             </button>
                           ) : (
                             <button
                               onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
                               style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#4f46e5", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                             >
-                              Submit →
+                              Submit ΓåÆ
                             </button>
                           )}
                         </>
@@ -1991,13 +1876,13 @@ function StageListingTable({
                             onClick={() => onOpenModal(post, "reject_script")}
                             style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ef4444", background: "#fff", color: "#dc2626", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Reject (↺)
+                            Reject (Γå║)
                           </button>
                           <button
                             onClick={() => onTransition(post, "designing", "advance", "Script approved, ready for design")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Approve → Design
+                            Approve ΓåÆ Design
                           </button>
                         </>
                       )}
@@ -2377,7 +2262,7 @@ function StageListingTable({
                               whiteSpace: "nowrap",
                             }}
                           >
-                            Ready for QA →
+                            Ready for QA ΓåÆ
                           </button>
                         </>
                       )}
@@ -2633,7 +2518,7 @@ function StageListingTable({
                             onClick={() => onTransition(post, "client_review", "advance", "Team QA passed, sent to client review")}
                             style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            QA Pass → Client
+                            QA Pass ΓåÆ Client
                           </button>
                         </>
                       )}
@@ -2650,65 +2535,16 @@ function StageListingTable({
                             Link
                           </button>
                           <button
-                            onClick={async () => {
-                              const mediaUrl = post.media_urls?.[0];
-                              if (!mediaUrl) {
-                                alert("No media available for this post.");
-                                return;
-                              }
-                              try {
-                                const res = await fetch(mediaUrl);
-                                const blob = await res.blob();
-                                const fileName = mediaUrl.split("/").pop() || "media.mp4";
-                                const file = new File([blob], fileName, { type: blob.type });
-
-                                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                                  try {
-                                    await navigator.share({
-                                      files: [file],
-                                      title: post.title || 'Review Media',
-                                    });
-                                    return;
-                                  } catch (err) {
-                                    console.log("Share cancelled or failed", err);
-                                  }
-                                }
-                                
-                                const blobUrl = window.URL.createObjectURL(blob);
-                                const a = document.createElement("a");
-                                a.style.display = "none";
-                                a.href = blobUrl;
-                                a.download = fileName;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(blobUrl);
-                                a.remove();
-                                
-                                setTimeout(() => {
-                                  const text = `Please review this for ${post.client_name || 'our brand'}:\n${window.location.origin}/social/review/?token=${post.client_approval_token}`;
-                                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-                                }, 600);
-                              } catch (e) {
-                                console.error("Download failed, opening in new tab", e);
-                                window.open(mediaUrl, "_blank");
-                              }
-                            }}
-                            title="Download Media and Share via WhatsApp"
-                            style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: "#25D366", color: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
-                          >
-                            <Share2 size={13} /> WhatsApp
-                          </button>
-                          <button
                             onClick={() => onOpenModal(post, "client_changes")}
                             style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ea580c", background: "#fff", color: "#ea580c", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            ↺ Revisions
+                            Γå║ Revisions
                           </button>
                           <button
                             onClick={() => onTransition(post, "approved", "advance", "Client approved design & copy")}
                             style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
                           >
-                            Approved →
+                            Approved ΓåÆ
                           </button>
                         </>
                       )}
@@ -2737,24 +2573,6 @@ function StageListingTable({
                           <span style={{ color: "#10b981", fontWeight: 800, fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 4, marginRight: 4 }}>
                             <CheckCircle2 size={14} /> Live
                           </span>
-                          <button
-                            onClick={() => onOpenModal(post, "live_urls")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#1d4ed8" }}
-                          >
-                            Live URLs
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "analytics")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #a7f3d0", background: "#ecfdf5", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#047857" }}
-                          >
-                            Analytics
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "archive_post")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#b91c1c" }}
-                          >
-                            Archive
-                          </button>
                           <button
                             onClick={() => onOpenModal(post, "edit_notes")}
                             style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}

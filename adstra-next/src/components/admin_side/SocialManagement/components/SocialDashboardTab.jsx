@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Sparkles,
   Award,
+  Film,
 } from "lucide-react";
 
 export default function SocialDashboardTab({
@@ -323,14 +324,40 @@ export default function SocialDashboardTab({
                         overflow: "hidden",
                         background: "#0f172a",
                         flexShrink: 0,
+                        position: "relative",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
                       {post.media_urls?.[0] ? (
-                        <img
-                          src={post.media_urls[0]}
-                          alt={post.title}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
+                        (post.post_type === "reel" ||
+                         post.post_type === "video" ||
+                         (typeof post.media_urls[0] === "string" &&
+                          (post.media_urls[0].toLowerCase().endsWith(".mp4") ||
+                           post.media_urls[0].toLowerCase().endsWith(".webm") ||
+                           post.media_urls[0].toLowerCase().endsWith(".mov")))) ? (
+                          <div style={{ width: "100%", height: "100%", position: "relative" }}>
+                            <video
+                              src={post.media_urls[0]}
+                              preload="metadata"
+                              muted
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Film size={14} color="#ffffff" />
+                            </div>
+                          </div>
+                        ) : (
+                          <img
+                            src={post.media_urls[0]}
+                            alt={post.title}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        )
                       ) : (
                         <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: "0.7rem" }}>
                           TEXT

@@ -86,6 +86,19 @@ class SocialPostSerializer(serializers.ModelSerializer):
         model = SocialPost
         fields = '__all__'
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        urls = ret.get('media_urls') or []
+        normalized = []
+        for u in urls:
+            if isinstance(u, str) and u.startswith('/media/') and request:
+                normalized.append(request.build_absolute_uri(u))
+            else:
+                normalized.append(u)
+        ret['media_urls'] = normalized
+        return ret
+
 
 class SocialInboxMessageSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client_profile.name', read_only=True)

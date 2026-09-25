@@ -562,7 +562,7 @@ class PublicClientReviewView(APIView):
     def get(self, request, token):
         try:
             post = SocialPost.objects.get(client_approval_token=token)
-            return Response(SocialPostSerializer(post).data)
+            return Response(SocialPostSerializer(post, context={'request': request}).data)
         except SocialPost.DoesNotExist:
             return Response({'error': 'Invalid or expired review link.'}, status=status.HTTP_404_NOT_FOUND)
 

@@ -193,6 +193,7 @@ class SocialPost(models.Model):
         ('client_review', 'Client Review'),
         ('approved', 'Approved / Post Schedule'),
         ('published', 'Published / Posted'),
+        ('archived', 'Archived'),
         # Backward compatibility aliases
         ('draft', 'Draft / Script'),
         ('internal_review', 'Team Review'),
@@ -226,6 +227,8 @@ class SocialPost(models.Model):
     media_assets = models.ManyToManyField(SocialMediaAsset, blank=True, related_name='posts')
     scheduled_at = models.DateTimeField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
+    live_urls = models.JSONField(default=dict, blank=True)
+    analytics = models.JSONField(default=dict, blank=True)
     PRIORITY_CHOICES = [
         ('urgent', 'Urgent'),
         ('high', 'High'),

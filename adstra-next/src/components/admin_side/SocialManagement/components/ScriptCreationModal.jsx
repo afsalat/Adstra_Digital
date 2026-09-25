@@ -34,6 +34,7 @@ import {
   Eye,
   RefreshCw,
   RotateCcw,
+  AlertCircle,
 } from "lucide-react";
 import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
 
@@ -865,13 +866,12 @@ export default function ScriptCreationModal({
           <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 700, color: theme.labelColor, marginBottom: 3 }}>
             Placement Notes & Additional Links for Designer (Optional)
           </label>
-          <input
+          <div style={{ position: "relative" }}>
+<input
             type="text"
             value={logoAssets}
             onChange={(e) => setLogoAssets(e.target.value)}
-            placeholder="e.g. White logo top right, feature attached product photo #1 in center, cyan brand accent..."
-            style={{
-              width: "100%",
+            style={{ paddingRight: "36px", width: "100%",
               padding: "8px 12px",
               borderRadius: 8,
               border: `1px solid ${theme.borderColor}`,
@@ -880,6 +880,10 @@ export default function ScriptCreationModal({
               background: "#fff",
             }}
           />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. White logo top right, feature attached product photo #1 in center, cyan brand accent...">
+<AlertCircle size={16} />
+</div>
+</div>
         </div>
       </div>
     );
@@ -987,13 +991,12 @@ export default function ScriptCreationModal({
                 <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#92400e", marginBottom: 5 }}>
                   Revision Summary / What was changed: (Optional summary logged to history)
                 </label>
-                <input
+                <div style={{ position: "relative" }}>
+<input
                   type="text"
-                  placeholder="e.g. Revised hook with punchier angle and updated CTA..."
                   value={reworkNotes}
                   onChange={(e) => setReworkNotes(e.target.value)}
-                  style={{
-                    width: "100%",
+                  style={{ paddingRight: "36px", width: "100%",
                     padding: "7px 12px",
                     borderRadius: 8,
                     border: "1px solid #fcd34d",
@@ -1003,6 +1006,10 @@ export default function ScriptCreationModal({
                     outline: "none",
                   }}
                 />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Revised hook with punchier angle and updated CTA...">
+<AlertCircle size={16} />
+</div>
+</div>
               </div>
             </div>
           )}
@@ -1214,13 +1221,17 @@ export default function ScriptCreationModal({
                     <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#581c87", marginBottom: 4 }}>
                       Headline (Main text on graphic) *
                     </label>
-                    <input
+                    <div style={{ position: "relative" }}>
+<input
                       type="text"
                       value={headline}
                       onChange={(e) => setHeadline(e.target.value)}
-                      placeholder="e.g. Stop Losing 40% of Your Ad Spend Every Month"
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Stop Losing 40% of Your Ad Spend Every Month">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
 
                   {/* Sub */}
@@ -1228,13 +1239,17 @@ export default function ScriptCreationModal({
                     <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#581c87", marginBottom: 4 }}>
                       Sub (Subheadline on graphic)
                     </label>
-                    <input
+                    <div style={{ position: "relative" }}>
+<input
                       type="text"
                       value={sub}
                       onChange={(e) => setSub(e.target.value)}
-                      placeholder="e.g. Proven B2B Growth Strategy for High-Ticket Brands"
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Proven B2B Growth Strategy for High-Ticket Brands">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
 
                   {/* Visual content text */}
@@ -1242,13 +1257,17 @@ export default function ScriptCreationModal({
                     <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#581c87", marginBottom: 4 }}>
                       Visual content text (Design Direction & Composition) *
                     </label>
-                    <textarea
+                    <div style={{ position: "relative" }}>
+<textarea
                       rows={3}
                       value={visualContentText}
                       onChange={(e) => setVisualContentText(e.target.value)}
-                      placeholder="Describe imagery, icon styles, graph visual, background gradient, layout placement for graphic designer..."
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.84rem", outline: "none", background: "#fff", resize: "vertical" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.84rem", outline: "none", background: "#fff", resize: "vertical" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "12px", transform: "none", color: "#94a3b8", cursor: "help" }} title="Describe imagery, icon styles, graph visual, background gradient, layout placement for graphic designer...">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
 
                   {/* CTA */}
@@ -1256,13 +1275,17 @@ export default function ScriptCreationModal({
                     <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#581c87", marginBottom: 4 }}>
                       CTA (Call to Action on graphic)
                     </label>
-                    <input
+                    <div style={{ position: "relative" }}>
+<input
                       type="text"
                       value={cta}
                       onChange={(e) => setCta(e.target.value)}
-                      placeholder="e.g. Book Free Consultation / Swipe Up / Register Now"
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Book Free Consultation / Swipe Up / Register Now">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
 
                   {/* Logo, Client Assets & Multi-Select Integration */}
@@ -1278,13 +1301,17 @@ export default function ScriptCreationModal({
                     <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#581c87", marginBottom: 4 }}>
                       Contact details (To feature on graphic)
                     </label>
-                    <input
+                    <div style={{ position: "relative" }}>
+<input
                       type="text"
                       value={contactDetails}
                       onChange={(e) => setContactDetails(e.target.value)}
-                      placeholder="e.g. +91 98765 43210 | www.adstradigital.com | Kochi, Kerala"
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #d8b4fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. +91 98765 43210 | www.adstradigital.com | Kochi, Kerala">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
                 </>
               )}
@@ -1300,25 +1327,33 @@ export default function ScriptCreationModal({
                       <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>
                         Headline (Cover Slide Hook) *
                       </label>
-                      <input
+                      <div style={{ position: "relative" }}>
+<input
                         type="text"
                         value={headline}
                         onChange={(e) => setHeadline(e.target.value)}
-                        placeholder="e.g. 5 Growth Mistakes In B2B Marketing"
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: "0.84rem", outline: "none", background: "#fff" }}
+                        style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: "0.84rem", outline: "none", background: "#fff" }}
                       />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. 5 Growth Mistakes In B2B Marketing">
+<AlertCircle size={16} />
+</div>
+</div>
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>
                         Sub (Cover Subheadline)
                       </label>
-                      <input
+                      <div style={{ position: "relative" }}>
+<input
                         type="text"
                         value={sub}
                         onChange={(e) => setSub(e.target.value)}
-                        placeholder="e.g. And the exact 3-step fix to double leads"
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: "0.84rem", outline: "none", background: "#fff" }}
+                        style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: "0.84rem", outline: "none", background: "#fff" }}
                       />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. And the exact 3-step fix to double leads">
+<AlertCircle size={16} />
+</div>
+</div>
                     </div>
                   </div>
 
@@ -1419,26 +1454,34 @@ export default function ScriptCreationModal({
                         <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 3 }}>
                           Slide {activeSlideIndex + 1} Visual Content Text (For designer):
                         </label>
-                        <input
+                        <div style={{ position: "relative" }}>
+<input
                           type="text"
                           value={carouselSlides[activeSlideIndex]?.visual_text || ""}
                           onChange={(e) => handleUpdateSlide(activeSlideIndex, "visual_text", e.target.value)}
-                          placeholder="e.g. Infographic diagram, split comparison, client quote card..."
-                          style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #c7d2fe", fontSize: "0.82rem", outline: "none" }}
+                          style={{ paddingRight: "36px", width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #c7d2fe", fontSize: "0.82rem", outline: "none" }}
                         />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Infographic diagram, split comparison, client quote card...">
+<AlertCircle size={16} />
+</div>
+</div>
                       </div>
 
                       <div>
                         <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 3 }}>
                           Slide {activeSlideIndex + 1} Inside Content Text (Text on slide):
                         </label>
-                        <textarea
+                        <div style={{ position: "relative" }}>
+<textarea
                           rows={2}
                           value={carouselSlides[activeSlideIndex]?.content_text || ""}
                           onChange={(e) => handleUpdateSlide(activeSlideIndex, "content_text", e.target.value)}
-                          placeholder="e.g. Headline on slide, bullet points, statistics, or actionable advice..."
-                          style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #c7d2fe", fontSize: "0.82rem", outline: "none", resize: "vertical" }}
+                          style={{ paddingRight: "36px", width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #c7d2fe", fontSize: "0.82rem", outline: "none", resize: "vertical" }}
                         />
+<div style={{ position: "absolute", right: "12px", top: "12px", transform: "none", color: "#94a3b8", cursor: "help" }} title="e.g. Headline on slide, bullet points, statistics, or actionable advice...">
+<AlertCircle size={16} />
+</div>
+</div>
                       </div>
                     </div>
                   </div>
@@ -1448,13 +1491,17 @@ export default function ScriptCreationModal({
                     <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#3730a3", marginBottom: 4 }}>
                       CTA (Call to Action on final slide)
                     </label>
-                    <input
+                    <div style={{ position: "relative" }}>
+<input
                       type="text"
                       value={cta}
                       onChange={(e) => setCta(e.target.value)}
-                      placeholder="e.g. Save for later | Comment 'SLIDES' to get the free template"
-                      style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: "0.85rem", outline: "none", background: "#fff" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Save for later | Comment 'SLIDES' to get the free template">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
 
                   {/* Logo, Client Assets & Multi-Select Integration */}
@@ -1510,13 +1557,17 @@ export default function ScriptCreationModal({
                         </label>
                         <div style={{ position: "relative" }}>
                           <Music2 size={14} color="#e11d48" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
-                          <input
+                          <div style={{ position: "relative" }}>
+<input
                             type="text"
                             value={musicReference}
                             onChange={(e) => setMusicReference(e.target.value)}
-                            placeholder="e.g. Trending upbeat instrumental / Spotify link / sound name"
-                            style={{ width: "100%", padding: "8px 12px 8px 30px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
+                            style={{ paddingRight: "36px", width: "100%", padding: "8px 12px 8px 30px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
                           />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Trending upbeat instrumental / Spotify link / sound name">
+<AlertCircle size={16} />
+</div>
+</div>
                         </div>
                       </div>
 
@@ -1525,13 +1576,17 @@ export default function ScriptCreationModal({
                         <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#9f1239", marginBottom: 4 }}>
                           Clips (Raw Footage link / Cloud Drive URL) *
                         </label>
-                        <input
+                        <div style={{ position: "relative" }}>
+<input
                           type="text"
                           value={clips}
                           onChange={(e) => setClips(e.target.value)}
-                          placeholder="e.g. Google Drive folder link, Dropbox, or raw clip URL..."
-                          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
+                          style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
                         />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Google Drive folder link, Dropbox, or raw clip URL...">
+<AlertCircle size={16} />
+</div>
+</div>
                       </div>
 
                       {/* Texts */}
@@ -1539,13 +1594,17 @@ export default function ScriptCreationModal({
                         <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#9f1239", marginBottom: 4 }}>
                           Texts (On-screen text overlays, captions, hooks) *
                         </label>
-                        <textarea
+                        <div style={{ position: "relative" }}>
+<textarea
                           rows={3}
                           value={clipTexts}
                           onChange={(e) => setClipTexts(e.target.value)}
-                          placeholder="e.g. [0:00-0:03] 'The #1 Mistake Clinics Make' | [0:10] Bold stat '80% Patients Search Online' | [0:25] 'Call now to consult'..."
-                          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff", resize: "vertical" }}
+                          style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff", resize: "vertical" }}
                         />
+<div style={{ position: "absolute", right: "12px", top: "12px", transform: "none", color: "#94a3b8", cursor: "help" }} title="e.g. [0:00-0:03] 'The #1 Mistake Clinics Make' | [0:10] Bold stat '80% Patients Search Online' | [0:25] 'Call now to consult'...">
+<AlertCircle size={16} />
+</div>
+</div>
                       </div>
 
                       {/* Logo, Client Assets & Multi-Select Integration */}
@@ -1566,17 +1625,21 @@ export default function ScriptCreationModal({
                         <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#9f1239", marginBottom: 4 }}>
                           Music Reference and video or images *
                         </label>
-                        <input
+                        <div style={{ position: "relative" }}>
+<input
                           type="text"
                           value={musicReference}
                           onChange={(e) => setMusicReference(e.target.value)}
-                          placeholder={
-                            videoType === "ai"
-                              ? "e.g. Cyberpunk cinematic synthwave + style reference images drive link"
-                              : "e.g. Modern electronic tech beat with swoosh SFX + brand vector graphics link"
-                          }
-                          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
+                          style={{ paddingRight: "36px", width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #fda4af", fontSize: "0.84rem", outline: "none", background: "#fff" }}
                         />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="
+                            videoType === &quot;ai&quot;
+                              ? &quot;e.g. Cyberpunk cinematic synthwave + style reference images drive link&quot;
+                              : &quot;e.g. Modern electronic tech beat with swoosh SFX + brand vector graphics link&quot;
+                          ">
+<AlertCircle size={16} />
+</div>
+</div>
                       </div>
 
                       {/* Multiple scenes visual content text + inside contents texts */}
@@ -1683,26 +1746,34 @@ export default function ScriptCreationModal({
                             <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 3 }}>
                               Scene {activeSceneIndex + 1} Visual Content Text (Visual prompt / Animation style):
                             </label>
-                            <input
+                            <div style={{ position: "relative" }}>
+<input
                               type="text"
                               value={scenes[activeSceneIndex]?.visual_text || ""}
                               onChange={(e) => handleUpdateScene(activeSceneIndex, "visual_text", e.target.value)}
-                              placeholder="e.g. AI prompt or motion animation description for this scene..."
-                              style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #fecdd3", fontSize: "0.82rem", outline: "none" }}
+                              style={{ paddingRight: "36px", width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #fecdd3", fontSize: "0.82rem", outline: "none" }}
                             />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. AI prompt or motion animation description for this scene...">
+<AlertCircle size={16} />
+</div>
+</div>
                           </div>
 
                           <div>
                             <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 3 }}>
                               Inside Contents Texts for Every Scene (Voiceover / On-screen text):
                             </label>
-                            <textarea
+                            <div style={{ position: "relative" }}>
+<textarea
                               rows={2}
                               value={scenes[activeSceneIndex]?.content_text || ""}
                               onChange={(e) => handleUpdateScene(activeSceneIndex, "content_text", e.target.value)}
-                              placeholder="e.g. Dialogue narration, kinetic headline text, or voiceover script for this scene..."
-                              style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #fecdd3", fontSize: "0.82rem", outline: "none", resize: "vertical" }}
+                              style={{ paddingRight: "36px", width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #fecdd3", fontSize: "0.82rem", outline: "none", resize: "vertical" }}
                             />
+<div style={{ position: "absolute", right: "12px", top: "12px", transform: "none", color: "#94a3b8", cursor: "help" }} title="e.g. Dialogue narration, kinetic headline text, or voiceover script for this scene...">
+<AlertCircle size={16} />
+</div>
+</div>
                           </div>
                         </div>
                       </div>
@@ -1773,19 +1844,23 @@ export default function ScriptCreationModal({
                 <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#0369a1", marginBottom: 4 }}>
                   Title (Internal Title / Campaign Identifier) *
                 </label>
-                <input
+                <div style={{ position: "relative" }}>
+<input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder={
-                    format === "poster"
-                      ? "e.g. Q3 Cloud Scalability Banner #1"
-                      : format === "carousel"
-                      ? "e.g. 5 Growth Marketing Mistakes Carousel"
-                      : "e.g. 30s Reel: AI Agency Workflow Automation"
-                  }
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.85rem", outline: "none", background: "#fff" }}
+                  style={{ paddingRight: "36px", width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.85rem", outline: "none", background: "#fff" }}
                 />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="
+                    format === &quot;poster&quot;
+                      ? &quot;e.g. Q3 Cloud Scalability Banner #1&quot;
+                      : format === &quot;carousel&quot;
+                      ? &quot;e.g. 5 Growth Marketing Mistakes Carousel&quot;
+                      : &quot;e.g. 30s Reel: AI Agency Workflow Automation&quot;
+                  ">
+<AlertCircle size={16} />
+</div>
+</div>
               </div>
 
               {/* Description */}
@@ -1798,13 +1873,17 @@ export default function ScriptCreationModal({
                     {description.length} chars
                   </span>
                 </div>
-                <textarea
+                <div style={{ position: "relative" }}>
+<textarea
                   rows={6}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Write the full social post copy, caption narrative, bullet points, and engagement question (English or Malayalam)..."
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.85rem", outline: "none", background: "#fff", resize: "vertical", lineHeight: 1.5 }}
+                  style={{ paddingRight: "36px", width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.85rem", outline: "none", background: "#fff", resize: "vertical", lineHeight: 1.5 }}
                 />
+<div style={{ position: "absolute", right: "12px", top: "12px", transform: "none", color: "#94a3b8", cursor: "help" }} title="Write the full social post copy, caption narrative, bullet points, and engagement question (English or Malayalam)...">
+<AlertCircle size={16} />
+</div>
+</div>
               </div>
 
               {/* Location & Hashtags */}
@@ -1815,13 +1894,17 @@ export default function ScriptCreationModal({
                   </label>
                   <div style={{ position: "relative" }}>
                     <MapPin size={14} color="#0284c7" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
-                    <input
+                    <div style={{ position: "relative" }}>
+<input
                       type="text"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      placeholder="e.g. Infopark Kochi, Kerala"
-                      style={{ width: "100%", padding: "8px 12px 8px 30px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.84rem", outline: "none", background: "#fff" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "8px 12px 8px 30px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.84rem", outline: "none", background: "#fff" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="e.g. Infopark Kochi, Kerala">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
                 </div>
 
@@ -1831,13 +1914,17 @@ export default function ScriptCreationModal({
                   </label>
                   <div style={{ position: "relative" }}>
                     <Hash size={14} color="#0284c7" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
-                    <input
+                    <div style={{ position: "relative" }}>
+<input
                       type="text"
                       value={hashtags}
                       onChange={(e) => setHashtags(e.target.value)}
-                      placeholder="#AdstraDigital #MarketingAgency #BusinessGrowth #KochiBusiness"
-                      style={{ width: "100%", padding: "8px 12px 8px 30px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.84rem", outline: "none", background: "#fff" }}
+                      style={{ paddingRight: "36px", width: "100%", padding: "8px 12px 8px 30px", borderRadius: 8, border: "1px solid #7dd3fc", fontSize: "0.84rem", outline: "none", background: "#fff" }}
                     />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="#AdstraDigital #MarketingAgency #BusinessGrowth #KochiBusiness">
+<AlertCircle size={16} />
+</div>
+</div>
                   </div>
                 </div>
               </div>
@@ -2113,13 +2200,12 @@ export default function ScriptCreationModal({
                     color="#94a3b8"
                     style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
                   />
-                  <input
+                  <div style={{ position: "relative" }}>
+<input
                     type="text"
                     value={assetSearchQuery}
                     onChange={(e) => setAssetSearchQuery(e.target.value)}
-                    placeholder="Search by title, tag, or folder..."
-                    style={{
-                      width: "100%",
+                    style={{ paddingRight: "36px", width: "100%",
                       padding: "8px 12px 8px 32px",
                       borderRadius: 8,
                       border: "1px solid #cbd5e1",
@@ -2127,6 +2213,10 @@ export default function ScriptCreationModal({
                       outline: "none",
                     }}
                   />
+<div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", cursor: "help" }} title="Search by title, tag, or folder...">
+<AlertCircle size={16} />
+</div>
+</div>
                   {assetSearchQuery && (
                     <button
                       type="button"

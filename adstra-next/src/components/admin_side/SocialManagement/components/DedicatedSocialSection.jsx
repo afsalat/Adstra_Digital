@@ -9,9 +9,11 @@ import {
   Eye,
   Calendar as CalendarIcon,
   Send,
+  BarChart2,
 } from "lucide-react";
 
 import WorkflowStageSection from "./WorkflowStageSection";
+import AnalyticsReportsTab from "./AnalyticsReportsTab";
 
 export default function DedicatedSocialSection({
   posts = [],
@@ -91,6 +93,13 @@ export default function DedicatedSocialSection({
       count: counts.published,
       color: "#10b981",
     },
+    {
+      id: "reporting",
+      label: "Analytics & Reports",
+      icon: BarChart2,
+      count: 0,
+      color: "#6366f1",
+    },
   ];
 
   return (
@@ -155,16 +164,20 @@ export default function DedicatedSocialSection({
 
       {/* Sub-tab view: Active Workflow Section */}
       <div>
-        <WorkflowStageSection
-          stageId={socialSubTab}
-          posts={posts}
-          clients={clients}
-          mediaAssets={mediaAssets}
-          selectedClientId={selectedClientId}
-          onRefresh={onRefresh}
-          onOpenCreatePost={onOpenCreatePost}
-          onNavigateStage={setSocialSubTab}
-        />
+        {socialSubTab === "reporting" ? (
+          <AnalyticsReportsTab selectedClientId={selectedClientId} clients={clients} posts={posts} />
+        ) : (
+          <WorkflowStageSection
+            stageId={socialSubTab}
+            posts={posts}
+            clients={clients}
+            mediaAssets={mediaAssets}
+            selectedClientId={selectedClientId}
+            onRefresh={onRefresh}
+            onOpenCreatePost={onOpenCreatePost}
+            onNavigateStage={setSocialSubTab}
+          />
+        )}
       </div>
 
     </div>

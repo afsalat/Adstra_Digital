@@ -414,6 +414,7 @@ function SocialManagementInner() {
           <AnalyticsReportsTab
             selectedClientId={selectedClientId}
             clients={activeClients}
+            posts={posts}
           />
         )}
 
