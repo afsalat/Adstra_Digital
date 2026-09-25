@@ -48,26 +48,60 @@ export const TikTokIcon = ({ size = 14, color = "currentColor", style }) => (
   </svg>
 );
 
+export const WhatsAppIcon = ({ size = 14, color = "#25D366", style }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill={color}
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}
+  >
+    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.8 14.13c-.24.67-1.39 1.28-1.92 1.34-.5.06-1.13.08-3.64-.96-3.21-1.33-5.27-4.57-5.43-4.78-.16-.21-1.3-1.73-1.3-3.3 0-1.57.82-2.34 1.11-2.66.29-.32.64-.4.85-.4.21 0 .43.01.62.02.2.01.47-.08.73.55.27.64.92 2.25 1 2.41.08.16.13.35.03.56-.11.21-.16.35-.32.53-.16.19-.34.42-.49.56-.16.16-.33.33-.14.65.19.32.84 1.38 1.8 2.24 1.24 1.1 2.29 1.44 2.61 1.6.32.16.51.13.7-.08.19-.21.82-.95 1.04-1.28.22-.32.43-.27.73-.16.29.11 1.87.88 2.19 1.04.32.16.53.24.61.37.08.14.08.8-.16 1.47z"/>
+  </svg>
+);
+
+export const GoogleAdsIcon = ({ size = 14, style }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}
+  >
+    <path fill="#4285F4" d="M3.77 15.37a5.52 5.52 0 0 0 7.56 2.03l6.5-3.76-7.56-13.1-6.5 3.75a5.52 5.52 0 0 0 0 11.08z"/>
+    <path fill="#FBBC04" d="M20.23 8.63a5.52 5.52 0 0 0-7.56-2.03l-6.5 3.76 7.56 13.1 6.5-3.75a5.52 5.52 0 0 0 0-11.08z"/>
+    <circle cx="5.52" cy="18.48" r="3.5" fill="#34A853"/>
+  </svg>
+);
+
 export function renderPlatformIcon(platformId, { size = 14, color, style } = {}) {
-  const norm = (platformId || "").toLowerCase();
+  const norm = (platformId || "").toLowerCase().replace(/[\s_-]+/g, "");
   switch (norm) {
     case "instagram":
-      return <Instagram size={size} color={color} style={{ flexShrink: 0, ...style }} />;
+    case "insta":
+      return <Instagram size={size} color={color || "#E1306C"} style={{ flexShrink: 0, ...style }} />;
     case "facebook":
-      return <Facebook size={size} color={color} style={{ flexShrink: 0, ...style }} />;
+    case "fb":
+      return <Facebook size={size} color={color || "#1877F2"} style={{ flexShrink: 0, ...style }} />;
     case "linkedin":
-      return <Linkedin size={size} color={color} style={{ flexShrink: 0, ...style }} />;
+      return <Linkedin size={size} color={color || "#0A66C2"} style={{ flexShrink: 0, ...style }} />;
     case "youtube":
-      return <Youtube size={size} color={color} style={{ flexShrink: 0, ...style }} />;
+    case "yt":
+      return <Youtube size={size} color={color || "#FF0000"} style={{ flexShrink: 0, ...style }} />;
     case "x":
     case "twitter":
       return <XIcon size={size} color={color || "currentColor"} style={style} />;
-    case "google_business":
+    case "googlebusiness":
     case "google":
       return <GoogleIcon size={size} style={style} />;
+    case "googleads":
+    case "ads":
+      return <GoogleAdsIcon size={size} style={style} />;
+    case "whatsapp":
+    case "wa":
+      return <WhatsAppIcon size={size} color={color || "#25D366"} style={style} />;
     case "tiktok":
       return <TikTokIcon size={size} color={color || "currentColor"} style={style} />;
     default:
-      return <Globe size={size} color={color} style={{ flexShrink: 0, ...style }} />;
+      return <Globe size={size} color={color || "#64748b"} style={{ flexShrink: 0, ...style }} />;
   }
 }

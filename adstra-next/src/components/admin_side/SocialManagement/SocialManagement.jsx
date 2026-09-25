@@ -49,6 +49,7 @@ function SocialManagementInner() {
   const [mediaAssets, setMediaAssets] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [inboxMessages, setInboxMessages] = useState([]);
+  const [platformConnections, setPlatformConnections] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -75,7 +76,8 @@ function SocialManagementInner() {
         mediaRes,
         campaignsRes,
         inboxRes,
-      ] = await Promise.all([
+        connectionsRes,
+      ] = await Promise.allSettled([
         axios.get(`${API_BASE_URL}/social/dashboard/?client_id=${selectedClientId}`),
         axios.get(`${API_BASE_URL}/social/clients/`),
         axios.get(`${API_BASE_URL}/social/accounts/`),
@@ -83,15 +85,19 @@ function SocialManagementInner() {
         axios.get(`${API_BASE_URL}/social/media/?client_id=${selectedClientId}`),
         axios.get(`${API_BASE_URL}/social/campaigns/?client_id=${selectedClientId}`),
         axios.get(`${API_BASE_URL}/social/inbox/?client_id=${selectedClientId}`),
+        axios.get(`${API_BASE_URL}/social/platform-connections/?platform=meta`),
       ]);
 
-      setDashboardData(dashRes.data);
-      setClients(clientsRes.data);
-      setAccounts(accountsRes.data);
-      setPosts(postsRes.data);
-      setMediaAssets(mediaRes.data);
-      setCampaigns(campaignsRes.data);
-      setInboxMessages(inboxRes.data);
+      if (dashRes.status === "fulfilled" && dashRes.value?.data) setDashboardData(dashRes.value.data);
+      if (clientsRes.status === "fulfilled" && clientsRes.value?.data) setClients(clientsRes.value.data);
+      if (accountsRes.status === "fulfilled" && accountsRes.value?.data) setAccounts(accountsRes.value.data);
+      if (postsRes.status === "fulfilled" && postsRes.value?.data) setPosts(postsRes.value.data);
+      if (mediaRes.status === "fulfilled" && mediaRes.value?.data) setMediaAssets(mediaRes.value.data);
+      if (campaignsRes.status === "fulfilled" && campaignsRes.value?.data) setCampaigns(campaignsRes.value.data);
+      if (inboxRes.status === "fulfilled" && inboxRes.value?.data) setInboxMessages(inboxRes.value.data);
+      if (connectionsRes.status === "fulfilled" && connectionsRes.value?.data) {
+        setPlatformConnections(Array.isArray(connectionsRes.value.data) ? connectionsRes.value.data : []);
+      }
     } catch (err) {
       console.error("Error loading social media suite data:", err);
     } finally {
@@ -188,180 +194,58 @@ function SocialManagementInner() {
         </div>
       </header>
 
-      {/* 5 Main Separate Modules Navigation */}
+      {/* Main Separate Modules Navigation */}
       <nav
         style={{
           display: "flex",
           background: "#ffffff",
-          padding: 8,
-          borderRadius: 16,
+          padding: 6,
+          borderRadius: 14,
           border: "1px solid #e2e8f0",
           marginBottom: 24,
-          gap: 8,
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.03)",
+          gap: 6,
+          boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
           overflowX: "auto",
         }}
       >
-        {/* 1. Full Overview Dashboard */}
-        <button
-          className={`social-nav-tab-item ${activeMainModule === "overview" ? "active" : ""}`}
-          onClick={() => setActiveMainModule("overview")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 20px",
-            borderRadius: 12,
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            border: "none",
-            background: activeMainModule === "overview" ? "#0f172a" : "transparent",
-            color: activeMainModule === "overview" ? "#ffffff" : "#475569",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <LayoutDashboard size={18} /> Full Overview Dashboard
-        </button>
-
-        {/* 2. Social Media Management */}
-        <button
-          className={`social-nav-tab-item ${activeMainModule === "social" ? "active" : ""}`}
-          onClick={() => setActiveMainModule("social")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 20px",
-            borderRadius: 12,
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            border: "none",
-            background: activeMainModule === "social" ? "#0f172a" : "transparent",
-            color: activeMainModule === "social" ? "#ffffff" : "#475569",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <Share2 size={18} /> Social Media Management
-        </button>
-
-        {/* 3. Client Assets */}
-        <button
-          className={`social-nav-tab-item ${activeMainModule === "assets" ? "active" : ""}`}
-          onClick={() => setActiveMainModule("assets")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 20px",
-            borderRadius: 12,
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            border: "none",
-            background: activeMainModule === "assets" ? "#0f172a" : "transparent",
-            color: activeMainModule === "assets" ? "#ffffff" : "#475569",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <FolderArchive size={18} /> Client Assets
-        </button>
-
-        {/* 4. Campaigns */}
-        <button
-          className={`social-nav-tab-item ${activeMainModule === "campaigns" ? "active" : ""}`}
-          onClick={() => setActiveMainModule("campaigns")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 20px",
-            borderRadius: 12,
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            border: "none",
-            background: activeMainModule === "campaigns" ? "#0f172a" : "transparent",
-            color: activeMainModule === "campaigns" ? "#ffffff" : "#475569",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <Layers size={18} /> Campaigns
-        </button>
-
-        {/* 4. Reports */}
-        <button
-          className={`social-nav-tab-item ${activeMainModule === "reports" ? "active" : ""}`}
-          onClick={() => setActiveMainModule("reports")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 20px",
-            borderRadius: 12,
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            border: "none",
-            background: activeMainModule === "reports" ? "#0f172a" : "transparent",
-            color: activeMainModule === "reports" ? "#ffffff" : "#475569",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <BarChart2 size={18} /> Reports & Analytics
-        </button>
-
-        {/* 5. Team Designation Chart Tree */}
-        <button
-          className={`social-nav-tab-item ${activeMainModule === "team_tree" ? "active" : ""}`}
-          onClick={() => setActiveMainModule("team_tree")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 20px",
-            borderRadius: 12,
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            border: "none",
-            background: activeMainModule === "team_tree" ? "#0f172a" : "transparent",
-            color: activeMainModule === "team_tree" ? "#ffffff" : "#475569",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <Network size={18} /> Team Designation Chart Tree
-        </button>
-
-        {/* 6. Settings */}
-        <button
-          className={`social-nav-tab-item ${activeMainModule === "settings" ? "active" : ""}`}
-          onClick={() => setActiveMainModule("settings")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 20px",
-            borderRadius: 12,
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            border: "none",
-            background: activeMainModule === "settings" ? "#0f172a" : "transparent",
-            color: activeMainModule === "settings" ? "#ffffff" : "#475569",
-            transition: "all 0.15s ease",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <Settings size={18} /> Settings
-        </button>
+        {[
+          { id: "overview", label: "Full Overview Dashboard", icon: LayoutDashboard },
+          { id: "social", label: "Social Media Management", icon: Share2 },
+          { id: "assets", label: "Client Assets", icon: FolderArchive },
+          { id: "campaigns", label: "Campaigns", icon: Layers },
+          { id: "reports", label: "Reports & Analytics", icon: BarChart2 },
+          { id: "team_tree", label: "Team Designation Chart Tree", icon: Network },
+          { id: "settings", label: "Settings", icon: Settings },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeMainModule === tab.id;
+          return (
+            <button
+              key={tab.id}
+              className={`social-nav-tab-item ${isActive ? "active" : ""}`}
+              onClick={() => setActiveMainModule(tab.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px",
+                borderRadius: 10,
+                fontSize: "0.86rem",
+                fontWeight: isActive ? 700 : 550,
+                cursor: "pointer",
+                border: "none",
+                background: isActive ? "#0f172a" : "transparent",
+                color: isActive ? "#ffffff" : "#64748b",
+                boxShadow: isActive ? "0 2px 8px rgba(15, 23, 42, 0.12)" : "none",
+                transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <Icon size={17} strokeWidth={isActive ? 2.2 : 1.8} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       {/* Main Module Content Panels */}
@@ -370,6 +254,9 @@ function SocialManagementInner() {
           <FullOverviewDashboardTab
             dashboardData={dashboardData}
             clients={activeClients}
+            posts={posts}
+            campaigns={campaigns}
+            inboxMessages={inboxMessages}
             onNavigateTab={setActiveMainModule}
           />
         )}
@@ -406,6 +293,7 @@ function SocialManagementInner() {
           <CampaignsTab
             campaigns={campaigns}
             clients={activeClients}
+            platformConnections={platformConnections}
             onRefresh={fetchData}
           />
         )}

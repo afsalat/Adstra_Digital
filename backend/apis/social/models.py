@@ -106,9 +106,31 @@ class SocialCampaign(models.Model):
 
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('ready_to_publish', 'Ready to Publish'),
+        ('publishing', 'Publishing'),
+        ('published', 'Published'),
+        ('pending_review', 'Pending Review'),
+        ('scheduled', 'Scheduled'),
         ('active', 'Active'),
         ('paused', 'Paused'),
         ('completed', 'Completed'),
+        ('archived', 'Archived'),
+        ('publish_failed', 'Publish Failed'),
+        ('sync_error', 'Sync Error'),
+        ('rejected', 'Rejected'),
+    ]
+
+    CTA_CHOICES = [
+        ('learn_more', 'Learn More'),
+        ('sign_up', 'Sign Up'),
+        ('contact_us', 'Contact Us'),
+        ('shop_now', 'Shop Now'),
+        ('book_now', 'Book Now'),
+        ('get_quote', 'Get Quote'),
+        ('download', 'Download'),
+        ('apply_now', 'Apply Now'),
+        ('watch_more', 'Watch More'),
+        ('no_button', 'No Button'),
     ]
 
     client_profile = models.ForeignKey(
@@ -124,11 +146,225 @@ class SocialCampaign(models.Model):
     end_date = models.DateField(null=True, blank=True)
     target_audience = models.TextField(blank=True)
     platforms = models.JSONField(default=list, blank=True)
-    status = models.CharField(max_length=20, default='active', choices=STATUS_CHOICES)
+    status = models.CharField(max_length=20, default='draft', choices=STATUS_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Advertising platform selection ('meta', 'google')
+    ad_platforms = models.JSONField(default=list, blank=True)
+    campaign_type = models.CharField(max_length=50, blank=True, default='SEARCH')
+    bidding_strategy = models.CharField(max_length=50, blank=True, default='MAXIMIZE_CONVERSIONS')
+
+    # Targeting
+    landing_page_url = models.CharField(max_length=1000, blank=True)
+    cta = models.CharField(max_length=40, choices=CTA_CHOICES, default='learn_more', blank=True)
+    target_locations = models.JSONField(default=list, blank=True)
+    target_age_min = models.PositiveSmallIntegerField(null=True, blank=True)
+    target_age_max = models.PositiveSmallIntegerField(null=True, blank=True)
+    target_gender = models.CharField(
+        max_length=10,
+        choices=[('all', 'All'), ('male', 'Male'), ('female', 'Female')],
+        default='all', blank=True
+    )
+    target_languages = models.JSONField(default=list, blank=True)
+
+    # Creative
+    ad_format = models.CharField(max_length=50, default='single_media', blank=True)
+    ad_creative = models.JSONField(default=dict, blank=True)
+    creative_image_url = models.CharField(max_length=1000, blank=True)
+    creative_video_url = models.CharField(max_length=1000, blank=True)
+    primary_text = models.TextField(blank=True)
+    headline = models.CharField(max_length=255, blank=True)
+    description = models.CharField(max_length=500, blank=True)
 
     def __str__(self):
         return f'{self.name} - {self.client_profile.name}'
+
+
+class PlatformConnection(models.Model):
+    """Stores a customer's authorized ad account for Meta or Google Ads.
+    Tokens are stored encrypted via apis.social.encryption. Never stored in plaintext."""
+
+    PLATFORM_CHOICES = [
+        ('meta', 'Meta Ads (Facebook / Instagram)'),
+        ('google', 'Google Ads'),
+    ]
+
+    STATUS_CHOICES = [
+        ('connected', 'Connected'),
+        ('expired', 'Token Expired'),
+        ('expiring_soon', 'Token Expiring Soon'),
+        ('disconnected', 'Disconnected'),
+        ('error', 'Connection Error'),
+        ('pending', 'Pending OAuth'),
+    ]
+
+    client_profile = models.ForeignKey(
+        SocialClientProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='platform_connections'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ad_platform_connections'
+    )
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+    account_id = models.CharField(max_length=255, blank=True)
+    account_name = models.CharField(max_length=255, blank=True)
+
+    # Encrypted. Use encryption.encrypt_token() / decrypt_token()
+    access_token_encrypted = models.TextField(blank=True)
+    refresh_token_encrypted = models.TextField(blank=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+
+    status = models.CharField(max_length=20, default='pending', choices=STATUS_CHOICES)
+
+    # Platform-specific metadata (JSON)
+    # Meta: {business_id, page_id, page_name, instagram_id, instagram_username}
+    # Google: {customer_id, manager_id, login_customer_id}
+    metadata = models.JSONField(default=dict, blank=True)
+
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.get_platform_display()} - {self.account_name or self.account_id}'
+
+
+class CampaignPlatform(models.Model):
+    """Per-platform record for a campaign: external IDs, publish state, sync state."""
+
+    PLATFORM_CHOICES = [
+        ('meta', 'Meta Ads'),
+        ('google', 'Google Ads'),
+    ]
+
+    PUBLISH_STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('publishing', 'Publishing'),
+        ('published', 'Published'),
+        ('failed', 'Failed'),
+    ]
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_review', 'Pending Review'),
+        ('active', 'Active'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+        ('removed', 'Removed'),
+        ('error', 'Error'),
+    ]
+
+    campaign = models.ForeignKey(
+        SocialCampaign,
+        on_delete=models.CASCADE,
+        related_name='campaign_platforms'
+    )
+    connection = models.ForeignKey(
+        PlatformConnection,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='campaign_platforms'
+    )
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+    platform_account_id = models.CharField(max_length=255, blank=True)
+    platform_campaign_id = models.CharField(max_length=255, blank=True)
+
+    publish_status = models.CharField(max_length=20, default='not_started', choices=PUBLISH_STATUS_CHOICES)
+    status = models.CharField(max_length=20, default='draft', choices=STATUS_CHOICES)
+
+    error_message = models.TextField(blank=True)
+    step_failed = models.CharField(max_length=100, blank=True)
+    technical_error_id = models.CharField(max_length=255, blank=True)
+
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Meta external object IDs
+    meta_campaign_id = models.CharField(max_length=255, blank=True)
+    meta_ad_set_id = models.CharField(max_length=255, blank=True)
+    meta_ad_creative_id = models.CharField(max_length=255, blank=True)
+    meta_ad_id = models.CharField(max_length=255, blank=True)
+
+    # Google external object IDs
+    google_customer_id = models.CharField(max_length=100, blank=True)
+    google_campaign_id = models.CharField(max_length=100, blank=True)
+    google_ad_group_id = models.CharField(max_length=100, blank=True)
+    google_ad_id = models.CharField(max_length=100, blank=True)
+    google_budget_id = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        unique_together = ('campaign', 'platform')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.campaign.name} on {self.get_platform_display()} [{self.publish_status}]'
+
+
+class CampaignMetricSnapshot(models.Model):
+    """Daily performance snapshot per platform. Append-only - never overwrites history."""
+
+    campaign_platform = models.ForeignKey(
+        CampaignPlatform,
+        on_delete=models.CASCADE,
+        related_name='metric_snapshots'
+    )
+    date = models.DateField(db_index=True)
+    spend = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    impressions = models.PositiveIntegerField(default=0)
+    reach = models.PositiveIntegerField(default=0)
+    clicks = models.PositiveIntegerField(default=0)
+    leads = models.PositiveIntegerField(default=0)
+    conversions = models.PositiveIntegerField(default=0)
+    engagement = models.FloatField(default=0.0)
+    ctr = models.FloatField(default=0.0)
+    cpc = models.DecimalField(max_digits=10, decimal_places=4, default=0)
+    cpl = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    revenue = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    roi = models.FloatField(null=True, blank=True)
+    synced_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('campaign_platform', 'date')
+        ordering = ['-date']
+
+    def __str__(self):
+        return f'{self.campaign_platform} on {self.date}'
+
+
+class CampaignActivity(models.Model):
+    """Append-only audit log of API events and status changes."""
+
+    campaign = models.ForeignKey(
+        SocialCampaign,
+        on_delete=models.CASCADE,
+        related_name='activities'
+    )
+    platform = models.CharField(max_length=20, blank=True)
+    action = models.CharField(max_length=200)
+    status = models.CharField(max_length=50, default='success')
+    message = models.TextField(blank=True)
+    external_id = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.campaign.name}: {self.action} [{self.status}]'
 
 
 class SocialMediaAsset(models.Model):

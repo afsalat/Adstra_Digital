@@ -33,6 +33,7 @@ import {
   Smartphone,
   Globe,
   Lock,
+  Key,
   Flame,
   Check,
   Instagram,
@@ -72,6 +73,17 @@ export default function SocialSettingsTab({
   const [username, setUsername] = useState("");
   const [followers, setFollowers] = useState(5000);
   const [actionLoading, setActionLoading] = useState(null);
+
+  // Ad Platform Connections State
+  const [platformConnections, setPlatformConnections] = useState([]);
+  const [adLoading, setAdLoading] = useState(false);
+  const [adActionLoading, setAdActionLoading] = useState(null);
+  const [accountSelectModal, setAccountSelectModal] = useState(null);
+  const [availableAccounts, setAvailableAccounts] = useState([]);
+  const [availablePages, setAvailablePages] = useState([]);
+  const [selectedAdAccount, setSelectedAdAccount] = useState("");
+  const [selectedPage, setSelectedPage] = useState("");
+  const [adNotification, setAdNotification] = useState(null);
 
   // Client Profile Edit State
   const [editingClient, setEditingClient] = useState(null);
@@ -158,6 +170,164 @@ export default function SocialSettingsTab({
       console.warn("Could not read local settings", e);
     }
   }, []);
+
+  // Fetch Platform Connections
+  const fetchPlatformConnections = async () => {
+    try {
+      setAdLoading(true);
+      const url = selectedClientId && selectedClientId !== "all"
+        ? `${API_BASE_URL}/social/platform-connections/?client_id=${selectedClientId}`
+        : `${API_BASE_URL}/social/platform-connections/`;
+      const res = await axios.get(url);
+      setPlatformConnections(res.data || []);
+    } catch (err) {
+      console.warn("Could not fetch platform connections", err);
+    } finally {
+      setAdLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlatformConnections();
+  }, [selectedClientId]);
+
+  // Direct Meta Access Token Connection State
+  const [tokenModalOpen, setTokenModalOpen] = useState(false);
+  const [metaTokenInput, setMetaTokenInput] = useState("");
+  const [metaAccountIdInput, setMetaAccountIdInput] = useState("");
+  const [connectingToken, setConnectingToken] = useState(false);
+
+  const showAdToast = (msg, type = "success") => {
+    setAdNotification({ msg, type });
+    setTimeout(() => setAdNotification(null), 4000);
+  };
+
+  const handleConnectOAuth = async (platform) => {
+    try {
+      setAdActionLoading(platform);
+      const clientId = selectedClientId === "all" ? (clients[0]?.id || "") : selectedClientId;
+      const res = await axios.get(`${API_BASE_URL}/social/platform-connections/${platform}/oauth-url/?client_id=${clientId}`);
+      if (res.data?.oauth_url) {
+        window.open(res.data.oauth_url, "_blank", "width=640,height=720");
+        showAdToast(`Redirected to ${platform === "meta" ? "Meta" : "Google"} authorization window.`);
+      }
+    } catch (err) {
+      showAdToast(err?.response?.data?.error || `OAuth error: ${err.message}. You can connect directly using an Access Token.`, "warning");
+    } finally {
+      setAdActionLoading(null);
+    }
+  };
+
+  const handleConnectToken = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!metaTokenInput.trim()) {
+      showAdToast("Please paste your Meta Access Token.", "warning");
+      return;
+    }
+    setConnectingToken(true);
+    try {
+      const clientId = selectedClientId === "all" ? (clients[0]?.id || "") : selectedClientId;
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/connect-token/`, {
+        platform: "meta",
+        access_token: metaTokenInput.trim(),
+        account_id: metaAccountIdInput.trim() || undefined,
+        client_id: clientId || undefined,
+      });
+      showAdToast(res.data?.message || "Connected Meta Ads account successfully!");
+      setTokenModalOpen(false);
+      setMetaTokenInput("");
+      setMetaAccountIdInput("");
+      await fetchPlatformConnections();
+    } catch (err) {
+      showAdToast(err?.response?.data?.error || `Failed to connect Meta account: ${err.message}`, "error");
+    } finally {
+      setConnectingToken(false);
+    }
+  };
+
+  const handleRefreshAdToken = async (connId) => {
+    try {
+      setAdActionLoading(`refresh_${connId}`);
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/${connId}/refresh-token/`);
+      if (res.data?.success) {
+        showAdToast("Access token refreshed successfully!");
+        await fetchPlatformConnections();
+      } else {
+        showAdToast("Token refresh failed. Please reconnect the account.", "error");
+      }
+    } catch (err) {
+      showAdToast(`Refresh failed: ${err?.response?.data?.error || err.message}`, "error");
+    } finally {
+      setAdActionLoading(null);
+    }
+  };
+
+  const handleDisconnectAdPlatform = async (connId, platformLabel) => {
+    if (!confirm(`Are you sure you want to disconnect ${platformLabel}? Active campaigns will not be able to sync metrics until reconnected.`)) {
+      return;
+    }
+    try {
+      setAdActionLoading(`disconnect_${connId}`);
+      await axios.post(`${API_BASE_URL}/social/platform-connections/${connId}/disconnect/`);
+      showAdToast(`${platformLabel} disconnected.`);
+      await fetchPlatformConnections();
+    } catch (err) {
+      showAdToast(`Disconnect error: ${err.message}`, "error");
+    } finally {
+      setAdActionLoading(null);
+    }
+  };
+
+  const handleOpenAccountSelector = async (conn) => {
+    try {
+      setAdActionLoading(`select_${conn.id}`);
+      const res = await axios.get(`${API_BASE_URL}/social/platform-connections/${conn.id}/ad-accounts/`);
+      setAccountSelectModal(conn);
+      if (conn.platform === "meta") {
+        setAvailableAccounts(res.data?.ad_accounts || []);
+        setAvailablePages(res.data?.pages || []);
+        setSelectedAdAccount(conn.account_id || res.data?.ad_accounts?.[0]?.id || "");
+        setSelectedPage(conn.metadata?.page_id || res.data?.pages?.[0]?.id || "");
+      } else {
+        setAvailableAccounts(res.data?.customers || []);
+        setSelectedAdAccount(conn.account_id || res.data?.customers?.[0]?.id || "");
+      }
+    } catch (err) {
+      showAdToast(`Could not load accessible accounts: ${err.message}`, "error");
+    } finally {
+      setAdActionLoading(null);
+    }
+  };
+
+  const handleSaveSelectedAccount = async () => {
+    if (!accountSelectModal || !selectedAdAccount) return;
+    try {
+      setAdActionLoading("saving_account");
+      const chosenAcc = availableAccounts.find((a) => (a.id || a.customer_id) === selectedAdAccount);
+      const accName = chosenAcc ? (chosenAcc.name || chosenAcc.descriptive_name || selectedAdAccount) : selectedAdAccount;
+      const chosenPage = availablePages.find((p) => p.id === selectedPage);
+
+      const metadata = { ...accountSelectModal.metadata };
+      if (chosenPage) {
+        metadata.page_id = chosenPage.id;
+        metadata.page_name = chosenPage.name;
+      }
+
+      await axios.post(`${API_BASE_URL}/social/platform-connections/${accountSelectModal.id}/set-account/`, {
+        account_id: selectedAdAccount,
+        account_name: accName,
+        metadata,
+      });
+
+      showAdToast("Ad account selection updated successfully!");
+      setAccountSelectModal(null);
+      await fetchPlatformConnections();
+    } catch (err) {
+      showAdToast(`Error setting account: ${err.message}`, "error");
+    } finally {
+      setAdActionLoading(null);
+    }
+  };
 
   // Save Workflow Preferences
   const handleSaveWorkflowPrefs = (e) => {
@@ -400,6 +570,7 @@ export default function SocialSettingsTab({
         >
           {[
             { id: "accounts", label: "Connected Channels", icon: Share2, count: filteredAccounts.length },
+            { id: "ad_platforms", label: "Meta Ad Account", icon: Facebook, count: platformConnections.filter((c) => c.platform === "meta" && c.status === "connected").length },
             { id: "clients", label: "Client Brands & Retainers", icon: Building2, count: clients.length },
             { id: "workflow", label: "Workflow & Priority Rules", icon: Sliders },
             { id: "ai", label: "AI Content Engine", icon: Sparkles },
@@ -694,6 +865,319 @@ export default function SocialSettingsTab({
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 2. META AD ACCOUNT CONNECTION (SIMPLE & DIRECT)          */}
+      {/* ======================================================== */}
+      {activeSubTab === "ad_platforms" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Notification Toast */}
+          {adNotification && (
+            <div
+              style={{
+                padding: "12px 18px",
+                borderRadius: 10,
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background:
+                  adNotification.type === "error"
+                    ? "#fef2f2"
+                    : adNotification.type === "warning"
+                    ? "#fffbeb"
+                    : "#f0fdf4",
+                color:
+                  adNotification.type === "error"
+                    ? "#b91c1c"
+                    : adNotification.type === "warning"
+                    ? "#b45309"
+                    : "#15803d",
+                border: `1px solid ${
+                  adNotification.type === "error"
+                    ? "#fecaca"
+                    : adNotification.type === "warning"
+                    ? "#fde68a"
+                    : "#bbf7d0"
+                }`,
+              }}
+            >
+              {adNotification.type === "error" ? (
+                <AlertTriangle size={18} />
+              ) : (
+                <CheckCircle2 size={18} />
+              )}
+              {adNotification.msg}
+            </div>
+          )}
+
+          {/* Simple Meta Connection Card */}
+          {(() => {
+            const metaConn = platformConnections.find((c) => c.platform === "meta");
+            const isConnected = metaConn?.status === "connected";
+            const matchedClient = clients.find((c) => c.id === (metaConn?.client_profile || (selectedClientId === "all" ? clients[0]?.id : selectedClientId)));
+
+            return (
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: 16,
+                  border: isConnected ? "1px solid #93c5fd" : "1px solid #e2e8f0",
+                  padding: "28px 32px",
+                  boxShadow: "0 2px 12px rgba(15, 23, 42, 0.04)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 20,
+                  maxWidth: 680,
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 12,
+                        background: "linear-gradient(135deg, #1877f2 0%, #0064e0 100%)",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 4px 12px rgba(24, 119, 242, 0.25)",
+                      }}
+                    >
+                      <Facebook size={26} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
+                        Meta Ads Account
+                      </h3>
+                      <p style={{ margin: "2px 0 0", fontSize: "0.82rem", color: "#64748b" }}>
+                        Connect your Facebook & Instagram ad account to run and manage sponsored campaigns.
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "4px 12px",
+                      borderRadius: 20,
+                      background: isConnected ? "#dcfce7" : "#f1f5f9",
+                      color: isConnected ? "#15803d" : "#64748b",
+                      border: `1px solid ${isConnected ? "#bbf7d0" : "#cbd5e1"}`,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: isConnected ? "#16a34a" : "#94a3b8",
+                      }}
+                    />
+                    {isConnected ? "Connected" : "Not Connected"}
+                  </span>
+                </div>
+
+                {/* Body Details */}
+                {isConnected ? (
+                  <div
+                    style={{
+                      background: "#f8fafc",
+                      borderRadius: 12,
+                      padding: "16px 20px",
+                      border: "1px solid #e2e8f0",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "#64748b" }}>Ad Account:</span>
+                      <span style={{ fontWeight: 700, color: "#0f172a" }}>
+                        {metaConn.account_name || "Primary Account"} <span style={{ fontFamily: "monospace", color: "#64748b" }}>({metaConn.account_id})</span>
+                      </span>
+                    </div>
+
+                    {metaConn.metadata?.page_name && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ color: "#64748b" }}>Linked Page:</span>
+                        <span style={{ fontWeight: 600, color: "#1e293b" }}>
+                          {metaConn.metadata.page_name}
+                        </span>
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "#64748b" }}>Client Profile:</span>
+                      <span style={{ fontWeight: 600, color: "#1e293b" }}>
+                        {matchedClient ? matchedClient.name : metaConn.client_profile ? `Client #${metaConn.client_profile}` : "Global (Default)"}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "#64748b" }}>Status:</span>
+                      <span style={{ color: metaConn.is_token_valid ? "#16a34a" : "#dc2626", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                        <Check size={14} /> {metaConn.is_token_valid ? "Active & Authorized" : "Needs Reconnection"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      color: "#64748b",
+                      background: "#f8fafc",
+                      borderRadius: 10,
+                      padding: "12px 16px",
+                      border: "1px solid #e2e8f0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span>Target Client Profile:</span>
+                    <strong style={{ color: "#0f172a" }}>
+                      {selectedClientId === "all"
+                        ? (clients[0]?.name ? `${clients[0].name} (Default)` : "Global / All Clients")
+                        : (clients.find((c) => c.id === selectedClientId)?.name || `Client #${selectedClientId}`)}
+                    </strong>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  {isConnected ? (
+                    <>
+                      <button
+                        onClick={() => handleOpenAccountSelector(metaConn)}
+                        disabled={adActionLoading !== null}
+                        style={{
+                          flex: 1,
+                          padding: "10px 18px",
+                          borderRadius: 9,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          fontSize: "0.84rem",
+                          fontWeight: 700,
+                          color: "#334155",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Sliders size={15} color="#2563eb" />
+                        Select / Switch Ad Account
+                      </button>
+
+                      <button
+                        onClick={() => handleRefreshAdToken(metaConn.id)}
+                        disabled={adActionLoading !== null}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: 9,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#334155",
+                          fontSize: "0.84rem",
+                          cursor: "pointer",
+                        }}
+                        title="Refresh Token"
+                      >
+                        <RefreshCw size={15} className={adActionLoading === `refresh_${metaConn.id}` ? "spin" : ""} />
+                      </button>
+
+                      <button
+                        onClick={() => handleDisconnectAdPlatform(metaConn.id, "Meta Ads")}
+                        disabled={adActionLoading !== null}
+                        style={{
+                          padding: "10px 16px",
+                          borderRadius: 9,
+                          border: "1px solid #fee2e2",
+                          background: "#fef2f2",
+                          color: "#b91c1c",
+                          fontSize: "0.84rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Power size={15} /> Disconnect
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ display: "flex", gap: 10, width: "100%", flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => handleConnectOAuth("meta")}
+                        disabled={adActionLoading !== null}
+                        style={{
+                          flex: 1,
+                          minWidth: 200,
+                          padding: "12px 22px",
+                          borderRadius: 10,
+                          background: "linear-gradient(135deg, #1877f2 0%, #0064e0 100%)",
+                          color: "#ffffff",
+                          border: "none",
+                          fontSize: "0.88rem",
+                          fontWeight: 700,
+                          cursor: adActionLoading !== null ? "not-allowed" : "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                          boxShadow: "0 4px 14px rgba(24, 119, 242, 0.35)",
+                          opacity: adActionLoading !== null ? 0.65 : 1,
+                          transition: "opacity 0.2s, box-shadow 0.2s",
+                        }}
+                      >
+                        <Facebook size={18} />
+                        {adActionLoading === "meta" ? "Connecting…" : "Connect via Facebook Login"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setTokenModalOpen(true)}
+                        disabled={adActionLoading !== null}
+                        style={{
+                          padding: "12px 20px",
+                          borderRadius: 10,
+                          background: "#ffffff",
+                          color: "#1877f2",
+                          border: "1.5px solid #bfdbfe",
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                          transition: "all 0.2s ease",
+                        }}
+                        title="Connect directly using a Meta Graph API Access Token"
+                      >
+                        <Key size={16} />
+                        Connect with Access Token
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -2581,6 +3065,335 @@ export default function SocialSettingsTab({
                   style={{ padding: "8px 18px", borderRadius: 8, background: "#4f46e5", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
                 >
                   {clientSaving ? "Creating..." : "Create Client Brand"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ======================================================== */}
+      {/* ACCOUNT SELECTION MODAL (META AD ACCOUNT & PAGE IDENTITY)*/}
+      {/* ======================================================== */}
+      {accountSelectModal && (
+        <div className="social-modal-overlay" onClick={() => setAccountSelectModal(null)}>
+          <div
+            className="social-modal-content"
+            style={{ maxWidth: 540, borderRadius: 16 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="social-modal-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: "#eff6ff",
+                    color: "#1877f2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Facebook size={18} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                  Configure Meta Ad Account & Linked Page
+                </h3>
+              </div>
+              <button
+                onClick={() => setAccountSelectModal(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 18, paddingTop: 16 }}>
+              <p style={{ fontSize: "0.82rem", color: "#64748b", margin: 0, lineHeight: 1.5 }}>
+                Select which Meta Advertising Account and Facebook Page / Instagram Identity to use when deploying campaigns for this client.
+              </p>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Accessible Meta Ad Accounts
+                </label>
+                {availableAccounts.length > 0 ? (
+                  <select
+                    value={selectedAdAccount}
+                    onChange={(e) => setSelectedAdAccount(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                      background: "#ffffff",
+                    }}
+                  >
+                    {availableAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name || acc.descriptive_name || acc.id} ({acc.id}) {acc.currency || acc.currency_code ? `[${acc.currency || acc.currency_code}]` : ""}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      placeholder="act_123456789"
+                      value={selectedAdAccount}
+                      onChange={(e) => setSelectedAdAccount(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: "9px 12px",
+                        borderRadius: 8,
+                        border: "1px solid #cbd5e1",
+                        fontSize: "0.85rem",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Linked Facebook Page / Instagram Identity
+                </label>
+                {availablePages.length > 0 ? (
+                  <select
+                    value={selectedPage}
+                    onChange={(e) => setSelectedPage(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                      background: "#ffffff",
+                    }}
+                  >
+                    {availablePages.map((page) => (
+                      <option key={page.id} value={page.id}>
+                        {page.name} ({page.id})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Page ID (e.g. 1029384756)"
+                    value={selectedPage}
+                    onChange={(e) => setSelectedPage(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                    }}
+                  />
+                )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setAccountSelectModal(null)}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    fontWeight: 600,
+                    fontSize: "0.84rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSelectedAccount}
+                  disabled={adActionLoading === "saving_account"}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: 8,
+                    background: "#1877f2",
+                    color: "#fff",
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: "0.84rem",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(24, 119, 242, 0.3)",
+                  }}
+                >
+                  {adActionLoading === "saving_account" ? "Saving..." : "Save Meta Account Selection"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* DIRECT META ACCESS TOKEN MODAL */}
+      {/* ======================================================== */}
+      {tokenModalOpen && (
+        <div className="social-modal-overlay" onClick={() => setTokenModalOpen(false)}>
+          <div
+            className="social-modal-content"
+            style={{ maxWidth: 520, borderRadius: 16 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="social-modal-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "#eff6ff",
+                    color: "#1877f2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Key size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                    Connect Real Meta Account
+                  </h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.75rem", color: "#64748b" }}>
+                    Using Meta Graph API Access Token or System User Token
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setTokenModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConnectToken}>
+              <div className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    Meta Access Token *
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={metaTokenInput}
+                    onChange={(e) => setMetaTokenInput(e.target.value)}
+                    placeholder="EAABw..."
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.82rem",
+                      fontFamily: "monospace",
+                      resize: "vertical",
+                    }}
+                  />
+                  <p style={{ margin: "4px 0 0", fontSize: "0.72rem", color: "#64748b" }}>
+                    Obtain from Meta Business Suite / System Users, or the Meta Graph API Explorer with <code>ads_management</code>, <code>ads_read</code>, and <code>pages_read_engagement</code> permissions.
+                  </p>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    Ad Account ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={metaAccountIdInput}
+                    onChange={(e) => setMetaAccountIdInput(e.target.value)}
+                    placeholder="e.g. act_1234567890 (leave blank to auto-discover)"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                    }}
+                  />
+                  <p style={{ margin: "4px 0 0", fontSize: "0.72rem", color: "#64748b" }}>
+                    If left blank, all ad accounts accessible to this token will be automatically discovered from Meta.
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    fontSize: "0.78rem",
+                    color: "#15803d",
+                  }}
+                >
+                  <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <div>
+                    Tokens are verified directly against Meta Marketing API v21.0 and encrypted using AES-256 Fernet on the server.
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 10,
+                  padding: "16px 24px",
+                  borderTop: "1px solid #f1f5f9",
+                  background: "#f8fafc",
+                  borderRadius: "0 0 16px 16px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setTokenModalOpen(false)}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={connectingToken}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "linear-gradient(135deg, #1877f2 0%, #0064e0 100%)",
+                    color: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: connectingToken ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    opacity: connectingToken ? 0.7 : 1,
+                  }}
+                >
+                  {connectingToken ? <RefreshCw size={15} className="spin" /> : <CheckCircle2 size={15} />}
+                  {connectingToken ? "Validating & Connecting…" : "Connect Account"}
                 </button>
               </div>
             </form>
