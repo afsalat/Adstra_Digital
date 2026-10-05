@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
   X,
@@ -19,9 +19,10 @@ import {
   ArrowRight,
   Sparkles,
   Plus,
+  Check,
 } from "lucide-react";
 import API_BASE_URL from "@/utils/apiBase";
-import { notify } from "./SocialFeedback";
+import { notify, toast } from "./SocialFeedback";
 
 // Standard sequential workflow milestones
 const WORKFLOW_PIPELINE_ORDER = [
@@ -222,61 +223,194 @@ function getEventStyle(action = "", notes = "", eventType = "") {
   };
 }
 
+const STAGE_INDEX = {
+  draft: 0,
+  script: 0,
+  rejected: 0,
+  script_approval: 1,
+  designing: 2,
+  team_review: 3,
+  internal_review: 3,
+  client_review: 4,
+  approved: 5,
+  post_schedule: 5,
+  scheduled: 5,
+  published: 6,
+  archived: 6,
+};
+
+const STAGE_NAMES = {
+  script: "Scripts",
+  draft: "Scripts",
+  script_approval: "Script Approval",
+  designing: "Designing",
+  team_review: "Team Review",
+  internal_review: "Team Review",
+  client_review: "Client Review",
+  approved: "Post Schedule",
+  scheduled: "Post Schedule",
+  published: "Published",
+  archived: "Archived",
+  content_rejected: "Rejected",
+};
+
+const NOTE_TYPES = ["Milestone Note", "Design Revision", "Review Feedback", "QA Checkpoint", "Script Reworked"];
+
+const FILTERS = [
+  { id: "all", label: "All" },
+  { id: "feedback", label: "Feedback & Rejections" },
+  { id: "approvals", label: "Approvals" },
+  { id: "activity", label: "Work & Notes" },
+];
+
+function relativeTime(dateString) {
+  if (!dateString) return "";
+  const diff = Date.now() - new Date(dateString).getTime();
+  const m = Math.round(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.round(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function durationLabel(fromIso, toIso) {
+  if (!fromIso) return "—";
+  const ms = new Date(toIso || Date.now()).getTime() - new Date(fromIso).getTime();
+  const h = Math.max(0, Math.round(ms / 3600000));
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  const rem = h % 24;
+  return rem ? `${d}d ${rem}h` : `${d}d`;
+}
+
+function dayLabel(dateString) {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return "Undated";
+  const today = new Date();
+  const yest = new Date();
+  yest.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yest.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+
+function initials(name = "") {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0].toUpperCase())
+      .join("") || "?"
+  );
+}
+
+function filterOf(type) {
+  if (type === "rejection") return "feedback";
+  if (["approved", "published", "submitted"].includes(type)) return "approvals";
+  return "activity";
+}
+
+function EventNotes({ text, color }) {
+  const [open, setOpen] = useState(false);
+  if (!text) return null;
+  const long = text.length > 220;
+  return (
+    <div>
+      <p className="tl-notes">
+        {long && !open ? `${text.slice(0, 220).trim()}…` : text}
+      </p>
+      {long && (
+        <button type="button" className="tl-more" onClick={() => setOpen((v) => !v)}>
+          {open ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) {
   const [addingNote, setAddingNote] = useState(false);
   const [newNoteAction, setNewNoteAction] = useState("Milestone Note");
   const [newNoteText, setNewNoteText] = useState("");
   const [submittingNote, setSubmittingNote] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const [newestFirst, setNewestFirst] = useState(true);
+  const [localHistory, setLocalHistory] = useState(null);
+
+  useEffect(() => {
+    setLocalHistory(null);
+  }, [post?.id]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
+  const historyEvents = useMemo(() => {
+    if (!post) return [];
+    const source = localHistory || (Array.isArray(post.approval_history) ? post.approval_history : []);
+    const raw = [...source].sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+    if (raw.length) return raw;
+    return [
+      {
+        id: "fallback-created",
+        action: "created",
+        actor_name: post.created_by_details?.fullname || post.created_by_details?.username || "Creative Team",
+        actor_role: "Content Creator",
+        notes: "Post drafted in workspace",
+        timestamp: post.created_at || new Date().toISOString(),
+      },
+    ];
+  }, [post, localHistory]);
+
+  const decorated = useMemo(
+    () =>
+      historyEvents.map((item) => {
+        const style = getEventStyle(item.action, item.notes, item.event_type);
+        return { item, style, group: filterOf(style.type) };
+      }),
+    [historyEvents]
+  );
+
+  const counts = useMemo(() => {
+    const c = { all: decorated.length, feedback: 0, approvals: 0, activity: 0 };
+    decorated.forEach((d) => (c[d.group] += 1));
+    return c;
+  }, [decorated]);
 
   if (!isOpen || !post) return null;
 
-  // Process and sort approval history chronologically (earliest to latest)
-  const rawHistory = Array.isArray(post.approval_history) ? [...post.approval_history] : [];
-  rawHistory.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
-
-  // If no history exists, provide an initial synthesized creation entry
-  const historyEvents =
-    rawHistory.length > 0
-      ? rawHistory
-      : [
-          {
-            id: "fallback-created",
-            action: "created",
-            actor_name: post.created_by_details?.fullname || post.created_by_details?.username || "Creative Team",
-            actor_role: "Content Creator",
-            notes: "Post drafted in workspace",
-            timestamp: post.created_at || new Date().toISOString(),
-          },
-        ];
-
-  // Determine current workflow stage
   const currentStatus = post.status || "script";
-  const stageMap = {
-    draft: 0,
-    script: 0,
-    script_approval: 1,
-    designing: 2,
-    team_review: 3,
-    internal_review: 3,
-    client_review: 4,
-    approved: 5,
-    post_schedule: 5,
-    scheduled: 5,
-    published: 6,
-  };
-  const currentStageIndex = stageMap[currentStatus] ?? 0;
+  const isRejected = currentStatus === "content_rejected";
+  const isFullyPublished = ["published", "archived"].includes(currentStatus);
+  const currentStageIndex = isRejected ? STAGE_INDEX[post.rejected_from_stage] ?? 0 : STAGE_INDEX[currentStatus] ?? 0;
+  const pendingStages = isFullyPublished || isRejected ? [] : WORKFLOW_PIPELINE_ORDER.slice(currentStageIndex + 1);
 
-  // Determine future pending stages (unreached milestones)
-  const isFullyPublished = currentStatus === "published";
-  const pendingStages = isFullyPublished
-    ? []
-    : WORKFLOW_PIPELINE_ORDER.slice(currentStageIndex + 1);
+  const visible = decorated.filter((d) => filter === "all" || d.group === filter);
+  const ordered = newestFirst ? [...visible].reverse() : visible;
 
-  // Quick submission for an ad-hoc milestone note / audit entry
+  // Group by calendar day
+  const groups = [];
+  ordered.forEach((d) => {
+    const label = dayLabel(d.item.timestamp);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(d);
+    else groups.push({ label, items: [d] });
+  });
+
+  const lastEvent = historyEvents[historyEvents.length - 1];
+  const endIso = isFullyPublished ? post.published_at || lastEvent?.timestamp : isRejected ? post.rejected_at : null;
+  const revisionRounds = post.revision_count || counts.feedback;
+
   const handleAddTimelineNote = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!newNoteText.trim()) return;
-
     setSubmittingNote(true);
     try {
       const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
@@ -289,16 +423,18 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
           actorRole = parsed.role || actorRole;
         } catch (err) {}
       }
-
-      await axios.post(`${API_BASE_URL}/social/posts/${post.id}/add_timeline_note/`, {
+      const res = await axios.post(`${API_BASE_URL}/social/posts/${post.id}/add_timeline_note/`, {
         action: newNoteAction,
         actor_name: actorName,
         actor_role: actorRole,
         notes: newNoteText.trim(),
       });
-
+      if (Array.isArray(res.data?.approval_history)) setLocalHistory(res.data.approval_history);
       setNewNoteText("");
       setAddingNote(false);
+      setFilter("all");
+      setNewestFirst(true);
+      toast.success("Note added to the timeline.");
       if (onRefresh) onRefresh();
     } catch (err) {
       notify(err.response?.data?.error || "Error adding milestone note.");
@@ -308,674 +444,361 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.65)",
-        backdropFilter: "blur(6px)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: 20,
-          width: "100%",
-          maxWidth: 640,
-          maxHeight: "92vh",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
-          border: "1px solid #e2e8f0",
-          overflow: "hidden",
-          animation: "modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* MODAL HEADER */}
-        <div
-          style={{
-            padding: "20px 24px",
-            borderBottom: "1px solid #e2e8f0",
-            background: "linear-gradient(to right, #f8fafc, #ffffff)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  fontWeight: 800,
-                  color: post.client_primary_color || "#4338ca",
-                  background: "#f1f5f9",
-                  padding: "3px 9px",
-                  borderRadius: 6,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {post.client_name || "Adstra Client"}
-              </span>
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  color: "#64748b",
-                  background: "#f8fafc",
-                  padding: "2px 7px",
-                  borderRadius: 6,
-                  border: "1px solid #e2e8f0",
-                  textTransform: "uppercase",
-                }}
-              >
-                {post.post_type || "Post"}
-              </span>
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 800,
-                  color: isFullyPublished ? "#166534" : "#1e40af",
-                  background: isFullyPublished ? "#dcfce7" : "#dbeafe",
-                  padding: "2px 8px",
-                  borderRadius: 10,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: isFullyPublished ? "#16a34a" : "#2563eb",
-                  }}
-                />
-                Status: {(post.status || "script").replace("_", " ").toUpperCase()}
-              </span>
+    <div className="tl-overlay" onClick={onClose}>
+      <style>{TL_CSS}</style>
+      <div className="tl-dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        {/* HERO HEADER */}
+        <header className="tl-hero">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+            <div style={{ minWidth: 0 }}>
+              <div className="tl-chips">
+                <span className="tl-chip">
+                  <span className="tl-dot" style={{ background: post.client_primary_color || "#a5b4fc" }} />
+                  {post.client_name || "Adstra Client"}
+                </span>
+                <span className="tl-chip">{(post.post_type || "post").toUpperCase()}</span>
+                <span className={`tl-chip ${isRejected ? "danger" : isFullyPublished ? "success" : "live"}`}>
+                  <span className="tl-dot pulse" /> {STAGE_NAMES[currentStatus] || currentStatus}
+                </span>
+              </div>
+              <h3 className="tl-title">{post.title || "Social Post Timeline"}</h3>
+              <p className="tl-sub">Every hand-off, revision and approval for this post.</p>
             </div>
-
-            <h3
-              style={{
-                margin: 0,
-                fontSize: "1.15rem",
-                fontWeight: 800,
-                color: "#0f172a",
-                lineHeight: 1.3,
-              }}
-            >
-              {post.title || "Social Post Timeline & History"}
-            </h3>
-            <p
-              style={{
-                margin: "4px 0 0",
-                fontSize: "0.8rem",
-                color: "#64748b",
-              }}
-            >
-              Comprehensive lifecycle tracking: creation, rejections, rework cycles, and approvals.
-            </p>
-          </div>
-
-          <button
-            onClick={onClose}
-            aria-label="Close modal"
-            style={{
-              background: "#f1f5f9",
-              border: "none",
-              borderRadius: "50%",
-              width: 32,
-              height: 32,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#64748b",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#e2e8f0";
-              e.currentTarget.style.color = "#0f172a";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#f1f5f9";
-              e.currentTarget.style.color = "#64748b";
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* MODAL BODY: VERTICAL TIMELINE GRAPH */}
-        <div
-          style={{
-            padding: "24px 28px",
-            overflowY: "auto",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            gap: 0,
-          }}
-        >
-          {/* Quick Info bar */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              padding: "10px 14px",
-              marginBottom: 24,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem", color: "#475569" }}>
-              <Layers size={15} style={{ color: "#6366f1" }} />
-              <span>
-                Total Events Logged: <strong>{historyEvents.length}</strong>
-              </span>
-            </div>
-
-            <button
-              onClick={() => setAddingNote(!addingNote)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                background: addingNote ? "#f1f5f9" : "#ffffff",
-                border: "1px solid #cbd5e1",
-                borderRadius: 8,
-                padding: "4px 10px",
-                fontSize: "0.74rem",
-                fontWeight: 700,
-                color: "#1e293b",
-                cursor: "pointer",
-              }}
-            >
-              <Plus size={13} style={{ color: "#4f46e5" }} />
-              {addingNote ? "Cancel Note" : "Add Milestone Note"}
+            <button type="button" className="tl-close" onClick={onClose} aria-label="Close">
+              <X size={18} />
             </button>
           </div>
 
-          {/* Collapsible Add Note Form */}
-          {addingNote && (
-            <form
-              onSubmit={handleAddTimelineNote}
-              style={{
-                background: "#f8fafc",
-                border: "1px solid #c7d2fe",
-                borderRadius: 12,
-                padding: 14,
-                marginBottom: 24,
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#3730a3" }}>
-                  Record Manual Checkpoint / Note
-                </span>
-                <select
-                  value={newNoteAction}
-                  onChange={(e) => setNewNoteAction(e.target.value)}
-                  style={{
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    padding: "3px 8px",
-                    borderRadius: 6,
-                    border: "1px solid #cbd5e1",
-                    background: "#ffffff",
-                    outline: "none",
-                  }}
-                >
-                  <option value="Milestone Note">Milestone Note</option>
-                  <option value="Script Reworked">Script Reworked</option>
-                  <option value="Design Revision">Design Revision</option>
-                  <option value="Review Feedback">Review Feedback</option>
-                  <option value="QA Checkpoint">QA Checkpoint</option>
-                </select>
-              </div>
+          {/* Stage stepper */}
+          <div className="tl-stepper">
+            {WORKFLOW_PIPELINE_ORDER.map((stage, idx) => {
+              const done = idx < currentStageIndex || (isFullyPublished && idx <= currentStageIndex);
+              const current = idx === currentStageIndex && !isFullyPublished;
+              const failed = current && isRejected;
+              return (
+                <div key={stage.id} className={`tl-step ${done ? "done" : ""} ${current ? "current" : ""} ${failed ? "failed" : ""}`} title={stage.label}>
+                  <div className="tl-step-node">{failed ? <X size={12} /> : done ? <Check size={12} /> : idx + 1}</div>
+                  <span>{stage.short}</span>
+                  {stage.id === "designing" && revisionRounds > 0 && (
+                    <em className="tl-loop">
+                      <RotateCcw size={9} /> {revisionRounds}
+                    </em>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </header>
 
+        {/* BODY */}
+        <div className="tl-body">
+          {isRejected && (
+            <div className="tl-rejected">
+              <AlertTriangle size={17} />
+              <div>
+                <strong>
+                  Rejected by {post.rejected_by === "internal" ? "internal team" : "client"}
+                  {post.rejected_from_stage ? ` at ${STAGE_NAMES[post.rejected_from_stage] || post.rejected_from_stage}` : ""}
+                </strong>
+                {(post.rejection_categories || []).length > 0 && <span> • {post.rejection_categories.join(", ")}</span>}
+                <p>{post.rejection_reason}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Stats */}
+          <div className="tl-stats">
+            <div className="tl-stat">
+              <Layers size={16} color="#6366f1" />
+              <div>
+                <strong>{historyEvents.length}</strong>
+                <span>Events</span>
+              </div>
+            </div>
+            <div className="tl-stat">
+              <RotateCcw size={16} color={revisionRounds ? "#d97706" : "#94a3b8"} />
+              <div>
+                <strong>{revisionRounds}</strong>
+                <span>Revision rounds{post.client_revision_count ? ` • ${post.client_revision_count} client` : ""}</span>
+              </div>
+            </div>
+            <div className="tl-stat">
+              <Clock size={16} color="#0284c7" />
+              <div>
+                <strong>{durationLabel(post.created_at || historyEvents[0]?.timestamp, endIso)}</strong>
+                <span>{isFullyPublished ? "Idea → live" : isRejected ? "Before rejection" : "In pipeline"}</span>
+              </div>
+            </div>
+            <div className="tl-stat">
+              <Sparkles size={16} color="#16a34a" />
+              <div>
+                <strong>{relativeTime(lastEvent?.timestamp) || "—"}</strong>
+                <span>Last activity</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Toolbar */}
+          <div className="tl-toolbar">
+            <div className="tl-filters" role="tablist">
+              {FILTERS.map((f) => (
+                <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} className={`tl-filter ${filter === f.id ? "active" : ""} ${f.id}`} onClick={() => setFilter(f.id)}>
+                  {f.label}
+                  <span>{counts[f.id]}</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button type="button" className="tl-tool" onClick={() => setNewestFirst((v) => !v)} title="Toggle sort order">
+                <ArrowRight size={13} style={{ transform: newestFirst ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }} />
+                {newestFirst ? "Newest" : "Oldest"}
+              </button>
+              <button type="button" className={`tl-tool primary ${addingNote ? "on" : ""}`} onClick={() => setAddingNote((v) => !v)}>
+                <Plus size={13} style={{ transform: addingNote ? "rotate(45deg)" : "none", transition: "transform .2s" }} />
+                {addingNote ? "Cancel" : "Add note"}
+              </button>
+            </div>
+          </div>
+
+          {/* Composer */}
+          {addingNote && (
+            <form className="tl-composer" onSubmit={handleAddTimelineNote}>
+              <div className="tl-note-types">
+                {NOTE_TYPES.map((t) => (
+                  <button key={t} type="button" className={newNoteAction === t ? "active" : ""} onClick={() => setNewNoteAction(t)}>
+                    {t}
+                  </button>
+                ))}
+              </div>
               <textarea
-                rows={2}
+                rows={3}
+                autoFocus
                 value={newNoteText}
                 onChange={(e) => setNewNoteText(e.target.value)}
-                placeholder="Type explanation, revision reason, or checkpoint update..."
-                required
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  border: "1px solid #cbd5e1",
-                  fontSize: "0.82rem",
-                  outline: "none",
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAddTimelineNote(e);
                 }}
+                placeholder="What happened? e.g. Client approved on call, waiting for final logo file…"
               />
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setAddingNote(false)}
-                  style={{
-                    padding: "5px 12px",
-                    borderRadius: 6,
-                    border: "1px solid #cbd5e1",
-                    background: "#fff",
-                    fontSize: "0.74rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingNote || !newNoteText.trim()}
-                  style={{
-                    padding: "5px 14px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#4f46e5",
-                    color: "#ffffff",
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  {submittingNote ? "Saving..." : "Save to Timeline"}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Ctrl + Enter to save</span>
+                <button type="submit" className="tl-save" disabled={submittingNote || !newNoteText.trim()}>
+                  {submittingNote ? "Saving…" : "Save to timeline"}
                 </button>
               </div>
             </form>
           )}
 
-          {/* VERTICAL TIMELINE LIST */}
-          <div style={{ position: "relative" }}>
-            {historyEvents.map((item, index) => {
-              const isLastEvent = index === historyEvents.length - 1;
-              const hasPendingAfter = pendingStages.length > 0;
-              const showConnectingLine = !isLastEvent || hasPendingAfter;
+          {/* Pending stages first when newest-first */}
+          {newestFirst && filter === "all" && pendingStages.length > 0 && <UpNext stages={pendingStages} />}
 
-              const styleMeta = getEventStyle(item.action, item.notes, item.event_type);
-              const EventIcon = styleMeta.icon;
-
-              return (
-                <div
-                  key={item.id || `evt-${index}`}
-                  style={{
-                    display: "flex",
-                    gap: 18,
-                    position: "relative",
-                    paddingBottom: isLastEvent && !hasPendingAfter ? 0 : 28,
-                  }}
-                >
-                  {/* LEFT: NODE CIRCLE & VERTICAL LINE */}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      width: 32,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {/* Node Checkpoint Circle */}
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: styleMeta.bgColor,
-                        border: `2.5px solid ${styleMeta.color}`,
-                        color: styleMeta.color,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 2,
-                        boxShadow: isLastEvent && !hasPendingAfter ? `0 0 0 4px ${styleMeta.borderColor}` : "none",
-                      }}
-                    >
-                      <EventIcon size={14} strokeWidth={2.5} />
-                    </div>
-
-                    {/* Continuous Vertical Connecting Line */}
-                    {showConnectingLine && (
-                      <div
-                        style={{
-                          width: 3,
-                          flex: 1,
-                          background: "#cbd5e1", // Clean slate connecting line for timeline track
-                          minHeight: 36,
-                          margin: "4px 0",
-                          borderRadius: 2,
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* RIGHT: EVENT DETAILS (Title, Date, Who, Reason) */}
-                  <div style={{ flex: 1, paddingTop: 1 }}>
-                    {/* Milestone Header & Badge */}
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "baseline",
-                        flexWrap: "wrap",
-                        gap: 8,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <h4
-                          style={{
-                            margin: 0,
-                            fontSize: "0.95rem",
-                            fontWeight: 800,
-                            color: "#0f172a",
-                          }}
-                        >
-                          {formatEventTitle(item.action)}
-                        </h4>
-
-                        {/* Action Badge */}
-                        <span
-                          style={{
-                            fontSize: "0.68rem",
-                            fontWeight: 800,
-                            color: styleMeta.badgeColor,
-                            background: styleMeta.badgeBg,
-                            padding: "2px 7px",
-                            borderRadius: 6,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {styleMeta.badgeLabel}
-                        </span>
-                      </div>
-
-                      {/* Exact Date & Time */}
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontSize: "0.74rem",
-                          fontWeight: 600,
-                          color: "#64748b",
-                        }}
-                      >
-                        <Clock size={12} style={{ color: "#94a3b8" }} />
-                        <span>{formatEventDate(item.timestamp)}</span>
-                      </div>
-                    </div>
-
-                    {/* "WHO" - Actor Pill */}
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                        fontSize: "0.75rem",
-                        color: "#334155",
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        padding: "3px 8px",
-                        borderRadius: 6,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <User size={12} style={{ color: "#6366f1" }} />
-                      <strong style={{ color: "#0f172a" }}>
-                        {item.actor_name || "Team Member"}
-                      </strong>
-                      {item.actor_role && (
-                        <>
-                          <span style={{ color: "#cbd5e1" }}>•</span>
-                          <span style={{ color: "#64748b" }}>{item.actor_role}</span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* "REASON" / FEEDBACK CALLOUT */}
-                    {item.notes && item.notes.trim() && (
-                      <div
-                        style={{
-                          background: styleMeta.bgColor,
-                          border: `1px solid ${styleMeta.borderColor}`,
-                          borderRadius: 10,
-                          padding: "8px 12px",
-                          marginTop: 2,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "0.7rem",
-                            fontWeight: 800,
-                            color: styleMeta.color,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                            marginBottom: 3,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.02em",
-                          }}
-                        >
-                          <MessageSquare size={12} />
-                          {styleMeta.type === "rejection"
-                            ? "Critique / Rejection Reason:"
-                            : styleMeta.type === "rework"
-                            ? "Rework & Revision Details:"
-                            : styleMeta.type === "submitted"
-                            ? "Submission Brief / Notes:"
-                            : styleMeta.type === "approved"
-                            ? "Approval Notes:"
-                            : styleMeta.type === "checkpoint"
-                            ? "QA Checkpoint Details:"
-                            : "Reason / Details:"}
+          {/* Events grouped by day */}
+          {groups.length === 0 ? (
+            <div className="tl-empty">No events in this filter yet.</div>
+          ) : (
+            groups.map((g) => (
+              <section key={g.label} className="tl-day">
+                <div className="tl-day-label">
+                  <Calendar size={12} /> {g.label}
+                </div>
+                <div className="tl-list">
+                  {g.items.map(({ item, style }, idx) => {
+                    const Icon = style.icon;
+                    const showRoute = item.from_stage && item.to_stage && item.from_stage !== item.to_stage;
+                    return (
+                      <article key={item.id || `${g.label}-${idx}`} className={`tl-event ${style.type}`} style={{ "--c": style.color }}>
+                        <div className="tl-node">
+                          <Icon size={14} />
                         </div>
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: "0.82rem",
-                            color: "#1e293b",
-                            lineHeight: 1.45,
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {item.notes}
-                        </p>
-                        {(item.reason_categories || []).length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                            {item.revision_round > 0 && (
-                              <span style={{ fontSize: "0.66rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "#0f172a", color: "#ffffff" }}>
-                                Round {item.revision_round}
-                              </span>
-                            )}
-                            {item.severity && (
-                              <span style={{ fontSize: "0.66rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: item.severity === "major" ? "#fee2e2" : "#f1f5f9", color: item.severity === "major" ? "#b91c1c" : "#475569", textTransform: "capitalize" }}>
-                                {item.severity}
-                              </span>
-                            )}
-                            {item.reason_categories.map((c) => (
-                              <span key={c} style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "#ffffff", border: `1px solid ${styleMeta.borderColor}`, color: styleMeta.color }}>
-                                {c}
-                              </span>
-                            ))}
+                        <div className="tl-card">
+                          <div className="tl-card-head">
+                            <div style={{ minWidth: 0 }}>
+                              <h4>{formatEventTitle(item.action)}</h4>
+                              <div className="tl-meta">
+                                <span className="tl-badge">
+                                  <i style={{ background: style.color }} />
+                                  {style.badgeLabel}
+                                </span>
+                                {showRoute && (
+                                  <span className="tl-route">
+                                    {STAGE_NAMES[item.from_stage] || item.from_stage} <ChevronRight size={11} /> {STAGE_NAMES[item.to_stage] || item.to_stage}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <time title={formatEventDate(item.timestamp)}>{relativeTime(item.timestamp)}</time>
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+
+                          <div className="tl-actor">
+                            <span className="tl-avatar">
+                              {initials(item.actor_name)}
+                            </span>
+                            <strong>{item.actor_name || "Team Member"}</strong>
+                            {item.actor_role && <span>• {item.actor_role}</span>}
+                            <span className="tl-time-full">• {formatEventDate(item.timestamp)}</span>
+                          </div>
+
+                          <EventNotes text={item.notes} color={style.color} />
+
+                          {((item.reason_categories || []).length > 0 || item.revision_round > 0 || item.severity) && (
+                            <div className="tl-tags">
+                              {item.revision_round > 0 && <span className="dark">Round {item.revision_round}</span>}
+                              {item.severity && <span className={item.severity === "major" ? "major" : ""}>{item.severity}</span>}
+                              {(item.reason_categories || []).map((c) => (
+                                <span key={c}>{c}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </section>
+            ))
+          )}
 
-            {/* REMAINING / FUTURE STAGES (RENDERED IN MUTED GRAY MATCHING TRACKING GRAPH) */}
-            {pendingStages.map((pStage, pIndex) => {
-              const isLastPending = pIndex === pendingStages.length - 1;
-
-              return (
-                <div
-                  key={`pending-${pStage.id}`}
-                  style={{
-                    display: "flex",
-                    gap: 18,
-                    position: "relative",
-                    paddingBottom: isLastPending ? 0 : 26,
-                    opacity: 0.55,
-                  }}
-                >
-                  {/* Left: Gray Node & Gray Connecting Line */}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      width: 32,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {/* Inactive Gray Checkpoint Node */}
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: "50%",
-                        background: "#f1f5f9",
-                        border: "2px dashed #cbd5e1",
-                        color: "#94a3b8",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 2,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: "50%",
-                          background: "#cbd5e1",
-                        }}
-                      />
-                    </div>
-
-                    {/* Gray vertical line */}
-                    {!isLastPending && (
-                      <div
-                        style={{
-                          width: 2,
-                          flex: 1,
-                          background: "#e2e8f0",
-                          minHeight: 32,
-                          margin: "4px 0",
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Right: Inactive Milestone Label & Pending Indicator */}
-                  <div style={{ flex: 1, paddingTop: 2 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: 8,
-                      }}
-                    >
-                      <h4
-                        style={{
-                          margin: 0,
-                          fontSize: "0.9rem",
-                          fontWeight: 700,
-                          color: "#64748b",
-                        }}
-                      >
-                        {pStage.label}
-                      </h4>
-
-                      <span
-                        style={{
-                          fontSize: "0.68rem",
-                          fontWeight: 700,
-                          color: "#94a3b8",
-                          background: "#f8fafc",
-                          padding: "2px 7px",
-                          borderRadius: 6,
-                          border: "1px dashed #cbd5e1",
-                        }}
-                      >
-                        Pending Milestone
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: "0.74rem",
-                        color: "#94a3b8",
-                        marginTop: 2,
-                      }}
-                    >
-                      Awaiting stage completion
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {!newestFirst && filter === "all" && pendingStages.length > 0 && <UpNext stages={pendingStages} />}
         </div>
 
-        {/* MODAL FOOTER */}
-        <div
-          style={{
-            padding: "14px 24px",
-            borderTop: "1px solid #e2e8f0",
-            background: "#f8fafc",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ fontSize: "0.74rem", color: "#64748b" }}>
-            Post ID: #{post.id} • Created: {formatEventDate(post.created_at)}
-          </div>
-
-          <button
-            onClick={onClose}
-            style={{
-              padding: "8px 20px",
-              borderRadius: 8,
-              border: "none",
-              background: "#0f172a",
-              color: "#ffffff",
-              fontSize: "0.82rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#1e293b";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#0f172a";
-            }}
-          >
-            Close Timeline
+        <footer className="tl-footer">
+          <span>
+            Post #{post.id} • Created {formatEventDate(post.created_at)}
+          </span>
+          <button type="button" className="tl-done" onClick={onClose}>
+            Close
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );
 }
+
+function UpNext({ stages }) {
+  return (
+    <div className="tl-upnext">
+      <div className="tl-day-label">
+        <ChevronRight size={12} /> Up next
+      </div>
+      <div className="tl-upnext-row">
+        {stages.map((s, i) => (
+          <div key={s.id} className="tl-upnext-item">
+            <span>{i + 1}</span>
+            {s.short}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const TL_CSS = `
+.tl-overlay { --ink: #111827; --ink-2: #4b5563; --ink-3: #9ca3af; --line: #e5e7eb; --line-2: #f3f4f6; --soft: #f9fafb; --accent: #4f46e5;
+  position: fixed; inset: 0; z-index: 10050; background: rgba(17,24,39,0.45); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: tlF .12s ease; }
+@keyframes tlF { from { opacity: 0 } to { opacity: 1 } }
+@keyframes tlU { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@keyframes tlIn { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
+@keyframes tlRing { 0% { box-shadow: 0 0 0 0 rgba(79,70,229,.35) } 70% { box-shadow: 0 0 0 6px rgba(79,70,229,0) } 100% { box-shadow: 0 0 0 0 rgba(79,70,229,0) } }
+.tl-dialog { width: 100%; max-width: 760px; max-height: 92vh; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 64px -16px rgba(17,24,39,.35); animation: tlU .18s cubic-bezier(.2,.8,.2,1); color: var(--ink); }
+.tl-hero { padding: 20px 24px 18px; border-bottom: 1px solid var(--line); background: #fff; }
+.tl-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.tl-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; padding: 2px 9px; border-radius: 6px; background: var(--line-2); color: var(--ink-2); }
+.tl-chip.live { background: #eef2ff; color: #4338ca; }
+.tl-chip.success { background: #ecfdf5; color: #047857; }
+.tl-chip.danger { background: #fef2f2; color: #b91c1c; }
+.tl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tl-title { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+.tl-sub { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-3); }
+.tl-close { width: 34px; height: 34px; border-radius: 8px; border: none; background: transparent; color: var(--ink-3); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background .12s, color .12s; }
+.tl-close:hover { background: var(--line-2); color: var(--ink); }
+.tl-stepper { display: flex; margin-top: 20px; }
+.tl-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; position: relative; min-width: 0; }
+.tl-step:not(:first-child)::before { content: ""; position: absolute; top: 11px; right: calc(50% + 14px); width: calc(100% - 28px); height: 1.5px; background: var(--line); }
+.tl-step.done:not(:first-child)::before, .tl-step.current:not(:first-child)::before { background: var(--ink); }
+.tl-step-node { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 1.5px solid #d1d5db; color: var(--ink-3); font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; transition: all .2s; }
+.tl-step.done .tl-step-node { background: var(--ink); border-color: var(--ink); color: #fff; }
+.tl-step.current .tl-step-node { border-color: var(--accent); color: var(--accent); font-weight: 600; animation: tlRing 2s infinite; }
+.tl-step.failed .tl-step-node { border-color: #dc2626; background: #dc2626; color: #fff; animation: none; }
+.tl-step span { font-size: 12px; color: var(--ink-3); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tl-step.done span { color: var(--ink-2); }
+.tl-step.current span { color: var(--ink); font-weight: 600; }
+.tl-loop { position: absolute; top: -6px; left: calc(50% + 8px); font-style: normal; font-size: 10.5px; font-weight: 600; background: #fff; color: #b45309; border: 1px solid #fde68a; border-radius: 999px; padding: 0 5px; display: inline-flex; align-items: center; gap: 2px; line-height: 15px; }
+.tl-body { padding: 16px 24px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; background: #fff; }
+.tl-rejected { display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line); border-left: 3px solid #dc2626; font-size: 13.5px; color: var(--ink); }
+.tl-rejected svg { color: #dc2626; flex-shrink: 0; }
+.tl-rejected strong { font-weight: 600; }
+.tl-rejected span { color: var(--ink-2); }
+.tl-rejected p { margin: 4px 0 0; color: var(--ink-2); line-height: 1.55; }
+.tl-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; }
+.tl-stat { display: flex; gap: 10px; align-items: center; padding: 11px 14px; }
+.tl-stat + .tl-stat { border-left: 1px solid var(--line); }
+.tl-stat svg { stroke: var(--ink-3); flex-shrink: 0; }
+.tl-stat strong { display: block; font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tl-stat span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+.tl-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tl-filters { display: flex; gap: 2px; background: var(--line-2); padding: 3px; border-radius: 8px; flex-wrap: wrap; }
+.tl-filter { display: inline-flex; align-items: center; gap: 6px; border: none; background: transparent; padding: 5px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); cursor: pointer; transition: background .12s, color .12s; }
+.tl-filter span { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tl-filter:hover { color: var(--ink); }
+.tl-filter.active { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(17,24,39,.08), 0 0 0 1px rgba(17,24,39,.04); }
+.tl-tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 500; color: var(--ink); cursor: pointer; transition: background .12s, border-color .12s; }
+.tl-tool:hover { background: var(--soft); border-color: #d1d5db; }
+.tl-tool.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+.tl-tool.primary:hover { background: #1f2937; }
+.tl-tool.primary.on { background: #fff; color: var(--ink); border-color: var(--line); }
+.tl-composer { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; animation: tlIn .15s ease; }
+.tl-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+.tl-note-types { display: flex; gap: 6px; flex-wrap: wrap; }
+.tl-note-types button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 9px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; transition: all .12s; }
+.tl-note-types button:hover { border-color: #d1d5db; color: var(--ink); }
+.tl-note-types button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.tl-composer textarea { width: 100%; box-sizing: border-box; border: none; padding: 2px 0; font: inherit; font-size: 14px; color: var(--ink); outline: none; resize: vertical; background: transparent; }
+.tl-save { border: none; background: var(--ink); color: #fff; height: 30px; padding: 0 14px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.tl-save:disabled { opacity: .4; cursor: not-allowed; }
+.tl-day { display: flex; flex-direction: column; }
+.tl-day-label { position: sticky; top: -16px; z-index: 2; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink-3); background: #fff; padding: 6px 0 10px; }
+.tl-day-label svg { color: var(--ink-3); }
+.tl-list { display: flex; flex-direction: column; }
+.tl-event { display: flex; gap: 14px; position: relative; padding-bottom: 14px; animation: tlIn .18s ease both; }
+.tl-event:not(:last-child)::before { content: ""; position: absolute; left: 13px; top: 30px; bottom: 2px; width: 1.5px; background: var(--line); }
+.tl-node { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1.5px solid var(--line); color: var(--ink-2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 1; transition: border-color .15s; }
+.tl-node svg { width: 13px; height: 13px; }
+.tl-event.rejection .tl-node { border-color: #fecaca; color: #dc2626; }
+.tl-event.approved .tl-node, .tl-event.published .tl-node { border-color: #a7f3d0; color: #059669; }
+.tl-event:hover .tl-node { border-color: #9ca3af; }
+.tl-card { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: #fff; transition: border-color .15s, box-shadow .15s; }
+.tl-card:hover { border-color: #d1d5db; box-shadow: 0 4px 14px -8px rgba(17,24,39,.18); }
+.tl-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.tl-card-head h4 { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+.tl-card-head time { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; cursor: help; font-variant-numeric: tabular-nums; }
+.tl-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.tl-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--ink-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 6px; }
+.tl-badge i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.tl-route { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--ink-2); background: var(--line-2); padding: 1px 8px; border-radius: 6px; }
+.tl-route svg { color: var(--ink-3); }
+.tl-actor { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+.tl-actor strong { color: var(--ink); font-weight: 500; }
+.tl-avatar { width: 20px; height: 20px; border-radius: 50%; background: var(--line-2); color: var(--ink-2); font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+.tl-notes { margin: 10px 0 0; padding: 9px 12px; border-radius: 8px; background: var(--soft); border: 1px solid var(--line-2); font-size: 13.5px; color: var(--ink); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.tl-event.rejection .tl-notes { border-left: 2px solid #dc2626; }
+.tl-more { background: none; border: none; color: var(--accent); font-size: 12.5px; font-weight: 500; cursor: pointer; padding: 6px 0 0; }
+.tl-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.tl-tags span { font-size: 12px; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink-2); text-transform: capitalize; }
+.tl-tags span.dark { background: var(--ink); border-color: var(--ink); color: #fff; }
+.tl-tags span.major { color: #b91c1c; border-color: #fecaca; }
+.tl-upnext { display: flex; flex-direction: column; }
+.tl-upnext-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.tl-upnext-item { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border-radius: 8px; border: 1px dashed #d1d5db; color: var(--ink-2); font-size: 13px; background: #fff; }
+.tl-upnext-item span { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tl-empty { text-align: center; padding: 28px; color: var(--ink-3); font-size: 13.5px; border: 1px dashed var(--line); border-radius: 10px; }
+.tl-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 24px; border-top: 1px solid var(--line); background: #fff; font-size: 13px; color: var(--ink-3); }
+.tl-done { border: 1px solid var(--line); background: #fff; color: var(--ink); height: 34px; padding: 0 16px; border-radius: 8px; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background .12s; }
+.tl-done:hover { background: var(--soft); }
+@media (max-width: 640px) {
+  .tl-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tl-stat:nth-child(3) { border-left: none; }
+  .tl-stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .tl-step span { display: none; }
+  .tl-time-full { display: none; }
+}
+`;
