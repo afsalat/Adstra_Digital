@@ -1450,8 +1450,8 @@ export default function AnalyticsReportsTab({
           <div className="report-kpi-matrix" style={{ marginBottom: 12 }}>
             {[
               { label: "Published", value: performance.publishedCount, sub: "posts live", color: "#059669" },
-              { label: "Total Reach", value: performance.totalReach.toLocaleString(), sub: "accounts reached", color: "#0284c7" },
-              { label: "Engagements", value: performance.totalEngagement.toLocaleString(), sub: `${performance.likes.toLocaleString()} likes • ${performance.comments.toLocaleString()} comments • ${performance.shares.toLocaleString()} shares`, color: "#7c3aed" },
+              { label: "Total Reach", value: performance.totalReach.toLocaleString("en-IN"), sub: "accounts reached", color: "#0284c7" },
+              { label: "Engagements", value: performance.totalEngagement.toLocaleString("en-IN"), sub: `${performance.likes.toLocaleString("en-IN")} likes • ${performance.comments.toLocaleString("en-IN")} comments • ${performance.shares.toLocaleString("en-IN")} shares`, color: "#7c3aed" },
               { label: "Engagement Rate", value: performance.engagementRate === null ? "—" : `${performance.engagementRate}%`, sub: "engagements ÷ reach", color: "#ea580c" },
             ].map((k) => (
               <div key={k.label} style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", background: "#ffffff" }}>
@@ -1487,10 +1487,10 @@ export default function AnalyticsReportsTab({
                       <div style={{ fontSize: "0.66rem", color: "#94a3b8" }}>{r.client}</div>
                     </td>
                     <td style={{ padding: "7px 8px", color: "#64748b", textTransform: "capitalize" }}>{r.platforms || "—"}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 700 }}>{r.reach.toLocaleString()}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.likes.toLocaleString()}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.comments.toLocaleString()}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.shares.toLocaleString()}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 700 }}>{r.reach.toLocaleString("en-IN")}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.likes.toLocaleString("en-IN")}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.comments.toLocaleString("en-IN")}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.shares.toLocaleString("en-IN")}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 800, color: "#ea580c" }}>{r.rate === null ? "—" : `${r.rate}%`}</td>
                   </tr>
                 ))}

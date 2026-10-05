@@ -47,6 +47,7 @@ import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
 import ScriptViewModal from "./ScriptViewModal";
 import PostTimelineModal from "./PostTimelineModal";
+import MistakeInsightsPanel from "./MistakeInsightsPanel";
 import WorkDetailsModal from "./WorkDetailsModal";
 import MediaPreviewModal from "./MediaPreviewModal";
 import { toast, confirmDialog, apiErrorMessage } from "./SocialFeedback";
@@ -56,6 +57,138 @@ import {
   ApproveScheduleModal,
   STAGE_LABELS,
 } from "./WorkflowDecisionModals";
+
+/* ─── New vs Redo work highlighting (production & review stages) ─── */
+const WORK_KIND_STAGES = ["designing", "team_review", "client_review"];
+
+const WORK_KIND_STYLE = {
+  redo: { color: "#c2410c", bg: "#fff7ed", border: "#fdba74", rowBg: "#fffaf5", bar: "#f97316" },
+  revised: { color: "#6d28d9", bg: "#f5f3ff", border: "#c4b5fd", rowBg: "#fdfcff", bar: "#8b5cf6" },
+  new: { color: "#047857", bg: "#ecfdf5", border: "#a7f3d0", rowBg: null, bar: null },
+};
+
+const WORK_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "new", label: "New" },
+  { id: "redo", label: "Redo" },
+  { id: "revised", label: "Revised" },
+];
+
+const mediaNoun = (post) =>
+  post.post_type === "reel" || post.post_type === "video"
+    ? "Video"
+    : post.post_type === "carousel"
+    ? "Carousel"
+    : post.post_type === "text"
+    ? "Post"
+    : "Design";
+
+/* ─── Scripts library: every post's script, bucketed by where it is now ─── */
+const SCRIPT_FILTERS = [
+  { id: "active", label: "Active", color: "#4f46e5" },
+  { id: "draft", label: "Drafts", color: "#4f46e5" },
+  { id: "under_review", label: "Under Approval", color: "#7c3aed" },
+  { id: "revision", label: "Needs Revision", color: "#dc2626" },
+  { id: "production", label: "Approved / In Production", color: "#0284c7" },
+  { id: "published", label: "Published", color: "#059669" },
+  { id: "rejected", label: "Rejected", color: "#991b1b" },
+  { id: "all", label: "All Scripts", color: "#0f172a" },
+];
+
+const SCRIPT_BUCKET_BADGE = {
+  draft: { label: "Draft", color: "#475569", bg: "#f1f5f9", border: "#cbd5e1" },
+  under_review: { label: "Under Approval", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  revision: { label: "Needs Revision", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+  production: { label: "Approved · In Production", color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" },
+  published: { label: "Published", color: "#047857", bg: "#ecfdf5", border: "#a7f3d0" },
+  rejected: { label: "Rejected", color: "#991b1b", bg: "#fef2f2", border: "#fca5a5" },
+};
+
+// Where a post's script currently sits
+export function getScriptBucket(post) {
+  switch (post.status) {
+    case "script":
+    case "draft":
+      return post.client_feedback ? "revision" : "draft";
+    case "script_approval":
+      return "under_review";
+    case "rejected":
+      return post.client_feedback?.toLowerCase().includes("script") ? "revision" : "production";
+    case "published":
+    case "archived":
+      return "published";
+    case "content_rejected":
+      return "rejected";
+    default:
+      return "production";
+  }
+}
+
+const scriptMatchesFilter = (bucket, filter) =>
+  filter === "all" || (filter === "active" ? bucket === "draft" || bucket === "revision" : bucket === filter);
+
+const SCRIPT_EDITABLE_BUCKETS = ["draft", "revision", "under_review"];
+
+// Workflow tab that currently owns a post (for "Open in …" jumps)
+const STATUS_TO_STAGE = {
+  script: "scripts",
+  draft: "scripts",
+  script_approval: "script_approval",
+  designing: "designing",
+  rejected: "designing",
+  team_review: "team_review",
+  internal_review: "team_review",
+  client_review: "client_review",
+  approved: "post_schedule",
+  scheduled: "post_schedule",
+  published: "published",
+  archived: "published",
+  content_rejected: "rejected",
+};
+
+// redo    = sent back with feedback and not yet resubmitted
+// revised = reworked and resubmitted at least once
+// new     = first version, never sent back
+export function getWorkKind(post) {
+  const rounds = post.revision_count || 0;
+  if (post.client_feedback || post.status === "rejected") return { kind: "redo", rounds };
+  if (rounds > 0) return { kind: "revised", rounds };
+  return { kind: "new", rounds: 0 };
+}
+
+function WorkKindBadge({ post }) {
+  const wk = getWorkKind(post);
+  const s = WORK_KIND_STYLE[wk.kind];
+  const noun = mediaNoun(post);
+  const label =
+    wk.kind === "redo"
+      ? `Redo ${noun}${wk.rounds ? ` · Round ${wk.rounds}` : ""}`
+      : wk.kind === "revised"
+      ? `Revised ${noun} · Round ${wk.rounds}`
+      : `New ${noun}`;
+  const Icon = wk.kind === "new" ? Sparkles : RotateCcw;
+  return (
+    <span
+      title={wk.rounds ? `${wk.rounds} revision round(s), ${post.client_revision_count || 0} requested by client` : "First version — never sent back"}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+        fontSize: "0.68rem",
+        padding: "2px 8px",
+        borderRadius: 8,
+        fontWeight: 800,
+        textTransform: wk.kind === "redo" ? "uppercase" : "none",
+        letterSpacing: wk.kind === "redo" ? "0.03em" : 0,
+      }}
+    >
+      <Icon size={11} /> {label}
+    </span>
+  );
+}
 
 export default function WorkflowStageSection({
   stageId,
@@ -69,10 +202,17 @@ export default function WorkflowStageSection({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [formatFilter, setFormatFilter] = useState("all");
-  const [scriptSubFilter, setScriptSubFilter] = useState("all");
+  const [scriptSubFilter, setScriptSubFilter] = useState("active");
   const [viewMode, setViewMode] = useState("listing");
   const [copiedToken, setCopiedToken] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [mistakeHints, setMistakeHints] = useState({});
+  const [workFilter, setWorkFilter] = useState("all");
+  const showWorkKind = WORK_KIND_STAGES.includes(stageId);
+
+  useEffect(() => {
+    setWorkFilter("all");
+  }, [stageId]);
 
   // Script Creation Modal State (Stage 1: Scripts)
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
@@ -208,61 +348,13 @@ export default function WorkflowStageSection({
     }
   }, [stageId]);
 
-  // Sub-counts for Stage 1 Scripts filter pills
-  const scriptSubCounts = useMemo(() => {
-    if (stageId !== "scripts") return { all: 0, drafts: 0, underReview: 0, revision: 0 };
-    const clientFiltered = posts.filter(
-      (p) => selectedClientId === "all" || String(p.client_profile) === String(selectedClientId)
-    );
-    return {
-      all: clientFiltered.filter(
-        (p) =>
-          ["script", "draft", "script_approval"].includes(p.status) ||
-          p.status === "rejected" ||
-          Boolean(p.client_feedback)
-      ).length,
-      drafts: clientFiltered.filter(
-        (p) => ["script", "draft"].includes(p.status) && !p.client_feedback
-      ).length,
-      underReview: clientFiltered.filter((p) => p.status === "script_approval").length,
-      revision: clientFiltered.filter(
-        (p) => p.status === "rejected" || Boolean(p.client_feedback)
-      ).length,
-    };
-  }, [posts, selectedClientId, stageId]);
-
-  // Filter posts belonging to this stage
-  const stagePosts = useMemo(() => {
+  // Client / format / search filters shared by the list and the script pill counts
+  const commonFilteredPosts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return posts.filter((p) => {
-      // Client filter
-      if (selectedClientId !== "all" && String(p.client_profile) !== String(selectedClientId)) {
-        return false;
-      }
-      // Stage status filter
-      const isStatusMatch = stageId === "published" && showArchived ? p.status === "archived" : stageMeta.statuses.includes(p.status);
-      const isFallbackRejected =
-        p.status === "rejected" &&
-        ((stageId === "scripts" && p.client_feedback?.toLowerCase().includes("script")) ||
-          (stageId === "designing" && !p.client_feedback?.toLowerCase().includes("script")));
-
-      if (!isStatusMatch && !isFallbackRejected) {
-        return false;
-      }
-
-      // Script Sub-Filter in Stage 1
-      if (stageId === "scripts" && scriptSubFilter !== "all") {
-        if (scriptSubFilter === "draft" && (!["script", "draft"].includes(p.status) || Boolean(p.client_feedback))) return false;
-        if (scriptSubFilter === "under_review" && p.status !== "script_approval") return false;
-        if (scriptSubFilter === "revision" && !(p.status === "rejected" || Boolean(p.client_feedback))) return false;
-      }
-
-      // Format filter
-      if (formatFilter !== "all" && p.post_type !== formatFilter) {
-        return false;
-      }
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      if (selectedClientId !== "all" && String(p.client_profile) !== String(selectedClientId)) return false;
+      if (formatFilter !== "all" && p.post_type !== formatFilter) return false;
+      if (q) {
         const titleMatch = (p.title || "").toLowerCase().includes(q);
         const captionMatch = (p.primary_caption || "").toLowerCase().includes(q);
         const hookMatch = (p.script_notes || "").toLowerCase().includes(q);
@@ -271,7 +363,44 @@ export default function WorkflowStageSection({
       }
       return true;
     });
-  }, [posts, stageMeta, stageId, selectedClientId, scriptSubFilter, formatFilter, searchQuery, showArchived]);
+  }, [posts, selectedClientId, formatFilter, searchQuery]);
+
+  // Sub-counts for Stage 1 Scripts filter pills
+  const scriptSubCounts = useMemo(() => {
+    const counts = Object.fromEntries(SCRIPT_FILTERS.map((f) => [f.id, 0]));
+    if (stageId !== "scripts") return counts;
+    commonFilteredPosts.forEach((p) => {
+      const bucket = getScriptBucket(p);
+      SCRIPT_FILTERS.forEach((f) => {
+        if (scriptMatchesFilter(bucket, f.id)) counts[f.id]++;
+      });
+    });
+    return counts;
+  }, [commonFilteredPosts, stageId]);
+
+  // Filter posts belonging to this stage (before the New/Redo/Revised filter)
+  const stageBasePosts = useMemo(() => {
+    if (stageId === "scripts") {
+      return commonFilteredPosts.filter((p) => scriptMatchesFilter(getScriptBucket(p), scriptSubFilter));
+    }
+    return commonFilteredPosts.filter((p) => {
+      const isStatusMatch = stageId === "published" && showArchived ? p.status === "archived" : stageMeta.statuses.includes(p.status);
+      const isFallbackRejected =
+        p.status === "rejected" && stageId === "designing" && !p.client_feedback?.toLowerCase().includes("script");
+      return isStatusMatch || isFallbackRejected;
+    });
+  }, [commonFilteredPosts, stageMeta, stageId, scriptSubFilter, showArchived]);
+
+  const workKindCounts = useMemo(() => {
+    const counts = { all: stageBasePosts.length, new: 0, redo: 0, revised: 0 };
+    if (showWorkKind) stageBasePosts.forEach((p) => counts[getWorkKind(p).kind]++);
+    return counts;
+  }, [stageBasePosts, showWorkKind]);
+
+  const stagePosts = useMemo(() => {
+    if (!showWorkKind || workFilter === "all") return stageBasePosts;
+    return stageBasePosts.filter((p) => getWorkKind(p).kind === workFilter);
+  }, [stageBasePosts, showWorkKind, workFilter]);
 
   const getActor = () => {
     let actorName = "Creative Team";
@@ -362,24 +491,36 @@ export default function WorkflowStageSection({
   };
 
   const handleRestore = async (post) => {
+    const fix = mistakeHints[String(post.id)]?.fix;
     const ok = await confirmDialog({
       title: "Restore to Scripts?",
-      message: `"${post.title || "This post"}" goes back to Stage 1 with the rejection reason attached, so the team can write a new version.`,
+      message: `"${post.title || "This post"}" goes back to Stage 1 with the rejection reason attached, so the team can write a new version.${fix ? ` A fix checklist ("${fix.title}") will be added to the post.` : ""}`,
       confirmLabel: "Restore",
     });
     if (!ok) return;
+    if (fix) {
+      try {
+        const existing = new Set((post.checklist || []).map((c) => c.task));
+        const added = fix.checklist.filter((t) => !existing.has(t)).map((task) => ({ task, done: false, source: "mistake_fix" }));
+        if (added.length) {
+          await axios.patch(`${API_BASE_URL}/social/posts/${post.id}/`, { checklist: [...(post.checklist || []), ...added] });
+        }
+      } catch (err) {
+        console.error("Could not attach fix checklist", err);
+      }
+    }
     handleTransition(post, "script", "restore", "Restored from Rejected list for a fresh script", {}, `"${post.title || "Post"}" restored to Scripts.`);
   };
 
   // Decision modal submit handlers
-  const submitRevision = ({ notes, categories, severity, requestedBy }) => {
+  const submitRevision = ({ notes, categories, severity, requestedBy, scope }) => {
     const { post, mode } = decision;
-    const extra = { reason_categories: categories, severity };
+    const extra = { reason_categories: categories, severity, revision_scope: scope };
     if (mode === "client" && requestedBy) {
       extra.actor_name = requestedBy;
       extra.actor_role = "Client";
     }
-    const target = mode === "script" ? "script" : "designing";
+    const target = mode === "script" || scope === "script" ? "script" : "designing";
     handleTransition(
       post,
       target,
@@ -640,79 +781,64 @@ export default function WorkflowStageSection({
                 <option value="text">Text</option>
               </select>
 
-              {/* Stage 1: Quick Sub-Filters for Drafts vs Under Approval */}
+              {/* Stage 1: Script library sub-filters (active work + every past script) */}
               {stageId === "scripts" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 3, background: "#f8fafc", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+                  {SCRIPT_FILTERS.map((f) => {
+                    const active = scriptSubFilter === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setScriptSubFilter(f.id)}
+                        style={{
+                          padding: "5px 11px",
+                          borderRadius: 7,
+                          border: "none",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: active ? f.color : "transparent",
+                          color: active ? "#ffffff" : "#64748b",
+                          transition: "all 0.15s ease",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {f.label} ({scriptSubCounts[f.id]})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Production & review stages: New vs Redo vs Revised */}
+              {showWorkKind && (
                 <div style={{ display: "flex", alignItems: "center", gap: 3, background: "#f8fafc", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                  <button
-                    type="button"
-                    onClick={() => setScriptSubFilter("all")}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 7,
-                      border: "none",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      background: scriptSubFilter === "all" ? "#4f46e5" : "transparent",
-                      color: scriptSubFilter === "all" ? "#ffffff" : "#64748b",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    All Scripts ({scriptSubCounts.all})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScriptSubFilter("draft")}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 7,
-                      border: "none",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      background: scriptSubFilter === "draft" ? "#4f46e5" : "transparent",
-                      color: scriptSubFilter === "draft" ? "#ffffff" : "#64748b",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    Drafts ({scriptSubCounts.drafts})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScriptSubFilter("under_review")}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 7,
-                      border: "none",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      background: scriptSubFilter === "under_review" ? "#7c3aed" : "transparent",
-                      color: scriptSubFilter === "under_review" ? "#ffffff" : "#64748b",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    Under Approval ({scriptSubCounts.underReview})
-                  </button>
-                  {scriptSubCounts.revision > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setScriptSubFilter("revision")}
-                      style={{
-                        padding: "5px 11px",
-                        borderRadius: 7,
-                        border: "none",
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        background: scriptSubFilter === "revision" ? "#dc2626" : "transparent",
-                        color: scriptSubFilter === "revision" ? "#ffffff" : "#64748b",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      Needs Revision ({scriptSubCounts.revision})
-                    </button>
-                  )}
+                  {WORK_FILTERS.map((f) => {
+                    const active = workFilter === f.id;
+                    const tone = f.id === "all" ? { color: "#4f46e5" } : WORK_KIND_STYLE[f.id];
+                    const activeBg = f.id === "all" ? "#4f46e5" : f.id === "new" ? "#059669" : tone.bar;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setWorkFilter(f.id)}
+                        style={{
+                          padding: "5px 11px",
+                          borderRadius: 7,
+                          border: "none",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: active ? activeBg : "transparent",
+                          color: active ? "#ffffff" : f.id === "all" ? "#64748b" : tone.color,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {f.label} ({workKindCounts[f.id]})
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -721,6 +847,14 @@ export default function WorkflowStageSection({
               Showing {stagePosts.length} {stageMeta.shortTitle.toLowerCase()} items
             </div>
           </div>
+
+          {stageId === "rejected" && (
+            <MistakeInsightsPanel
+              selectedClientId={selectedClientId}
+              onHints={setMistakeHints}
+              onApplied={onRefresh}
+            />
+          )}
 
           {/* 3. SECTION CARDS GRID */}
           {stagePosts.length === 0 ? (
@@ -752,10 +886,16 @@ export default function WorkflowStageSection({
                 <StageIcon size={28} />
               </div>
               <h3 style={{ margin: 0, color: "#0f172a", fontSize: "1.15rem" }}>
-                No items currently in {stageMeta.shortTitle}
+                {showWorkKind && workFilter !== "all" && stageBasePosts.length > 0
+                  ? `No ${workFilter} work in ${stageMeta.shortTitle}`
+                  : stageId === "scripts" && scriptSubFilter !== "active"
+                  ? `No scripts under "${SCRIPT_FILTERS.find((f) => f.id === scriptSubFilter)?.label}"`
+                  : `No items currently in ${stageMeta.shortTitle}`}
               </h3>
               <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem", maxWidth: 460 }}>
-                {stageId === "scripts"
+                {stageId === "scripts" && scriptSubFilter !== "active"
+                  ? "Try another filter, or clear the search / format filter."
+                  : stageId === "scripts"
                   ? "Click '+ New Script' to draft your next viral hook and content angle."
                   : stageId === "rejected"
                   ? "Nothing has been rejected outright. Content turned down by the client or team will be listed here with its reason."
@@ -780,9 +920,17 @@ export default function WorkflowStageSection({
               onUploadMedia={handleUploadMedia}
               onOpenDecision={openDecision}
               onRestore={handleRestore}
+              mistakeHints={mistakeHints}
+              showWorkKind={showWorkKind}
               uploadState={uploadState}
               onOpenScriptModal={(post) => {
                 setActiveScriptPost(post);
+                setScriptModalOpen(true);
+              }}
+              onReuseScript={(post) => {
+                // Prefill a brand-new script from an old one (no id → creates a new post)
+                const { id, client_feedback, last_revision_categories, ...rest } = post;
+                setActiveScriptPost({ ...rest, title: `${post.title || "Untitled"} (Copy)`, status: "script" });
                 setScriptModalOpen(true);
               }}
             />
@@ -1554,14 +1702,18 @@ export default function WorkflowStageSection({
           isOpen={Boolean(viewingScriptPost)}
           onClose={() => setViewingScriptPost(null)}
           post={viewingScriptPost}
-          onApprove={(p) =>
-            handleTransition(p, "designing", "advance", "Script approved, ready for visual design")
+          onApprove={
+            viewingScriptPost.status === "script_approval"
+              ? (p) => handleTransition(p, "designing", "advance", "Script approved, ready for visual design")
+              : null
           }
-          onReject={(p, reason) =>
-            handleTransition(p, "script", "reject", reason, { script_notes: p.script_notes })
+          onReject={
+            viewingScriptPost.status === "script_approval"
+              ? (p, reason) => handleTransition(p, "script", "reject", reason, { script_notes: p.script_notes })
+              : null
           }
           onEdit={
-            stageId === "scripts"
+            stageId === "scripts" && SCRIPT_EDITABLE_BUCKETS.includes(getScriptBucket(viewingScriptPost))
               ? (p) => {
                   setActiveScriptPost(p);
                   setScriptModalOpen(true);
@@ -1658,6 +1810,7 @@ function StageListingTable({
   onOpenModal,
   onNavigateStage,
   onOpenScriptModal,
+  onReuseScript,
   onOpenTimeline,
   onViewScript,
   onViewWorkDetails,
@@ -1665,6 +1818,8 @@ function StageListingTable({
   onUploadMedia,
   onOpenDecision,
   onRestore,
+  mistakeHints = {},
+  showWorkKind = false,
   uploadState,
 }) {
   return (
@@ -1703,7 +1858,11 @@ function StageListingTable({
           <tbody>
             {stagePosts.map((post) => {
               const isRejected = Boolean(post.client_feedback);
+              const scriptBucket = stageId === "scripts" ? getScriptBucket(post) : null;
+              const scriptEditable = scriptBucket ? SCRIPT_EDITABLE_BUCKETS.includes(scriptBucket) : false;
               const StageIcon = stageMeta.icon;
+              const kindStyle = showWorkKind ? WORK_KIND_STYLE[getWorkKind(post).kind] : null;
+              const rowBg = kindStyle?.rowBg || "transparent";
 
               return (
                 <tr
@@ -1711,12 +1870,13 @@ function StageListingTable({
                   style={{
                     borderBottom: "1px solid #f1f5f9",
                     transition: "background 0.12s ease",
+                    background: rowBg,
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = rowBg)}
                 >
                   {/* 1. Post & Content */}
-                  <td style={{ padding: "14px 20px", verticalAlign: "middle" }}>
+                  <td style={{ padding: "14px 20px", verticalAlign: "middle", boxShadow: kindStyle?.bar ? `inset 4px 0 0 ${kindStyle.bar}` : "none" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       {/* Thumbnail or Stage Icon */}
                       {post.media_urls?.[0] ? (
@@ -1790,6 +1950,8 @@ function StageListingTable({
                           onClick={() => {
                             if (stageId === "script_approval" && onViewScript) {
                               onViewScript(post);
+                            } else if (stageId === "scripts" && !scriptEditable && onViewScript) {
+                              onViewScript(post);
                             } else if (stageId === "scripts" && onOpenScriptModal) {
                               onOpenScriptModal(post);
                             } else if (onViewWorkDetails) {
@@ -1814,49 +1976,24 @@ function StageListingTable({
                         >
                           <span>{post.title || "Untitled Post"}</span>
                           {stageId === "scripts" ? (
-                            post.status === "script_approval" ? (
-                              <span
-                                style={{
-                                  background: "#f5f3ff",
-                                  color: "#7c3aed",
-                                  border: "1px solid #ddd6fe",
-                                  fontSize: "0.68rem",
-                                  padding: "2px 7px",
-                                  borderRadius: 8,
-                                  fontWeight: 800,
-                                }}
-                              >
-                                ● Under Approval
-                              </span>
-                            ) : isRejected ? (
-                              <span
-                                style={{
-                                  background: "#fef2f2",
-                                  color: "#dc2626",
-                                  border: "1px solid #fecaca",
-                                  fontSize: "0.68rem",
-                                  padding: "2px 7px",
-                                  borderRadius: 8,
-                                  fontWeight: 800,
-                                }}
-                              >
-                                ● Needs Revision
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  background: "#f1f5f9",
-                                  color: "#475569",
-                                  border: "1px solid #cbd5e1",
-                                  fontSize: "0.68rem",
-                                  padding: "2px 7px",
-                                  borderRadius: 8,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                ● Draft
-                              </span>
-                            )
+                            <span
+                              title={scriptBucket === "rejected" && post.rejected_from_stage ? `Rejected at ${STAGE_LABELS[post.rejected_from_stage] || post.rejected_from_stage}` : `Currently in ${STAGE_LABELS[post.status] || post.status}`}
+                              style={{
+                                background: SCRIPT_BUCKET_BADGE[scriptBucket].bg,
+                                color: SCRIPT_BUCKET_BADGE[scriptBucket].color,
+                                border: `1px solid ${SCRIPT_BUCKET_BADGE[scriptBucket].border}`,
+                                fontSize: "0.68rem",
+                                padding: "2px 7px",
+                                borderRadius: 8,
+                                fontWeight: scriptBucket === "draft" ? 700 : 800,
+                              }}
+                            >
+                              ● {SCRIPT_BUCKET_BADGE[scriptBucket].label}
+                              {scriptBucket === "production" && STAGE_LABELS[post.status] ? ` · ${STAGE_LABELS[post.status]}` : ""}
+                              {post.status === "archived" ? " · Archived" : ""}
+                            </span>
+                          ) : showWorkKind ? (
+                            <WorkKindBadge post={post} />
                           ) : isRejected ? (
                             <span
                               style={{
@@ -1887,7 +2024,7 @@ function StageListingTable({
                         </div>
 
                         {/* Revision round badge */}
-                        {(post.revision_count || 0) > 0 && stageId !== "rejected" && (
+                        {(post.revision_count || 0) > 0 && stageId !== "rejected" && !showWorkKind && (
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 4, marginRight: 6, fontSize: "0.68rem", fontWeight: 800, color: post.revision_count >= 3 ? "#b91c1c" : "#92400e", background: post.revision_count >= 3 ? "#fef2f2" : "#fffbeb", border: `1px solid ${post.revision_count >= 3 ? "#fecaca" : "#fde68a"}`, padding: "2px 7px", borderRadius: 6 }} title={`${post.revision_count} revision round(s), ${post.client_revision_count || 0} requested by client`}>
                             <RotateCcw size={11} /> Round {post.revision_count}
                             {(post.client_revision_count || 0) > 0 && <span style={{ fontWeight: 700 }}>• {post.client_revision_count} client</span>}
@@ -1914,11 +2051,16 @@ function StageListingTable({
                             <div style={{ fontSize: "0.76rem", color: "#334155", marginTop: 4, whiteSpace: "normal", lineHeight: 1.4 }}>
                               {post.rejection_reason || "No reason recorded."}
                             </div>
+                            {mistakeHints[String(post.id)]?.similar_count > 0 && (
+                              <div style={{ marginTop: 6, fontSize: "0.7rem", fontWeight: 800, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", padding: "3px 8px", borderRadius: 6, display: "inline-block" }}>
+                                Seen {mistakeHints[String(post.id)].similar_count}× before · Fix: {mistakeHints[String(post.id)].fix?.title}
+                              </div>
+                            )}
                           </div>
                         )}
 
                         {/* Revision feedback tag if looped back */}
-                        {isRejected && stageId !== "rejected" && (
+                        {isRejected && stageId !== "rejected" && (stageId !== "scripts" || scriptEditable) && (
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
@@ -2074,8 +2216,35 @@ function StageListingTable({
                         Timeline
                       </button>
 
+                      {/* Stage 1: Scripts — past scripts (approved / published / rejected) */}
+                      {stageId === "scripts" && !scriptEditable && (
+                        <>
+                          <button
+                            onClick={() => onViewScript && onViewScript(post)}
+                            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+                          >
+                            <Eye size={12} /> View Script
+                          </button>
+                          <button
+                            onClick={() => onReuseScript && onReuseScript(post)}
+                            title="Start a new script pre-filled from this one"
+                            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+                          >
+                            <Copy size={12} /> Reuse
+                          </button>
+                          {onNavigateStage && STATUS_TO_STAGE[post.status] && (
+                            <button
+                              onClick={() => onNavigateStage(STATUS_TO_STAGE[post.status])}
+                              style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: SCRIPT_BUCKET_BADGE[scriptBucket].color, color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                            >
+                              Open in {STAGE_LABELS[post.status] || "Stage"} →
+                            </button>
+                          )}
+                        </>
+                      )}
+
                       {/* Stage 1: Scripts */}
-                      {stageId === "scripts" && (
+                      {stageId === "scripts" && scriptEditable && (
                         <>
                           <button
                             onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}

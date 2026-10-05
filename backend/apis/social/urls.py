@@ -13,6 +13,8 @@ from apis.social.views import (
     SocialAIView,
     PlatformConnectionViewSet,
     CampaignPublishingViewSet,
+    MistakeInsightsView,
+    MistakeFixApplyView,
 )
 
 router = DefaultRouter()
@@ -29,6 +31,8 @@ router.register(r'ad', CampaignPublishingViewSet, basename='campaign-publishing'
 urlpatterns = [
     path('dashboard/', SocialDashboardView.as_view(), name='social-dashboard'),
     path('analytics/', SocialAnalyticsView.as_view(), name='social-analytics'),
+    path('insights/mistakes/', MistakeInsightsView.as_view(), name='social-mistake-insights'),
+    path('insights/apply-fix/', MistakeFixApplyView.as_view(), name='social-mistake-apply-fix'),
     path('ai/', SocialAIView.as_view(), name='social-ai'),
     path('review/<str:token>/', PublicClientReviewView.as_view(), name='social-public-review'),
     path('', include(router.urls)),

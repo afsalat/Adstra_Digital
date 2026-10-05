@@ -555,6 +555,34 @@ class PostApprovalHistory(models.Model):
         ordering = ['-timestamp']
 
 
+class MistakeFix(models.Model):
+    """A corrective action applied against a recurring rejection/revision reason.
+
+    Stores the baseline at apply-time so the insights engine can later measure
+    whether the mistake rate for that category actually dropped.
+    """
+    client_profile = models.ForeignKey(
+        SocialClientProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='mistake_fixes'
+    )  # null = applies to all clients
+    category = models.CharField(max_length=60)
+    title = models.CharField(max_length=200)
+    checklist_items = models.JSONField(default=list, blank=True)
+    lesson = models.TextField(blank=True)
+    baseline_count_30d = models.PositiveIntegerField(default=0)
+    applied_by = models.CharField(max_length=150, blank=True)
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+
+    def __str__(self):
+        return f'{self.category}: {self.title}'
+
+
 class SocialInboxMessage(models.Model):
     PLATFORM_CHOICES = [
         ('instagram', 'Instagram'),

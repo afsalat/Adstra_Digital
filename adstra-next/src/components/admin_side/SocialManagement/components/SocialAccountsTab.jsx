@@ -187,7 +187,7 @@ export default function SocialAccountsTab({
                 <div>
                   <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Followers / Subs</span>
                   <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
-                    {acc.followers_count?.toLocaleString()}
+                    {acc.followers_count?.toLocaleString("en-IN")}
                   </div>
                 </div>
 

@@ -71,7 +71,7 @@ export default function SocialDashboardTab({
               <Users size={20} />
             </div>
           </div>
-          <div className="kpi-value">{overview.total_followers?.toLocaleString() || 0}</div>
+          <div className="kpi-value">{overview.total_followers?.toLocaleString("en-IN") || 0}</div>
           <div className="kpi-growth up">
             <ArrowUpRight size={16} /> +12.4% vs last 30 days
           </div>
@@ -85,7 +85,7 @@ export default function SocialDashboardTab({
               <Eye size={20} />
             </div>
           </div>
-          <div className="kpi-value">{overview.total_reach?.toLocaleString() || 0}</div>
+          <div className="kpi-value">{overview.total_reach?.toLocaleString("en-IN") || 0}</div>
           <div className="kpi-growth up">
             <ArrowUpRight size={16} /> +18.2% across campaigns
           </div>
@@ -99,7 +99,7 @@ export default function SocialDashboardTab({
               <TrendingUp size={20} />
             </div>
           </div>
-          <div className="kpi-value">{overview.total_impressions?.toLocaleString() || 0}</div>
+          <div className="kpi-value">{overview.total_impressions?.toLocaleString("en-IN") || 0}</div>
           <div className="kpi-growth up">
             <ArrowUpRight size={16} /> High organic distribution
           </div>
@@ -196,7 +196,7 @@ export default function SocialDashboardTab({
                   </span>
                 </div>
                 <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0f172a" }}>
-                  {p.followers?.toLocaleString()}
+                  {p.followers?.toLocaleString("en-IN")}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 2 }}>
                   followers • {p.posts_count} posts

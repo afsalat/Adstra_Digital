@@ -205,7 +205,7 @@ export default function WorkDetailsModal({
   const handleCopyWorkBrief = () => {
     let brief = `DESIGNER WORK BRIEF\n\nProject: ${postTitle}\nClient: ${post.client_name || "Client"}\n`;
     brief += `Format: ${formatMeta.label}${format === "video" ? ` (${duration})` : ""}\nRatio: ${recommendedAspect}\n`;
-    if (post.scheduled_at) brief += `Target: ${new Date(post.scheduled_at).toLocaleString()}\n`;
+    if (post.scheduled_at) brief += `Target: ${new Date(post.scheduled_at).toLocaleString("en-IN")}\n`;
     brief += `Platforms: ${platforms.join(", ")}\n\n`;
     if (post.client_feedback) brief += `REVISION NOTES:\n${post.client_feedback}\n\n`;
     if (headline) brief += `Headline: ${headline}\n`;
@@ -349,7 +349,7 @@ export default function WorkDetailsModal({
                 {format === "video" ? ` · ${duration}` : ""}
               </span>
               {post.scheduled_at && (
-                <span title={new Date(post.scheduled_at).toLocaleString()}>
+                <span title={new Date(post.scheduled_at).toLocaleString("en-IN")}>
                   Due {fmtDate(post.scheduled_at)} <span className={due?.late ? "late" : "muted"}>({due?.text})</span>
                 </span>
               )}

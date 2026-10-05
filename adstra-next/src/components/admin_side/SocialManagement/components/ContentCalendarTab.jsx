@@ -1506,7 +1506,7 @@ export default function ContentCalendarTab({
                   </span>
                 </div>
                 <div>
-                  <strong>Scheduled:</strong> {selectedPostDetail.scheduled_at ? new Date(selectedPostDetail.scheduled_at).toLocaleString() : "Not scheduled"}
+                  <strong>Scheduled:</strong> {selectedPostDetail.scheduled_at ? new Date(selectedPostDetail.scheduled_at).toLocaleString("en-IN") : "Not scheduled"}
                 </div>
                 <div>
                   <strong>Status:</strong> {selectedPostDetail.status}

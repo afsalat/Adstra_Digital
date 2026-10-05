@@ -782,7 +782,7 @@ export default function SocialSettingsTab({
 
                         {/* Followers */}
                         <td style={{ padding: "14px 16px", fontWeight: 700, color: "#0f172a" }}>
-                          {(acc.followers_count || 0).toLocaleString()}
+                          {(acc.followers_count || 0).toLocaleString("en-IN")}
                         </td>
 
                         {/* Token & Status */}
@@ -807,7 +807,7 @@ export default function SocialSettingsTab({
 
                             {acc.token_expiry && (
                               <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                                Renews: {new Date(acc.token_expiry).toLocaleDateString()}
+                                Renews: {new Date(acc.token_expiry).toLocaleDateString("en-IN")}
                               </span>
                             )}
                           </div>

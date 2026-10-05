@@ -1222,7 +1222,7 @@ export default function MediaLibraryTab({
                       {asset.file_format || "PNG"} • {formatBytes(asset.file_size_bytes)}
                     </td>
                     <td style={{ padding: "10px 16px", fontSize: "0.78rem", color: "#64748b" }}>
-                      {asset.created_at ? new Date(asset.created_at).toLocaleDateString() : "—"}
+                      {asset.created_at ? new Date(asset.created_at).toLocaleDateString("en-IN") : "—"}
                     </td>
                     <td style={{ padding: "10px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: 5 }}>

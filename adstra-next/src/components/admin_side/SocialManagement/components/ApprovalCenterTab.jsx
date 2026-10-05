@@ -397,7 +397,7 @@ export default function ApprovalCenterTab({
                         <div style={{ display: "flex", justifyContent: "space-between", color: "#0f172a", fontWeight: 700 }}>
                           <span>{hist.action.replace("_", " ").toUpperCase()} by {hist.actor_name} ({hist.actor_role})</span>
                           <span style={{ color: "#64748b", fontWeight: 500 }}>
-                            {new Date(hist.timestamp).toLocaleString()}
+                            {new Date(hist.timestamp).toLocaleString("en-IN")}
                           </span>
                         </div>
                         {hist.notes && <div style={{ color: "#475569", marginTop: 2 }}>{hist.notes}</div>}

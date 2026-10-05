@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   FileText,
   CheckCircle2,
@@ -16,6 +17,18 @@ import {
 import WorkflowStageSection from "./WorkflowStageSection";
 import AnalyticsReportsTab from "./AnalyticsReportsTab";
 
+const SOCIAL_STAGE_IDS = [
+  "scripts",
+  "script_approval",
+  "designing",
+  "team_review",
+  "client_review",
+  "post_schedule",
+  "published",
+  "rejected",
+  "reporting",
+];
+
 export default function DedicatedSocialSection({
   posts = [],
   clients = [],
@@ -28,7 +41,23 @@ export default function DedicatedSocialSection({
   onOpenCreateWithAsset,
   onOpenAiStudio,
 }) {
-  const [socialSubTab, setSocialSubTab] = useState("scripts");
+  const searchParams = useSearchParams();
+  const [socialSubTab, setSocialSubTab] = useState(
+    () => (SOCIAL_STAGE_IDS.includes(searchParams.get("stage")) ? searchParams.get("stage") : "scripts")
+  );
+
+  // Persist active stage in the URL so a reload keeps the user on the same stage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stage") === socialSubTab) return;
+    params.set("stage", socialSubTab);
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}?${params.toString()}${window.location.hash}`
+    );
+  }, [socialSubTab]);
 
   // Stage counts for badges (1:1 with pipeline stages)
   const counts = {

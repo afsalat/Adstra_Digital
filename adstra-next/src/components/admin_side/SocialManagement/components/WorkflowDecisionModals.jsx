@@ -114,6 +114,16 @@ const REVISION_MODES = {
   },
 };
 
+// QA / client revisions can target the creative only, or the script itself.
+// A script rework goes Scripts → Approval → Designing → Team Review → Client.
+const REVISION_SCOPES = [
+  { id: "design", label: "Design only", desc: "Script is fine — fix the creative" },
+  { id: "script", label: "Script / copy rework", desc: "Rewrite & re-approve script, then redesign" },
+];
+
+const SCRIPT_SCOPE_PLACEHOLDER =
+  "What must change in the script? e.g. Hook should lead with the free-consult offer. Replace claim in line 2. The design will be redone after the new script is approved.";
+
 /* ─────────────────────────── Helpers ─────────────────────────── */
 
 const isVideo = (post, url) =>
@@ -361,12 +371,32 @@ const btn = (bg, color = "#ffffff", border = "none") => ({
 /* ─────────────────────────── Revision request ─────────────────────────── */
 
 export function RevisionRequestModal({ post, mode = "client", submitting, onClose, onSubmit, onOpenTimeline, onSwitchToReject }) {
-  const cfg = REVISION_MODES[mode] || REVISION_MODES.client;
+  const baseCfg = REVISION_MODES[mode] || REVISION_MODES.client;
+  const canPickScope = mode === "qa" || mode === "client";
+  const [scope, setScope] = useState("design");
   const [categories, setCategories] = useState([]);
   const [notes, setNotes] = useState("");
   const [severity, setSeverity] = useState("minor");
   const [requestedBy, setRequestedBy] = useState(mode === "client" ? `${post?.client_name || "Client"}` : "");
   const [touched, setTouched] = useState(false);
+
+  const scriptScope = canPickScope && scope === "script";
+  const cfg = scriptScope
+    ? {
+        ...baseCfg,
+        to: "script",
+        reasons: SCRIPT_REASONS,
+        submitLabel: "Send back to Scripts",
+        placeholder: SCRIPT_SCOPE_PLACEHOLDER,
+        subtitle: "The script is rewritten and re-approved, then the design is redone, checked by the team and sent to the client again.",
+      }
+    : baseCfg;
+
+  const changeScope = (next) => {
+    if (next === scope) return;
+    setScope(next);
+    setCategories([]); // reason lists differ per scope
+  };
 
   const round = (post?.revision_count || 0) + 1;
   const clientRound = (post?.client_revision_count || 0) + (mode === "client" ? 1 : 0);
@@ -377,7 +407,7 @@ export function RevisionRequestModal({ post, mode = "client", submitting, onClos
   const submit = () => {
     setTouched(true);
     if (!valid || submitting) return;
-    onSubmit({ notes: notes.trim(), categories, severity, requestedBy: requestedBy.trim() });
+    onSubmit({ notes: notes.trim(), categories, severity, requestedBy: requestedBy.trim(), scope: canPickScope ? scope : mode === "script" ? "script" : "design" });
   };
 
   return (
@@ -440,6 +470,48 @@ export function RevisionRequestModal({ post, mode = "client", submitting, onClos
         </div>
       )}
 
+      {canPickScope && (
+        <div>
+          <FieldLabel hint="Decides which stage the post returns to">What needs revising?</FieldLabel>
+          <div style={{ display: "flex", gap: 8 }}>
+            {REVISION_SCOPES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => changeScope(s.id)}
+                aria-pressed={scope === s.id}
+                style={{
+                  flex: 1,
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: `1.5px solid ${scope === s.id ? cfg.color : "#e2e8f0"}`,
+                  background: scope === s.id ? cfg.soft : "#ffffff",
+                  cursor: "pointer",
+                  display: "flex",
+                  gap: 9,
+                }}
+              >
+                {s.id === "script" ? (
+                  <FileText size={16} color={scope === s.id ? cfg.color : "#64748b"} style={{ flexShrink: 0, marginTop: 1 }} />
+                ) : (
+                  <RotateCcw size={16} color={scope === s.id ? cfg.color : "#64748b"} style={{ flexShrink: 0, marginTop: 1 }} />
+                )}
+                <span>
+                  <span style={{ display: "block", fontSize: "0.82rem", fontWeight: 800, color: "#0f172a" }}>{s.label}</span>
+                  <span style={{ display: "block", fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>{s.desc}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          {scriptScope && (
+            <div style={{ marginTop: 8, fontSize: "0.74rem", color: "#475569", lineHeight: 1.45 }}>
+              Path: Scripts → Approval → Designing → Team Review → Client Review. Counted as a revision, not a rejection.
+            </div>
+          )}
+        </div>
+      )}
+
       <div>
         <FieldLabel required hint="Pick all that apply — used in reports">What needs to change?</FieldLabel>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -455,7 +527,7 @@ export function RevisionRequestModal({ post, mode = "client", submitting, onClos
         <div style={{ display: "flex", gap: 8 }}>
           {[
             { id: "minor", label: "Minor tweaks", desc: "Small fixes, same concept" },
-            { id: "major", label: "Major rework", desc: "Significant redesign / re-edit" },
+            { id: "major", label: "Major rework", desc: scriptScope ? "Significant rewrite" : "Significant redesign / re-edit" },
           ].map((s) => (
             <button
               key={s.id}

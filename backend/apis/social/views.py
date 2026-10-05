@@ -313,6 +313,25 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         record_approval_action(post, 'changes_requested', actor, 'Reviewer', notes)
         return Response(SocialPostSerializer(post).data)
 
+    @staticmethod
+    def _pending_script_rework(post):
+        """Latest Team Review / Client Review → Scripts revision whose redesign hasn't happened yet.
+
+        Extra script-approval bounces in between are fine; a full rejection or a
+        later move into Designing means there is nothing pending.
+        """
+        source = (post.approval_history
+                  .filter(event_type='revision', to_stage='script',
+                          from_stage__in=['team_review', 'internal_review', 'client_review'])
+                  .order_by('-timestamp', '-id')
+                  .first())
+        if not source:
+            return None
+        later = post.approval_history.filter(timestamp__gt=source.timestamp)
+        if later.filter(to_stage='designing').exists() or later.filter(event_type='rejection').exists():
+            return None
+        return source
+
     @action(detail=True, methods=['post'])
     def transition_stage(self, request, pk=None):
         post = self.get_object()
@@ -412,6 +431,19 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             # Resubmitted or approved: clear previous loopback critique
             post.client_feedback = ''
 
+        # A script revision requested at Team Review / Client Review: once the
+        # rewritten script is re-approved, the existing creative is outdated, so
+        # Designing gets it back as redo work with the original feedback attached.
+        script_rework_source = None
+        if action_type == 'advance' and prev_status == 'script_approval' and target_stage == 'designing':
+            script_rework_source = self._pending_script_rework(post)
+            if script_rework_source:
+                who = 'client' if script_rework_source.from_stage == 'client_review' else 'team QA'
+                post.client_feedback = (
+                    f"Script was revised after {who} feedback — update the design to match the new script.\n"
+                    f"Original feedback: {script_rework_source.notes}"
+                )
+
         try:
             post.save()
         except Exception as e:
@@ -424,10 +456,10 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                 action_label = "Script Rejected (Rework Requested)"
                 actor_role = actor_role or "Content Reviewer"
             elif prev_status in ['team_review', 'internal_review']:
-                action_label = "Team QA Rejected (Rework Requested)"
+                action_label = "Team QA: Script Rework Requested" if target_stage == 'script' else "Team QA Rejected (Rework Requested)"
                 actor_role = actor_role or "QA Lead"
             elif prev_status == 'client_review':
-                action_label = "Client Requested Changes"
+                action_label = "Client Requested Script Changes" if target_stage == 'script' else "Client Requested Changes"
                 actor_role = actor_role or "Client"
             else:
                 action_label = f"Rejected: Returned to {target_stage.replace('_', ' ').title()}"
@@ -441,7 +473,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                     action_label = "Submitted for Script Approval"
                     actor_role = actor_role or "Content Creator"
             elif target_stage == 'designing':
-                action_label = "Script Approved → Moved to Designing"
+                action_label = "Revised Script Approved → Redesign Needed" if script_rework_source else "Script Approved → Moved to Designing"
                 actor_role = actor_role or "Content Reviewer"
             elif target_stage == 'team_review':
                 if prev_feedback:
@@ -1237,6 +1269,48 @@ class SocialInboxViewSet(viewsets.ModelViewSet):
             'lead': LeadSerializer(lead).data,
             'inbox_message': SocialInboxMessageSerializer(msg).data,
         })
+
+
+class MistakeInsightsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from apis.social.insights import build_mistake_insights
+        try:
+            days = max(7, min(int(request.query_params.get('days', 90)), 365))
+        except (TypeError, ValueError):
+            days = 90
+        return Response(build_mistake_insights(request.query_params.get('client_id'), days))
+
+
+class MistakeFixApplyView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from apis.social.insights import apply_fix
+        category = (request.data.get('category') or '').strip()
+        if not category:
+            return Response({'error': 'category is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            days = max(7, min(int(request.data.get('days', 90)), 365))
+        except (TypeError, ValueError):
+            days = 90
+        checklist = request.data.get('checklist')
+        if checklist is not None and not isinstance(checklist, list):
+            return Response({'error': 'checklist must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+        fix, created, updated = apply_fix(
+            category=category,
+            client_id=request.data.get('client_id'),
+            applied_by=request.data.get('applied_by') or '',
+            title=request.data.get('title'),
+            checklist=[str(i)[:200] for i in checklist] if checklist else None,
+            lesson=request.data.get('lesson') or '',
+            days=days,
+        )
+        return Response(
+            {'id': fix.id, 'created': created, 'posts_updated': updated},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
 class SocialAnalyticsView(APIView):

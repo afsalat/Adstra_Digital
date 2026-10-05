@@ -78,6 +78,23 @@ function SocialManagementInner() {
     }
   }, [searchParams]);
 
+  // Persist active tab/subtab in the URL so a reload keeps the user on the same module
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", activeMainModule);
+    if (activeMainModule === "campaigns") {
+      params.set("subtab", campaignSubTab);
+    } else {
+      params.delete("subtab");
+    }
+    if (activeMainModule !== "social") params.delete("stage");
+    const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  }, [activeMainModule, campaignSubTab]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
