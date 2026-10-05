@@ -37,6 +37,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
+import { notify } from "./SocialFeedback";
 
 export default function ScriptCreationModal({
   isOpen,
@@ -449,7 +450,7 @@ export default function ScriptCreationModal({
 
   const handleSubmit = async (targetStatus = "script") => {
     if (!title.trim() && !headline.trim() && !description.trim()) {
-      alert("Please provide at least a Title, Headline, or Description for the script.");
+      notify("Please provide at least a Title, Headline, or Description for the script.");
       return;
     }
 
@@ -613,7 +614,7 @@ export default function ScriptCreationModal({
       if (onSuccess) onSuccess(targetStatus);
       onClose();
     } catch (err) {
-      alert(err.response?.data?.error || "Error saving script. Please check all required fields.");
+      notify(err.response?.data?.error || "Error saving script. Please check all required fields.");
     } finally {
       setSubmitting(false);
     }

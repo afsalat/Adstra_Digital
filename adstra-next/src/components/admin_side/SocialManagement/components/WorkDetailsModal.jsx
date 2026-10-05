@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
+import { notify, askConfirm } from "./SocialFeedback";
 
 export default function WorkDetailsModal({
   isOpen,
@@ -227,8 +228,8 @@ export default function WorkDetailsModal({
     }
   };
 
-  const handleRemoveAttachedMedia = () => {
-    if (!confirm("Remove this media asset?")) return;
+  const handleRemoveAttachedMedia = async () => {
+    if (!await askConfirm("Remove this media asset?")) return;
     setMediaUrl("");
     if (post) {
       post.media_urls = [];
@@ -1087,7 +1088,7 @@ export default function WorkDetailsModal({
                       type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(mediaUrl);
-                        alert("Media link copied to clipboard!");
+                        notify("Media link copied to clipboard!");
                       }}
                       style={{
                         background: "#f8fafc",

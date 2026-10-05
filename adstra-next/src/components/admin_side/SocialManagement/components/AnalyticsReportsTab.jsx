@@ -32,159 +32,6 @@ import {
   Cell
 } from "recharts";
 
-// High-fidelity fallback mock posts ensuring all sections are populated
-const DEFAULT_FALLBACK_POSTS = [
-  {
-    id: "mock-1",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Crispy Kerala Banana Chips - Secret Recipe Teaser",
-    post_type: "reel",
-    platforms: ["instagram", "facebook"],
-    status: "script",
-    priority: "high",
-    primary_caption: "Why do homemade banana chips never get this golden crunch? 🍌✨ Fresh Nendran bananas meet pure hot coconut oil.",
-    script_notes: "Extreme close up of raw banana sliced straight into bubbling oil with sizzling audio.",
-    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-2",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Weekend Malabar Biryani Masala Kit Launch",
-    post_type: "carousel",
-    platforms: ["instagram", "facebook"],
-    status: "draft",
-    priority: "medium",
-    primary_caption: "Master authentic Thalassery Biryani in under 30 minutes! Hand-ground spices.",
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-3",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Grandma's Clay Jar Mango Pickle Heritage",
-    post_type: "video",
-    platforms: ["instagram", "youtube"],
-    status: "script_approval",
-    priority: "urgent",
-    primary_caption: "Sun-dried in clay bharanis for 21 days with pure gingelly oil and crushed mustard.",
-    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-4",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Behind the Scenes: Zero Adulteration Spice Milling",
-    post_type: "reel",
-    platforms: ["instagram"],
-    status: "script_approval",
-    priority: "high",
-    primary_caption: "Testing every single batch of coriander and turmeric for pure flavor without fillers.",
-    created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-5",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Festive Sweet Box Special Edition Announcement",
-    post_type: "image",
-    platforms: ["instagram", "facebook"],
-    status: "designing",
-    priority: "high",
-    primary_caption: "Sweeten your celebrations with V J Foods Premium Gift Assortment!",
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-6",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Crispy Jackfruit Chips - Seasonal Harvest Release",
-    post_type: "carousel",
-    platforms: ["instagram"],
-    status: "designing",
-    priority: "medium",
-    primary_caption: "Harvested fresh from Wayanad orchards! Salted to crunchy perfection.",
-    created_at: new Date(Date.now() - 6 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-7",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Fresh Idli & Dosa Batter Morning Routine",
-    post_type: "reel",
-    platforms: ["instagram", "facebook"],
-    status: "team_review",
-    priority: "medium",
-    primary_caption: "Fluffy idlis and golden dosas with zero prep work! Naturally fermented stone-ground batter.",
-    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-8",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Instant Roasted Coconut Chutney Powder Launch",
-    post_type: "image",
-    platforms: ["instagram", "facebook"],
-    status: "client_review",
-    priority: "urgent",
-    primary_caption: "Missing Amma's Thenga Chutney? Just add warm water and savor authentic aroma.",
-    created_at: new Date(Date.now() - 8 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-9",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "Sunday Special Chettinad Chicken Masala Guide",
-    post_type: "carousel",
-    platforms: ["instagram", "facebook"],
-    status: "scheduled",
-    priority: "high",
-    primary_caption: "Fiery, aromatic, and deeply satisfying Sunday feast recipe.",
-    scheduled_at: new Date(Date.now() + 1 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 9 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-10",
-    client_name: "V J Food Industries",
-    client_profile: 13,
-    title: "25 Years of Purity & Tradition - Thank You Kerala!",
-    post_type: "image",
-    platforms: ["instagram", "facebook", "linkedin"],
-    status: "published",
-    priority: "medium",
-    primary_caption: "From a small family kitchen to dining tables across the globe, thank you for 25 years.",
-    published_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-11",
-    client_name: "Adstra Digital",
-    client_profile: 2,
-    title: "Why 80% of Ad Spend Fails Without Conversion Tracking",
-    post_type: "reel",
-    platforms: ["instagram", "youtube"],
-    status: "published",
-    priority: "high",
-    primary_caption: "Stop burning ad budgets on vanity metrics! Masterclass by Afsal AT.",
-    published_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 11 * 86400000).toISOString(),
-  },
-  {
-    id: "mock-12",
-    client_name: "Vorion Nexus",
-    client_profile: 1,
-    title: "Scaling Enterprise AI: 5 Architectural Bottlenecks",
-    post_type: "carousel",
-    platforms: ["linkedin"],
-    status: "scheduled",
-    priority: "urgent",
-    primary_caption: "Building an AI roadmap requires disciplined data pipelines and latency optimization.",
-    scheduled_at: new Date(Date.now() + 2 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 12 * 86400000).toISOString(),
-  }
-];
-
 export default function AnalyticsReportsTab({
   selectedClientId = "all",
   clients = [],
@@ -207,14 +54,8 @@ export default function AnalyticsReportsTab({
     ? (currentClient.company_name || currentClient.name || currentClient.brand_name || `Client #${selectedClientId}`)
     : "All Client Accounts";
 
-  // Combine actual posts with fallback data to guarantee all sections have data
-  const basePosts = useMemo(() => {
-    if (Array.isArray(posts) && posts.length > 0) {
-      // If posts exist but don't cover all stages, combine or use them
-      return posts;
-    }
-    return DEFAULT_FALLBACK_POSTS;
-  }, [posts]);
+  // Real posts only — the audit must never show placeholder data
+  const basePosts = useMemo(() => (Array.isArray(posts) ? posts : []), [posts]);
 
   // Filter posts based on selected client and extra filters
   const filteredPosts = useMemo(() => {
@@ -222,19 +63,9 @@ export default function AnalyticsReportsTab({
 
     // Client filter
     if (selectedClientId !== "all") {
-      const clientMatched = result.filter(
+      result = result.filter(
         (p) => String(p.client_profile) === String(selectedClientId) || String(p.client) === String(selectedClientId)
       );
-      if (clientMatched.length > 0) {
-        result = clientMatched;
-      } else {
-        // Fallback: adapt posts with client name so section is never blank
-        result = DEFAULT_FALLBACK_POSTS.map((p) => ({
-          ...p,
-          client_name: clientDisplayName,
-          client_profile: selectedClientId,
-        }));
-      }
     }
 
     // Platform filter
@@ -271,8 +102,8 @@ export default function AnalyticsReportsTab({
       });
     }
 
-    return result.length > 0 ? result : basePosts;
-  }, [basePosts, selectedClientId, clientDisplayName, selectedPlatform, selectedPostType, selectedPriority, selectedDateRange]);
+    return result;
+  }, [basePosts, selectedClientId, selectedPlatform, selectedPostType, selectedPriority, selectedDateRange]);
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -284,7 +115,7 @@ export default function AnalyticsReportsTab({
     filteredPosts.forEach((p) => {
       if (p.status === "published") {
         published++;
-      } else if (p.status !== "archived") {
+      } else if (!["archived", "content_rejected"].includes(p.status)) {
         active++;
       }
 
@@ -313,6 +144,7 @@ export default function AnalyticsReportsTab({
       "Client Review": 0,
       Scheduled: 0,
       Published: 0,
+      Rejected: 0,
     };
 
     filteredPosts.forEach((p) => {
@@ -322,6 +154,7 @@ export default function AnalyticsReportsTab({
       else if (p.status === "client_review") counts["Client Review"]++;
       else if (["approved", "scheduled"].includes(p.status)) counts["Scheduled"]++;
       else if (p.status === "published") counts["Published"]++;
+      else if (p.status === "content_rejected") counts["Rejected"]++;
     });
 
     const total = filteredPosts.length || 1;
@@ -333,6 +166,7 @@ export default function AnalyticsReportsTab({
       { name: "Client Review", count: counts["Client Review"], percent: Math.round((counts["Client Review"] / total) * 100), color: "#ea580c", desc: "Awaiting stakeholder approval" },
       { name: "Scheduled", count: counts["Scheduled"], percent: Math.round((counts["Scheduled"] / total) * 100), color: "#0ea5e9", desc: "Approved & queue locked" },
       { name: "Published", count: counts["Published"], percent: Math.round((counts["Published"] / total) * 100), color: "#10b981", desc: "Live on target channels" },
+      { name: "Rejected", count: counts["Rejected"], percent: Math.round((counts["Rejected"] / total) * 100), color: "#dc2626", desc: "Content dropped by client / team" },
     ];
   }, [filteredPosts]);
 
@@ -342,10 +176,12 @@ export default function AnalyticsReportsTab({
     filteredPosts.forEach((p) => {
       if (p.status === "archived") return;
       const clientName = p.client_name || currentClient?.company_name || currentClient?.name || "V J Food Industries";
-      if (!map[clientName]) map[clientName] = { active: 0, published: 0, total: 0 };
+      if (!map[clientName]) map[clientName] = { active: 0, published: 0, rejected: 0, revisions: 0, total: 0 };
 
       if (p.status === "published") map[clientName].published++;
+      else if (p.status === "content_rejected") map[clientName].rejected++;
       else map[clientName].active++;
+      map[clientName].revisions += p.revision_count || 0;
 
       map[clientName].total++;
     });
@@ -359,6 +195,122 @@ export default function AnalyticsReportsTab({
     return arr.sort((a, b) => b.total - a.total).slice(0, 10);
   }, [filteredPosts, currentClient]);
 
+  // Revision loops & rejections (from post counters + structured audit events)
+  const quality = useMemo(() => {
+    const STAGE_SOURCE = { script_approval: "Script Approval", team_review: "Team QA", internal_review: "Team QA", client_review: "Client Review" };
+    // Events logged before structured tracking existed are recognised by their action text
+    const isLegacyRevision = (h) =>
+      (!h.event_type || h.event_type === "transition") && /reject|changes|rework requested/i.test(h.action || "") && !/restor/i.test(h.action || "");
+
+    let revisionLoops = 0;
+    let clientRevisions = 0;
+    const reasonCounts = {};
+    const rejectionReasonCounts = {};
+    const sourceCounts = { "Script Approval": 0, "Team QA": 0, "Client Review": 0 };
+
+    filteredPosts.forEach((p) => {
+      const history = p.approval_history || [];
+      const revEvents = history.filter((h) => h.event_type === "revision" || isLegacyRevision(h));
+      revisionLoops += Math.max(p.revision_count || 0, revEvents.length);
+      clientRevisions += Math.max(
+        p.client_revision_count || 0,
+        revEvents.filter((h) => h.from_stage === "client_review" || /client/i.test(h.action || "")).length
+      );
+      revEvents.forEach((h) => {
+        const src = STAGE_SOURCE[h.from_stage] || (/client/i.test(h.action || "") ? "Client Review" : /script/i.test(h.action || "") ? "Script Approval" : "Team QA");
+        sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+        (h.reason_categories || []).forEach((c) => (reasonCounts[c] = (reasonCounts[c] || 0) + 1));
+      });
+      history
+        .filter((h) => h.event_type === "rejection")
+        .forEach((h) => (h.reason_categories || []).forEach((c) => (rejectionReasonCounts[c] = (rejectionReasonCounts[c] || 0) + 1)));
+    });
+
+    const rejected = filteredPosts
+      .filter((p) => p.status === "content_rejected" || p.rejected_at)
+      .map((p) => ({
+        id: p.id,
+        title: p.title || (p.primary_caption || "").slice(0, 45) || "Content Asset",
+        client: p.client_name || clientDisplayName,
+        format: p.post_type,
+        by: p.rejected_by === "internal" ? "Internal" : "Client",
+        stage: p.rejected_from_stage ? p.rejected_from_stage.replace(/_/g, " ") : "—",
+        reason: p.rejection_reason || "—",
+        categories: p.rejection_categories || [],
+        outcome: p.status === "content_rejected" ? "Dropped" : "Restarted",
+        date: p.rejected_at,
+      }))
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    const delivered = filteredPosts.filter((p) => ["approved", "scheduled", "published"].includes(p.status));
+    const firstTimeRight = delivered.filter((p) => !(p.revision_count > 0)).length;
+    const toList = (obj) => Object.entries(obj).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+    return {
+      revisionLoops,
+      clientRevisions,
+      internalRevisions: Math.max(revisionLoops - clientRevisions, 0),
+      rejectedCount: rejected.length,
+      droppedCount: rejected.filter((r) => r.outcome === "Dropped").length,
+      clientRejected: rejected.filter((r) => r.by === "Client").length,
+      deliveredCount: delivered.length,
+      firstTimeRightRate: delivered.length ? Math.round((firstTimeRight / delivered.length) * 100) : null,
+      avgRevisions: delivered.length ? (delivered.reduce((a, p) => a + (p.revision_count || 0), 0) / delivered.length).toFixed(1) : "0.0",
+      reasons: toList(reasonCounts),
+      rejectionReasons: toList(rejectionReasonCounts),
+      sources: toList(sourceCounts),
+      rejected,
+      mostRevised: [...filteredPosts]
+        .filter((p) => (p.revision_count || 0) > 0)
+        .sort((a, b) => (b.revision_count || 0) - (a.revision_count || 0))
+        .slice(0, 5),
+    };
+  }, [filteredPosts, clientDisplayName]);
+
+  // Published content performance (manually tracked per-post analytics)
+  const performance = useMemo(() => {
+    const published = filteredPosts.filter((p) => p.status === "published" || p.status === "archived");
+    const rows = published.map((p) => {
+      const a = p.analytics || {};
+      const likes = Number(a.likes) || 0;
+      const comments = Number(a.comments) || 0;
+      const shares = Number(a.shares) || 0;
+      const reach = Number(a.reach) || 0;
+      const engagement = likes + comments + shares;
+      return {
+        id: p.id,
+        title: p.title || (p.primary_caption || "").slice(0, 45) || "Content Asset",
+        client: p.client_name || clientDisplayName,
+        format: p.post_type,
+        platforms: (p.platforms || []).join(", "),
+        likes,
+        comments,
+        shares,
+        reach,
+        engagement,
+        rate: reach > 0 ? ((engagement / reach) * 100).toFixed(1) : null,
+        tracked: likes + comments + shares + reach > 0,
+        publishedAt: p.published_at,
+      };
+    });
+    const tracked = rows.filter((r) => r.tracked);
+    const sum = (k) => tracked.reduce((acc, r) => acc + r[k], 0);
+    const totalReach = sum("reach");
+    const totalEngagement = sum("engagement");
+    return {
+      publishedCount: rows.length,
+      trackedCount: tracked.length,
+      totalReach,
+      totalEngagement,
+      likes: sum("likes"),
+      comments: sum("comments"),
+      shares: sum("shares"),
+      engagementRate: totalReach > 0 ? ((totalEngagement / totalReach) * 100).toFixed(1) : null,
+      top: [...tracked].sort((a, b) => b.engagement - a.engagement).slice(0, 8),
+      untracked: rows.filter((r) => !r.tracked).length,
+    };
+  }, [filteredPosts, clientDisplayName]);
+
   // Operational Diagnosis Insight
   const healthDiagnosis = useMemo(() => {
     if (kpis.revisions > 0) {
@@ -368,6 +320,15 @@ export default function AnalyticsReportsTab({
         bg: "#fef2f2",
         border: "#fecaca",
         message: `${kpis.revisions} content item(s) require creative revision or feedback response to prevent delivery loopbacks.`,
+      };
+    }
+    if (quality.deliveredCount >= 3 && quality.firstTimeRightRate !== null && quality.firstTimeRightRate < 50) {
+      return {
+        status: "High Revision Rate",
+        color: "#ea580c",
+        bg: "#fff7ed",
+        border: "#fed7aa",
+        message: `Only ${quality.firstTimeRightRate}% of delivered posts were approved without revisions (avg ${quality.avgRevisions} rounds). Top cause: ${quality.reasons[0]?.name || "uncategorised feedback"}.`,
       };
     }
     if (kpis.pendingApproval > 1) {
@@ -386,10 +347,11 @@ export default function AnalyticsReportsTab({
       border: "#c7d2fe",
       message: "Healthy operational throughput. Content items are advancing steadily across creative, review, and scheduling milestones.",
     };
-  }, [kpis]);
+  }, [kpis, quality]);
 
   // Export to Excel (.xls)
   const handleExportExcel = () => {
+    const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const reportDate = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -467,6 +429,67 @@ export default function AnalyticsReportsTab({
           <td colspan="1" class="data-cell cell-bold" style="text-align: center;">${c.total}</td>
           <td colspan="1" class="data-cell" style="text-align: center;">${c.rate}%</td>
         </tr>`).join('')}
+        <tr><td colspan="6"></td></tr>
+
+        <tr><th colspan="6" class="section-header">4. REVISION LOOPS & REJECTIONS</th></tr>
+        <tr class="col-header">
+          <th colspan="2">Revision Loops (Client / Internal)</th>
+          <th colspan="1">First-Time Right</th>
+          <th colspan="1">Avg Rounds / Post</th>
+          <th colspan="1">Rejected Content</th>
+          <th colspan="1">Rejected by Client</th>
+        </tr>
+        <tr>
+          <td colspan="2" class="data-cell cell-bold" style="text-align: center;">${quality.revisionLoops} (${quality.clientRevisions} / ${quality.internalRevisions})</td>
+          <td colspan="1" class="data-cell" style="text-align: center;">${quality.firstTimeRightRate === null ? "-" : quality.firstTimeRightRate + "%"}</td>
+          <td colspan="1" class="data-cell" style="text-align: center;">${quality.avgRevisions}</td>
+          <td colspan="1" class="data-cell" style="text-align: center; color: #dc2626;">${quality.rejectedCount}</td>
+          <td colspan="1" class="data-cell" style="text-align: center;">${quality.clientRejected}</td>
+        </tr>
+        <tr class="col-header"><th colspan="4">Revision Reason</th><th colspan="2">Occurrences</th></tr>
+        ${quality.reasons.map(r => `<tr><td colspan="4" class="data-cell">${esc(r.name)}</td><td colspan="2" class="data-cell cell-bold" style="text-align: center;">${r.count}</td></tr>`).join('') || '<tr><td colspan="6" class="data-cell">No categorised revision feedback.</td></tr>'}
+        <tr class="col-header">
+          <th colspan="1">Date</th>
+          <th colspan="1">Client</th>
+          <th colspan="1">Content</th>
+          <th colspan="1">Rejected By / Stage</th>
+          <th colspan="1">Reason</th>
+          <th colspan="1">Outcome</th>
+        </tr>
+        ${quality.rejected.map(r => `
+        <tr>
+          <td class="data-cell">${r.date ? new Date(r.date).toLocaleDateString("en-US") : "-"}</td>
+          <td class="data-cell cell-bold">${esc(r.client)}</td>
+          <td class="data-cell">${esc(r.title)} (${esc(r.format || "")})</td>
+          <td class="data-cell">${r.by} @ ${esc(r.stage)}</td>
+          <td class="data-cell">${esc(r.categories.join(", "))}${r.categories.length ? " — " : ""}${esc(r.reason)}</td>
+          <td class="data-cell cell-bold">${r.outcome}</td>
+        </tr>`).join('') || '<tr><td colspan="6" class="data-cell">No content rejected entirely.</td></tr>'}
+        <tr><td colspan="6"></td></tr>
+
+        <tr><th colspan="6" class="section-header">5. PUBLISHED CONTENT PERFORMANCE</th></tr>
+        <tr class="col-header">
+          <th colspan="2">Content</th>
+          <th colspan="1">Reach</th>
+          <th colspan="1">Likes</th>
+          <th colspan="1">Comments + Shares</th>
+          <th colspan="1">Engagement Rate</th>
+        </tr>
+        ${performance.top.map(r => `
+        <tr>
+          <td colspan="2" class="data-cell cell-bold">${esc(r.title)} — ${esc(r.client)}</td>
+          <td class="data-cell" style="text-align: center;">${r.reach}</td>
+          <td class="data-cell" style="text-align: center;">${r.likes}</td>
+          <td class="data-cell" style="text-align: center;">${r.comments + r.shares}</td>
+          <td class="data-cell" style="text-align: center;">${r.rate === null ? "-" : r.rate + "%"}</td>
+        </tr>`).join('') || '<tr><td colspan="6" class="data-cell">No post analytics recorded.</td></tr>'}
+        <tr>
+          <td colspan="2" class="data-cell cell-bold">TOTAL (${performance.trackedCount} tracked posts)</td>
+          <td class="data-cell cell-bold" style="text-align: center;">${performance.totalReach}</td>
+          <td class="data-cell cell-bold" style="text-align: center;">${performance.likes}</td>
+          <td class="data-cell cell-bold" style="text-align: center;">${performance.comments + performance.shares}</td>
+          <td class="data-cell cell-bold" style="text-align: center;">${performance.engagementRate === null ? "-" : performance.engagementRate + "%"}</td>
+        </tr>
       </table>
     </body>
     </html>
@@ -1145,6 +1168,8 @@ export default function AnalyticsReportsTab({
                 <th style={{ textAlign: "left", padding: "8px 10px", color: "#334155", fontWeight: 800 }}>Client / Brand Account</th>
                 <th style={{ textAlign: "center", padding: "8px 10px", color: "#334155", fontWeight: 800 }}>In Production</th>
                 <th style={{ textAlign: "center", padding: "8px 10px", color: "#334155", fontWeight: 800 }}>Published & Live</th>
+                <th style={{ textAlign: "center", padding: "8px 10px", color: "#334155", fontWeight: 800 }}>Revisions</th>
+                <th style={{ textAlign: "center", padding: "8px 10px", color: "#334155", fontWeight: 800 }}>Rejected</th>
                 <th style={{ textAlign: "center", padding: "8px 10px", color: "#334155", fontWeight: 800 }}>Total Posts</th>
                 <th style={{ textAlign: "right", padding: "8px 10px", color: "#334155", fontWeight: 800 }}>Delivery Rate</th>
               </tr>
@@ -1156,6 +1181,8 @@ export default function AnalyticsReportsTab({
                   <td style={{ padding: "8px 10px", fontWeight: 800, color: "#0f172a" }}>{client.name}</td>
                   <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, color: "#4f46e5" }}>{client.active}</td>
                   <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, color: "#059669" }}>{client.published}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, color: "#ea580c" }}>{client.revisions}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, color: client.rejected ? "#dc2626" : "#94a3b8" }}>{client.rejected}</td>
                   <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 900, color: "#0f172a" }}>{client.total}</td>
                   <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 800, color: client.rate >= 50 ? "#059669" : "#0f172a" }}>
                     {client.rate}%
@@ -1241,6 +1268,240 @@ export default function AnalyticsReportsTab({
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* SECTION 4: REVISION LOOPS & REJECTION AUDIT */}
+        <div className="print-break-inside-avoid" style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, borderBottom: "1px solid #e2e8f0", paddingBottom: 6 }}>
+            <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+              4. Revision Loops & Rejection Audit
+            </h4>
+            <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Script → QA → Client feedback cycles</span>
+          </div>
+
+          <div className="report-kpi-matrix" style={{ marginBottom: 14 }}>
+            <div style={{ border: "1.5px solid #fed7aa", borderRadius: 10, padding: "10px 12px", background: "#fffbf5" }}>
+              <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#c2410c", textTransform: "uppercase" }}>Revision Loops</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#ea580c", margin: "2px 0" }}>{quality.revisionLoops}</div>
+              <div style={{ fontSize: "0.68rem", color: "#9a3412" }}>
+                {quality.clientRevisions} client • {quality.internalRevisions} internal
+              </div>
+            </div>
+            <div style={{ border: "1.5px solid #a7f3d0", borderRadius: 10, padding: "10px 12px", background: "#f6fffb" }}>
+              <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#047857", textTransform: "uppercase" }}>First-Time Right</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#059669", margin: "2px 0" }}>
+                {quality.firstTimeRightRate === null ? "—" : `${quality.firstTimeRightRate}%`}
+              </div>
+              <div style={{ fontSize: "0.68rem", color: "#047857" }}>of {quality.deliveredCount} approved / published posts</div>
+            </div>
+            <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "10px 12px", background: "#ffffff" }}>
+              <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#475569", textTransform: "uppercase" }}>Avg Rounds / Post</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#0f172a", margin: "2px 0" }}>{quality.avgRevisions}</div>
+              <div style={{ fontSize: "0.68rem", color: "#64748b" }}>before approval</div>
+            </div>
+            <div style={{ border: "1.5px solid #fecaca", borderRadius: 10, padding: "10px 12px", background: "#fffafa" }}>
+              <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#b91c1c", textTransform: "uppercase" }}>Rejected Content</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#dc2626", margin: "2px 0" }}>{quality.rejectedCount}</div>
+              <div style={{ fontSize: "0.68rem", color: "#b91c1c" }}>
+                {quality.clientRejected} by client • {quality.droppedCount} dropped
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14, marginBottom: 14 }}>
+            {/* Where loops originate */}
+            <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#334155", textTransform: "uppercase", marginBottom: 8 }}>Where loops originate</div>
+              {quality.sources.every((s) => s.count === 0) ? (
+                <div style={{ fontSize: "0.76rem", color: "#94a3b8" }}>No revision loops recorded.</div>
+              ) : (
+                quality.sources.map((s) => {
+                  const max = Math.max(...quality.sources.map((x) => x.count), 1);
+                  return (
+                    <div key={s.name} style={{ marginBottom: 7 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", fontWeight: 700, color: "#334155" }}>
+                        <span>{s.name}</span>
+                        <span>{s.count}</span>
+                      </div>
+                      <div style={{ height: 7, background: "#f1f5f9", borderRadius: 4, overflow: "hidden", marginTop: 3 }}>
+                        <div style={{ width: `${(s.count / max) * 100}%`, height: "100%", background: s.name === "Client Review" ? "#ea580c" : s.name === "Team QA" ? "#f59e0b" : "#8b5cf6" }} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Top revision reasons */}
+            <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#334155", textTransform: "uppercase", marginBottom: 8 }}>Top revision reasons</div>
+              {quality.reasons.length === 0 ? (
+                <div style={{ fontSize: "0.76rem", color: "#94a3b8" }}>No categorised feedback yet. Reasons appear here once revisions are logged through the Revisions popup.</div>
+              ) : (
+                quality.reasons.slice(0, 6).map((r) => (
+                  <div key={r.name} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", padding: "4px 0", borderBottom: "1px dashed #e2e8f0" }}>
+                    <span style={{ color: "#0f172a", fontWeight: 600 }}>{r.name}</span>
+                    <span style={{ fontWeight: 800, color: "#ea580c" }}>{r.count}</span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Rejection reasons */}
+            <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#334155", textTransform: "uppercase", marginBottom: 8 }}>Rejection reasons</div>
+              {quality.rejectionReasons.length === 0 ? (
+                <div style={{ fontSize: "0.76rem", color: "#94a3b8" }}>No content rejected outright.</div>
+              ) : (
+                quality.rejectionReasons.slice(0, 6).map((r) => (
+                  <div key={r.name} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", padding: "4px 0", borderBottom: "1px dashed #e2e8f0" }}>
+                    <span style={{ color: "#0f172a", fontWeight: 600 }}>{r.name}</span>
+                    <span style={{ fontWeight: 800, color: "#dc2626" }}>{r.count}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Rejected content log */}
+          <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#b91c1c", textTransform: "uppercase", margin: "4px 0 6px" }}>Rejected content log</div>
+          {quality.rejected.length === 0 ? (
+            <div style={{ fontSize: "0.76rem", color: "#94a3b8", padding: "8px 0 12px" }}>No scripts, images or videos were rejected entirely in this scope.</div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.74rem", marginBottom: 14 }}>
+              <thead>
+                <tr style={{ background: "#fef2f2", borderBottom: "1.5px solid #fecaca" }}>
+                  <th style={{ textAlign: "left", padding: "7px 8px", color: "#7f1d1d", fontWeight: 800 }}>Date</th>
+                  <th style={{ textAlign: "left", padding: "7px 8px", color: "#7f1d1d", fontWeight: 800 }}>Client</th>
+                  <th style={{ textAlign: "left", padding: "7px 8px", color: "#7f1d1d", fontWeight: 800 }}>Content</th>
+                  <th style={{ textAlign: "center", padding: "7px 8px", color: "#7f1d1d", fontWeight: 800 }}>By</th>
+                  <th style={{ textAlign: "left", padding: "7px 8px", color: "#7f1d1d", fontWeight: 800 }}>Reason</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", color: "#7f1d1d", fontWeight: 800 }}>Outcome</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quality.rejected.slice(0, 15).map((r) => (
+                  <tr key={r.id} style={{ borderBottom: "1px solid #fee2e2", verticalAlign: "top" }}>
+                    <td style={{ padding: "7px 8px", color: "#64748b", whiteSpace: "nowrap" }}>
+                      {r.date ? new Date(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                    </td>
+                    <td style={{ padding: "7px 8px", fontWeight: 700, color: "#0f172a" }}>{r.client}</td>
+                    <td style={{ padding: "7px 8px", color: "#334155" }}>
+                      <div style={{ fontWeight: 700 }}>{r.title}</div>
+                      <div style={{ fontSize: "0.66rem", color: "#94a3b8", textTransform: "capitalize" }}>
+                        {r.format} • at {r.stage}
+                      </div>
+                    </td>
+                    <td style={{ padding: "7px 8px", textAlign: "center", fontWeight: 700, color: r.by === "Client" ? "#b91c1c" : "#475569" }}>{r.by}</td>
+                    <td style={{ padding: "7px 8px", color: "#334155", maxWidth: 260 }}>
+                      {r.categories.length > 0 && <div style={{ fontWeight: 700, color: "#b91c1c", marginBottom: 2 }}>{r.categories.join(", ")}</div>}
+                      <div>{r.reason}</div>
+                    </td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 800, color: r.outcome === "Dropped" ? "#dc2626" : "#4f46e5" }}>{r.outcome}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* Most revised posts */}
+          {quality.mostRevised.length > 0 && (
+            <>
+              <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#c2410c", textTransform: "uppercase", margin: "4px 0 6px" }}>Most revised content</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.74rem" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #cbd5e1" }}>
+                    <th style={{ textAlign: "left", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Content</th>
+                    <th style={{ textAlign: "left", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Client</th>
+                    <th style={{ textAlign: "center", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Rounds</th>
+                    <th style={{ textAlign: "center", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>From Client</th>
+                    <th style={{ textAlign: "left", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Last feedback</th>
+                    <th style={{ textAlign: "right", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Stage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quality.mostRevised.map((p) => (
+                    <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "7px 8px", fontWeight: 700, color: "#0f172a" }}>{p.title || "Content Asset"}</td>
+                      <td style={{ padding: "7px 8px", color: "#334155" }}>{p.client_name || clientDisplayName}</td>
+                      <td style={{ padding: "7px 8px", textAlign: "center", fontWeight: 900, color: p.revision_count >= 3 ? "#dc2626" : "#ea580c" }}>{p.revision_count}</td>
+                      <td style={{ padding: "7px 8px", textAlign: "center", fontWeight: 700 }}>{p.client_revision_count || 0}</td>
+                      <td style={{ padding: "7px 8px", color: "#64748b" }}>{(p.last_revision_categories || []).join(", ") || "—"}</td>
+                      <td style={{ padding: "7px 8px", textAlign: "right", textTransform: "capitalize", color: "#334155" }}>{(p.status || "").replace(/_/g, " ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+
+        {/* SECTION 5: PUBLISHED CONTENT PERFORMANCE */}
+        <div className="print-break-inside-avoid" style={{ marginBottom: 26 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, borderBottom: "1px solid #e2e8f0", paddingBottom: 6 }}>
+            <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+              5. Published Content Performance
+            </h4>
+            <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+              {performance.trackedCount} of {performance.publishedCount} posts tracked
+            </span>
+          </div>
+
+          <div className="report-kpi-matrix" style={{ marginBottom: 12 }}>
+            {[
+              { label: "Published", value: performance.publishedCount, sub: "posts live", color: "#059669" },
+              { label: "Total Reach", value: performance.totalReach.toLocaleString(), sub: "accounts reached", color: "#0284c7" },
+              { label: "Engagements", value: performance.totalEngagement.toLocaleString(), sub: `${performance.likes.toLocaleString()} likes • ${performance.comments.toLocaleString()} comments • ${performance.shares.toLocaleString()} shares`, color: "#7c3aed" },
+              { label: "Engagement Rate", value: performance.engagementRate === null ? "—" : `${performance.engagementRate}%`, sub: "engagements ÷ reach", color: "#ea580c" },
+            ].map((k) => (
+              <div key={k.label} style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", background: "#ffffff" }}>
+                <div style={{ fontSize: "0.66rem", fontWeight: 800, color: "#475569", textTransform: "uppercase" }}>{k.label}</div>
+                <div style={{ fontSize: "1.45rem", fontWeight: 900, color: k.color, margin: "2px 0" }}>{k.value}</div>
+                <div style={{ fontSize: "0.66rem", color: "#64748b" }}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {performance.top.length === 0 ? (
+            <div style={{ fontSize: "0.78rem", color: "#64748b", padding: "10px 12px", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 8 }}>
+              No post analytics entered yet. Open <strong>Published / Posted → Analytics</strong> on a live post to record likes, comments, shares and reach.
+            </div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.74rem" }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #cbd5e1" }}>
+                  <th style={{ textAlign: "left", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Top Content</th>
+                  <th style={{ textAlign: "left", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Channels</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Reach</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Likes</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Comments</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Shares</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", color: "#334155", fontWeight: 800 }}>Eng. Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {performance.top.map((r) => (
+                  <tr key={r.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <td style={{ padding: "7px 8px" }}>
+                      <div style={{ fontWeight: 700, color: "#0f172a" }}>{r.title}</div>
+                      <div style={{ fontSize: "0.66rem", color: "#94a3b8" }}>{r.client}</div>
+                    </td>
+                    <td style={{ padding: "7px 8px", color: "#64748b", textTransform: "capitalize" }}>{r.platforms || "—"}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 700 }}>{r.reach.toLocaleString()}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.likes.toLocaleString()}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.comments.toLocaleString()}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right" }}>{r.shares.toLocaleString()}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: 800, color: "#ea580c" }}>{r.rate === null ? "—" : `${r.rate}%`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {performance.untracked > 0 && performance.top.length > 0 && (
+            <div className="no-print" style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 6 }}>
+              {performance.untracked} published post(s) have no analytics entered yet.
+            </div>
+          )}
         </div>
 
         {/* OFFICIAL FOOTER / SIGN-OFF */}

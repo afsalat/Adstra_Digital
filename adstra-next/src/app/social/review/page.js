@@ -15,6 +15,9 @@ const resolveMediaUrl = (url) => {
   return `${cleanBase}${cleanPath}`;
 };
 
+const CHANGE_REASONS = ["Text / caption", "Design / colors", "Image or video", "Logo / contact details", "Product / offer details", "Music / audio", "Other"];
+const REJECT_REASONS = ["Concept not relevant", "Off-brand / wrong tone", "Plans changed", "Inaccurate information", "Quality not acceptable", "Other"];
+
 const isVideoMedia = (url, postType) => {
   if (postType === "reel" || postType === "video") return true;
   if (!url || typeof url !== "string") return false;
@@ -40,6 +43,9 @@ function ReviewContent() {
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [actionDone, setActionDone] = useState(null); // 'approved' | 'changes_requested'
+  const [decisionMode, setDecisionMode] = useState(null); // null | 'changes' | 'reject'
+  const [reasonCategories, setReasonCategories] = useState([]);
+  const [formError, setFormError] = useState("");
   const [activeMediaIdx, setActiveMediaIdx] = useState(0);
   const [mediaError, setMediaError] = useState(false);
 
@@ -61,13 +67,23 @@ function ReviewContent() {
       .finally(() => setLoading(false));
   }, [token]);
 
+  const toggleReason = (r) =>
+    setReasonCategories((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
+
+  const openDecision = (mode) => {
+    setDecisionMode(mode);
+    setReasonCategories([]);
+    setFormError("");
+  };
+
   const handleAction = async (actionType) => {
+    setFormError("");
     if (!reviewerName.trim()) {
-      alert("Please enter your name or company designation.");
+      setFormError("Please enter your name so the team knows who reviewed this.");
       return;
     }
-    if (actionType === "request_changes" && !feedback.trim()) {
-      alert("Please enter revision details or requested changes.");
+    if (actionType !== "approve" && !feedback.trim()) {
+      setFormError(actionType === "reject" ? "Please tell us why this content doesn't work for you." : "Please describe the changes you need.");
       return;
     }
 
@@ -77,10 +93,11 @@ function ReviewContent() {
         action: actionType,
         reviewer_name: reviewerName,
         notes: feedback,
+        reason_categories: actionType === "approve" ? [] : reasonCategories,
       });
       setActionDone(res.data.status);
     } catch (err) {
-      alert(err.response?.data?.error || "Error processing your response. Please try again.");
+      setFormError(err.response?.data?.error || "Error processing your response. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -143,15 +160,17 @@ function ReviewContent() {
 
         {/* Success Banner */}
         {actionDone && (
-          <div style={{ background: actionDone === "approved" ? "#ecfdf5" : "#fffbeb", border: `1px solid ${actionDone === "approved" ? "#a7f3d0" : "#fde68a"}`, borderRadius: 16, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
-            <CheckCircle2 size={28} color={actionDone === "approved" ? "#10b981" : "#f59e0b"} />
+          <div style={{ background: actionDone === "approved" ? "#ecfdf5" : actionDone === "rejected" ? "#fef2f2" : "#fffbeb", border: `1px solid ${actionDone === "approved" ? "#a7f3d0" : actionDone === "rejected" ? "#fecaca" : "#fde68a"}`, borderRadius: 16, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
+            <CheckCircle2 size={28} color={actionDone === "approved" ? "#10b981" : actionDone === "rejected" ? "#ef4444" : "#f59e0b"} />
             <div>
-              <h4 style={{ margin: 0, color: actionDone === "approved" ? "#065f46" : "#92400e", fontSize: "1.05rem", fontWeight: 700 }}>
-                {actionDone === "approved" ? "Post Approved Successfully!" : "Revision Feedback Submitted!"}
+              <h4 style={{ margin: 0, color: actionDone === "approved" ? "#065f46" : actionDone === "rejected" ? "#991b1b" : "#92400e", fontSize: "1.05rem", fontWeight: 700 }}>
+                {actionDone === "approved" ? "Post Approved Successfully!" : actionDone === "rejected" ? "Decision Recorded" : "Revision Feedback Submitted!"}
               </h4>
-              <p style={{ margin: "4px 0 0", color: actionDone === "approved" ? "#047857" : "#b45309", fontSize: "0.875rem" }}>
+              <p style={{ margin: "4px 0 0", color: actionDone === "approved" ? "#047857" : actionDone === "rejected" ? "#b91c1c" : "#b45309", fontSize: "0.875rem" }}>
                 {actionDone === "approved"
                   ? "Thank you! Your content is now scheduled and locked for publishing across your social platforms."
+                  : actionDone === "rejected"
+                  ? "Thanks for being clear. This content has been withdrawn and the team will come back with a new concept."
                   : "Thank you for the notes. The Adstra Digital creative team has been notified and will make the requested adjustments."}
               </p>
             </div>
@@ -337,8 +356,16 @@ function ReviewContent() {
               </div>
             )}
 
+            {/* Already reviewed */}
+            {!actionDone && post.status !== "client_review" && (
+              <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 16, fontSize: "0.88rem", color: "#475569", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <AlertCircle size={18} color="#64748b" style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>This post is not awaiting your review right now. If you need further changes, please contact your Adstra Digital account manager.</span>
+              </div>
+            )}
+
             {/* Client Action Box */}
-            {!actionDone && (
+            {!actionDone && post.status === "client_review" && (
               <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 16 }}>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
@@ -348,40 +375,113 @@ function ReviewContent() {
                     type="text"
                     value={reviewerName}
                     onChange={(e) => setReviewerName(e.target.value)}
-                    placeholder="e.g. Alex (microsoft Marketing)"
-                    style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: "0.88rem", outline: "none" }}
+                    placeholder="e.g. Alex (Marketing Head)"
+                    style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: "0.88rem", outline: "none", boxSizing: "border-box" }}
                   />
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
-                    Comments / Feedback (Optional for approval, required for revisions)
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="Add any copy tweaks, mentions, or changes needed..."
-                    style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: "0.88rem", outline: "none", resize: "none" }}
-                  />
-                </div>
+                {decisionMode && (
+                  <div style={{ marginBottom: 14, padding: 14, borderRadius: 12, background: decisionMode === "reject" ? "#fef2f2" : "#fffbeb", border: `1px solid ${decisionMode === "reject" ? "#fecaca" : "#fde68a"}` }}>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: decisionMode === "reject" ? "#991b1b" : "#92400e", marginBottom: 8 }}>
+                      {decisionMode === "reject" ? "Why doesn't this content work?" : "What should we change?"}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                      {(decisionMode === "reject" ? REJECT_REASONS : CHANGE_REASONS).map((r) => {
+                        const active = reasonCategories.includes(r);
+                        const color = decisionMode === "reject" ? "#dc2626" : "#d97706";
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => toggleReason(r)}
+                            aria-pressed={active}
+                            style={{ padding: "6px 11px", borderRadius: 999, border: `1px solid ${active ? color : "#e2e8f0"}`, background: active ? color : "#ffffff", color: active ? "#ffffff" : "#334155", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}
+                          >
+                            {r}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      placeholder={decisionMode === "reject" ? "Tell us what's wrong with the idea so the next concept fits better..." : "e.g. Change the offer to 20% off, use our new logo, swap slide 2 photo..."}
+                      style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: "0.88rem", outline: "none", resize: "vertical", boxSizing: "border-box", background: "#ffffff" }}
+                      autoFocus
+                    />
+                  </div>
+                )}
 
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button
-                    onClick={() => handleAction("approve")}
-                    disabled={submitting}
-                    style={{ flex: 1, padding: "12px", borderRadius: 10, background: "#10b981", color: "#fff", border: "none", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 12px rgba(16,185,129,0.2)" }}
-                  >
-                    <Check size={18} /> Approve Post
-                  </button>
-                  <button
-                    onClick={() => handleAction("request_changes")}
-                    disabled={submitting}
-                    style={{ flex: 1, padding: "12px", borderRadius: 10, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-                  >
-                    <X size={18} /> Request Changes
-                  </button>
-                </div>
+                {!decisionMode && (
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
+                      Comments (optional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      placeholder="Anything to note with your approval..."
+                      style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: "0.88rem", outline: "none", resize: "none", boxSizing: "border-box" }}
+                    />
+                  </div>
+                )}
+
+                {formError && (
+                  <div role="alert" style={{ marginBottom: 12, padding: "9px 12px", borderRadius: 10, background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", fontSize: "0.82rem", fontWeight: 600, display: "flex", gap: 8, alignItems: "center" }}>
+                    <AlertCircle size={15} /> {formError}
+                  </div>
+                )}
+
+                {!decisionMode ? (
+                  <>
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => handleAction("approve")}
+                        disabled={submitting}
+                        style={{ flex: "1 1 160px", padding: "12px", borderRadius: 10, background: "#10b981", color: "#fff", border: "none", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 12px rgba(16,185,129,0.2)" }}
+                      >
+                        <Check size={18} /> {submitting ? "Submitting..." : "Approve Post"}
+                      </button>
+                      <button
+                        onClick={() => openDecision("changes")}
+                        disabled={submitting}
+                        style={{ flex: "1 1 160px", padding: "12px", borderRadius: 10, background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                      >
+                        <Sparkles size={18} /> Request Changes
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openDecision("reject")}
+                      style={{ marginTop: 12, background: "transparent", border: "none", color: "#b91c1c", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, padding: 0 }}
+                    >
+                      <X size={15} /> This content doesn't work for us — reject it
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDecisionMode(null);
+                        setFormError("");
+                      }}
+                      disabled={submitting}
+                      style={{ flex: "0 0 auto", padding: "12px 18px", borderRadius: 10, background: "#ffffff", color: "#334155", border: "1px solid #cbd5e1", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => handleAction(decisionMode === "reject" ? "reject" : "request_changes")}
+                      disabled={submitting}
+                      style={{ flex: 1, padding: "12px", borderRadius: 10, background: decisionMode === "reject" ? "#dc2626" : "#d97706", color: "#fff", border: "none", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                    >
+                      <Send size={16} /> {submitting ? "Sending..." : decisionMode === "reject" ? "Reject Content" : "Send Change Request"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

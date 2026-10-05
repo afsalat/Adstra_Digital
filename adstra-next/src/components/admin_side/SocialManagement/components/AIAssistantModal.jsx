@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import { Sparkles, X, Copy, Check, Wand2, Clock, Globe2, Layers } from "lucide-react";
+import { notify } from "./SocialFeedback";
 
 export default function AIAssistantModal({ isOpen, onClose, onApplyContent }) {
   const [prompt, setPrompt] = useState("");
@@ -19,7 +20,7 @@ export default function AIAssistantModal({ isOpen, onClose, onApplyContent }) {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
-      alert("Please enter a campaign topic or content prompt.");
+      notify("Please enter a campaign topic or content prompt.");
       return;
     }
 
@@ -33,7 +34,7 @@ export default function AIAssistantModal({ isOpen, onClose, onApplyContent }) {
       });
       setResult(res.data);
     } catch (err) {
-      alert("Failed to generate AI content. Please try again.");
+      notify("Failed to generate AI content. Please try again.");
     } finally {
       setLoading(false);
     }

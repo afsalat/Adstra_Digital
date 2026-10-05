@@ -34,6 +34,7 @@ import SocialSettingsTab from "./components/SocialSettingsTab";
 import CreatePostModal from "./components/CreatePostModal";
 import AIAssistantModal from "./components/AIAssistantModal";
 import ClientCompanySearchSelect from "./components/ClientCompanySearchSelect";
+import { SocialFeedbackHost } from "./components/SocialFeedback";
 
 function SocialManagementInner() {
   const router = useRouter();
@@ -449,6 +450,7 @@ function SocialManagementInner() {
         />
       )}
 
+      <SocialFeedbackHost />
     </div>
   );
 }

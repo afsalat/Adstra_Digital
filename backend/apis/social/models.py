@@ -432,6 +432,7 @@ class SocialPost(models.Model):
         ('approved', 'Approved / Post Schedule'),
         ('published', 'Published / Posted'),
         ('archived', 'Archived'),
+        ('content_rejected', 'Rejected / Dropped'),
         # Backward compatibility aliases
         ('draft', 'Draft / Script'),
         ('internal_review', 'Team Review'),
@@ -499,6 +500,16 @@ class SocialPost(models.Model):
     script_data = models.JSONField(default=dict, blank=True)
     client_approval_token = models.CharField(max_length=64, blank=True, db_index=True)
     client_feedback = models.TextField(blank=True)
+    # Revision loop tracking (incremented every time content is sent back for rework)
+    revision_count = models.PositiveIntegerField(default=0)
+    client_revision_count = models.PositiveIntegerField(default=0)
+    last_revision_categories = models.JSONField(default=list, blank=True)
+    # Full rejection (content dropped entirely or restarted from scratch)
+    rejection_reason = models.TextField(blank=True)
+    rejection_categories = models.JSONField(default=list, blank=True)
+    rejected_by = models.CharField(max_length=20, blank=True)  # 'client' | 'internal'
+    rejected_from_stage = models.CharField(max_length=30, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -520,10 +531,24 @@ class PostApprovalHistory(models.Model):
         on_delete=models.CASCADE,
         related_name='approval_history'
     )
+    EVENT_TYPE_CHOICES = [
+        ('transition', 'Transition'),
+        ('revision', 'Revision Requested'),
+        ('rejection', 'Content Rejected'),
+        ('approval', 'Approval'),
+        ('note', 'Note'),
+    ]
+
     action = models.CharField(max_length=50)
     actor_name = models.CharField(max_length=150)
     actor_role = models.CharField(max_length=50, blank=True)
     notes = models.TextField(blank=True)
+    event_type = models.CharField(max_length=20, default='transition', choices=EVENT_TYPE_CHOICES)
+    from_stage = models.CharField(max_length=30, blank=True)
+    to_stage = models.CharField(max_length=30, blank=True)
+    reason_categories = models.JSONField(default=list, blank=True)
+    severity = models.CharField(max_length=20, blank=True)  # 'minor' | 'major'
+    revision_round = models.PositiveIntegerField(default=0)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:

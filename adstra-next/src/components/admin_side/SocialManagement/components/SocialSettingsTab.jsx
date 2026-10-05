@@ -46,6 +46,7 @@ import {
   FileText,
 } from "lucide-react";
 import { XIcon, GoogleIcon, TikTokIcon, renderPlatformIcon } from "./PlatformIcons";
+import { notify, askConfirm } from "./SocialFeedback";
 
 const PLATFORM_CONFIG = {
   instagram: { label: "Instagram Business", color: "#e1306c", icon: <Instagram size={18} /> },
@@ -263,7 +264,7 @@ export default function SocialSettingsTab({
   };
 
   const handleDisconnectAdPlatform = async (connId, platformLabel) => {
-    if (!confirm(`Are you sure you want to disconnect ${platformLabel}? Active campaigns will not be able to sync metrics until reconnected.`)) {
+    if (!await askConfirm(`Are you sure you want to disconnect ${platformLabel}? Active campaigns will not be able to sync metrics until reconnected.`)) {
       return;
     }
     try {
@@ -360,7 +361,7 @@ export default function SocialSettingsTab({
       await axios.post(`${API_BASE_URL}/social/accounts/${accId}/reconnect/`);
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Error reconnecting account. Please verify credentials.");
+      notify("Error reconnecting account. Please verify credentials.");
     } finally {
       setActionLoading(null);
     }
@@ -368,13 +369,13 @@ export default function SocialSettingsTab({
 
   // Disconnect Social Channel
   const handleDisconnectAccount = async (accId) => {
-    if (!confirm("Are you sure you want to disconnect this social channel?")) return;
+    if (!await askConfirm("Are you sure you want to disconnect this social channel?")) return;
     setActionLoading(accId);
     try {
       await axios.post(`${API_BASE_URL}/social/accounts/${accId}/disconnect/`);
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Error disconnecting account.");
+      notify("Error disconnecting account.");
     } finally {
       setActionLoading(null);
     }
@@ -384,7 +385,7 @@ export default function SocialSettingsTab({
   const handleAddAccount = async (e) => {
     e.preventDefault();
     if (!accountName.trim()) {
-      alert("Please enter an account or page name.");
+      notify("Please enter an account or page name.");
       return;
     }
 
@@ -404,7 +405,7 @@ export default function SocialSettingsTab({
       setUsername("");
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Error adding social account.");
+      notify("Error adding social account.");
     }
   };
 
@@ -419,7 +420,7 @@ export default function SocialSettingsTab({
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error("Error updating client status:", err);
-      alert("Error updating client visibility status.");
+      notify("Error updating client visibility status.");
     } finally {
       setActionLoading(null);
     }
@@ -460,7 +461,7 @@ export default function SocialSettingsTab({
       setEditingClient(null);
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Error updating client configuration.");
+      notify("Error updating client configuration.");
     } finally {
       setClientSaving(false);
     }
@@ -470,7 +471,7 @@ export default function SocialSettingsTab({
   const handleCreateClient = async (e) => {
     e.preventDefault();
     if (!newClientData.name.trim()) {
-      alert("Please enter a client brand name.");
+      notify("Please enter a client brand name.");
       return;
     }
 
@@ -503,7 +504,7 @@ export default function SocialSettingsTab({
       });
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Error creating client brand profile.");
+      notify("Error creating client brand profile.");
     } finally {
       setClientSaving(false);
     }

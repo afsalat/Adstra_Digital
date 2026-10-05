@@ -374,6 +374,13 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             else:
                 post.scheduled_at = None
 
+        reason_categories = request.data.get('reason_categories') or []
+        if not isinstance(reason_categories, list):
+            reason_categories = [reason_categories]
+        reason_categories = [str(c)[:60] for c in reason_categories if c][:12]
+        severity = (request.data.get('severity') or '')[:20]
+        rejected_by = (request.data.get('rejected_by') or '')[:20]
+
         prev_status = post.status
         prev_feedback = post.client_feedback
         post.status = target_stage
@@ -381,8 +388,26 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         if target_stage == 'published':
             post.published_at = timezone.now()
 
-        if action_type == 'reject' or 'reject' in notes.lower():
+        event_type = 'transition'
+        if action_type == 'reject':
+            # Revision loopback: content goes back for rework
+            event_type = 'revision'
             post.client_feedback = notes
+            post.revision_count = (post.revision_count or 0) + 1
+            if prev_status == 'client_review':
+                post.client_revision_count = (post.client_revision_count or 0) + 1
+            post.last_revision_categories = reason_categories
+        elif action_type == 'reject_final':
+            # Entire content rejected: dropped, or restarted from a fresh script
+            event_type = 'rejection'
+            post.rejection_reason = notes
+            post.rejection_categories = reason_categories
+            post.rejected_by = rejected_by or ('client' if prev_status == 'client_review' else 'internal')
+            post.rejected_from_stage = prev_status
+            post.rejected_at = timezone.now()
+            post.client_feedback = notes if target_stage != 'content_rejected' else ''
+        elif action_type == 'restore':
+            post.client_feedback = post.rejection_reason
         elif target_stage in ['script_approval', 'team_review', 'client_review', 'approved', 'published']:
             # Resubmitted or approved: clear previous loopback critique
             post.client_feedback = ''
@@ -444,6 +469,19 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         elif action_type == 'update':
             action_label = "Post Reworked / Updated"
             actor_role = actor_role or "Creative Team"
+        elif action_type == 'reject_final':
+            who = 'Client' if post.rejected_by == 'client' else 'Internal'
+            if target_stage == 'content_rejected':
+                action_label = f"Content Rejected by {who} (Dropped)"
+            else:
+                action_label = f"Content Rejected by {who} (Restart Script)"
+            actor_role = actor_role or ("Client" if post.rejected_by == 'client' else "Reviewer")
+        elif action_type == 'restore':
+            action_label = "Rejected Content Restored to Scripts"
+            actor_role = actor_role or "Workflow Lead"
+
+        if event_type == 'transition' and action_type == 'advance' and target_stage in ['designing', 'client_review', 'approved', 'scheduled']:
+            event_type = 'approval'
 
         try:
             record_approval_action(
@@ -451,7 +489,13 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                 (action_label or "Stage Updated")[:50],
                 (actor or "Team Member")[:150],
                 (actor_role or "Workflow Team")[:50],
-                notes or f"Moved from {prev_status} to {target_stage}"
+                notes or f"Moved from {prev_status} to {target_stage}",
+                event_type=event_type,
+                from_stage=prev_status,
+                to_stage=target_stage,
+                reason_categories=reason_categories if event_type in ['revision', 'rejection'] else [],
+                severity=severity,
+                revision_round=post.revision_count if event_type == 'revision' else 0,
             )
         except Exception:
             pass
@@ -491,7 +535,6 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         import os, re, time
         from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
         from django.conf import settings
 
         media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
@@ -502,7 +545,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
         filename = f"{post.id}_{clean_base}_{int(time.time())}{ext}"
         file_path = os.path.join('social_media', filename)
-        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+        # Stream the original upload to storage in chunks — bytes are kept exactly as uploaded (no re-encoding)
+        saved_path = default_storage.save(file_path, file)
 
         file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
 
@@ -534,6 +578,40 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             'post': SocialPostSerializer(post).data
         })
 
+    @action(detail=True, methods=['get'], url_path='download_media')
+    def download_media(self, request, pk=None):
+        """Serve a post's deliverable as an attachment, byte-for-byte identical to the uploaded file."""
+        import re
+        from urllib.parse import urlparse, unquote
+        from django.conf import settings
+        from django.http import FileResponse, HttpResponseRedirect
+
+        post = self.get_object()
+        urls = post.media_urls if isinstance(post.media_urls, list) else []
+        try:
+            idx = int(request.query_params.get('index', 0) or 0)
+        except (TypeError, ValueError):
+            idx = 0
+        if idx < 0 or idx >= len(urls) or not urls[idx]:
+            return Response({'error': 'No deliverable attached to this post.'}, status=status.HTTP_404_NOT_FOUND)
+
+        url = str(urls[idx])
+        path = unquote(urlparse(url).path)
+        if path.startswith(settings.MEDIA_URL):
+            media_root = os.path.normpath(settings.MEDIA_ROOT)
+            full_path = os.path.normpath(os.path.join(media_root, path[len(settings.MEDIA_URL):]))
+            if full_path.startswith(media_root + os.sep) and os.path.isfile(full_path):
+                base, ext = os.path.splitext(os.path.basename(full_path))
+                # Stored as "<post_id>_<name>_<timestamp>"; hand back "<name>"
+                clean = re.sub(rf'^{post.id}_', '', base)
+                clean = re.sub(r'_\d{9,}$', '', clean) or f'post_{post.id}'
+                return FileResponse(open(full_path, 'rb'), as_attachment=True, filename=f'{clean}{ext}')
+
+        # Externally hosted asset (cloud link): send the browser to the original
+        if url.startswith(('http://', 'https://')):
+            return HttpResponseRedirect(url)
+        return Response({'error': 'Deliverable file could not be found.'}, status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_generic(self, request):
         file = request.FILES.get('file') or request.FILES.get('media')
@@ -542,7 +620,6 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         import os, re, time
         from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
         from django.conf import settings
 
         media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
@@ -553,7 +630,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
         filename = f"media_{clean_base}_{int(time.time())}{ext}"
         file_path = os.path.join('social_media', filename)
-        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+        # Stream the original upload to storage in chunks — bytes are kept exactly as uploaded (no re-encoding)
+        saved_path = default_storage.save(file_path, file)
 
         file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
         return Response({'url': file_url, 'file_url': file_url})
@@ -575,24 +653,51 @@ class PublicClientReviewView(APIView):
         except SocialPost.DoesNotExist:
             return Response({'error': 'Invalid or expired review link.'}, status=status.HTTP_404_NOT_FOUND)
 
-        action_type = request.data.get('action') # 'approve' or 'request_changes'
+        action_type = request.data.get('action') # 'approve' | 'request_changes' | 'reject'
         notes = request.data.get('notes', '')
         reviewer_name = request.data.get('reviewer_name', f'{post.client_profile.name} Client')
+        reason_categories = request.data.get('reason_categories') or []
+        if not isinstance(reason_categories, list):
+            reason_categories = [reason_categories]
+        reason_categories = [str(c)[:60] for c in reason_categories if c][:12]
+
+        if post.status != 'client_review' and action_type in ['approve', 'request_changes', 'reject']:
+            return Response({'error': 'This post is no longer awaiting your review.'}, status=status.HTTP_409_CONFLICT)
 
         if action_type == 'approve':
-            post.status = 'scheduled' if post.scheduled_at else 'approved'
+            post.status = 'approved'
             post.client_feedback = ''
             post.save(update_fields=['status', 'client_feedback'])
-            record_approval_action(post, 'client_approved', reviewer_name, 'Client', notes or 'Approved by client')
+            record_approval_action(post, 'Client Approved via Review Link', reviewer_name, 'Client', notes or 'Approved by client',
+                                   event_type='approval', from_stage='client_review', to_stage='approved')
             return Response({'status': 'approved', 'message': 'Post approved successfully! Thank you.'})
         elif action_type == 'request_changes':
             # Per workflow diagram: Client Review rejection loops back to Scheduled / Designing
             post.status = 'designing'
             post.client_feedback = notes
-            post.save(update_fields=['status', 'client_feedback'])
-            record_approval_action(post, 'client_changes_requested', reviewer_name, 'Client', notes or 'Changes requested by client (Returned to Designing)')
+            post.revision_count = (post.revision_count or 0) + 1
+            post.client_revision_count = (post.client_revision_count or 0) + 1
+            post.last_revision_categories = reason_categories
+            post.save(update_fields=['status', 'client_feedback', 'revision_count', 'client_revision_count', 'last_revision_categories'])
+            record_approval_action(post, 'Client Requested Changes', reviewer_name, 'Client', notes or 'Changes requested by client (Returned to Designing)',
+                                   event_type='revision', from_stage='client_review', to_stage='designing',
+                                   reason_categories=reason_categories, revision_round=post.revision_count)
             return Response({'status': 'changes_requested', 'message': 'Feedback received. Creative team will revise in Scheduled / Designing.'})
-        
+        elif action_type == 'reject':
+            if not notes.strip():
+                return Response({'error': 'Please share the reason for rejecting this content.'}, status=status.HTTP_400_BAD_REQUEST)
+            post.status = 'content_rejected'
+            post.rejection_reason = notes
+            post.rejection_categories = reason_categories
+            post.rejected_by = 'client'
+            post.rejected_from_stage = 'client_review'
+            post.rejected_at = timezone.now()
+            post.save()
+            record_approval_action(post, 'Content Rejected by Client (Dropped)', reviewer_name, 'Client', notes,
+                                   event_type='rejection', from_stage='client_review', to_stage='content_rejected',
+                                   reason_categories=reason_categories)
+            return Response({'status': 'rejected', 'message': 'Your decision has been recorded. The team will follow up with a new concept.'})
+
         return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
 
 

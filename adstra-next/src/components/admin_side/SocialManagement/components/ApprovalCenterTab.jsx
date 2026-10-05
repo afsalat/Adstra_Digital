@@ -20,6 +20,7 @@ import {
   X,
   Film,
 } from "lucide-react";
+import { notify } from "./SocialFeedback";
 
 export default function ApprovalCenterTab({
   posts = [],
@@ -55,7 +56,7 @@ export default function ApprovalCenterTab({
       setReviewNotes("");
       onRefresh();
     } catch (err) {
-      alert("Error approving post.");
+      notify("Error approving post.");
     } finally {
       setActionLoading(false);
     }
@@ -63,7 +64,7 @@ export default function ApprovalCenterTab({
 
   const handleRequestChanges = async (postId) => {
     if (!reviewNotes.trim()) {
-      alert("Please provide change request notes or revision feedback.");
+      notify("Please provide change request notes or revision feedback.");
       return;
     }
     setActionLoading(true);
@@ -78,7 +79,7 @@ export default function ApprovalCenterTab({
       setReviewNotes("");
       onRefresh();
     } catch (err) {
-      alert("Error sending change request.");
+      notify("Error sending change request.");
     } finally {
       setActionLoading(false);
     }

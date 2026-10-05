@@ -19,6 +19,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import { notify, askConfirm } from "./SocialFeedback";
 
 // Kerala & Indian Festival/Holiday Calendar Milestones
 const FESTIVALS_AND_HOLIDAYS = [
@@ -220,7 +221,7 @@ export default function ContentCalendarTab({
       setSelectedPostDetail(null);
       onRefresh();
     } catch (err) {
-      alert("Error rescheduling post.");
+      notify("Error rescheduling post.");
     } finally {
       setRescheduling(false);
     }
@@ -228,13 +229,13 @@ export default function ContentCalendarTab({
 
   // Handle Quick Publish
   const handlePublishNow = async (postId) => {
-    if (!confirm("Are you sure you want to publish this post immediately across platforms?")) return;
+    if (!await askConfirm("Are you sure you want to publish this post immediately across platforms?")) return;
     try {
       await axios.post(`${API_BASE_URL}/social/posts/${postId}/publish_now/`);
       setSelectedPostDetail(null);
       onRefresh();
     } catch (err) {
-      alert("Error publishing post.");
+      notify("Error publishing post.");
     }
   };
 
@@ -288,7 +289,7 @@ export default function ContentCalendarTab({
       });
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Failed to update post priority.");
+      notify("Failed to update post priority.");
     } finally {
       setUpdatingPriorityPostId(null);
     }

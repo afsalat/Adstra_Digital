@@ -10,6 +10,7 @@ import {
   Calendar as CalendarIcon,
   Send,
   BarChart2,
+  Ban,
 } from "lucide-react";
 
 import WorkflowStageSection from "./WorkflowStageSection";
@@ -41,6 +42,7 @@ export default function DedicatedSocialSection({
     client_review: posts.filter((p) => p.status === "client_review").length,
     post_schedule: posts.filter((p) => ["approved", "scheduled"].includes(p.status)).length,
     published: posts.filter((p) => p.status === "published").length,
+    rejected: posts.filter((p) => p.status === "content_rejected").length,
   };
 
   const navItems = [
@@ -92,6 +94,13 @@ export default function DedicatedSocialSection({
       icon: Send,
       count: counts.published,
       color: "#10b981",
+    },
+    {
+      id: "rejected",
+      label: "Rejected",
+      icon: Ban,
+      count: counts.rejected,
+      color: "#dc2626",
     },
     {
       id: "reporting",

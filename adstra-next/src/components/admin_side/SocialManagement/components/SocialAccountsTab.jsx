@@ -16,6 +16,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { notify, askConfirm } from "./SocialFeedback";
 
 export default function SocialAccountsTab({
   accounts = [],
@@ -36,20 +37,20 @@ export default function SocialAccountsTab({
       await axios.post(`${API_BASE_URL}/social/accounts/${accId}/reconnect/`);
       onRefresh();
     } catch (err) {
-      alert("Error reconnecting account. Please verify credentials.");
+      notify("Error reconnecting account. Please verify credentials.");
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleDisconnect = async (accId) => {
-    if (!confirm("Are you sure you want to disconnect this social channel?")) return;
+    if (!await askConfirm("Are you sure you want to disconnect this social channel?")) return;
     setActionLoading(accId);
     try {
       await axios.post(`${API_BASE_URL}/social/accounts/${accId}/disconnect/`);
       onRefresh();
     } catch (err) {
-      alert("Error disconnecting account.");
+      notify("Error disconnecting account.");
     } finally {
       setActionLoading(null);
     }
@@ -58,7 +59,7 @@ export default function SocialAccountsTab({
   const handleAddAccount = async (e) => {
     e.preventDefault();
     if (!accountName.trim()) {
-      alert("Please enter an account or page name.");
+      notify("Please enter an account or page name.");
       return;
     }
 
@@ -78,7 +79,7 @@ export default function SocialAccountsTab({
       setUsername("");
       onRefresh();
     } catch (err) {
-      alert("Error adding social account.");
+      notify("Error adding social account.");
     }
   };
 

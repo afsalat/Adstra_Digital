@@ -31,6 +31,7 @@ import {
   LinkedInLogoIcon,
 } from "./CreateCampaignWizard";
 import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
+import { askConfirm } from "./SocialFeedback";
 
 // Fallback baseline accounts matching the uploaded design
 const DEFAULT_IMAGE_ACCOUNTS = [
@@ -317,7 +318,7 @@ export default function AdAccountsSection({
 
   // Disconnect / Delete account
   const handleDisconnect = async (acc) => {
-    const confirmed = window.confirm(
+    const confirmed = await askConfirm(
       `Are you sure you want to disconnect or remove "${acc.account_name}"? You can reconnect it at any time.`
     );
     if (!confirmed) return;

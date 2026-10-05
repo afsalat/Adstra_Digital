@@ -21,6 +21,7 @@ import {
   Plus,
 } from "lucide-react";
 import API_BASE_URL from "@/utils/apiBase";
+import { notify } from "./SocialFeedback";
 
 // Standard sequential workflow milestones
 const WORKFLOW_PIPELINE_ORDER = [
@@ -63,13 +64,30 @@ function formatEventTitle(action = "") {
   return action;
 }
 
-function getEventStyle(action = "", notes = "") {
+function getEventStyle(action = "", notes = "", eventType = "") {
   const act = (action || "").toLowerCase().trim();
   const not = (notes || "").toLowerCase().trim();
 
+  // 0. Entire content rejected (dropped or restarted)
+  if (eventType === "rejection") {
+    return {
+      type: "rejection",
+      color: "#b91c1c",
+      bgColor: "#fef2f2",
+      borderColor: "#fca5a5",
+      badgeColor: "#ffffff",
+      badgeBg: "#dc2626",
+      badgeLabel: "Content Rejected",
+      icon: AlertTriangle,
+    };
+  }
+
   // 1. Rejections / Critique / Rework requested
   if (
+    eventType === "revision" ||
     act.includes("reject") ||
+    act.includes("requested changes") ||
+    act.includes("changes_requested") ||
     act.includes("rework requested") ||
     act.includes("changes requested") ||
     act.includes("needs work") ||
@@ -283,7 +301,7 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
       setAddingNote(false);
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Error adding milestone note.");
+      notify(err.response?.data?.error || "Error adding milestone note.");
     } finally {
       setSubmittingNote(false);
     }
@@ -587,7 +605,7 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
               const hasPendingAfter = pendingStages.length > 0;
               const showConnectingLine = !isLastEvent || hasPendingAfter;
 
-              const styleMeta = getEventStyle(item.action, item.notes);
+              const styleMeta = getEventStyle(item.action, item.notes, item.event_type);
               const EventIcon = styleMeta.icon;
 
               return (
@@ -776,6 +794,25 @@ export default function PostTimelineModal({ post, isOpen, onClose, onRefresh }) 
                         >
                           {item.notes}
                         </p>
+                        {(item.reason_categories || []).length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                            {item.revision_round > 0 && (
+                              <span style={{ fontSize: "0.66rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "#0f172a", color: "#ffffff" }}>
+                                Round {item.revision_round}
+                              </span>
+                            )}
+                            {item.severity && (
+                              <span style={{ fontSize: "0.66rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: item.severity === "major" ? "#fee2e2" : "#f1f5f9", color: item.severity === "major" ? "#b91c1c" : "#475569", textTransform: "capitalize" }}>
+                                {item.severity}
+                              </span>
+                            )}
+                            {item.reason_categories.map((c) => (
+                              <span key={c} style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "#ffffff", border: `1px solid ${styleMeta.borderColor}`, color: styleMeta.color }}>
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -34,6 +34,7 @@ import {
   AlertCircle,
   Pencil,
 } from "lucide-react";
+import { notify, askConfirm } from "./SocialFeedback";
 
 export default function MediaLibraryTab({
   mediaAssets = [],
@@ -223,7 +224,7 @@ export default function MediaLibraryTab({
   // Delete asset
   const handleDeleteAsset = async (assetId, e) => {
     e?.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this asset from the library?")) {
+    if (!await askConfirm("Are you sure you want to delete this asset from the library?")) {
       return;
     }
 
@@ -235,7 +236,7 @@ export default function MediaLibraryTab({
       }
       onRefresh?.();
     } catch (err) {
-      alert("Failed to delete asset: " + (err.response?.data?.detail || err.message));
+      notify("Failed to delete asset: " + (err.response?.data?.detail || err.message));
     } finally {
       setDeletingId(null);
     }

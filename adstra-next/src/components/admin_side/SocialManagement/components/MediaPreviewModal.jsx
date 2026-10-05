@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   X,
   Play,
@@ -21,9 +21,12 @@ import {
   Maximize2,
   Volume2,
   VolumeX,
+  ZoomIn,
+  Minimize2,
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
+import { notify, askConfirm, toast, apiErrorMessage } from "./SocialFeedback";
 
 export default function MediaPreviewModal({
   isOpen,
@@ -37,8 +40,23 @@ export default function MediaPreviewModal({
   const [copiedLink, setCopiedLink] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [uploadPct, setUploadPct] = useState(0);
+  const [actualSize, setActualSize] = useState(false);
+  const [mediaInfo, setMediaInfo] = useState(null); // { width, height }
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    setMediaInfo(null);
+    setActualSize(false);
+  }, [post?.media_urls?.[0]]);
 
   if (!isOpen || !post) return null;
 
@@ -81,6 +99,21 @@ export default function MediaPreviewModal({
     }
   };
 
+  const fileExt = (mediaUrl.split("?")[0].split(".").pop() || "").toUpperCase();
+  const isLocalFile = /\/media\//.test(mediaUrl);
+
+  // Downloads the stored original byte-for-byte (served as an attachment by the API — no re-encoding)
+  const handleDownload = () => {
+    if (!mediaUrl) return;
+    const a = document.createElement("a");
+    a.href = `${API_BASE_URL}/social/posts/${post.id}/download_media/?index=0`;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast.success("Downloading the original file — full quality, no compression.", { title: "Download started" });
+  };
+
   const handleCopyLink = () => {
     if (!mediaUrl) return;
     navigator.clipboard.writeText(mediaUrl);
@@ -94,6 +127,7 @@ export default function MediaPreviewModal({
 
     setIsUploading(true);
     setUploadError(null);
+    setUploadPct(0);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -103,12 +137,16 @@ export default function MediaPreviewModal({
       const res = await axios.post(
         `${API_BASE_URL}/social/posts/${post.id}/upload_media/`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (ev) => ev.total && setUploadPct(Math.round((ev.loaded / ev.total) * 100)),
+        }
       );
+      toast.success(`"${file.name}" (${(file.size / 1048576).toFixed(1)} MB) uploaded in original quality.`, { title: "File replaced" });
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error("Upload error:", err);
-      setUploadError(err.response?.data?.error || "Failed to upload media file.");
+      setUploadError(apiErrorMessage(err, "Failed to upload media file."));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -116,19 +154,19 @@ export default function MediaPreviewModal({
   };
 
   const handleRemoveMedia = async () => {
-    if (!confirm("Are you sure you want to remove this media asset?")) return;
+    if (!await askConfirm("Are you sure you want to remove this media asset?")) return;
     setIsUploading(true);
     try {
       await axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
         target_stage: post.status,
-        action_type: "advance",
+        action_type: "update",
         notes: "Designer removed attached creative media asset",
         media_urls: [],
       });
       if (onRefresh) onRefresh();
       onClose();
     } catch (err) {
-      alert("Failed to remove media.");
+      notify("Failed to remove media.");
     } finally {
       setIsUploading(false);
     }
@@ -296,7 +334,7 @@ export default function MediaPreviewModal({
             background: "#020617",
             minHeight: 380,
             maxHeight: "68vh",
-            overflow: "hidden",
+            overflow: actualSize ? "auto" : "hidden",
             position: "relative",
           }}
         >
@@ -325,7 +363,7 @@ export default function MediaPreviewModal({
                 }}
               />
               <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
-                Uploading & Replacing Deliverable...
+                Uploading original file... {uploadPct}%
               </span>
             </div>
           )}
@@ -365,6 +403,7 @@ export default function MediaPreviewModal({
                   src={mediaUrl}
                   controls
                   playsInline
+                  onLoadedMetadata={(e) => setMediaInfo({ width: e.currentTarget.videoWidth, height: e.currentTarget.videoHeight })}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
                   style={{
@@ -380,13 +419,21 @@ export default function MediaPreviewModal({
               <img
                 src={mediaUrl}
                 alt={post.title || "Deliverable preview"}
-                style={{
-                  maxHeight: "60vh",
-                  maxWidth: "100%",
-                  borderRadius: 12,
-                  objectFit: "contain",
-                  boxShadow: "0 20px 40px rgba(0, 0, 0, 0.7)",
-                }}
+                onLoad={(e) => setMediaInfo({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })}
+                onClick={() => setActualSize((v) => !v)}
+                title={actualSize ? "Click to fit to screen" : "Click to view at 100% (actual pixels)"}
+                style={
+                  actualSize
+                    ? { maxWidth: "none", maxHeight: "none", alignSelf: "flex-start", cursor: "zoom-out" }
+                    : {
+                        maxHeight: "60vh",
+                        maxWidth: "100%",
+                        borderRadius: 12,
+                        objectFit: "contain",
+                        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.7)",
+                        cursor: "zoom-in",
+                      }
+                }
               />
             )
           ) : (
@@ -517,6 +564,37 @@ export default function MediaPreviewModal({
 
             {mediaUrl && (
               <>
+                {mediaInfo?.width > 0 && (
+                  <span
+                    title="Resolution of the stored original file"
+                    style={{ fontSize: "0.72rem", fontWeight: 700, color: "#94a3b8", background: "rgba(255,255,255,0.06)", padding: "5px 9px", borderRadius: 7, whiteSpace: "nowrap" }}
+                  >
+                    {mediaInfo.width}×{mediaInfo.height}
+                    {fileExt && fileExt.length <= 5 ? ` • ${fileExt}` : ""}
+                  </span>
+                )}
+
+                {!isVideo && (
+                  <button
+                    type="button"
+                    onClick={() => setActualSize((v) => !v)}
+                    title={actualSize ? "Fit to screen" : "View at 100% to check sharpness"}
+                    style={{ background: actualSize ? "#6366f1" : "#334155", border: "none", borderRadius: 7, padding: "6px 12px", color: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}
+                  >
+                    {actualSize ? <Minimize2 size={13} /> : <ZoomIn size={13} />}
+                    {actualSize ? "Fit" : "100%"}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  title={isLocalFile ? "Download the original uploaded file (no quality loss)" : "Open the original externally hosted file"}
+                  style={{ background: "#10b981", border: "none", borderRadius: 7, padding: "6px 12px", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}
+                >
+                  <Download size={13} /> Download Original
+                </button>
+
                 <button
                   type="button"
                   onClick={handleCopyLink}
@@ -542,7 +620,6 @@ export default function MediaPreviewModal({
                   href={mediaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  download
                   style={{
                     background: "#334155",
                     borderRadius: 7,
@@ -556,7 +633,7 @@ export default function MediaPreviewModal({
                     gap: 5,
                   }}
                 >
-                  <ExternalLink size={13} /> Open Original
+                  <ExternalLink size={13} /> Open in Tab
                 </a>
 
                 {post?.status === "designing" && (
