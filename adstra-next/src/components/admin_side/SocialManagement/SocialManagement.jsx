@@ -187,7 +187,7 @@ function SocialManagementInner() {
               <Share2 size={24} color="#4f46e5" /> Adstra Digital Marketing Hub
             </h2>
             <p>
-              Dedicated modules for microsoft & Adstra Digital marketing operations
+              Dedicated modules for Microsoft & Adstra Digital marketing operations
             </p>
           </div>
         </div>
@@ -219,7 +219,7 @@ function SocialManagementInner() {
             }}
             className="social-create-btn"
           >
-            <Plus size={18} /> + Create Post
+            <Plus size={18} /> Create Post
           </button>
         </div>
       </header>

@@ -74,131 +74,66 @@ export default function DedicatedSocialSection({
     rejected: posts.filter((p) => p.status === "content_rejected").length,
   };
 
-  const navItems = [
-    {
-      id: "scripts",
-      label: "Scripts",
-      icon: FileText,
-      count: counts.scripts,
-      color: "#4f46e5",
-    },
-    {
-      id: "script_approval",
-      label: "Approval",
-      icon: CheckCircle2,
-      count: counts.script_approval,
-      color: "#8b5cf6",
-    },
-    {
-      id: "designing",
-      label: "Scheduled / Designing",
-      icon: Palette,
-      count: counts.designing,
-      color: "#ec4899",
-    },
-    {
-      id: "team_review",
-      label: "Team Review / Ready",
-      icon: Users,
-      count: counts.team_review,
-      color: "#f59e0b",
-    },
-    {
-      id: "client_review",
-      label: "Client Review",
-      icon: Eye,
-      count: counts.client_review,
-      color: "#ea580c",
-    },
-    {
-      id: "post_schedule",
-      label: "Approved / Post Schedule",
-      icon: CalendarIcon,
-      count: counts.post_schedule,
-      color: "#0ea5e9",
-    },
-    {
-      id: "published",
-      label: "Published / Posted",
-      icon: Send,
-      count: counts.published,
-      color: "#10b981",
-    },
-    {
-      id: "rejected",
-      label: "Rejected",
-      icon: Ban,
-      count: counts.rejected,
-      color: "#dc2626",
-    },
-    {
-      id: "reporting",
-      label: "Analytics & Reports",
-      icon: BarChart2,
-      count: 0,
-      color: "#6366f1",
-    },
+  // Main pipeline, left to right
+  const pipelineSteps = [
+    { id: "scripts", label: "Script", fullLabel: "Scripts & Content Ideation", icon: FileText, color: "#4f46e5" },
+    { id: "script_approval", label: "Approval", fullLabel: "Script Approval", icon: CheckCircle2, color: "#8b5cf6" },
+    { id: "designing", label: "Design", fullLabel: "Scheduled / Designing", icon: Palette, color: "#ec4899" },
+    { id: "team_review", label: "Team Review", fullLabel: "Team Review / Ready", icon: Users, color: "#f59e0b" },
+    { id: "client_review", label: "Client Review", fullLabel: "Client Review", icon: Eye, color: "#ea580c" },
+    { id: "post_schedule", label: "Scheduled", fullLabel: "Approved / Post Schedule", icon: CalendarIcon, color: "#0ea5e9" },
+    { id: "published", label: "Published", fullLabel: "Published / Posted", icon: Send, color: "#10b981" },
   ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Sub-navigation pills: The 7 Workflow Sections */}
-      <div
-        className="no-print"
-        style={{
-          display: "flex",
-          gap: 8,
-          background: "#ffffff",
-          padding: 6,
-          borderRadius: 14,
-          border: "1px solid #e2e8f0",
-          overflowX: "auto",
-          boxShadow: "0 2px 10px rgba(15, 23, 42, 0.02)",
-        }}
-      >
-        {navItems.map((item) => {
-          const ItemIcon = item.icon;
-          const isActive = socialSubTab === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => setSocialSubTab(item.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "9px 16px",
-                borderRadius: 10,
-                border: "none",
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                background: isActive ? item.color : "transparent",
-                color: isActive ? "#ffffff" : "#475569",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <ItemIcon size={15} />
-              {item.label}
-              {item.count > 0 && (
-                <span
-                  style={{
-                    background: isActive ? "rgba(255, 255, 255, 0.25)" : "#f1f5f9",
-                    color: isActive ? "#ffffff" : item.color,
-                    fontSize: "0.7rem",
-                    padding: "2px 7px",
-                    borderRadius: 10,
-                    fontWeight: 800,
-                  }}
+      {/* Workflow pipeline stepper + side sections (Rejected, Analytics) */}
+      <div className="sm-pipeline no-print">
+        <ol className="sm-pipeline-steps">
+          {pipelineSteps.map((step, idx) => {
+            const StepIcon = step.icon;
+            const isActive = socialSubTab === step.id;
+            const count = counts[step.id] || 0;
+            return (
+              <li key={step.id} className="sm-step-wrap">
+                <button
+                  type="button"
+                  className={`sm-step ${isActive ? "active" : ""} ${count > 0 ? "has-items" : ""}`}
+                  style={{ "--step-color": step.color }}
+                  onClick={() => setSocialSubTab(step.id)}
+                  title={`${idx + 1}. ${step.fullLabel} · ${count} ${count === 1 ? "item" : "items"}`}
+                  aria-current={isActive ? "step" : undefined}
                 >
-                  {item.count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+                  <StepIcon size={15} className="sm-step-icon" />
+                  <span className="sm-step-label">{step.label}</span>
+                  <span className="sm-step-count">{count}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="sm-pipeline-side">
+          <button
+            type="button"
+            className={`sm-side-btn sm-side-rejected ${socialSubTab === "rejected" ? "active" : ""}`}
+            onClick={() => setSocialSubTab("rejected")}
+            title="Content rejected outright by the client or team"
+          >
+            <Ban size={15} />
+            <span>Rejected</span>
+            {counts.rejected > 0 && <span className="sm-side-badge">{counts.rejected}</span>}
+          </button>
+          <button
+            type="button"
+            className={`sm-side-btn sm-side-reports ${socialSubTab === "reporting" ? "active" : ""}`}
+            onClick={() => setSocialSubTab("reporting")}
+            title="Analytics & Reports"
+          >
+            <BarChart2 size={15} />
+            <span>Analytics</span>
+          </button>
+        </div>
       </div>
 
       {/* Sub-tab view: Active Workflow Section */}

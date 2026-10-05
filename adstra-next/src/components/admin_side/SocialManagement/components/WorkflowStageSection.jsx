@@ -42,6 +42,8 @@ import {
   Archive,
   Ban,
   Undo2,
+  Clapperboard,
+  Type,
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
@@ -51,6 +53,7 @@ import MistakeInsightsPanel from "./MistakeInsightsPanel";
 import WorkDetailsModal from "./WorkDetailsModal";
 import MediaPreviewModal from "./MediaPreviewModal";
 import { toast, confirmDialog, apiErrorMessage } from "./SocialFeedback";
+import { renderPlatformIcon } from "./PlatformIcons";
 import {
   RevisionRequestModal,
   RejectContentModal,
@@ -84,16 +87,58 @@ const mediaNoun = (post) =>
     : "Design";
 
 /* ─── Scripts library: every post's script, bucketed by where it is now ─── */
+// "stage" filters are the work that belongs to the Scripts stage (shown as chips);
+// "library" filters browse scripts that already moved on (shown in the library dropdown)
 const SCRIPT_FILTERS = [
-  { id: "active", label: "Active", color: "#4f46e5" },
-  { id: "draft", label: "Drafts", color: "#4f46e5" },
-  { id: "under_review", label: "Under Approval", color: "#7c3aed" },
-  { id: "revision", label: "Needs Revision", color: "#dc2626" },
-  { id: "production", label: "Approved / In Production", color: "#0284c7" },
-  { id: "published", label: "Published", color: "#059669" },
-  { id: "rejected", label: "Rejected", color: "#991b1b" },
-  { id: "all", label: "All Scripts", color: "#0f172a" },
+  { id: "active", label: "Active", color: "#4f46e5", group: "stage" },
+  { id: "draft", label: "Drafts", color: "#4f46e5", group: "stage" },
+  { id: "under_review", label: "Submitted", color: "#7c3aed", group: "stage" },
+  { id: "revision", label: "Needs Revision", color: "#dc2626", group: "stage" },
+  { id: "production", label: "Approved / In Production", color: "#0284c7", group: "library" },
+  { id: "published", label: "Published", color: "#059669", group: "library" },
+  { id: "rejected", label: "Rejected", color: "#991b1b", group: "library" },
+  { id: "all", label: "All Scripts", color: "#0f172a", group: "library" },
 ];
+
+/* ─── Format, platform & timing display helpers ─── */
+const FORMAT_META = {
+  reel: { label: "Reel", icon: Clapperboard, color: "#db2777", bg: "#fdf2f8" },
+  video: { label: "Video", icon: Video, color: "#7c3aed", bg: "#f5f3ff" },
+  image: { label: "Image", icon: ImageIcon, color: "#0284c7", bg: "#f0f9ff" },
+  carousel: { label: "Carousel", icon: Layers, color: "#ea580c", bg: "#fff7ed" },
+  text: { label: "Text", icon: Type, color: "#475569", bg: "#f1f5f9" },
+};
+
+const PLATFORM_NAMES = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  x: "X (Twitter)",
+  twitter: "X (Twitter)",
+  google_business: "Google Business",
+  tiktok: "TikTok",
+  whatsapp: "WhatsApp",
+};
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+// "in 5 days", "in 3 hours", "2 days ago"
+function relativeTime(date) {
+  const diffMs = date.getTime() - Date.now();
+  const abs = Math.abs(diffMs);
+  const mins = Math.round(abs / 60000);
+  const hours = Math.round(abs / 3600000);
+  const days = Math.round(abs / 86400000);
+  const span = mins < 60 ? plural(Math.max(mins, 1), "min") : hours < 24 ? plural(hours, "hour") : plural(days, "day");
+  return diffMs >= 0 ? `in ${span}` : `${span} ago`;
+}
+
+const shortDate = (d, withTime = false) =>
+  d.toLocaleDateString(
+    "en-US",
+    withTime ? { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric" }
+  );
 
 const SCRIPT_BUCKET_BADGE = {
   draft: { label: "Draft", color: "#475569", bg: "#f1f5f9", border: "#cbd5e1" },
@@ -641,7 +686,7 @@ export default function WorkflowStageSection({
                 fontWeight: 800,
               }}
             >
-              {stagePosts.length} items
+              {plural(stagePosts.length, "item")}
             </span>
           </div>
           <p style={{ margin: 0, fontSize: "0.84rem", color: "#64748b" }}>
@@ -783,32 +828,66 @@ export default function WorkflowStageSection({
 
               {/* Stage 1: Script library sub-filters (active work + every past script) */}
               {stageId === "scripts" && (
-                <div style={{ display: "flex", alignItems: "center", gap: 3, background: "#f8fafc", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0", flexWrap: "wrap" }}>
-                  {SCRIPT_FILTERS.map((f) => {
-                    const active = scriptSubFilter === f.id;
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: "#f8fafc", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+                    {SCRIPT_FILTERS.filter((f) => f.group === "stage").map((f) => {
+                      const active = scriptSubFilter === f.id;
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setScriptSubFilter(f.id)}
+                          style={{
+                            padding: "5px 11px",
+                            borderRadius: 7,
+                            border: "none",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            background: active ? f.color : "transparent",
+                            color: active ? "#ffffff" : "#64748b",
+                            transition: "all 0.15s ease",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {f.label} ({scriptSubCounts[f.id]})
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Script library: scripts that already moved past this stage */}
+                  {(() => {
+                    const libraryFilter = SCRIPT_FILTERS.find((f) => f.group === "library" && f.id === scriptSubFilter);
                     return (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setScriptSubFilter(f.id)}
-                        style={{
-                          padding: "5px 11px",
-                          borderRadius: 7,
-                          border: "none",
-                          fontSize: "0.78rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          background: active ? f.color : "transparent",
-                          color: active ? "#ffffff" : "#64748b",
-                          transition: "all 0.15s ease",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {f.label} ({scriptSubCounts[f.id]})
-                      </button>
+                      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <Archive size={14} color={libraryFilter ? "#ffffff" : "#64748b"} style={{ position: "absolute", left: 10, pointerEvents: "none" }} />
+                        <select
+                          value={libraryFilter ? libraryFilter.id : ""}
+                          onChange={(e) => setScriptSubFilter(e.target.value || "active")}
+                          title="Browse scripts that already moved past this stage"
+                          style={{
+                            padding: "7px 12px 7px 30px",
+                            borderRadius: 10,
+                            border: `1px solid ${libraryFilter ? libraryFilter.color : "#cbd5e1"}`,
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            background: libraryFilter ? libraryFilter.color : "#ffffff",
+                            color: libraryFilter ? "#ffffff" : "#475569",
+                          }}
+                        >
+                          <option value="" style={{ background: "#ffffff", color: "#0f172a" }}>Script library…</option>
+                          {SCRIPT_FILTERS.filter((f) => f.group === "library").map((f) => (
+                            <option key={f.id} value={f.id} style={{ background: "#ffffff", color: "#0f172a" }}>
+                              {f.label} ({scriptSubCounts[f.id]})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     );
-                  })}
-                </div>
+                  })()}
+                </>
               )}
 
               {/* Production & review stages: New vs Redo vs Revised */}
@@ -844,7 +923,7 @@ export default function WorkflowStageSection({
             </div>
 
             <div style={{ fontSize: "0.82rem", color: "#64748b", fontWeight: 600 }}>
-              Showing {stagePosts.length} {stageMeta.shortTitle.toLowerCase()} items
+              Showing {plural(stagePosts.length, stageId === "scripts" ? "script" : "post")}
             </div>
           </div>
 
@@ -1848,7 +1927,7 @@ function StageListingTable({
                 Platforms
               </th>
               <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 120, whiteSpace: "nowrap" }}>
-                {stageId === "published" ? "Published At" : stageId === "post_schedule" ? "Scheduled At" : stageId === "rejected" ? "Rejected On" : "Timing"}
+                {stageId === "published" ? "Published" : stageId === "rejected" ? "Rejected On" : "Post Date"}
               </th>
               <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 360, textAlign: "right", whiteSpace: "nowrap" }}>
                 Actions
@@ -2117,21 +2196,29 @@ function StageListingTable({
 
                   {/* 3. Format */}
                   <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        fontWeight: 700,
-                        color: "#475569",
-                        background: "#f8fafc",
-                        padding: "3px 8px",
-                        borderRadius: 6,
-                        border: "1px solid #e2e8f0",
-                        textTransform: "uppercase",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {post.post_type}
-                    </span>
+                    {(() => {
+                      const fmt = FORMAT_META[post.post_type] || { label: post.post_type || "Post", icon: FileText, color: "#475569", bg: "#f1f5f9" };
+                      const FmtIcon = fmt.icon;
+                      return (
+                        <span
+                          title={fmt.label}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            color: fmt.color,
+                            background: fmt.bg,
+                            padding: "4px 9px",
+                            borderRadius: 999,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <FmtIcon size={13} /> {fmt.label}
+                        </span>
+                      );
+                    })()}
                   </td>
 
                   {/* 4. Platforms */}
@@ -2140,18 +2227,20 @@ function StageListingTable({
                       {(post.platforms || ["instagram"]).map((plat) => (
                         <span
                           key={plat}
+                          title={PLATFORM_NAMES[plat] || plat}
+                          aria-label={PLATFORM_NAMES[plat] || plat}
                           style={{
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                            color: "#334155",
-                            background: "#f1f5f9",
-                            padding: "2px 7px",
-                            borderRadius: 4,
-                            textTransform: "capitalize",
-                            whiteSpace: "nowrap",
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            background: "#f8fafc",
+                            border: "1px solid #e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
                         >
-                          {plat}
+                          {renderPlatformIcon(plat, { size: 15 })}
                         </span>
                       ))}
                     </div>
@@ -2163,30 +2252,45 @@ function StageListingTable({
                       <span style={{ fontSize: "0.76rem", color: "#b91c1c", fontWeight: 700, whiteSpace: "nowrap" }}>
                         {post.rejected_at ? new Date(post.rejected_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
                       </span>
-                    ) : post.scheduled_at ? (() => {
-                      const isOverdue = new Date(post.scheduled_at) < new Date() && stageId !== "published";
+                    ) : stageId !== "published" && post.scheduled_at ? (() => {
+                      const when = new Date(post.scheduled_at);
+                      const hoursLeft = (when.getTime() - Date.now()) / 3600000;
+                      const isOverdue = hoursLeft < 0;
+                      const isSoon = !isOverdue && hoursLeft <= 24;
+                      const tone = isOverdue ? "#dc2626" : isSoon ? "#d97706" : "#0284c7";
                       return (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: isOverdue ? "#dc2626" : "#0284c7", whiteSpace: "nowrap" }}>
-                            <Clock size={13} />
-                            {new Date(post.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }} title={when.toLocaleString()}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap" }}>
+                            <Clock size={13} color={tone} />
+                            Posts {shortDate(when, true)}
                           </div>
-                          {isOverdue && (
-                            <div style={{ fontSize: "0.7rem", color: "#ef4444", fontWeight: 800, display: "flex", alignItems: "center", gap: 3 }} title="Scheduled time has passed">
-                              <AlertTriangle size={12} /> Is this posted or not?
-                            </div>
-                          )}
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.7rem", fontWeight: 800, color: tone, whiteSpace: "nowrap" }}>
+                            {isOverdue && <AlertTriangle size={12} />}
+                            {isOverdue
+                              ? stageId === "post_schedule"
+                                ? `Overdue ${relativeTime(when).replace(" ago", "")} · posted?`
+                                : `Overdue by ${relativeTime(when).replace(" ago", "")}`
+                              : `Due ${relativeTime(when)}`}
+                          </div>
                         </div>
                       );
                     })() : post.published_at ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#10b981", whiteSpace: "nowrap" }}>
-                        <CheckCircle2 size={13} />
-                        {new Date(post.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }} title={new Date(post.published_at).toLocaleString()}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#047857", whiteSpace: "nowrap" }}>
+                          <CheckCircle2 size={13} />
+                          {shortDate(new Date(post.published_at))}
+                        </div>
+                        <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#64748b", whiteSpace: "nowrap" }}>
+                          {relativeTime(new Date(post.published_at))}
+                        </div>
                       </div>
                     ) : (
-                      <span style={{ fontSize: "0.76rem", color: "#94a3b8", whiteSpace: "nowrap" }}>
-                        {new Date(post.created_at || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#94a3b8", whiteSpace: "nowrap" }}>No post date</span>
+                        <span style={{ fontSize: "0.7rem", color: "#94a3b8", whiteSpace: "nowrap" }}>
+                          Created {shortDate(new Date(post.created_at || Date.now()))}
+                        </span>
+                      </div>
                     )}
                   </td>
 

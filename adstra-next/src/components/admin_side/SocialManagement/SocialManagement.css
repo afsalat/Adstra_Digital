@@ -509,3 +509,212 @@
   }
 }
 
+
+/* ─── Social workflow pipeline stepper ─── */
+.sm-pipeline {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  background: #ffffff;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
+}
+
+.sm-pipeline-steps {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 3px;
+}
+
+.sm-step-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+}
+
+.sm-step {
+  --step-color: #4f46e5;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 18px 10px 22px;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sm-step-wrap:first-child .sm-step {
+  padding-left: 14px;
+  border-radius: 10px 0 0 10px;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+}
+
+.sm-step-wrap:last-child .sm-step {
+  padding-right: 14px;
+  border-radius: 0 10px 10px 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%);
+}
+
+.sm-step:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.sm-step.has-items {
+  color: #334155;
+}
+
+.sm-step.has-items .sm-step-icon {
+  color: var(--step-color);
+}
+
+.sm-step.active,
+.sm-step.active:hover {
+  background: var(--step-color);
+  color: #ffffff;
+}
+
+.sm-step.active .sm-step-icon {
+  color: #ffffff;
+}
+
+.sm-step:focus-visible {
+  outline: 2px solid var(--step-color);
+  outline-offset: -4px;
+}
+
+.sm-step-icon {
+  flex-shrink: 0;
+}
+
+.sm-step-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sm-step-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: center;
+  background: #ffffff;
+  color: #94a3b8;
+}
+
+.sm-step.has-items .sm-step-count {
+  color: var(--step-color);
+}
+
+.sm-step.active .sm-step-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.sm-pipeline-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 12px;
+  border-left: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.sm-side-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.sm-side-btn:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.sm-side-rejected.active {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.sm-side-reports.active {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.sm-side-badge {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.sm-side-rejected.active .sm-side-badge {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Narrow screens: show only icon + count on inactive steps */
+@media (max-width: 1280px) {
+  .sm-step:not(.active) .sm-step-label {
+    display: none;
+  }
+  .sm-step-wrap:has(.sm-step.active) {
+    flex-grow: 2.4;
+  }
+  .sm-pipeline-side .sm-side-btn span:not(.sm-side-badge) {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .sm-pipeline {
+    flex-direction: column;
+  }
+  .sm-pipeline-side {
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
+    padding: 6px 0 0;
+    justify-content: flex-end;
+  }
+  .sm-step {
+    padding-left: 16px;
+    padding-right: 12px;
+  }
+  .sm-step-count {
+    display: none;
+  }
+  .sm-step.active .sm-step-count {
+    display: inline;
+  }
+}
