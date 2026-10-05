@@ -26,6 +26,8 @@ import FullOverviewDashboardTab from "./components/FullOverviewDashboardTab";
 import DedicatedSocialSection from "./components/DedicatedSocialSection";
 import MediaLibraryTab from "./components/MediaLibraryTab";
 import CampaignsTab from "./components/CampaignsTab";
+import CampaignManagementSection from "./components/CampaignManagementSection";
+import MetaAudienceSection from "./components/MetaAudienceSection";
 import AnalyticsReportsTab from "./components/AnalyticsReportsTab";
 import TeamDesignationTreeTab from "./components/TeamDesignationTreeTab";
 import SocialSettingsTab from "./components/SocialSettingsTab";
@@ -37,8 +39,14 @@ function SocialManagementInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "overview";
+  const initialSubTab = searchParams.get("subtab") || "dashboard";
 
   const [activeMainModule, setActiveMainModule] = useState(initialTab);
+  const [campaignSubTab, setCampaignSubTab] = useState(
+    ["dashboard", "campaign_management", "audience"].includes(initialSubTab)
+      ? initialSubTab
+      : "dashboard"
+  );
   const [selectedClientId, setSelectedClientId] = useState("all");
 
   // Data states
@@ -62,6 +70,10 @@ function SocialManagementInner() {
     const tabParam = searchParams.get("tab");
     if (tabParam && ["overview", "social", "assets", "campaigns", "reports", "team_tree", "settings"].includes(tabParam)) {
       setActiveMainModule(tabParam);
+    }
+    const subTabParam = searchParams.get("subtab");
+    if (subTabParam && ["dashboard", "campaign_management", "audience"].includes(subTabParam)) {
+      setCampaignSubTab(subTabParam);
     }
   }, [searchParams]);
 
@@ -290,12 +302,102 @@ function SocialManagementInner() {
         )}
 
         {activeMainModule === "campaigns" && (
-          <CampaignsTab
-            campaigns={campaigns}
-            clients={activeClients}
-            platformConnections={platformConnections}
-            onRefresh={fetchData}
-          />
+          <div>
+            {/* Secondary Tab Bar for Campaigns */}
+            <nav
+              style={{
+                display: "flex",
+                background: "#ffffff",
+                padding: "4px 6px",
+                borderRadius: 12,
+                border: "1px solid #e2e8f0",
+                marginBottom: 20,
+                gap: 4,
+                boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
+                width: "fit-content",
+              }}
+            >
+              {[
+                { id: "dashboard", label: "Dashboard" },
+                { id: "campaign_management", label: "Campaign Management" },
+                { id: "audience", label: "Audience" },
+              ].map((subTab) => {
+                const isActive = campaignSubTab === subTab.id;
+                return (
+                  <button
+                    key={subTab.id}
+                    onClick={() => setCampaignSubTab(subTab.id)}
+                    style={{
+                      padding: "8px 20px",
+                      borderRadius: 9,
+                      fontSize: "0.85rem",
+                      fontWeight: isActive ? 700 : 550,
+                      cursor: "pointer",
+                      border: "none",
+                      background: isActive ? "#0f172a" : "transparent",
+                      color: isActive ? "#ffffff" : "#64748b",
+                      boxShadow: isActive ? "0 2px 8px rgba(15, 23, 42, 0.12)" : "none",
+                      transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {subTab.label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Dashboard Sub-Tab */}
+            {campaignSubTab === "dashboard" && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: 320,
+                  color: "#94a3b8",
+                  fontSize: "0.95rem",
+                  fontWeight: 500,
+                  gap: 10,
+                  background: "#ffffff",
+                  borderRadius: 14,
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+                <span>Dashboard coming soon</span>
+              </div>
+            )}
+
+            {/* Campaign Management Sub-Tab */}
+            {campaignSubTab === "campaign_management" && (
+              <CampaignsTab
+                campaigns={campaigns}
+                clients={activeClients}
+                selectedClientId={selectedClientId}
+                activeSubsection="management"
+                onSelectSubsection={(sub) =>
+                  setCampaignSubTab(sub === "audience" ? "audience" : "campaign_management")
+                }
+                onRefresh={fetchData}
+              />
+            )}
+
+            {/* Audience Sub-Tab (Meta Ads Manager Audience Section) */}
+            {campaignSubTab === "audience" && (
+              <MetaAudienceSection
+                clients={activeClients}
+                selectedClientId={selectedClientId}
+                campaigns={campaigns}
+              />
+            )}
+          </div>
         )}
 
         {activeMainModule === "reports" && (

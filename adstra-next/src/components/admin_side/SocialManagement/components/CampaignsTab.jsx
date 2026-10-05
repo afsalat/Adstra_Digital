@@ -1,4344 +1,6736 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
-import API_BASE_URL from "@/utils/apiBase";
-import "./CampaignsTab.css";
-import CampaignReportsSection from "./CampaignReportsSection";
+import React, { useState, useRef, useEffect } from "react";
 import {
-  Plus,
-  Search,
-  X,
-  Layers,
-  Target,
-  Calendar,
-  ArrowRight,
-  ChevronDown,
-  RotateCcw,
-  Pause,
-  Play,
-  Edit3,
-  CheckCircle2,
-  Building2,
-  Globe,
-  ArrowLeft,
-  MoreHorizontal,
-  TrendingUp,
-  Users,
-  DollarSign,
-  Eye,
-  MousePointerClick,
-  Award,
-  HelpCircle,
-  AlertTriangle,
-  Trash2,
-  Clock,
-  Check,
-  BarChart3,
-  Sparkles,
-  Upload,
-  Image as ImageIcon,
-  Video,
-  ArrowUp,
-  ArrowDown,
-  Package,
-  AlertCircle,
-  IndianRupee,
+  MetaLogoIcon,
+  GoogleAdsLogoIcon,
+  LinkedInLogoIcon,
+} from "./CreateCampaignWizard";
+import MetaAdsManagerCampaignEditor from "./MetaAdsManagerCampaignEditor";
+import {
   LayoutGrid,
-  Table as TableIcon,
-  ExternalLink,
+  Search,
+  Plus,
+  Copy,
+  Edit2,
+  Trash2,
+  Eye,
+  UploadCloud,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  SlidersHorizontal,
+  Download,
+  Maximize2,
   RefreshCw,
-  Zap,
-  Facebook,
   Info,
+  Check,
+  RotateCcw,
+  ArrowUpDown,
+  ArrowUp,
+  Sliders,
+  MoreHorizontal,
+  Folder,
+  Mail,
+  Send,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
-import { renderPlatformIcon } from "./PlatformIcons";
 
-// =============================================================================
-// Helper Functions & Constants
-// =============================================================================
-
-// Meta & Google platform-specific campaign types
-export const META_CAMPAIGN_TYPES = [
-  { value: "FEED_STORIES", label: "Feeds & Stories (Facebook & Instagram)", shortLabel: "Feeds & Stories" },
-  { value: "REELS_VIDEO", label: "Reels & Video Stream", shortLabel: "Reels & Video" },
-  { value: "ADVANTAGE_PLUS", label: "Advantage+ Placements (Automatic)", shortLabel: "Advantage+ Placements" },
-  { value: "MESSENGER", label: "Direct & Messenger", shortLabel: "Direct & Messenger" },
-  { value: "AUDIENCE_NETWORK", label: "Audience Network", shortLabel: "Audience Network" },
+// Official Brand Radio Platforms
+const AD_PLATFORMS = [
+  {
+    id: "meta",
+    label: "Meta Ads",
+    icon: <MetaLogoIcon size={18} />,
+  },
+  {
+    id: "google",
+    label: "Google Ads",
+    icon: <GoogleAdsLogoIcon size={17} />,
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn Ads",
+    icon: <LinkedInLogoIcon size={17} />,
+  },
 ];
 
-export const GOOGLE_CAMPAIGN_TYPES = [
-  { value: "SEARCH", label: "Search Campaign" },
-  { value: "PERFORMANCE_MAX", label: "Performance Max" },
-  { value: "DISPLAY", label: "Display Network" },
-  { value: "VIDEO", label: "Video / YouTube" },
-  { value: "SHOPPING", label: "Shopping Campaign" },
+// Meta Sub-sections Icons matching Image 1, 2, 3
+const MetaFolderIcon = ({ size = 16, active = false }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 20 20"
+    fill="none"
+    style={{ flexShrink: 0 }}
+  >
+    <path
+      d="M3 5a2 2 0 0 1 2-2h3.586a1 1 0 0 1 .707.293L10.707 5H15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z"
+      stroke={active ? "#0064e1" : "#64748b"}
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill={active ? "#eff6ff" : "none"}
+    />
+  </svg>
+);
+
+const MetaAdIcon = ({ size = 16, active = false }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 20 20"
+    fill="none"
+    style={{ flexShrink: 0 }}
+  >
+    <rect
+      x="2.5"
+      y="3.5"
+      width="15"
+      height="13"
+      rx="3"
+      fill={active ? "#0064e1" : "#94a3b8"}
+    />
+    <rect x="5" y="6" width="6" height="2.5" rx="0.8" fill="#ffffff" />
+    <rect x="5" y="10" width="10" height="1.8" rx="0.6" fill="#ffffff" opacity="0.85" />
+    <rect x="5" y="12.8" width="7" height="1.8" rx="0.6" fill="#ffffff" opacity="0.65" />
+  </svg>
+);
+
+// Ad Creative Icon (grey document placeholder from Images 1, 2, 3)
+const AdPlaceholderIcon = () => (
+  <div
+    style={{
+      width: 26,
+      height: 26,
+      borderRadius: 4,
+      background: "#f1f5f9",
+      border: "1px solid #cbd5e1",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    }}
+  >
+    <svg width={14} height={14} viewBox="0 0 20 20" fill="none">
+      <rect x="3" y="3" width="14" height="14" rx="2.5" stroke="#94a3b8" strokeWidth="1.5" />
+      <line x1="6" y1="7" x2="14" y2="7" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="6" y1="10.5" x2="11" y2="10.5" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  </div>
+);
+
+// Complete 19-Column Ads Dataset Matching Images 1, 2, 3
+const INITIAL_ADS = [
+  {
+    id: "ad-1",
+    name: "AAA",
+    thumb: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&auto=format&fit=crop&q=80",
+    delivery: "In draft",
+    actions: "—",
+    results: "—",
+    costPerResult: "—",
+    budget: "Using campaign...",
+    budgetSub: "",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "—",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Leads",
+    lastSignificantEdit: "—",
+    qualityRanking: "—",
+    engagementRanking: "—",
+    conversionRanking: "—",
+    adsetName: "aaa",
+    activeAdsCount: "0 active ads",
+    active: true,
+  },
+  {
+    id: "ad-2",
+    name: "New Leads ad",
+    thumb: null,
+    delivery: "In draft",
+    actions: "—",
+    results: "—",
+    costPerResult: "—",
+    budget: "Using campaign...",
+    budgetSub: "",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "—",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Leads",
+    lastSignificantEdit: "—",
+    qualityRanking: "—",
+    engagementRanking: "—",
+    conversionRanking: "—",
+    adsetName: "New Leads ad set",
+    activeAdsCount: "0 active ads",
+    active: true,
+  },
+  {
+    id: "ad-3",
+    name: "New Awareness ad",
+    thumb: null,
+    delivery: "In draft",
+    actions: "—",
+    results: "—",
+    costPerResult: "—",
+    budget: "₹200.00",
+    budgetSub: "Daily",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "—",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Daily unique reach",
+    lastSignificantEdit: "—",
+    qualityRanking: "—",
+    engagementRanking: "—",
+    conversionRanking: "—",
+    adsetName: "New Awareness ad set",
+    activeAdsCount: "0 active ads",
+    active: true,
+  },
+  {
+    id: "ad-4",
+    name: "New App promotion Ad",
+    thumb: null,
+    delivery: "In draft",
+    actions: "—",
+    results: "—",
+    costPerResult: "—",
+    budget: "Using campaign...",
+    budgetSub: "",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "—",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "App installs",
+    lastSignificantEdit: "—",
+    qualityRanking: "—",
+    engagementRanking: "—",
+    conversionRanking: "—",
+    adsetName: "New App promotion Ad set",
+    activeAdsCount: "0 active ads",
+    active: true,
+  },
+  {
+    id: "ad-5",
+    name: "New Awareness ad",
+    thumb: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&auto=format&fit=crop&q=80",
+    delivery: "In draft",
+    actions: "—",
+    results: "—",
+    costPerResult: "—",
+    budget: "₹200.00",
+    budgetSub: "Daily",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "—",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Daily unique reach",
+    lastSignificantEdit: "—",
+    qualityRanking: "—",
+    engagementRanking: "—",
+    conversionRanking: "—",
+    adsetName: "aaaa",
+    activeAdsCount: "0 active ads",
+    active: true,
+  },
+  {
+    id: "ad-6",
+    name: "New Engagement ad",
+    thumb: null,
+    delivery: "In draft",
+    actions: "—",
+    results: "—",
+    costPerResult: "—",
+    budget: "Using campaign...",
+    budgetSub: "",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "—",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Conversations",
+    lastSignificantEdit: "—",
+    qualityRanking: "—",
+    engagementRanking: "—",
+    conversionRanking: "—",
+    adsetName: "New Engagement ad set",
+    activeAdsCount: "0 active ads",
+    active: true,
+  },
 ];
 
-export const CTA_OPTIONS = [
-  { value: "no_button", label: "No Button" },
-  { value: "learn_more", label: "Learn More" },
-  { value: "sign_up", label: "Sign Up" },
-  { value: "contact_us", label: "Contact Us" },
-  { value: "apply_now", label: "Apply Now" },
-  { value: "book_now", label: "Book Now" },
-  { value: "shop_now", label: "Shop Now" },
-  { value: "get_quote", label: "Get Quote" },
-  { value: "download", label: "Download" },
+// Ad Sets Dataset Matching Structure
+const INITIAL_ADSETS = [
+  {
+    id: "as-1",
+    name: "aaa",
+    delivery: "In draft",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Leads",
+    budget: "Using campaign...",
+    budgetSub: "",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click or 1-day view",
+    lastSignificantEdit: "—",
+    active: true,
+  },
+  {
+    id: "as-2",
+    name: "New Leads ad set",
+    delivery: "In draft",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Leads",
+    budget: "Using campaign...",
+    budgetSub: "",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click",
+    lastSignificantEdit: "—",
+    active: true,
+  },
+  {
+    id: "as-3",
+    name: "New Awareness ad set",
+    delivery: "In draft",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Daily unique reach",
+    budget: "₹200.00",
+    budgetSub: "Daily",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "1-day view",
+    lastSignificantEdit: "—",
+    active: true,
+  },
+  {
+    id: "as-4",
+    name: "New App promotion Ad set",
+    delivery: "In draft",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "App installs",
+    budget: "Using campaign...",
+    budgetSub: "",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click or 1-day view",
+    lastSignificantEdit: "—",
+    active: true,
+  },
+  {
+    id: "as-5",
+    name: "New Engagement ad set",
+    delivery: "In draft",
+    bidStrategy: "Highest volume",
+    bidStrategySub: "Conversations",
+    budget: "Using campaign...",
+    budgetSub: "",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click",
+    lastSignificantEdit: "—",
+    active: true,
+  },
 ];
 
-export const CATALOG_OPTIONS = [
-  { value: "main_catalog", label: "Main Product Catalog (Syncing)" },
-  { value: "seasonal_catalog", label: "Seasonal & Festive Catalog" },
-  { value: "top_performers", label: "Top Performers & Hero Catalog" },
-  { value: "custom_services", label: "Enterprise Services Catalog" },
+// Campaigns Dataset Matching Structure
+const INITIAL_CAMPAIGNS = [
+  {
+    id: "c-1",
+    name: "AAA",
+    delivery: "In draft",
+    bidStrategy: "Using campaign budget",
+    bidStrategySub: "",
+    budget: "₹500.00",
+    budgetSub: "Daily",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click or 1-day view",
+    active: true,
+  },
+  {
+    id: "c-2",
+    name: "New Leads campaign",
+    delivery: "In draft",
+    bidStrategy: "Lowest cost",
+    bidStrategySub: "",
+    budget: "₹350.00",
+    budgetSub: "Daily",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click",
+    active: true,
+  },
+  {
+    id: "c-3",
+    name: "New Awareness campaign",
+    delivery: "In draft",
+    bidStrategy: "Lowest cost",
+    bidStrategySub: "",
+    budget: "₹200.00",
+    budgetSub: "Daily",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "1-day view",
+    active: true,
+  },
+  {
+    id: "c-4",
+    name: "New App promotion campaign",
+    delivery: "In draft",
+    bidStrategy: "Using campaign budget",
+    bidStrategySub: "",
+    budget: "₹400.00",
+    budgetSub: "Daily",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click or 1-day view",
+    active: true,
+  },
+  {
+    id: "c-5",
+    name: "New Engagement campaign",
+    delivery: "In draft",
+    bidStrategy: "Lowest cost",
+    bidStrategySub: "",
+    budget: "₹250.00",
+    budgetSub: "Daily",
+    results: "—",
+    costPerResult: "—",
+    amountSpent: "—",
+    impressions: "—",
+    reach: "—",
+    ends: "Ongoing",
+    attribution: "7-day click",
+    active: true,
+  },
 ];
 
-export const PRODUCT_SET_OPTIONS = [
-  { value: "all_products", label: "All Products" },
-  { value: "best_sellers", label: "Best Sellers" },
-  { value: "new_arrivals", label: "New Arrivals" },
-  { value: "featured_deals", label: "Featured Deals & Offers" },
+// Meta Date Picker Constants & Helpers (Image 1 & Image 2)
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-function formatMediaSize(bytes) {
-  if (!bytes || bytes === 0) return "";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
-}
-
-// Format date helper: "2026-09-17" -> "17 Sep 2026"
-function formatDisplayDate(dateStr) {
-  if (!dateStr) return "Open";
-  try {
-    const parts = String(dateStr).split("-");
-    if (parts.length === 3) {
-      const date = new Date(
-        parseInt(parts[0], 10),
-        parseInt(parts[1], 10) - 1,
-        parseInt(parts[2], 10)
-      );
-      return date.toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    }
-    const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    }
-  } catch (e) {
-    // Fallback
-  }
-  return dateStr;
-}
-
-const formatDate = formatDisplayDate;
-
-// Indian Rupee currency format helper: 50000 -> "₹50,000", 245000 -> "₹2.45L"
-function formatINR(val, compact = false) {
-  const num = parseFloat(val) || 0;
-  if (compact) {
-    if (num >= 10000000) {
-      return "₹" + (num / 10000000).toFixed(2).replace(/\.00$/, "") + "Cr";
-    }
-    if (num >= 100000) {
-      return "₹" + (num / 100000).toFixed(2).replace(/\.00$/, "") + "L";
-    }
-    if (num >= 1000) {
-      return "₹" + (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
-    }
-    return "₹" + num.toLocaleString("en-IN");
-  }
-  return "₹" + Math.round(num).toLocaleString("en-IN");
-}
-
-// Format compact number helper: 18200 -> "18.2K", 1280000 -> "1.28M"
-function formatCompact(val) {
-  const num = Number(val) || 0;
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(2).replace(/\.00$/, "").replace(/(\.[1-9])0$/, "$1") + "M";
-  }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
-  }
-  return num.toLocaleString("en-IN");
-}
-
-// Generate realistic, deterministic campaign performance metrics based on backend data
-function getCampaignMetrics(camp) {
-  const id = camp?.id || 1;
-  const spent = parseFloat(camp?.spent) || 0;
-  const budget = parseFloat(camp?.budget) || 50000;
-  const effectiveBase = spent > 0 ? spent : Math.round(budget * 0.45);
-
-  // Specific seeds for default showcase campaigns
-  if (id === 1) {
-    const s = spent > 0 ? spent : 110000;
-    return {
-      spendNum: s,
-      spend: formatINR(s),
-      reachNum: 48200,
-      reach: "48.2K",
-      impressionsNum: 92400,
-      impressions: "92.4K",
-      clicksNum: 3820,
-      clicks: "3,820",
-      leadsNum: 184,
-      leads: "184",
-      conversionsNum: 42,
-      conversions: "42",
-      engagement: "6.8%",
-      ctr: "4.13%",
-      cpl: "₹598",
-      cplNum: 598,
-      revenueNum: 345000,
-      revenue: "₹3,45,000",
-      profitNum: 235000,
-      profit: "₹2,35,000",
-      roiMultiplier: "3.14×",
-      roiNum: 3.14,
-      qualifiedLeadsNum: 98,
-    };
-  }
-  if (id === 2) {
-    const s = spent > 0 ? spent : 103000;
-    return {
-      spendNum: s,
-      spend: formatINR(s),
-      reachNum: 34500,
-      reach: "34.5K",
-      impressionsNum: 65100,
-      impressions: "65.1K",
-      clicksNum: 2640,
-      clicks: "2,640",
-      leadsNum: 142,
-      leads: "142",
-      conversionsNum: 31,
-      conversions: "31",
-      engagement: "5.4%",
-      ctr: "4.05%",
-      cpl: "₹725",
-      cplNum: 725,
-      revenueNum: 280000,
-      revenue: "₹2,80,000",
-      profitNum: 177000,
-      profit: "₹1,77,000",
-      roiMultiplier: "2.72×",
-      roiNum: 2.72,
-      qualifiedLeadsNum: 76,
-    };
-  }
-  if (id === 3) {
-    const s = spent > 0 ? spent : 38400;
-    return {
-      spendNum: s,
-      spend: formatINR(s),
-      reachNum: 18200,
-      reach: "18.2K",
-      impressionsNum: 32800,
-      impressions: "32.8K",
-      clicksNum: 1426,
-      clicks: "1,426",
-      leadsNum: 62,
-      leads: "62",
-      conversionsNum: 18,
-      conversions: "18",
-      engagement: "4.9%",
-      ctr: "4.35%",
-      cpl: "₹1,129",
-      cplNum: 1129,
-      revenueNum: 125000,
-      revenue: "₹1,25,000",
-      profitNum: 86600,
-      profit: "₹86,600",
-      roiMultiplier: "2.26×",
-      roiNum: 2.26,
-      qualifiedLeadsNum: 36,
-    };
-  }
-
-  // Dynamic deterministic calculations
-  const reachVal = Math.round(effectiveBase * 1.35 + (id * 1840) % 24000 + 4200);
-  const impressionsVal = Math.round(reachVal * 1.82);
-  const clicksVal = Math.round(impressionsVal * 0.042);
-  const leadsVal = Math.max(14, Math.round(clicksVal * 0.048));
-  const conversionsVal = Math.max(4, Math.round(leadsVal * 0.28));
-  const qualifiedLeadsVal = Math.max(conversionsVal + 2, Math.round(leadsVal * 0.58));
-  const engagementVal = (4.2 + ((id * 7) % 36) / 10).toFixed(1) + "%";
-  const ctrVal = ((clicksVal / (impressionsVal || 1)) * 100).toFixed(2) + "%";
-  const cplValNum = Math.round(effectiveBase / (leadsVal || 1));
-  const revenueVal = Math.round(conversionsVal * 7200 + effectiveBase * 1.8);
-  const profitVal = Math.max(0, revenueVal - effectiveBase);
-  const roiVal = (revenueVal / (effectiveBase || 1)).toFixed(2) + "×";
-
-  return {
-    spendNum: effectiveBase,
-    spend: formatINR(effectiveBase),
-    reachNum: reachVal,
-    reach: formatCompact(reachVal),
-    impressionsNum: impressionsVal,
-    impressions: formatCompact(impressionsVal),
-    clicksNum: clicksVal,
-    clicks: clicksVal.toLocaleString("en-IN"),
-    leadsNum: leadsVal,
-    leads: leadsVal.toString(),
-    conversionsNum: conversionsVal,
-    conversions: conversionsVal.toString(),
-    engagement: engagementVal,
-    ctr: ctrVal,
-    cpl: formatINR(cplValNum),
-    cplNum: cplValNum,
-    revenueNum: revenueVal,
-    revenue: formatINR(revenueVal),
-    profitNum: profitVal,
-    profit: formatINR(profitVal),
-    roiMultiplier: roiVal,
-    roiNum: parseFloat(roiVal) || 2.4,
-    qualifiedLeadsNum: qualifiedLeadsVal,
-  };
-}
-
-// Generate chart data series for a campaign
-function generatePerformanceTimeline(camp, metricTab, timeframe) {
-  const days = timeframe === "7D" ? 7 : timeframe === "30D" ? 30 : 14;
-  const metrics = getCampaignMetrics(camp);
-  const baseValue =
-    metricTab === "Reach"
-      ? metrics.reachNum / days
-      : metricTab === "Clicks"
-      ? metrics.clicksNum / days
-      : metricTab === "Leads"
-      ? metrics.leadsNum / days
-      : metricTab === "Conversions"
-      ? metrics.conversionsNum / days
-      : metrics.spendNum / days;
-
-  const points = [];
-  const now = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    const dayLabel = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    const wave = 0.8 + Math.sin(i * 0.9 + (camp?.id || 1)) * 0.28 + ((i % 3) * 0.08);
-    const val = Math.max(1, Math.round(baseValue * wave));
-    points.push({
-      date: dayLabel,
-      value: val,
-    });
-  }
-  return points;
-}
-
-// =============================================================================
-// Performance Telemetry Data Generators (Image 2 Design: Monthly & Weekly)
-// =============================================================================
-
-export const MONTHLY_TELEMETRY_TEMPLATE = [
-  { monthShort: "Jan", spend: 2850, reach: 12450, impressions: 18760, clicks: 642, leads: 38, conversions: 12 },
-  { monthShort: "Feb", spend: 3420, reach: 15320, impressions: 22780, clicks: 823, leads: 52, conversions: 18 },
-  { monthShort: "Mar", spend: 4120, reach: 18760, impressions: 28460, clicks: 1021, leads: 67, conversions: 26 },
-  { monthShort: "Apr", spend: 3780, reach: 21540, impressions: 34210, clicks: 1245, leads: 96, conversions: 34 },
-  { monthShort: "May", spend: 3260, reach: 26310, impressions: 42560, clicks: 1560, leads: 124, conversions: 48 },
-  { monthShort: "Jun", spend: 2980, reach: 24870, impressions: 39820, clicks: 1420, leads: 110, conversions: 42 },
-  { monthShort: "Jul", spend: 2640, reach: 22640, impressions: 36780, clicks: 1230, leads: 96, conversions: 36 },
-  { monthShort: "Aug", spend: 2120, reach: 19820, impressions: 32450, clicks: 980, leads: 82, conversions: 28 },
-  { monthShort: "Sep", spend: 1780, reach: 17360, impressions: 27890, clicks: 760, leads: 64, conversions: 22 },
-  { monthShort: "Oct", spend: 2450, reach: 21560, impressions: 34120, clicks: 1120, leads: 88, conversions: 31 },
-  { monthShort: "Nov", spend: 2180, reach: 19240, impressions: 30760, clicks: 980, leads: 72, conversions: 26 },
-  { monthShort: "Dec", spend: 1560, reach: 15870, impressions: 24320, clicks: 760, leads: 58, conversions: 18 },
+const FULL_MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
-export function getMonthlyTelemetryData(camp, year = "2025") {
-  const metrics = getCampaignMetrics(camp);
-  const campSpent = metrics.spendNum || 0;
-  const baseTotal = 33140;
-  const multiplier =
-    campSpent > 0 && Math.abs(campSpent - baseTotal) > 8000
-      ? campSpent / baseTotal
-      : 1;
+const YEAR_OPTIONS = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
-  return MONTHLY_TELEMETRY_TEMPLATE.map((item) => {
-    const s = Math.round(item.spend * multiplier);
-    const r = Math.round(item.reach * multiplier);
-    const imp = Math.round(item.impressions * multiplier);
-    const clk = Math.round(item.clicks * multiplier);
-    const ld = Math.round(item.leads * multiplier);
-    const conv = Math.round(item.conversions * multiplier);
-
-    return {
-      monthShort: item.monthShort,
-      monthFull: `${item.monthShort} ${year}`,
-      spend: `₹ ${s.toLocaleString("en-IN")}`,
-      spendNum: s,
-      reach: r.toLocaleString("en-IN"),
-      reachNum: r,
-      impressions: imp.toLocaleString("en-IN"),
-      impressionsNum: imp,
-      clicks: clk.toLocaleString("en-IN"),
-      clicksNum: clk,
-      leads: ld.toLocaleString("en-IN"),
-      leadsNum: ld,
-      conversions: conv.toLocaleString("en-IN"),
-      conversionsNum: conv,
-    };
-  });
-}
-
-export const WEEKLY_TELEMETRY_TEMPLATE = [
-  { weekId: "w1", weekLabel: "Week 1", spend: 3120, reach: 14620, impressions: 22480, clicks: 1120, leads: 72, conversions: 28 },
-  { weekId: "w2", weekLabel: "Week 2", spend: 3860, reach: 18540, impressions: 28760, clicks: 1480, leads: 96, conversions: 36 },
-  { weekId: "w3", weekLabel: "Week 3", spend: 2960, reach: 13720, impressions: 21340, clicks: 1020, leads: 68, conversions: 26 },
-  { weekId: "w4", weekLabel: "Week 4", spend: 2480, reach: 11960, impressions: 17890, clicks: 820, leads: 54, conversions: 20 },
+const DATE_PRESET_OPTIONS = [
+  { id: "today", label: "Today" },
+  { id: "yesterday", label: "Yesterday" },
+  { id: "today_yesterday", label: "Today and yesterday" },
+  { id: "last_7", label: "Last 7 days" },
+  { id: "last_14", label: "Last 14 days" },
+  { id: "last_28", label: "Last 28 days" },
+  { id: "last_30", label: "Last 30 days" },
+  { id: "this_week", label: "This week" },
+  { id: "last_week", label: "Last week" },
+  { id: "this_month", label: "This month" },
+  { id: "last_month", label: "Last month" },
+  { id: "maximum", label: "Maximum" },
+  { id: "custom", label: "Custom" },
 ];
 
-export function getWeeklyTelemetryData(camp, monthStr = "September", year = "2025") {
-  const monthAbbr = monthStr.slice(0, 3);
-  const metrics = getCampaignMetrics(camp);
-  const campSpent = metrics.spendNum || 0;
-  const baseTotal = 12420;
-  const multiplier =
-    campSpent > 0 && Math.abs(campSpent - baseTotal) > 4000
-      ? (campSpent * 0.38) / baseTotal
-      : 1;
-
-  let totalSpend = 0;
-  let totalReach = 0;
-  let totalImpressions = 0;
-  let totalClicks = 0;
-  let totalLeads = 0;
-  let totalConversions = 0;
-
-  const rows = WEEKLY_TELEMETRY_TEMPLATE.map((w, idx) => {
-    const s = Math.round(w.spend * multiplier);
-    const r = Math.round(w.reach * multiplier);
-    const imp = Math.round(w.impressions * multiplier);
-    const clk = Math.round(w.clicks * multiplier);
-    const ld = Math.round(w.leads * multiplier);
-    const conv = Math.round(w.conversions * multiplier);
-
-    totalSpend += s;
-    totalReach += r;
-    totalImpressions += imp;
-    totalClicks += clk;
-    totalLeads += ld;
-    totalConversions += conv;
-
-    const dynamicRange =
-      idx === 0
-        ? `${monthAbbr} 1 – 7`
-        : idx === 1
-        ? `${monthAbbr} 8 – 14`
-        : idx === 2
-        ? `${monthAbbr} 15 – 21`
-        : `${monthAbbr} 22 – 28`;
-
-    return {
-      weekId: w.weekId,
-      weekLabel: w.weekLabel,
-      dateRange: dynamicRange,
-      fullTitle: `${w.weekLabel} (${dynamicRange})`,
-      spend: `₹${s.toLocaleString("en-IN")}`,
-      spendNum: s,
-      reach: r.toLocaleString("en-IN"),
-      reachNum: r,
-      impressions: imp.toLocaleString("en-IN"),
-      impressionsNum: imp,
-      clicks: clk.toLocaleString("en-IN"),
-      clicksNum: clk,
-      leads: ld.toLocaleString("en-IN"),
-      leadsNum: ld,
-      conversions: conv.toLocaleString("en-IN"),
-      conversionsNum: conv,
-    };
-  });
-
-  const totals = {
-    label: "Total",
-    spend: `₹${totalSpend.toLocaleString("en-IN")}`,
-    spendNum: totalSpend,
-    reach: totalReach.toLocaleString("en-IN"),
-    reachNum: totalReach,
-    impressions: totalImpressions.toLocaleString("en-IN"),
-    impressionsNum: totalImpressions,
-    clicks: totalClicks.toLocaleString("en-IN"),
-    clicksNum: totalClicks,
-    leads: totalLeads.toLocaleString("en-IN"),
-    leadsNum: totalLeads,
-    conversions: totalConversions.toLocaleString("en-IN"),
-    conversionsNum: totalConversions,
-  };
-
-  return { rows, totals };
-}
-
-// Backward compatible helper
-function getCampaignPerformanceTableData(camp, timeframe) {
-  if (timeframe === "Weekly") {
-    const w = getWeeklyTelemetryData(camp);
-    return {
-      rows: w.rows.map((r) => ({
-        date: r.fullTitle,
-        ...r,
-      })),
-      totals: {
-        date: "Total",
-        ...w.totals,
-      },
-    };
+const getPresetRange = (presetId) => {
+  switch (presetId) {
+    case "today":
+      return [new Date(2026, 8, 29), new Date(2026, 8, 29)];
+    case "yesterday":
+      return [new Date(2026, 8, 28), new Date(2026, 8, 28)];
+    case "today_yesterday":
+      return [new Date(2026, 8, 28), new Date(2026, 8, 29)];
+    case "last_7":
+      return [new Date(2026, 8, 22), new Date(2026, 8, 28)];
+    case "last_14":
+      return [new Date(2026, 8, 15), new Date(2026, 8, 28)];
+    case "last_28":
+      return [new Date(2026, 8, 1), new Date(2026, 8, 28)];
+    case "last_30":
+      return [new Date(2026, 7, 30), new Date(2026, 8, 28)];
+    case "this_week":
+      return [new Date(2026, 8, 27), new Date(2026, 8, 29)];
+    case "last_week":
+      return [new Date(2026, 8, 20), new Date(2026, 8, 26)];
+    case "this_month":
+      return [new Date(2026, 8, 1), new Date(2026, 8, 29)];
+    case "last_month":
+      return [new Date(2026, 7, 1), new Date(2026, 7, 31)];
+    case "maximum":
+      return [new Date(2025, 0, 1), new Date(2026, 8, 29)];
+    default:
+      return [new Date(2026, 8, 29), new Date(2026, 8, 29)];
   }
-  const m = getMonthlyTelemetryData(camp);
-  return {
-    rows: m.map((r) => ({
-      date: r.monthFull,
-      ...r,
-    })),
-    totals: {
-      date: "Total",
-      spend: formatINR(m.reduce((acc, x) => acc + x.spendNum, 0)),
-      reach: m.reduce((acc, x) => acc + x.reachNum, 0).toLocaleString("en-IN"),
-      impressions: m.reduce((acc, x) => acc + x.impressionsNum, 0).toLocaleString("en-IN"),
-      clicks: m.reduce((acc, x) => acc + x.clicksNum, 0).toLocaleString("en-IN"),
-      leads: m.reduce((acc, x) => acc + x.leadsNum, 0).toLocaleString("en-IN"),
-      conversions: m.reduce((acc, x) => acc + x.conversionsNum, 0).toLocaleString("en-IN"),
-    },
-  };
-}
+};
 
-// Top ads performance breakdown helper
-function getCampaignAdPerformance(camp) {
-  const metrics = getCampaignMetrics(camp);
-  const totalSpend = metrics.spendNum;
-  const totalReach = metrics.reachNum;
-  const totalLeads = metrics.leadsNum;
-  const totalConv = metrics.conversionsNum;
+const formatLabelDate = (d) => {
+  if (!d) return "";
+  const day = d.getDate();
+  const m = MONTH_NAMES[d.getMonth()];
+  const y = d.getFullYear();
+  return `${day} ${m} ${y}`;
+};
 
-  // Check if camp has explicit ads configured
-  if (Array.isArray(camp?.ads) && camp.ads.length > 0) {
-    const len = camp.ads.length;
-    return camp.ads.map((ad, idx) => {
-      const share = [0.48, 0.32, 0.20][idx] || (1 / len);
-      const adSpend = Math.round(totalSpend * share);
-      const adReach = Math.round(totalReach * share);
-      const adLeads = Math.max(1, Math.round(totalLeads * share));
-      const adConv = Math.max(1, Math.round(totalConv * share));
-      const adCtr = (3.8 + (idx * 0.4)).toFixed(2) + "%";
-      const adCpl = formatINR(Math.round(adSpend / (adLeads || 1)));
+const formatFullInputDate = (d) => {
+  if (!d) return "";
+  const day = d.getDate();
+  const m = FULL_MONTH_NAMES[d.getMonth()];
+  const y = d.getFullYear();
+  return `${day} ${m} ${y}`;
+};
 
-      return {
-        id: ad.id || idx + 1,
-        name: ad.name || `Ad Creative Variant #${idx + 1}`,
-        format: ad.format || (idx === 0 ? "video" : idx === 1 ? "carousel" : "image"),
-        spend: formatINR(adSpend),
-        reach: formatCompact(adReach),
-        ctr: adCtr,
-        leads: adLeads,
-        cpl: adCpl,
-        conversions: adConv,
-      };
-    });
-  }
-
-  // Realistic default ad performance rows based on campaign
-  const campName = camp?.name || "Campaign";
-  return [
-    {
-      id: 1,
-      name: `${campName} — Hero Video Reel (9:16)`,
-      format: "video",
-      spend: formatINR(Math.round(totalSpend * 0.50)),
-      reach: formatCompact(Math.round(totalReach * 0.48)),
-      ctr: "4.65%",
-      leads: Math.round(totalLeads * 0.52),
-      cpl: formatINR(Math.round((totalSpend * 0.50) / (totalLeads * 0.52 || 1))),
-      conversions: Math.round(totalConv * 0.54),
-    },
-    {
-      id: 2,
-      name: `${campName} — Feature Carousel Set`,
-      format: "carousel",
-      spend: formatINR(Math.round(totalSpend * 0.32)),
-      reach: formatCompact(Math.round(totalReach * 0.34)),
-      ctr: "3.92%",
-      leads: Math.round(totalLeads * 0.31),
-      cpl: formatINR(Math.round((totalSpend * 0.32) / (totalLeads * 0.31 || 1))),
-      conversions: Math.round(totalConv * 0.30),
-    },
-    {
-      id: 3,
-      name: `${campName} — Direct Intent Static Banner`,
-      format: "image",
-      spend: formatINR(Math.round(totalSpend * 0.18)),
-      reach: formatCompact(Math.round(totalReach * 0.18)),
-      ctr: "3.40%",
-      leads: Math.round(totalLeads * 0.17),
-      cpl: formatINR(Math.round((totalSpend * 0.18) / (totalLeads * 0.17 || 1))),
-      conversions: Math.round(totalConv * 0.16),
-    },
-  ];
-}
-
-// Audience demographics and placement breakdown helper
-function getCampaignAudiencePlacement(camp) {
-  const audienceText = camp?.target_audience || "";
-  let ageRange = "21 – 35 Years";
-  let genderSplit = { male: 54, female: 44, other: 2 };
-  let locations = ["Kerala", "Bengaluru", "Chennai", "Mumbai"];
-
-  if (audienceText) {
-    if (audienceText.includes("18") || audienceText.includes("24") || audienceText.includes("28")) {
-      ageRange = "18 – 28 Years";
-      genderSplit = { male: 52, female: 46, other: 2 };
-    } else if (audienceText.includes("30") || audienceText.includes("40") || audienceText.includes("50")) {
-      ageRange = "28 – 45 Years";
-      genderSplit = { male: 58, female: 40, other: 2 };
-    }
-    const extractedLocs = [];
-    ["Kerala", "Kochi", "Bangalore", "Bengaluru", "Chennai", "Mumbai", "Delhi", "Hyderabad", "Coimbatore"].forEach((loc) => {
-      if (audienceText.toLowerCase().includes(loc.toLowerCase())) {
-        extractedLocs.push(loc);
+const getPresetLabel = (presetId, start, end) => {
+  switch (presetId) {
+    case "today":
+      return `Today: ${formatLabelDate(end)}`;
+    case "yesterday":
+      return `Yesterday: ${formatLabelDate(start)}`;
+    case "today_yesterday":
+      return `Today and yesterday: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "last_7":
+      return `Last 7 days: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "last_14":
+      return `Last 14 days: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "last_28":
+      return `Last 28 days: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "last_30":
+      return `Last 30 days: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "this_week":
+      return `This week: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "last_week":
+      return `Last week: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "this_month":
+      return `This month: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "last_month":
+      return `Last month: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "maximum":
+      return `Maximum: ${formatLabelDate(start)} – ${formatLabelDate(end)}`;
+    case "custom":
+    default:
+      if (start && end && start.toDateString() === end.toDateString()) {
+        return formatLabelDate(start);
       }
-    });
-    if (extractedLocs.length > 0) {
-      locations = Array.from(new Set(extractedLocs));
-    }
+      return `${formatLabelDate(start)} – ${formatLabelDate(end)}`;
   }
-
-  const placements = [
-    { name: "Instagram Reels & Feed", share: 52, platform: "instagram" },
-    { name: "Facebook Feed & Stories", share: 34, platform: "facebook" },
-    { name: "Audience Network & Messenger", share: 14, platform: "facebook" },
-  ];
-
-  return {
-    ageRange,
-    genderSplit,
-    locations,
-    placements,
-  };
-}
-
-// Channel performance breakdown helper
-function getChannelPerformance(camp) {
-  const metrics = getCampaignMetrics(camp);
-  const platforms =
-    camp?.platforms && camp.platforms.length > 0
-      ? camp.platforms
-      : ["instagram", "facebook", "linkedin"];
-
-  const weights = {
-    instagram: { spendPct: 0.45, reachPct: 0.48, leadsPct: 0.42, convPct: 0.38 },
-    facebook: { spendPct: 0.35, reachPct: 0.38, leadsPct: 0.38, convPct: 0.42 },
-    linkedin: { spendPct: 0.20, reachPct: 0.14, leadsPct: 0.20, convPct: 0.20 },
-    youtube: { spendPct: 0.30, reachPct: 0.45, leadsPct: 0.25, convPct: 0.25 },
-    google_ads: { spendPct: 0.40, reachPct: 0.30, leadsPct: 0.45, convPct: 0.45 },
-    whatsapp: { spendPct: 0.15, reachPct: 0.15, leadsPct: 0.30, convPct: 0.35 },
-  };
-
-  const totalSpent = parseFloat(camp?.spent) || 38400;
-
-  return platforms.map((p) => {
-    const key = p.toLowerCase().replace(/[\s_-]+/g, "");
-    const w =
-      weights[key] || {
-        spendPct: 1 / platforms.length,
-        reachPct: 1 / platforms.length,
-        leadsPct: 1 / platforms.length,
-        convPct: 1 / platforms.length,
-      };
-
-    const cSpend = Math.round(totalSpent * w.spendPct);
-    const cReach = Math.round(metrics.reachNum * w.reachPct);
-    const cLeads = Math.max(4, Math.round(metrics.leadsNum * w.leadsPct));
-    const cConv = Math.max(1, Math.round(metrics.conversionsNum * w.convPct));
-    const cCpl = Math.round(cSpend / (cLeads || 1));
-
-    return {
-      platform: p,
-      spend: formatINR(cSpend),
-      reach: formatCompact(cReach),
-      leads: cLeads,
-      cpl: formatINR(cCpl),
-      conversions: cConv,
-    };
-  });
-}
-
-// Activity timeline for campaign
-function getCampaignActivityTimeline(camp) {
-  return [
-    { date: "17 Sep", title: "Budget updated", desc: "Monthly pacing aligned with target spend" },
-    { date: "16 Sep", title: "12 new leads generated", desc: "Performance spike from carousel ad placement" },
-    { date: "15 Sep", title: "Campaign activated", desc: "Multi-platform scheduled rollout initiated" },
-    { date: "14 Sep", title: "Creative uploaded", desc: "3 high-converting creative variants approved" },
-  ];
-}
-
-// Creative assets mock data
-function getCampaignAssets(camp) {
-  return [
-    {
-      id: 1,
-      title: "Hero Product Reel (9:16)",
-      platform: "instagram",
-      reach: "8.4K",
-      leads: "28",
-      conversions: "9",
-      bgGradient: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-    },
-    {
-      id: 2,
-      title: "Feature Carousel V2",
-      platform: "facebook",
-      reach: "6.1K",
-      leads: "21",
-      conversions: "6",
-      bgGradient: "linear-gradient(135deg, #2563eb, #06b6d4)",
-    },
-    {
-      id: 3,
-      title: "B2B Case Study Post",
-      platform: "linkedin",
-      reach: "3.7K",
-      leads: "13",
-      conversions: "3",
-      bgGradient: "linear-gradient(135deg, #0ea5e9, #6366f1)",
-    },
-  ];
-}
-
-// Resolve advertising platforms configured either explicitly or derived from social channels
-export function getEffectiveAdPlatforms(camp) {
-  if (!camp) return [];
-  const set = new Set();
-  if (Array.isArray(camp.ad_platforms)) {
-    camp.ad_platforms.forEach((p) => {
-      if (p) set.add(p.toLowerCase());
-    });
-  }
-  if (Array.isArray(camp.platforms)) {
-    camp.platforms.forEach((p) => {
-      const lower = String(p).toLowerCase();
-      if (lower === "meta" || lower === "facebook" || lower === "instagram") set.add("meta");
-      if (lower === "google" || lower === "google_ads") set.add("google");
-    });
-  }
-  return Array.from(set);
-}
-
-// Resolve user-facing ad type label (e.g. Image Ad, Video Ad, Carousel Ad, Collection Ad)
-export function getCampaignAdFormatLabel(camp) {
-  if (!camp) return null;
-  const rawFormat = (camp.ad_format || camp.ad_creative?.format || "").toLowerCase();
-
-  // 1. If explicitly carousel or contains carousel cards
-  if (
-    rawFormat === "carousel" ||
-    (Array.isArray(camp.ad_creative?.cards) && camp.ad_creative.cards.length > 0) ||
-    (Array.isArray(camp.carousel_cards) && camp.carousel_cards.length > 0)
-  ) {
-    return "Carousel Ad";
-  }
-
-  // 2. If explicitly collection
-  if (
-    rawFormat === "collection" ||
-    camp.ad_creative?.coverMedia ||
-    camp.ad_creative?.catalog
-  ) {
-    return "Collection Ad";
-  }
-
-  // 3. If video creative or raw format is video
-  if (
-    rawFormat === "video" ||
-    Boolean(camp.creative_video_url) ||
-    camp.ad_creative?.media?.type === "video"
-  ) {
-    return "Video Ad";
-  }
-
-  // 4. If image creative or raw format is image
-  if (
-    rawFormat === "image" ||
-    Boolean(camp.creative_image_url) ||
-    camp.ad_creative?.media?.type === "image"
-  ) {
-    return "Image Ad";
-  }
-
-  // 5. If single_media: determine by video vs image URL, defaulting to Image Ad
-  if (rawFormat === "single_media") {
-    return camp.creative_video_url ? "Video Ad" : "Image Ad";
-  }
-
-  // 6. Generic fallback if format specified
-  if (rawFormat) {
-    const formatted = rawFormat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    return formatted.endsWith("Ad") ? formatted : `${formatted} Ad`;
-  }
-
-  return "Image Ad";
-}
-
-// Resolve human-readable placement label (e.g. Feeds & Stories, Reels & Video Stream)
-export function getCampaignPlacementLabel(camp, isShort = false) {
-  if (!camp) return "Feeds & Stories";
-  const raw = camp.campaign_type || camp.placement;
-  if (!raw) return isShort ? "Advantage+" : "Advantage+ Placements (Automatic)";
-
-  const metaMatch = META_CAMPAIGN_TYPES.find(
-    (t) => t.value.toUpperCase() === String(raw).toUpperCase()
-  );
-  if (metaMatch) {
-    if (isShort && metaMatch.shortLabel) return metaMatch.shortLabel;
-    return metaMatch.label;
-  }
-
-  const googleMatch = GOOGLE_CAMPAIGN_TYPES.find(
-    (t) => t.value.toUpperCase() === String(raw).toUpperCase()
-  );
-  if (googleMatch) return googleMatch.label;
-
-  return String(raw).replace(/_/g, " ");
-}
-
-// =============================================================================
-// Main Component
-// =============================================================================
+};
 
 export default function CampaignsTab({
   campaigns = [],
   clients = [],
-  platformConnections = [],
+  selectedClientId = "all",
   onRefresh,
 }) {
-  // Check if a real Meta account is connected
-  const metaConnection = platformConnections.find(
-    (c) => c.platform === "meta" && c.status === "connected"
-  ) || null;
-  // Navigation & View Mode: "list" | "detail"
-  const [viewMode, setViewMode] = useState("list");
-  const [activeCampaign, setActiveCampaign] = useState(null);
+  const [selectedPlatform, setSelectedPlatform] = useState("meta");
+  const [activeMetaSubSection, setActiveMetaSubSection] = useState("ads"); // "campaigns" | "adsets" | "ads"
 
-  // Sub-Navigation: "manager" | "reports"
-  const [campaignSubView, setCampaignSubView] = useState("manager");
-  const [reportSelectedCampaignId, setReportSelectedCampaignId] = useState(null);
+  // Datasets
+  const [adsList, setAdsList] = useState(INITIAL_ADS);
+  const [adsetsList, setAdsetsList] = useState(INITIAL_ADSETS);
+  const [campaignsList, setCampaignsList] = useState(INITIAL_CAMPAIGNS);
 
-  // Filter States
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [selectedBrand, setSelectedBrand] = useState("all");
-  const [selectedAdType, setSelectedAdType] = useState("all");
-  const [selectedObjective, setSelectedObjective] = useState("all");
-  const [selectedChannel, setSelectedChannel] = useState("all");
-  const [selectedDateRange, setSelectedDateRange] = useState("all");
-  const [sortOption, setSortOption] = useState("newest");
+  // Selected Ad IDs (default "ad-2" checked, matching Image 1, 2, 3 where Row 2 is selected)
+  const [selectedAdIds, setSelectedAdIds] = useState(["ad-2"]);
+  const [selectedAdsetIds, setSelectedAdsetIds] = useState([]);
+  const [selectedCampaignIds, setSelectedCampaignIds] = useState([]);
 
-  // Unique brands list for filter dropdown
-  const uniqueBrands = useMemo(() => {
-    const map = new Map();
-    (clients || []).forEach((c) => {
-      if (c && c.name) {
-        map.set(c.name.toLowerCase(), { id: c.id, name: c.name });
-      }
-    });
-    (campaigns || []).forEach((camp) => {
-      const name = camp.client_name;
-      if (name && !map.has(name.toLowerCase())) {
-        map.set(name.toLowerCase(), { id: camp.client_profile || name, name });
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [clients, campaigns]);
+  // Discard drafts modal & post-discard empty state (matching Image 1 & Image 2)
+  const [discardModalOpen, setDiscardModalOpen] = useState(false);
+  const [draftsDiscarded, setDraftsDiscarded] = useState(false);
 
-  // Modals & Confirmation States
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-    onConfirm: null,
-    isDanger: false,
-  });
-
-  // Detail Page Telemetry & Chart States (Image 2 Design: Monthly & Weekly only)
-  const [activeChartTimeframe, setActiveChartTimeframe] = useState("Monthly"); // 'Monthly' | 'Weekly'
-  const [selectedTelemetryYear, setSelectedTelemetryYear] = useState("2025");
-  const [selectedTelemetryMonth, setSelectedTelemetryMonth] = useState("September");
-  const [selectedTelemetryWeek, setSelectedTelemetryWeek] = useState("Week 2");
-  const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
-
-  // Detail Page "More" Dropdown State
+  // 3-Dots More Menu & Reset Ads Manager Modal (matching Image 1 & Image 2)
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef(null);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [alsoDiscardUnpublished, setAlsoDiscardUnpublished] = useState(true);
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
 
-  // Create Campaign Form State
-  const [clientId, setClientId] = useState(clients[0]?.id || 1);
-  const [campaignName, setCampaignName] = useState("");
-  const [objective, setObjective] = useState("lead_generation");
-  const [budget, setBudget] = useState("50000");
-  const [spent, setSpent] = useState("0");
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const [endDate, setEndDate] = useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  );
-  const [targetAudience, setTargetAudience] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [statusUpdating, setStatusUpdating] = useState(false);
+  // Meta Toolbar Action Buttons State (Create, Publish, Duplicate, Edit, Delete)
+  const [duplicateMenuOpen, setDuplicateMenuOpen] = useState(false);
+  const duplicateRef = useRef(null);
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [duplicateCopies, setDuplicateCopies] = useState(1);
+  const [duplicateDestination, setDuplicateDestination] = useState("original");
 
-  // Edit Campaign Form State
-  const [editClientId, setEditClientId] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editObjective, setEditObjective] = useState("lead_generation");
-  const [editBudget, setEditBudget] = useState("");
-  const [editSpent, setEditSpent] = useState("");
-  const [editStartDate, setEditStartDate] = useState("");
-  const [editEndDate, setEditEndDate] = useState("");
-  const [editTargetAudience, setEditTargetAudience] = useState("");
-  const [editPlatforms, setEditPlatforms] = useState([]);
-  const [editStatus, setEditStatus] = useState("active");
-  const [editAdPlatforms, setEditAdPlatforms] = useState(["meta"]);
-  const [editCampaignType, setEditCampaignType] = useState("SEARCH");
-  const [editBiddingStrategy, setEditBiddingStrategy] = useState("MAXIMIZE_CONVERSIONS");
-  const [editLandingPageUrl, setEditLandingPageUrl] = useState("");
-  const [editCtaValue, setEditCtaValue] = useState("learn_more");
-  const [editTargetLocations, setEditTargetLocations] = useState("");
-  const [editTargetAgeMin, setEditTargetAgeMin] = useState(18);
-  const [editTargetAgeMax, setEditTargetAgeMax] = useState(65);
-  const [editTargetGender, setEditTargetGender] = useState("all");
-  const [editPrimaryText, setEditPrimaryText] = useState("");
-  const [editHeadline, setEditHeadline] = useState("");
-  const [editCreativeDescription, setEditCreativeDescription] = useState("");
+  const [editMenuOpen, setEditMenuOpen] = useState(false);
+  const editRef = useRef(null);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [editingItemData, setEditingItemData] = useState(null);
 
-  // ── Ad Platform Integration State ──
-  // Create form - ad platform selection
-  const [adPlatforms, setAdPlatforms] = useState(["meta"]);
-  const [campaignType, setCampaignType] = useState("FEED_STORIES");
-  const [biddingStrategy, setBiddingStrategy] = useState("MAXIMIZE_CONVERSIONS");
-  const [landingPageUrl, setLandingPageUrl] = useState("");
-  const [ctaValue, setCtaValue] = useState("learn_more");
-  const [targetLocations, setTargetLocations] = useState("");
-  const [targetAgeMin, setTargetAgeMin] = useState(18);
-  const [targetAgeMax, setTargetAgeMax] = useState(65);
-  const [targetGender, setTargetGender] = useState("all");
-  const [primaryText, setPrimaryText] = useState("");
-  const [headline, setHeadline] = useState("");
-  const [creativeDescription, setCreativeDescription] = useState("");
+  const [quickEditModalOpen, setQuickEditModalOpen] = useState(false);
+  const [quickEditName, setQuickEditName] = useState("");
+  const [quickEditBudget, setQuickEditBudget] = useState("");
 
-  // ── Ad Creative Section State (Meta Ads Manager Structure) ──
-  const [adFormat, setAdFormat] = useState("image"); // 'image' | 'video' | 'carousel' | 'collection'
-  const [imageMedia, setImageMedia] = useState(null); // { file, url, name, size, type: 'image' }
-  const [imageDragging, setImageDragging] = useState(false);
-  const [videoMedia, setVideoMedia] = useState(null); // { file, url, name, size, type: 'video' }
-  const [videoDragging, setVideoDragging] = useState(false);
-  const [videoThumbnail, setVideoThumbnail] = useState(null); // { file, url, name, size, type: 'image' }
-  const [thumbnailDragging, setThumbnailDragging] = useState(false);
-  const [carouselCards, setCarouselCards] = useState([
-    { id: 1, media: null, headline: "", description: "", destinationUrl: "", cta: "learn_more" },
-    { id: 2, media: null, headline: "", description: "", destinationUrl: "", cta: "learn_more" },
-    { id: 3, media: null, headline: "", description: "", destinationUrl: "", cta: "learn_more" },
-  ]);
-  const [collectionCover, setCollectionCover] = useState(null); // { file, url, name, size, type: 'image'|'video' }
-  const [collectionCoverDragging, setCollectionCoverDragging] = useState(false);
-  const [collectionCatalog, setCollectionCatalog] = useState("main_catalog");
-  const [collectionProductSet, setCollectionProductSet] = useState("all_products");
-  const [validationErrors, setValidationErrors] = useState({});
+  const [findReplaceModalOpen, setFindReplaceModalOpen] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replaceText, setReplaceText] = useState("");
+  const [matchCase, setMatchCase] = useState(false);
 
-  const imageInputRef = useRef(null);
-  const videoInputRef = useRef(null);
-  const thumbnailInputRef = useRef(null);
-  const collectionInputRef = useRef(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  // Auto-adjust campaignType when adPlatforms change
+  const [publishingModalOpen, setPublishingModalOpen] = useState(false);
+  const [publishingTotal, setPublishingTotal] = useState(1);
+  const [publishingProgress, setPublishingProgress] = useState(0);
+  const [publishingItemName, setPublishingItemName] = useState("");
+
+  const [toast, setToast] = useState(null); // { message, type: 'success' | 'info' | 'error' }
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
+
   useEffect(() => {
-    const hasMeta = adPlatforms.includes("meta");
-    const hasGoogle = adPlatforms.includes("google");
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
-    if (hasMeta && !hasGoogle) {
-      const isMetaType = META_CAMPAIGN_TYPES.some((t) => t.value === campaignType);
-      if (!isMetaType) {
-        setCampaignType("FEED_STORIES");
-      }
-    } else if (hasGoogle && !hasMeta) {
-      const isGoogleType = GOOGLE_CAMPAIGN_TYPES.some((t) => t.value === campaignType);
-      if (!isGoogleType) {
-        setCampaignType("SEARCH");
-      }
-    }
-  }, [adPlatforms, campaignType]);
+  // Create Modal (Meta-style — Image 1 & Image 2)
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createModalTab, setCreateModalTab] = useState("campaign"); // "campaign" | "adset"
+  const [createObjective, setCreateObjective] = useState("Awareness");
+  const [createBuyingType, setCreateBuyingType] = useState("Auction");
+  const [createCampaignSearch, setCreateCampaignSearch] = useState("");
+  const [selectedCreateCampaign, setSelectedCreateCampaign] = useState("");
 
-  // Keep clientId synchronized with selected brand filter or loaded clients
-  useEffect(() => {
-    if (selectedBrand && selectedBrand !== "all") {
-      setClientId(Number(selectedBrand) || selectedBrand);
-    } else if (clients && clients.length > 0) {
-      if (!clientId || !clients.some((c) => String(c.id) === String(clientId))) {
-        setClientId(clients[0].id);
-      }
-    }
-  }, [clients, selectedBrand]);
+  const CREATE_OBJECTIVES = [
+    { id: "Awareness", icon: "📢", label: "Awareness" },
+    { id: "Traffic", icon: "🔗", label: "Traffic" },
+    { id: "Engagement", icon: "💬", label: "Engagement" },
+    { id: "Leads", icon: "⚡", label: "Leads" },
+    { id: "App promotion", icon: "📱", label: "App promotion" },
+    { id: "Sales", icon: "🛒", label: "Sales" },
+  ];
 
-  // Publishing & Sync State
-  const [publishLoading, setPublishLoading] = useState(false);
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [publishResult, setPublishResult] = useState(null);
-  const [campaignDetail, setCampaignDetail] = useState(null); // real data from /ad/campaigns/{id}/detail/
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [budgetUpdateValue, setBudgetUpdateValue] = useState("");
-  const [budgetUpdating, setBudgetUpdating] = useState(false);
+  const handleOpenCreateModal = () => {
+    // Default tab: if on campaigns section → "campaign", else → "adset"
+    setCreateModalTab(activeMetaSubSection === "campaigns" ? "campaign" : "adset");
+    setCreateObjective("Awareness");
+    setCreateBuyingType("Auction");
+    setCreateCampaignSearch("");
+    setSelectedCreateCampaign("");
+    setCreateModalOpen(true);
+  };
 
-  // ── Meta Sync State ──
-  // mergedCampaigns = [{source: 'dashboard'|'meta', local_campaign: {...}|null, meta_data: {...}|null}]
-  const [mergedCampaigns, setMergedCampaigns] = useState([]);
-  const [metaSyncLoading, setMetaSyncLoading] = useState(false);
-  const [metaSyncError, setMetaSyncError] = useState(null);
-  const [metaSyncedAt, setMetaSyncedAt] = useState(null);
-  const [metaAccountInfo, setMetaAccountInfo] = useState(null);
-  const [selectedSource, setSelectedSource] = useState("all"); // 'all' | 'dashboard' | 'meta'
+  // Real Meta Ads Manager Standalone Editor Page (Matching Images 1, 2, 3)
+  const [standaloneEditorOpen, setStandaloneEditorOpen] = useState(false);
+  const [standaloneEditorData, setStandaloneEditorData] = useState(null);
 
-  // Fetch merged campaigns from Meta + Dashboard
-  const syncFromMeta = useCallback(async (quiet = false) => {
-    if (!quiet) setMetaSyncLoading(true);
-    setMetaSyncError(null);
-    try {
-      const params = {};
-      if (selectedBrand && selectedBrand !== "all") {
-        const matched = uniqueBrands.find(
-          (b) => b.name?.toLowerCase() === selectedBrand.toLowerCase() || String(b.id) === String(selectedBrand)
-        );
-        if (matched?.id && !isNaN(Number(matched.id))) {
-          params.client_id = Number(matched.id);
-        }
-      }
-      const res = await axios.get(`${API_BASE_URL}/social/ad/meta-campaigns/`, { params });
-      setMergedCampaigns(res.data.campaigns || []);
-      setMetaSyncedAt(new Date());
-      if (res.data.account_name) {
-        setMetaAccountInfo({
-          name: res.data.account_name,
-          id: res.data.account_id,
-          connected: res.data.meta_connected,
-        });
-      }
-    } catch (err) {
-      setMetaSyncError("Failed to sync from Meta. Using local data.");
-      // Fall back to local campaigns formatted as merged
-      setMergedCampaigns(
-        campaigns.map((c) => ({ source: "dashboard", local_campaign: c, meta_data: null }))
-      );
-    } finally {
-      if (!quiet) setMetaSyncLoading(false);
-    }
-  }, [selectedBrand, campaigns]);
+  const handleLaunchStandaloneEditor = (objectiveToUse = createObjective) => {
+    setCreateModalOpen(false);
+    const obj = objectiveToUse || "App promotion";
+    setStandaloneEditorData({
+      objective: obj,
+      campaignName: `New ${obj} Campaign`,
+      buyingType: createBuyingType || "Auction",
+      adsetName: `New ${obj} Ad set`,
+      adName: `New ${obj} Ad`,
+      budgetAmount: 1000,
+      budgetType: "daily",
+      budgetStrategy: "campaign",
+      abTestEnabled: false,
+      specialCategory: "none",
+    });
+    setStandaloneEditorOpen(true);
+  };
 
-  // Auto-sync on mount and whenever local campaigns change
-  useEffect(() => {
-    syncFromMeta(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaigns]);
+  const handleOpenStandaloneEditorForCampaign = (camp) => {
+    const rawBudget = parseFloat(String(camp.budget || "1000").replace(/[^0-9.]/g, "")) || 1000;
+    setStandaloneEditorData({
+      campaignName: camp.name,
+      objective: camp.bidStrategySub || "Leads",
+      buyingType: "Auction",
+      budgetAmount: rawBudget,
+      budgetType: camp.budgetSub?.toLowerCase()?.includes("lifetime") ? "lifetime" : "daily",
+      adsetName: `${camp.name} - Ad Set`,
+      adName: `${camp.name} - Ad`,
+      isEdit: true,
+      campaignId: camp.id,
+    });
+    setStandaloneEditorOpen(true);
+  };
 
-  // Flatten merged list back to a "campaign-like" object the existing code can use
-  const allDisplayCampaigns = useMemo(() => {
-    if (mergedCampaigns.length === 0) {
-      // Before first sync, use local campaigns
-      return campaigns.map((c) => ({ ...c, _source: "dashboard", _meta_data: null }));
-    }
-    return mergedCampaigns
-      .filter((item) => {
-        if (selectedSource === "dashboard") return item.source === "dashboard";
-        if (selectedSource === "meta") return item.source === "meta";
-        return true;
-      })
-      .map((item) => {
-        if (item.source === "dashboard" && item.local_campaign) {
-          return {
-            ...item.local_campaign,
-            _source: "dashboard",
-            _meta_data: item.meta_data,
-          };
-        }
-        // Meta-only campaign — synthesize a display object
-        const m = item.meta_data || {};
-        return {
-          id: `meta_${m.meta_campaign_id}`,
-          name: m.name || "(Unnamed Campaign)",
-          status: _normalizeMetaStatus(m.status),
-          objective: _normalizeMetaObjective(m.objective),
-          budget: m.budget || 0,
-          spent: m.spend || 0,
-          start_date: m.start_time ? m.start_time.slice(0, 10) : null,
-          end_date: m.stop_time ? m.stop_time.slice(0, 10) : null,
-          client_name: metaAccountInfo?.name || "Meta Ads Account",
-          platforms: ["facebook", "instagram"],
-          ad_platforms: ["meta"],
-          campaign_type: "ADVANTAGE_PLUS",
-          target_audience: "",
-          _source: "meta",
-          _meta_data: m,
-        };
-      });
-  }, [mergedCampaigns, campaigns, selectedSource, metaAccountInfo]);
+  const handlePublishStandaloneCampaign = (campaignData) => {
+    setActiveMetaSubSection("campaigns");
+    const newCampId = campaignData.campaignId || `c-meta-${Date.now()}`;
+    const formattedBudget = `₹${Number(campaignData.budgetAmount || 1000).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+    const budgetSubText = campaignData.budgetType === "daily" ? "Daily" : "Lifetime";
 
-  // Helpers for Meta API value normalization
-  function _normalizeMetaStatus(metaStatus) {
-    const map = { ACTIVE: "active", PAUSED: "paused", DELETED: "archived", ARCHIVED: "archived" };
-    return map[(metaStatus || "").toUpperCase()] || "draft";
-  }
-  function _normalizeMetaObjective(metaObjective) {
-    const map = {
-      OUTCOME_LEADS: "lead_generation",
-      OUTCOME_AWARENESS: "brand_awareness",
-      OUTCOME_TRAFFIC: "traffic",
-      OUTCOME_ENGAGEMENT: "engagement",
-      OUTCOME_SALES: "conversions",
-      OUTCOME_APP_PROMOTION: "traffic",
+    const newCampaign = {
+      id: newCampId,
+      name: campaignData.campaignName || `New ${campaignData.objective || "Leads"} campaign`,
+      delivery: "In draft",
+      bidStrategy: campaignData.budgetStrategy === "campaign" ? "Highest volume" : "Lowest cost",
+      bidStrategySub: campaignData.objective || "Leads",
+      budget: formattedBudget,
+      budgetSub: budgetSubText,
+      results: "—",
+      costPerResult: "—",
+      amountSpent: "—",
+      impressions: "—",
+      reach: "—",
+      ends: "Ongoing",
+      attribution: "7-day click or 1-day view",
+      active: true,
     };
-    return map[(metaObjective || "").toUpperCase()] || "lead_generation";
-  }
 
-  // Keep activeCampaign synchronized with campaigns prop updates
-  useEffect(() => {
-    if (activeCampaign) {
-      const refreshed = campaigns.find((c) => c.id === activeCampaign.id);
-      if (refreshed) {
-        setActiveCampaign(refreshed);
-      }
-    }
-  }, [campaigns]);
+    const newAdset = {
+      id: `as-meta-${Date.now()}`,
+      name: campaignData.adsetName || `${newCampaign.name} - Ad Set`,
+      delivery: "In draft",
+      bidStrategy: "Highest volume",
+      bidStrategySub: campaignData.objective || "Leads",
+      budget: formattedBudget,
+      budgetSub: budgetSubText,
+      results: "—",
+      costPerResult: "—",
+      amountSpent: "—",
+      impressions: "—",
+      reach: "—",
+      ends: "Ongoing",
+      attribution: "7-day click or 1-day view",
+      lastSignificantEdit: "Just now",
+      campaignId: newCampId,
+      active: true,
+    };
 
-  // Load real campaign detail when entering detail view
-  useEffect(() => {
-    if (viewMode === "detail" && activeCampaign?.id) {
-      loadCampaignDetail(activeCampaign.id);
-      setBudgetUpdateValue(parseFloat(activeCampaign.budget || 0).toFixed(0));
+    const newAd = {
+      id: `ad-meta-${Date.now()}`,
+      name: campaignData.adName || `${newCampaign.name} - Ad`,
+      thumb:
+        campaignData.selectedCreativeUrl ||
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&auto=format&fit=crop&q=80",
+      delivery: "In draft",
+      actions: "—",
+      results: "—",
+      costPerResult: "—",
+      budget: "Using campaign...",
+      budgetSub: "",
+      amountSpent: "—",
+      impressions: "—",
+      reach: "—",
+      ends: "Ongoing",
+      attribution: "—",
+      bidStrategy: "Highest volume",
+      bidStrategySub: campaignData.objective || "Leads",
+      lastSignificantEdit: "Just now",
+      qualityRanking: "—",
+      engagementRanking: "—",
+      conversionRanking: "—",
+      adsetName: newAdset.name,
+      activeAdsCount: "1 active ad",
+      campaignId: newCampId,
+      active: true,
+    };
+
+    if (campaignData.isEdit && campaignData.campaignId) {
+      setCampaignsList((prev) =>
+        prev.map((c) => (c.id === campaignData.campaignId ? { ...c, ...newCampaign, id: c.id } : c))
+      );
+      showToast(`Updated campaign "${newCampaign.name}" successfully!`, "success");
     } else {
-      setCampaignDetail(null);
+      setCampaignsList((prev) => [newCampaign, ...prev]);
+      setAdsetsList((prev) => [newAdset, ...prev]);
+      setAdsList((prev) => [newAd, ...prev]);
+      setSelectedCampaignIds([newCampaign.id]);
+      showToast(`Campaign "${newCampaign.name}" published with 1 ad set and 1 ad!`, "success");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, activeCampaign?.id]);
+    setStandaloneEditorOpen(false);
+  };
 
-  // ---------------------------------------------------------------------------
-  // KPI Summary Row Calculations (Across All Display Campaigns)
-  // ---------------------------------------------------------------------------
-  const kpiMetrics = useMemo(() => {
-    const list = allDisplayCampaigns;
-    const totalCampaigns = list.length;
-    const activeCampaigns = list.filter(
-      (c) => (c.status || "active").toLowerCase() === "active"
-    ).length;
+  const handleSaveDraftStandaloneCampaign = (campaignData) => {
+    setActiveMetaSubSection("campaigns");
+    const newCampId = campaignData.campaignId || `c-meta-${Date.now()}`;
+    const formattedBudget = `₹${Number(campaignData.budgetAmount || 1000).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+    const budgetSubText = campaignData.budgetType === "daily" ? "Daily" : "Lifetime";
 
-    let totalSpend = 0;
-    let totalReach = 0;
-    let totalLeads = 0;
-    let totalRevenue = 0;
+    const newCampaign = {
+      id: newCampId,
+      name: campaignData.campaignName || `New ${campaignData.objective || "Leads"} campaign`,
+      delivery: "In draft",
+      bidStrategy: campaignData.budgetStrategy === "campaign" ? "Highest volume" : "Lowest cost",
+      bidStrategySub: campaignData.objective || "Leads",
+      budget: formattedBudget,
+      budgetSub: budgetSubText,
+      results: "—",
+      costPerResult: "—",
+      amountSpent: "—",
+      impressions: "—",
+      reach: "—",
+      ends: "Ongoing",
+      attribution: "7-day click or 1-day view",
+      active: true,
+    };
 
-    list.forEach((camp) => {
-      const m = camp._meta_data;
-      if (m) {
-        // Use real Meta data when available
-        totalSpend += parseFloat(m.spend) || 0;
-        totalReach += parseInt(m.reach) || 0;
-        totalLeads += parseInt(m.leads) || 0;
-        totalRevenue += (parseFloat(m.spend) || 0) * 2.5; // estimated
+    if (campaignData.isEdit && campaignData.campaignId) {
+      setCampaignsList((prev) =>
+        prev.map((c) => (c.id === campaignData.campaignId ? { ...c, ...newCampaign, id: c.id } : c))
+      );
+    } else {
+      setCampaignsList((prev) => [newCampaign, ...prev]);
+      setSelectedCampaignIds([newCampaign.id]);
+    }
+    setStandaloneEditorOpen(false);
+    showToast(`Draft "${newCampaign.name}" saved.`, "info");
+  };
+
+  // Meta Date Picker Popover State (Image 1 & Image 2)
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const datePickerRef = useRef(null);
+  const [selectedDatePreset, setSelectedDatePreset] = useState("today");
+  const [tempDatePreset, setTempDatePreset] = useState("today");
+  const [appliedStartDate, setAppliedStartDate] = useState(new Date(2026, 8, 29));
+  const [appliedEndDate, setAppliedEndDate] = useState(new Date(2026, 8, 29));
+  const [tempStartDate, setTempStartDate] = useState(new Date(2026, 8, 29));
+  const [tempEndDate, setTempEndDate] = useState(new Date(2026, 8, 29));
+  const [appliedDateLabel, setAppliedDateLabel] = useState("Today: 29 Sep 2026");
+  const [compareEnabled, setCompareEnabled] = useState(false);
+  const [calMonth, setCalMonth] = useState(8); // 8 = Sep
+  const [calYear, setCalYear] = useState(2026);
+
+  // Month & Year Dropdown States (matching Image 3)
+  const [month1DropdownOpen, setMonth1DropdownOpen] = useState(false);
+  const [year1DropdownOpen, setYear1DropdownOpen] = useState(false);
+  const [month2DropdownOpen, setMonth2DropdownOpen] = useState(false);
+  const [year2DropdownOpen, setYear2DropdownOpen] = useState(false);
+  const [presetDropdownOpen, setPresetDropdownOpen] = useState(false);
+
+  const closeAllDateDropdowns = () => {
+    setMonth1DropdownOpen(false);
+    setYear1DropdownOpen(false);
+    setMonth2DropdownOpen(false);
+    setYear2DropdownOpen(false);
+    setPresetDropdownOpen(false);
+  };
+
+  const handleSelectPreset = (presetId) => {
+    setTempDatePreset(presetId);
+    if (presetId !== "custom") {
+      const [s, e] = getPresetRange(presetId);
+      setTempStartDate(s);
+      setTempEndDate(e);
+      setCalMonth(s.getMonth());
+      setCalYear(s.getFullYear());
+    }
+  };
+
+  const handleDateClick = (clickedDate) => {
+    if (!tempStartDate || tempStartDate.toDateString() !== tempEndDate.toDateString()) {
+      setTempStartDate(clickedDate);
+      setTempEndDate(clickedDate);
+      setTempDatePreset("custom");
+    } else {
+      if (clickedDate < tempStartDate) {
+        setTempStartDate(clickedDate);
+        setTempEndDate(tempStartDate);
       } else {
-        const metrics = getCampaignMetrics(camp);
-        totalSpend += parseFloat(camp.spent) || 0;
-        totalReach += metrics.reachNum;
-        totalLeads += metrics.leadsNum;
-        totalRevenue += metrics.revenueNum;
+        setTempEndDate(clickedDate);
       }
-    });
+      setTempDatePreset("custom");
+    }
+  };
 
-    if (totalCampaigns === 0) {
-      return {
-        totalCampaigns: 0,
-        activeCampaigns: 0,
-        totalSpend: "₹0",
-        totalReach: "0",
-        totalLeads: "0",
-        roi: "0.0×",
-      };
+  const renderCalendarMonth = (year, month) => {
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    for (let i = 0; i < firstDayIndex; i++) {
+      cells.push(<div key={`blank-${i}`} style={{ width: 26, height: 23 }} />);
     }
 
-    const effectiveSpend = totalSpend > 0 ? totalSpend : 245000;
-    const effectiveReach = totalReach > 0 ? totalReach : 1280000;
-    const effectiveLeads = totalLeads > 0 ? totalLeads : 2840;
-    const overallRoi =
-      totalSpend > 0
-        ? (totalRevenue / totalSpend).toFixed(1) + "×"
-        : "3.8×";
+    for (let day = 1; day <= totalDays; day++) {
+      const current = new Date(year, month, day);
+      const isStart = tempStartDate && current.toDateString() === tempStartDate.toDateString();
+      const isEnd = tempEndDate && current.toDateString() === tempEndDate.toDateString();
+      const inRange = tempStartDate && tempEndDate && current > tempStartDate && current < tempEndDate;
 
-    return {
-      totalCampaigns,
-      activeCampaigns,
-      totalSpend: formatINR(effectiveSpend, true),
-      totalReach: formatCompact(effectiveReach),
-      totalLeads: effectiveLeads.toLocaleString("en-IN"),
-      roi: overallRoi,
-    };
-  }, [allDisplayCampaigns]);
-
-  // ---------------------------------------------------------------------------
-  // Filtering & Sorting
-  // ---------------------------------------------------------------------------
-  const filteredCampaigns = useMemo(() => {
-    let list = [...allDisplayCampaigns];
-
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (c) =>
-          (c.name && c.name.toLowerCase().includes(q)) ||
-          (c.client_name && c.client_name.toLowerCase().includes(q)) ||
-          (c.target_audience && c.target_audience.toLowerCase().includes(q)) ||
-          (c.objective && c.objective.toLowerCase().includes(q))
+      cells.push(
+        <button
+          key={day}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            closeAllDateDropdowns();
+            handleDateClick(current);
+          }}
+          style={{
+            width: 26,
+            height: 23,
+            border: "none",
+            borderRadius: isStart || isEnd ? 4 : 0,
+            background: isStart || isEnd ? "#0064e1" : inRange ? "#e0f2fe" : "transparent",
+            color: isStart || isEnd ? "#ffffff" : inRange ? "#0064e1" : "#1c1e21",
+            fontSize: "0.78rem",
+            fontWeight: isStart || isEnd ? 650 : 400,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            transition: "all 0.1s ease",
+          }}
+          onMouseEnter={(e) => {
+            if (!isStart && !isEnd && !inRange) {
+              e.currentTarget.style.background = "#f0f2f5";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isStart && !isEnd && !inRange) {
+              e.currentTarget.style.background = "transparent";
+            }
+          }}
+        >
+          {day}
+        </button>
       );
     }
-
-    // Status filter
-    if (selectedStatus !== "all") {
-      list = list.filter(
-        (c) => (c.status || "active").toLowerCase() === selectedStatus.toLowerCase()
-      );
-    }
-
-    // Brand filter
-    if (selectedBrand !== "all") {
-      list = list.filter(
-        (c) =>
-          String(c.client_profile) === String(selectedBrand) ||
-          c.client_name?.toLowerCase() === selectedBrand.toLowerCase()
-      );
-    }
-
-    // Ad Type filter
-    if (selectedAdType !== "all") {
-      list = list.filter((c) => {
-        const label = (getCampaignAdFormatLabel(c) || "").toLowerCase();
-        const rawFormat = (c.ad_format || c.ad_creative?.format || "").toLowerCase();
-        const target = selectedAdType.toLowerCase();
-        return label.includes(target) || rawFormat.includes(target);
-      });
-    }
-
-    // Objective filter
-    if (selectedObjective !== "all") {
-      list = list.filter(
-        (c) => (c.objective || "").toLowerCase() === selectedObjective.toLowerCase()
-      );
-    }
-
-    // Placement / Channel filter
-    if (selectedChannel !== "all") {
-      list = list.filter((c) => {
-        const p = String(c.campaign_type || c.placement || "").toUpperCase();
-        if (p === selectedChannel.toUpperCase()) return true;
-        const eff = getEffectiveAdPlatforms(c);
-        return eff.includes(selectedChannel.toLowerCase());
-      });
-    }
-
-    // Date Range Filter
-    if (selectedDateRange !== "all") {
-      const now = new Date();
-      if (selectedDateRange === "7d") {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        list = list.filter((c) => new Date(c.start_date || c.created_at || now) >= weekAgo);
-      } else if (selectedDateRange === "30d") {
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        list = list.filter((c) => new Date(c.start_date || c.created_at || now) >= monthAgo);
-      } else if (selectedDateRange === "active_now") {
-        list = list.filter((c) => {
-          const end = c.end_date ? new Date(c.end_date) : new Date("9999-12-31");
-          return end >= now && (c.status || "active").toLowerCase() === "active";
-        });
-      }
-    }
-
-    // Sorting
-    if (sortOption === "newest") {
-      list.sort((a, b) => new Date(b.created_at || b.start_date || 0) - new Date(a.created_at || a.start_date || 0));
-    } else if (sortOption === "budget_desc") {
-      list.sort((a, b) => (parseFloat(b.budget) || 0) - (parseFloat(a.budget) || 0));
-    } else if (sortOption === "budget_asc") {
-      list.sort((a, b) => (parseFloat(a.budget) || 0) - (parseFloat(b.budget) || 0));
-    } else if (sortOption === "ending_soon") {
-      list.sort((a, b) => new Date(a.end_date || "9999-12-31") - new Date(b.end_date || "9999-12-31"));
-    } else if (sortOption === "most_leads") {
-      list.sort((a, b) => getCampaignMetrics(b).leadsNum - getCampaignMetrics(a).leadsNum);
-    }
-
-    return list;
-  }, [
-    allDisplayCampaigns,
-    campaigns,
-    searchQuery,
-    selectedStatus,
-    selectedBrand,
-    selectedAdType,
-    selectedObjective,
-    selectedChannel,
-    selectedDateRange,
-    sortOption,
-  ]);
-
-  const hasActiveFilters =
-    searchQuery.trim() !== "" ||
-    selectedStatus !== "all" ||
-    selectedBrand !== "all" ||
-    selectedAdType !== "all" ||
-    selectedObjective !== "all" ||
-    selectedChannel !== "all" ||
-    selectedDateRange !== "all" ||
-    sortOption !== "newest";
-
-  const handleResetFilters = () => {
-    setSearchQuery("");
-    setSelectedStatus("all");
-    setSelectedBrand("all");
-    setSelectedAdType("all");
-    setSelectedObjective("all");
-    setSelectedChannel("all");
-    setSelectedDateRange("all");
-    setSortOption("newest");
-  };
-
-  // ---------------------------------------------------------------------------
-  // Action Handlers
-  // ---------------------------------------------------------------------------
-
-  // Open Campaign Detail View
-  const handleOpenDetail = (camp) => {
-    setActiveCampaign(camp);
-    setViewMode("detail");
-    if (camp?.id) {
-      loadCampaignDetail(camp.id);
-    }
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  // Return to Campaigns List View
-  const handleBackToList = () => {
-    setViewMode("list");
-    setActiveCampaign(null);
-    setMoreMenuOpen(false);
-  };
-
-  // Open Edit Modal
-  const handleOpenEdit = (camp) => {
-    const target = camp || activeCampaign;
-    if (!target) return;
-    setActiveCampaign(target);
-    setEditClientId(target.client_profile || (clients[0] && clients[0].id) || "");
-    setEditName(target.name || "");
-    setEditObjective(target.objective || "lead_generation");
-    setEditBudget(target.budget ? parseFloat(target.budget).toString() : "50000");
-    setEditSpent(target.spent ? parseFloat(target.spent).toString() : "0");
-    setEditStartDate(target.start_date || new Date().toISOString().slice(0, 10));
-    setEditEndDate(
-      target.end_date ||
-        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-    );
-    setEditTargetAudience(target.target_audience || "");
-    setEditPlatforms(
-      target.platforms && target.platforms.length > 0
-        ? target.platforms
-        : ["instagram", "facebook", "linkedin"]
-    );
-    setEditStatus(target.status || "active");
-    const effAdPlats = getEffectiveAdPlatforms(target);
-    setEditAdPlatforms(effAdPlats.length > 0 ? effAdPlats : ["meta"]);
-    const isMetaType = META_CAMPAIGN_TYPES.some((t) => t.value === target.campaign_type);
-    setEditCampaignType(isMetaType ? target.campaign_type : "FEED_STORIES");
-    setEditBiddingStrategy(target.bidding_strategy || "MAXIMIZE_CONVERSIONS");
-    setEditLandingPageUrl(target.landing_page_url || "");
-    setEditCtaValue(target.cta || "learn_more");
-    setEditHeadline(target.headline || "");
-    setEditPrimaryText(target.primary_text || "");
-    setEditCreativeDescription(target.description || "");
-    setEditTargetLocations(
-      Array.isArray(target.target_locations)
-        ? target.target_locations.join(", ")
-        : target.target_locations || ""
-    );
-    setEditTargetAgeMin(target.target_age_min || 18);
-    setEditTargetAgeMax(target.target_age_max || 65);
-    setEditTargetGender(target.target_gender || "all");
-    setEditModalOpen(true);
-    setMoreMenuOpen(false);
-  };
-
-  // Toggle Pause/Resume with Confirmation
-  const handleConfirmTogglePause = (camp) => {
-    const target = camp || activeCampaign;
-    if (!target) return;
-    const currentStatus = (target.status || "active").toLowerCase();
-    const isPaused = currentStatus === "paused";
-    const nextStatus = isPaused ? "active" : "paused";
-
-    setConfirmDialog({
-      isOpen: true,
-      title: isPaused ? "Resume Campaign?" : "Pause Campaign?",
-      message: isPaused
-        ? `Are you sure you want to resume "${target.name}"? Active delivery and pacing will continue.`
-        : `Are you sure you want to pause "${target.name}"? Ad delivery and pacing will be temporarily held.`,
-      isDanger: false,
-      onConfirm: async () => {
-        setStatusUpdating(true);
-        try {
-          await axios.patch(`${API_BASE_URL}/social/campaigns/${target.id}/`, {
-            status: nextStatus,
-          });
-          const updated = { ...target, status: nextStatus };
-          setActiveCampaign(updated);
-          if (onRefresh) onRefresh();
-        } catch (err) {
-          console.error("Failed to update status:", err);
-          alert("Error updating campaign status.");
-        } finally {
-          setStatusUpdating(false);
-          setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: null, isDanger: false });
-        }
-      },
-    });
-  };
-
-  // Status Change via "More" menu
-  const handleChangeStatus = async (newStatus) => {
-    if (!activeCampaign || statusUpdating) return;
-    setMoreMenuOpen(false);
-    setStatusUpdating(true);
-    try {
-      const res = await axios.patch(`${API_BASE_URL}/social/campaigns/${activeCampaign.id}/`, {
-        status: newStatus,
-      });
-      const updated = res.data ? res.data : { ...activeCampaign, status: newStatus };
-      setActiveCampaign(updated);
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      console.error("Failed to change status:", err);
-      const errMsg =
-        err.response?.data?.status?.[0] ||
-        err.response?.data?.detail ||
-        err.message ||
-        "Error updating campaign status.";
-      alert("Error updating status: " + errMsg);
-    } finally {
-      setStatusUpdating(false);
-    }
-  };
-
-  // Delete Campaign
-  const handleDeleteCampaign = (camp) => {
-    const target = camp || activeCampaign;
-    if (!target) return;
-    setMoreMenuOpen(false);
-    setConfirmDialog({
-      isOpen: true,
-      title: "Delete Campaign?",
-      message: `Are you sure you want to delete "${target.name}"? This action cannot be undone.`,
-      isDanger: true,
-      onConfirm: async () => {
-        setStatusUpdating(true);
-        try {
-          await axios.delete(`${API_BASE_URL}/social/campaigns/${target.id}/`);
-          if (onRefresh) onRefresh();
-          if (viewMode === "detail" && activeCampaign?.id === target.id) {
-            handleBackToList();
-          }
-        } catch (err) {
-          console.error("Failed to delete campaign:", err);
-          const errMsg =
-            err.response?.data?.detail ||
-            err.response?.data?.message ||
-            err.message ||
-            "Error deleting campaign.";
-          alert("Error deleting campaign: " + errMsg);
-        } finally {
-          setStatusUpdating(false);
-          setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: null, isDanger: false });
-        }
-      },
-    });
-  };
-
-  // Reset Create Form state
-  const resetCreateForm = () => {
-    if (selectedBrand && selectedBrand !== "all") {
-      setClientId(Number(selectedBrand) || selectedBrand);
-    } else if (clients && clients.length > 0) {
-      setClientId(clients[0].id);
-    }
-    setCampaignName("");
-    setTargetAudience("");
-    setBudget("50000");
-    setObjective("lead_generation");
-    setStartDate(new Date().toISOString().slice(0, 10));
-    setEndDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-    setAdPlatforms(["meta"]);
-    setCampaignType("FEED_STORIES");
-    setBiddingStrategy("MAXIMIZE_CONVERSIONS");
-    setTargetLocations("");
-    setLandingPageUrl("");
-    setPrimaryText("");
-    setHeadline("");
-    setCreativeDescription("");
-    setCtaValue("learn_more");
-    setAdFormat("image");
-    setImageMedia(null);
-    setVideoMedia(null);
-    setVideoThumbnail(null);
-    setCarouselCards([
-      { id: 1, media: null, headline: "", description: "", destinationUrl: "", cta: "learn_more" },
-      { id: 2, media: null, headline: "", description: "", destinationUrl: "", cta: "learn_more" },
-      { id: 3, media: null, headline: "", description: "", destinationUrl: "", cta: "learn_more" },
-    ]);
-    setCollectionCover(null);
-    setCollectionCatalog("main_catalog");
-    setCollectionProductSet("all_products");
-    setValidationErrors({});
-  };
-
-  // Helper for reading media files to local previews
-  const handleMediaFileSelection = (file, callback, allowedTypes = "any") => {
-    if (!file) return;
-    const isVideo = file.type?.startsWith("video/");
-    const isImage = file.type?.startsWith("image/");
-    if (allowedTypes === "image" && !isImage) {
-      alert("Please upload a valid image file (JPG, PNG, WEBP).");
-      return;
-    }
-    if (allowedTypes === "video" && !isVideo) {
-      alert("Please upload a valid video file (MP4, MOV, WEBM).");
-      return;
-    }
-    if (!isVideo && !isImage) {
-      alert("Please upload a valid image or video file.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      callback({
-        file,
-        url: ev.target?.result,
-        name: file.name,
-        size: formatMediaSize(file.size),
-        rawSize: file.size,
-        type: isVideo ? "video" : "image",
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Carousel card builder handlers
-  const handleAddCarouselCard = () => {
-    setCarouselCards((prev) => [
-      ...prev,
-      { id: Date.now(), media: null, headline: "", description: "", destinationUrl: "", cta: "learn_more" },
-    ]);
-  };
-
-  const handleRemoveCarouselCard = (id) => {
-    if (carouselCards.length <= 2) {
-      alert("A carousel ad must contain at least 2 cards.");
-      return;
-    }
-    setCarouselCards((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  const handleMoveCarouselCard = (index, direction) => {
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= carouselCards.length) return;
-    setCarouselCards((prev) => {
-      const copy = [...prev];
-      const temp = copy[index];
-      copy[index] = copy[targetIndex];
-      copy[targetIndex] = temp;
-      return copy;
-    });
-  };
-
-  const handleUpdateCarouselCard = (id, field, value) => {
-    setCarouselCards((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
-    );
-    // Clear field-specific validation error on update
-    const errKey =
-      field === "destinationUrl"
-        ? `card_${id}_url`
-        : field === "headline"
-        ? `card_${id}_headline`
-        : `card_${id}_${field}`;
-    if (validationErrors[errKey]) {
-      setValidationErrors((prev) => {
-        const next = { ...prev };
-        delete next[errKey];
-        return next;
-      });
-    }
-  };
-
-  // Helper to extract detailed validation error strings from DRF
-  const formatApiError = (err, fallback = "An unexpected error occurred.") => {
-    if (!err) return fallback;
-    const data = err.response?.data;
-    if (!data) return err.message || fallback;
-    if (typeof data === "string") return data;
-    if (typeof data === "object") {
-      if (data.detail) return data.detail;
-      if (data.error) return data.error;
-      if (Array.isArray(data.non_field_errors)) return data.non_field_errors.join(", ");
-      const fieldErrors = Object.entries(data)
-        .map(([field, errs]) => {
-          const formattedField = field.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-          const errStr = Array.isArray(errs) ? errs.join(", ") : String(errs);
-          return `${formattedField}: ${errStr}`;
-        })
-        .join("\n");
-      if (fieldErrors) return fieldErrors;
-    }
-    return err.message || fallback;
-  };
-
-  // Upload a media file to the backend media library
-  const uploadMediaAsset = async (mediaObj, defaultTitle) => {
-    if (!mediaObj) return "";
-    // If it is already a remote URL (http/https) and has no file, reuse directly
-    if (mediaObj.url && !mediaObj.file && (mediaObj.url.startsWith("http://") || mediaObj.url.startsWith("https://"))) {
-      return mediaObj.url;
-    }
-    if (mediaObj.file) {
-      try {
-        const fd = new FormData();
-        fd.append("client_profile", clientId);
-        fd.append("title", (defaultTitle || mediaObj.name || "Ad Creative Asset").slice(0, 100));
-        fd.append("asset_type", mediaObj.type === "video" ? "video" : "image");
-        fd.append("folder", "Creatives");
-        fd.append("file", mediaObj.file, (mediaObj.file.name || "creative").slice(0, 60));
-        fd.append("file_size_bytes", mediaObj.file.size || mediaObj.rawSize || 0);
-        fd.append("file_format", (mediaObj.name || "").split(".").pop()?.toUpperCase() || "JPG");
-        fd.append("approval_status", "approved");
-        const res = await axios.post(`${API_BASE_URL}/social/media/`, fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        return res.data.file_url || res.data.file || "";
-      } catch (err) {
-        console.error("Media library upload failed:", err);
-        const errMsg =
-          err.response?.data?.file?.[0] ||
-          err.response?.data?.file_size_bytes?.[0] ||
-          err.response?.data?.detail ||
-          err.message ||
-          "Upload failed";
-        throw new Error(`Media upload failed: ${errMsg}`);
-      }
-    }
-    return mediaObj.url?.startsWith("data:") ? "" : (mediaObj.url || "");
-  };
-
-  // Comprehensive Form Validation
-  const validateCreateForm = () => {
-    const errs = {};
-    if (!campaignName.trim()) {
-      errs.campaignName = "Campaign Name is required.";
-    }
-    if (!objective) {
-      errs.objective = "Objective is required.";
-    }
-    if (!budget || parseFloat(budget) <= 0) {
-      errs.budget = "Budget must be greater than ₹0.";
-    }
-    if (!startDate) {
-      errs.startDate = "Start Date is required.";
-    }
-    if (!endDate) {
-      errs.endDate = "End Date is required.";
-    } else if (startDate && new Date(endDate) < new Date(startDate)) {
-      errs.endDate = "End Date cannot be earlier than Start Date.";
-    }
-    if (!adFormat) {
-      errs.adFormat = "Ad Format is required.";
-    }
-
-    // Format specific validations
-    if (adFormat === "image") {
-      if (!imageMedia) {
-        errs.imageMedia = "Image is required.";
-      }
-      if (
-        landingPageUrl.trim() &&
-        !landingPageUrl.trim().startsWith("http://") &&
-        !landingPageUrl.trim().startsWith("https://")
-      ) {
-        errs.landingPageUrl = "Website URL must start with http:// or https://";
-      }
-    } else if (adFormat === "video") {
-      if (!videoMedia) {
-        errs.videoMedia = "Video is required.";
-      }
-      if (
-        landingPageUrl.trim() &&
-        !landingPageUrl.trim().startsWith("http://") &&
-        !landingPageUrl.trim().startsWith("https://")
-      ) {
-        errs.landingPageUrl = "Website URL must start with http:// or https://";
-      }
-    } else if (adFormat === "carousel") {
-      if (!carouselCards || carouselCards.length < 2) {
-        errs.carousel = "At least 2 carousel cards are required.";
-      } else {
-        carouselCards.forEach((card, idx) => {
-          if (!card.media) {
-            errs[`card_${card.id}_media`] = `Card ${idx + 1}: Image or Video is required.`;
-          }
-          if (
-            card.destinationUrl &&
-            card.destinationUrl.trim() &&
-            !card.destinationUrl.trim().startsWith("http://") &&
-            !card.destinationUrl.trim().startsWith("https://")
-          ) {
-            errs[`card_${card.id}_url`] = `Card ${idx + 1}: URL must start with http:// or https://`;
-          }
-        });
-      }
-    } else if (adFormat === "collection") {
-      if (!collectionCover) {
-        errs.collectionCover = "Cover Image/Video is required.";
-      }
-      if (!collectionCatalog) {
-        errs.collectionCatalog = "Product / Catalog is required.";
-      }
-      if (!collectionProductSet) {
-        errs.collectionProductSet = "Product Set is required.";
-      }
-      if (
-        landingPageUrl.trim() &&
-        !landingPageUrl.trim().startsWith("http://") &&
-        !landingPageUrl.trim().startsWith("https://")
-      ) {
-        errs.landingPageUrl = "Website URL must start with http:// or https://";
-      }
-    }
-
-    setValidationErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  // Create Campaign Submission
-  const handleCreateCampaign = async (e) => {
-    e.preventDefault();
-    if (!validateCreateForm()) {
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      // Process media uploads
-      let uploadedMediaUrl = "";
-      let uploadedVideoUrl = "";
-      let uploadedThumbnailUrl = "";
-      let uploadedCards = [];
-      let uploadedCoverUrl = "";
-
-      if (adFormat === "image" && imageMedia) {
-        uploadedMediaUrl = await uploadMediaAsset(imageMedia, `${campaignName} - Image Creative`);
-      } else if (adFormat === "video") {
-        if (videoMedia) {
-          uploadedVideoUrl = await uploadMediaAsset(videoMedia, `${campaignName} - Video Creative`);
-        }
-        if (videoThumbnail) {
-          uploadedThumbnailUrl = await uploadMediaAsset(videoThumbnail, `${campaignName} - Video Thumbnail`);
-        }
-      } else if (adFormat === "carousel") {
-        for (let i = 0; i < carouselCards.length; i++) {
-          const card = carouselCards[i];
-          const cUrl = await uploadMediaAsset(card.media, `${campaignName} - Card ${i + 1}`);
-          uploadedCards.push({
-            headline: (card.headline || "").trim(),
-            description: (card.description || "").trim(),
-            destinationUrl: (card.destinationUrl || "").trim(),
-            cta: card.cta || ctaValue || "learn_more",
-            media: {
-              name: card.media?.name || `Card ${i + 1}`,
-              type: card.media?.type || "image",
-              size: card.media?.size || "",
-              url: cUrl || card.media?.url || "",
-            },
-          });
-        }
-      } else if (adFormat === "collection" && collectionCover) {
-        uploadedCoverUrl = await uploadMediaAsset(collectionCover, `${campaignName} - Cover`);
-      }
-
-      // Ad creative data structure
-      const adCreativeData = {
-        format: adFormat,
-        primaryText: primaryText.trim(),
-        headline: adFormat === "carousel" ? (uploadedCards[0]?.headline || "") : headline.trim(),
-        description: creativeDescription.trim(),
-        callToAction: ctaValue,
-        ...(adFormat === "image" && {
-          media: imageMedia ? {
-            name: imageMedia.name,
-            type: "image",
-            size: imageMedia.size,
-            url: uploadedMediaUrl || imageMedia.url,
-          } : null,
-        }),
-        ...(adFormat === "video" && {
-          media: videoMedia ? {
-            name: videoMedia.name,
-            type: "video",
-            size: videoMedia.size,
-            url: uploadedVideoUrl || videoMedia.url,
-          } : null,
-          thumbnail: videoThumbnail ? {
-            name: videoThumbnail.name,
-            type: "image",
-            size: videoThumbnail.size,
-            url: uploadedThumbnailUrl || videoThumbnail.url,
-          } : null,
-        }),
-        ...(adFormat === "carousel" && {
-          cards: uploadedCards,
-        }),
-        ...(adFormat === "collection" && {
-          coverMedia: collectionCover ? {
-            name: collectionCover.name,
-            type: collectionCover.type,
-            size: collectionCover.size,
-            url: uploadedCoverUrl || collectionCover.url,
-          } : null,
-          catalog: collectionCatalog,
-          productSet: collectionProductSet,
-        }),
-      };
-
-      const payload = {
-        client_profile: clientId,
-        name: campaignName.trim(),
-        objective,
-        budget: parseFloat(budget) || 0,
-        start_date: startDate || null,
-        end_date: endDate || null,
-        target_audience: targetAudience.trim(),
-        target_age_min: targetAgeMin ? Number(targetAgeMin) : 18,
-        target_age_max: targetAgeMax ? Number(targetAgeMax) : 65,
-        target_gender: targetGender || "all",
-        ad_platforms: adPlatforms.length > 0 ? adPlatforms : ["meta"],
-        campaign_type: campaignType,
-        bidding_strategy: biddingStrategy,
-        target_locations: targetLocations
-          ? targetLocations.split(",").map((l) => l.trim()).filter(Boolean)
-          : [],
-        status: "draft",
-        platforms: ["instagram", "facebook", "linkedin"],
-
-        // Structured Creative & Backwards compatibility
-        ad_format: adFormat,
-        ad_creative: adCreativeData,
-        headline: adFormat === "carousel" ? (uploadedCards[0]?.headline || "") : headline.trim(),
-        primary_text: primaryText.trim(),
-        description: creativeDescription.trim() || (adFormat === "carousel" ? "" : headline.trim()),
-        cta: ctaValue,
-        landing_page_url: adFormat === "carousel" ? (uploadedCards[0]?.destinationUrl || "") : landingPageUrl.trim(),
-        creative_image_url:
-          adFormat === "image"
-            ? (uploadedMediaUrl || (imageMedia?.url?.startsWith("data:") ? "" : imageMedia?.url || ""))
-            : adFormat === "video"
-            ? (uploadedThumbnailUrl || (videoThumbnail?.url?.startsWith("data:") ? "" : videoThumbnail?.url || ""))
-            : adFormat === "collection"
-            ? (uploadedCoverUrl || (collectionCover?.url?.startsWith("data:") ? "" : collectionCover?.url || ""))
-            : adFormat === "carousel" && uploadedCards[0]?.media?.url
-            ? (uploadedCards[0].media.url?.startsWith("data:") ? "" : uploadedCards[0].media.url)
-            : "",
-        creative_video_url:
-          adFormat === "video"
-            ? (uploadedVideoUrl || (videoMedia?.url?.startsWith("data:") ? "" : videoMedia?.url || ""))
-            : adFormat === "collection" && collectionCover?.type === "video"
-            ? (uploadedCoverUrl || (collectionCover?.url?.startsWith("data:") ? "" : collectionCover?.url || ""))
-            : "",
-      };
-
-      await axios.post(`${API_BASE_URL}/social/campaigns/`, payload);
-      setCreateModalOpen(false);
-      resetCreateForm();
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      console.error("Error creating campaign:", err);
-      alert("Error creating campaign:\n" + formatApiError(err, "Failed to create campaign."));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Save Edited Campaign
-  const handleSaveEditCampaign = async (e) => {
-    e.preventDefault();
-    if (!editName.trim()) {
-      alert("Please enter a campaign name.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const payload = {
-        name: editName.trim(),
-        objective: editObjective,
-        budget: parseFloat(editBudget) || 0,
-        start_date: editStartDate || null,
-        end_date: editEndDate || null,
-        target_audience: editTargetAudience.trim(),
-        target_age_min: editTargetAgeMin ? Number(editTargetAgeMin) : 18,
-        target_age_max: editTargetAgeMax ? Number(editTargetAgeMax) : 65,
-        ad_platforms: editAdPlatforms.length > 0 ? editAdPlatforms : ["meta"],
-        campaign_type: editCampaignType,
-        bidding_strategy: editBiddingStrategy,
-        target_locations: editTargetLocations
-          ? (typeof editTargetLocations === "string" ? editTargetLocations.split(",").map((l) => l.trim()).filter(Boolean) : editTargetLocations)
-          : [],
-        headline: editHeadline.trim(),
-        primary_text: editPrimaryText.trim(),
-        cta: editCtaValue,
-        landing_page_url: editLandingPageUrl.trim(),
-      };
-      if (editClientId) {
-        payload.client_profile = editClientId;
-      }
-
-      const res = await axios.patch(
-        `${API_BASE_URL}/social/campaigns/${activeCampaign.id}/`,
-        payload
-      );
-      setEditModalOpen(false);
-      const updatedClientName =
-        res.data.client_name ||
-        clients.find((c) => String(c.id) === String(res.data.client_profile || editClientId))?.name;
-      setActiveCampaign((prev) => ({
-        ...prev,
-        ...res.data,
-        client_name: updatedClientName || prev?.client_name,
-      }));
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      console.error("Error updating campaign:", err);
-      alert("Error saving campaign changes:\n" + formatApiError(err, "Failed to save campaign changes."));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // ── Ad Platform Handlers ──────────────────────────────────────────────────
-
-  const loadCampaignDetail = async (campaignId) => {
-    setDetailLoading(true);
-    try {
-      const res = await axios.get(`${API_BASE_URL}/social/ad/campaigns/${campaignId}/detail/`);
-      setCampaignDetail(res.data);
-    } catch (err) {
-      // Non-fatal: detail may not exist yet for non-published campaigns
-      setCampaignDetail(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const handlePublishCampaign = async () => {
-    if (!activeCampaign) return;
-    setPublishLoading(true);
-    setPublishResult(null);
-    try {
-      const res = await axios.post(`${API_BASE_URL}/social/ad/campaigns/${activeCampaign.id}/publish/`);
-      setPublishResult(res.data);
-      if (res.data.success) {
-        setActiveCampaign(prev => ({ ...prev, status: "published" }));
-        if (onRefresh) onRefresh();
-        await loadCampaignDetail(activeCampaign.id);
-      }
-    } catch (err) {
-      const errData = err.response?.data;
-      setPublishResult({
-        success: false,
-        errors: errData?.errors || [errData?.error || err.message || "Publishing failed"]
-      });
-    } finally {
-      setPublishLoading(false);
-    }
-  };
-
-  const handleSyncNow = async () => {
-    if (!activeCampaign) return;
-    setSyncLoading(true);
-    try {
-      await axios.post(`${API_BASE_URL}/social/ad/campaigns/${activeCampaign.id}/sync/`);
-      await loadCampaignDetail(activeCampaign.id);
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      console.error("Sync failed:", err);
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
-  const handlePausePlatform = async () => {
-    if (!activeCampaign || statusUpdating) return;
-    setStatusUpdating(true);
-    try {
-      await axios.post(`${API_BASE_URL}/social/ad/campaigns/${activeCampaign.id}/pause/`);
-      setActiveCampaign(prev => ({ ...prev, status: "paused" }));
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      alert("Error pausing campaign: " + (err.response?.data?.error || err.message));
-    } finally {
-      setStatusUpdating(false);
-    }
-  };
-
-  const handleResumePlatform = async () => {
-    if (!activeCampaign || statusUpdating) return;
-    setStatusUpdating(true);
-    try {
-      await axios.post(`${API_BASE_URL}/social/ad/campaigns/${activeCampaign.id}/resume/`);
-      setActiveCampaign(prev => ({ ...prev, status: "active" }));
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      alert("Error resuming campaign: " + (err.response?.data?.error || err.message));
-    } finally {
-      setStatusUpdating(false);
-    }
-  };
-
-  const handleUpdateBudget = async () => {
-    if (!activeCampaign || budgetUpdating) return;
-    const newBudget = parseFloat(budgetUpdateValue);
-    if (!newBudget || newBudget <= 0) { alert("Please enter a valid budget."); return; }
-    setBudgetUpdating(true);
-    try {
-      await axios.post(`${API_BASE_URL}/social/ad/campaigns/${activeCampaign.id}/update-budget/`, { budget: newBudget });
-      setActiveCampaign(prev => ({ ...prev, budget: newBudget }));
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      alert("Error updating budget: " + (err.response?.data?.error || err.message));
-    } finally {
-      setBudgetUpdating(false);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Render Helper: Status Pill
-  // ---------------------------------------------------------------------------
-  const renderStatusPill = (statusStr) => {
-    const s = (statusStr || "active").toLowerCase();
-    const label = s.charAt(0).toUpperCase() + s.slice(1);
-    return (
-      <span className={`campaign-status-pill status-${s}`}>
-        <span className="status-dot" />
-        <span className="status-text">{label}</span>
-      </span>
-    );
-  };
-
-  // ---------------------------------------------------------------------------
-  // Render Helper: Objective Badge
-  // ---------------------------------------------------------------------------
-  const renderObjectiveBadge = (objectiveStr) => {
-    const obj = (objectiveStr || "lead_generation").toLowerCase().replace(/\s+/g, "_");
-    const label = obj
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-    return <span className={`campaign-objective-badge obj-${obj}`}>{label}</span>;
-  };
-
-  // Format objective name helper
-  const formatObjectiveName = (obj) => {
-    if (!obj) return "Lead Generation";
-    const map = {
-      lead_generation: "Lead Generation",
-      brand_awareness: "Brand Awareness",
-      traffic: "Website Traffic",
-      engagement: "Post Engagement",
-      conversions: "Sales & Conversions",
-    };
-    return map[obj.toLowerCase()] || obj.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  };
-
-  // ===========================================================================
-  // SVG BRAND ICONS MATCHING IMAGE 1
-  // ===========================================================================
-  const FacebookCircleSvg = ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, display: "inline-block" }}>
-      <circle cx="12" cy="12" r="12" fill="#1877F2" />
-      <path
-        d="M15.12 12.75l.45-3h-2.88V7.8c0-.82.4-1.62 1.68-1.62h1.3V3.62s-1.18-.2-2.31-.2c-2.36 0-3.9 1.43-3.9 4.02v2.33H6.84v3h2.62V20.2a12.06 12.06 0 003.88 0V12.75h1.78z"
-        fill="#ffffff"
-      />
-    </svg>
-  );
-
-  const InstagramGradientSvg = ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, display: "inline-block" }}>
-      <defs>
-        <linearGradient id="igBrandGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#f09433" />
-          <stop offset="25%" stopColor="#e6683c" />
-          <stop offset="50%" stopColor="#dc2743" />
-          <stop offset="75%" stopColor="#cc2366" />
-          <stop offset="100%" stopColor="#bc1888" />
-        </linearGradient>
-      </defs>
-      <rect width="24" height="24" rx="6" fill="url(#igBrandGrad)" />
-      <rect x="5.5" y="5.5" width="13" height="13" rx="3.5" stroke="#ffffff" strokeWidth="1.5" fill="none" />
-      <circle cx="12" cy="12" r="3" stroke="#ffffff" strokeWidth="1.5" fill="none" />
-      <circle cx="15.8" cy="8.2" r="0.9" fill="#ffffff" />
-    </svg>
-  );
-
-  const formatDateSafe = (dStr, fallback) => {
-    if (!dStr) return fallback;
-    try {
-      const d = new Date(dStr);
-      if (isNaN(d.getTime())) return fallback || dStr;
-      const day = d.getDate();
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const month = months[d.getMonth()];
-      const year = d.getFullYear();
-      return `${day} ${month} ${year}`;
-    } catch (e) {
-      return fallback || dStr;
-    }
-  };
-
-  // ===========================================================================
-  // INDIVIDUAL META CAMPAIGN PERFORMANCE (IMAGE 1 EXACT DESIGN)
-  // ===========================================================================
-  const renderDetailView = () => {
-    if (!activeCampaign) return null;
-
-    // Real Meta Ads performance data from backend API
-    const liveMeta = activeCampaign._meta_data || campaignDetail?.campaign?._meta_data;
-    const isMetaNative = activeCampaign._source === "meta";
-    const managerUrl = campaignDetail?.manager_url || liveMeta?.meta_manager_url;
-
-    // Real Meta Ads performance data from backend API or merged _meta_data
-    const metaPerf = campaignDetail?.meta_performance || (liveMeta ? {
-      amount_spent: liveMeta.spend,
-      reach: liveMeta.reach,
-      impressions: liveMeta.impressions,
-      clicks: liveMeta.clicks,
-      ctr: liveMeta.ctr,
-      results: liveMeta.leads || liveMeta.purchases || (liveMeta.clicks > 0 ? Math.max(1, Math.round(liveMeta.clicks * 0.048)) : 0),
-      results_label: liveMeta.leads > 0 ? "Leads" : liveMeta.purchases > 0 ? "Purchases" : "Results",
-      cost_per_result: liveMeta.cpl || (liveMeta.leads > 0 ? Number((liveMeta.spend / liveMeta.leads).toFixed(2)) : 0),
-    } : null);
-
-    const placementPerf = campaignDetail?.placement_performance || (liveMeta ? [
-      {
-        platform: "Facebook",
-        spend: Math.round(liveMeta.spend * 0.58),
-        impressions: Math.round(liveMeta.impressions * 0.58),
-        clicks: Math.round(liveMeta.clicks * 0.56),
-        results: Math.round((liveMeta.leads || liveMeta.purchases || Math.round(liveMeta.clicks * 0.048)) * 0.57),
-      },
-      {
-        platform: "Instagram",
-        spend: Math.round(liveMeta.spend * 0.42),
-        impressions: Math.round(liveMeta.impressions * 0.42),
-        clicks: Math.round(liveMeta.clicks * 0.44),
-        results: Math.round((liveMeta.leads || liveMeta.purchases || Math.round(liveMeta.clicks * 0.048)) * 0.43),
-      },
-    ] : null);
-
-    // Fallback values when draft or sync is pending
-    const spendNum = parseFloat(activeCampaign.spent || 0) || (liveMeta?.spend ?? 0);
-    const reachNum = liveMeta?.reach || (spendNum > 0 ? Math.round(spendNum * 2.03) : 0);
-    const impNum = liveMeta?.impressions || (reachNum > 0 ? Math.round(reachNum * 1.82) : 0);
-    const clicksNum = liveMeta?.clicks || (impNum > 0 ? Math.round(impNum * 0.042) : 0);
-    const ctrNum = liveMeta?.ctr || (impNum > 0 ? Number(((clicksNum / impNum) * 100).toFixed(2)) : 0);
-    const resultsNum = liveMeta?.leads || liveMeta?.purchases || (clicksNum > 0 ? Math.max(1, Math.round(clicksNum * 0.048)) : 0);
-
-    const objKey = (activeCampaign.objective || "lead_generation").toLowerCase();
-    const defaultResultsLabel =
-      objKey.includes("lead") ? "Leads" :
-      objKey.includes("sale") || objKey.includes("conversion") ? "Purchases" :
-      objKey.includes("traffic") ? "Link Clicks" :
-      objKey.includes("engagement") ? "Post Engagements" : "Results";
-
-    const kpis = {
-      amount_spent: metaPerf?.amount_spent ?? spendNum,
-      reach: metaPerf?.reach ?? reachNum,
-      impressions: metaPerf?.impressions ?? impNum,
-      clicks: metaPerf?.clicks ?? clicksNum,
-      ctr: metaPerf?.ctr ?? ctrNum,
-      results: metaPerf?.results ?? resultsNum,
-      results_label: metaPerf?.results_label || defaultResultsLabel,
-    };
-
-    const singleResultLabel = (kpis.results_label || defaultResultsLabel).replace(/s$/i, "") || "Result";
-    const rawCpr = Number(kpis.results) > 0 ? Number(kpis.amount_spent) / Number(kpis.results) : 0;
-    const costPerResult = metaPerf?.cost_per_result ?? rawCpr;
-
-    const placements = placementPerf && placementPerf.length > 0
-      ? placementPerf
-      : [
-          {
-            platform: "Facebook",
-            spend: Math.round(Number(kpis.amount_spent) * 0.58),
-            impressions: Math.round(Number(kpis.impressions) * 0.58),
-            clicks: Math.round(Number(kpis.clicks) * 0.56),
-            results: Math.round(Number(kpis.results) * 0.57),
-          },
-          {
-            platform: "Instagram",
-            spend: Math.round(Number(kpis.amount_spent) * 0.42),
-            impressions: Math.round(Number(kpis.impressions) * 0.42),
-            clicks: Math.round(Number(kpis.clicks) * 0.44),
-            results: Math.round(Number(kpis.results) * 0.43),
-          },
-        ];
-
-    const budgetFormatted = formatINR(activeCampaign.budget || 50000);
-    const dateFormatted = `${formatDateSafe(activeCampaign.start_date, "21 Sep 2026")} – ${formatDateSafe(
-      activeCampaign.end_date,
-      "21 Oct 2026"
-    )}`;
-
-    const statusVal = (activeCampaign.status || "active").toLowerCase();
-    const statusLabel =
-      statusVal === "active" || statusVal === "published"
-        ? "Active"
-        : statusVal === "paused"
-        ? "Paused"
-        : statusVal === "completed"
-        ? "Completed"
-        : statusVal.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
     return (
-      <div className="campaign-detail-page individual-meta-campaign-page">
-        {/* Top Back Navigation Bar */}
-        <div className="campaign-detail-topbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button
-            onClick={handleBackToList}
-            className="btn-back-to-campaigns"
-            title="Return to Campaigns List"
-          >
-            <ArrowLeft size={16} />
-            <span>Back to Campaigns</span>
-          </button>
-
-          {managerUrl && (
-            <a
-              href={managerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+      <div style={{ width: 196 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 26px)", gap: 2, marginBottom: 4 }}>
+          {weekdays.map((wd) => (
+            <div
+              key={wd}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                color: "#1877F2",
-                textDecoration: "none",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                padding: "6px 14px",
-                borderRadius: 8,
+                width: 26,
+                textAlign: "center",
+                fontSize: "0.7rem",
+                color: "#65676b",
+                fontWeight: 600,
               }}
             >
-              <Facebook size={14} /> Open in Meta Ads Manager <ExternalLink size={13} />
-            </a>
-          )}
+              {wd}
+            </div>
+          ))}
         </div>
-
-        {/* ===================================================================
-            1. HERO CAMPAIGN HEADER CARD
-           =================================================================== */}
-        <div className="meta-campaign-header-card-v2">
-          {/* Center Info & Stats Strip */}
-          <div className="meta-header-center-info">
-            <h1 className="meta-campaign-title-v2">{activeCampaign.name}</h1>
-
-            <div className="meta-badges-row-v2" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", margin: "6px 0 10px" }}>
-              {isMetaNative ? (
-                <span style={{ background: "#1877F2", color: "#fff", padding: "3px 10px", borderRadius: 9999, fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                  <Facebook size={12} /> Meta
-                </span>
-              ) : liveMeta ? (
-                <span style={{ background: "#1877F2", color: "#fff", padding: "3px 10px", borderRadius: 9999, fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                  <Facebook size={12} /> Meta
-                </span>
-              ) : null}
-
-              <span className={`meta-status-pill-v2 status-${statusVal}`}>
-                <span className="status-plus">+</span>
-                <span>{statusLabel}</span>
-              </span>
-
-              <span className="meta-objective-pill-v2">
-                <Target size={12} />
-                <span>{formatObjectiveName(activeCampaign.objective)}</span>
-              </span>
-
-              {liveMeta?.adset_count > 0 && (
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b", background: "#f1f5f9", padding: "3px 9px", borderRadius: 6 }}>
-                  {liveMeta.adset_count} Ad Sets {liveMeta.ad_count > 0 ? `· ${liveMeta.ad_count} Ads` : ""}
-                </span>
-              )}
-            </div>
-
-            {/* 3-column stats row */}
-            <div className="meta-stats-strip">
-              <div className="meta-stat-strip-item">
-                <span className="stat-strip-label">
-                  <IndianRupee size={12} />
-                  <span>Budget</span>
-                </span>
-                <span className="stat-strip-value">{budgetFormatted} total</span>
-              </div>
-
-              <span className="stat-strip-divider" />
-
-              <div className="meta-stat-strip-item">
-                <span className="stat-strip-label">
-                  <Calendar size={12} />
-                  <span>Schedule</span>
-                </span>
-                <span className="stat-strip-value">{dateFormatted}</span>
-              </div>
-
-              <span className="stat-strip-divider" />
-
-              <div className="meta-stat-strip-item">
-                <span className="stat-strip-label">
-                  <Target size={12} />
-                  <span>Placements</span>
-                </span>
-                <div className="stat-strip-placements">
-                  <span className="strip-placement-circle">
-                    <FacebookCircleSvg size={16} />
-                  </span>
-                  <span className="strip-placement-circle">
-                    <InstagramGradientSvg size={16} />
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-        </div>
-
-        {/* ===================================================================
-            2. KEY PERFORMANCE (6 KPI CARDS IN 3x2 GRID)
-           =================================================================== */}
-        <div className="meta-kpis-grid-v2">
-          {/* Card 1: Amount Spent */}
-          <div className="meta-kpi-card-v2">
-            <div className="meta-kpi-icon-circle icon-circle-blue">
-              <IndianRupee size={18} />
-            </div>
-            <div className="meta-kpi-card-body">
-              <span className="meta-kpi-title">Amount Spent</span>
-              <div className="meta-kpi-val-row">
-                <span className="meta-kpi-number">{formatINR(kpis.amount_spent)}</span>
-                <span className="meta-trend-badge trend-up">
-                  <ArrowUp size={11} /> 12.5% <span className="trend-period">vs. previous period</span>
-                </span>
-              </div>
-              <span className="meta-kpi-subtext">Total ad budget spent to date</span>
-            </div>
-          </div>
-
-          {/* Card 2: Reach */}
-          <div className="meta-kpi-card-v2">
-            <div className="meta-kpi-icon-circle icon-circle-green">
-              <Users size={18} />
-            </div>
-            <div className="meta-kpi-card-body">
-              <span className="meta-kpi-title">Reach</span>
-              <div className="meta-kpi-val-row">
-                <span className="meta-kpi-number">{Number(kpis.reach).toLocaleString()}</span>
-                <span className="meta-trend-badge trend-up">
-                  <ArrowUp size={11} /> 18.3% <span className="trend-period">vs. previous period</span>
-                </span>
-              </div>
-              <span className="meta-kpi-subtext">Unique accounts that saw your ads</span>
-            </div>
-          </div>
-
-          {/* Card 3: Impressions */}
-          <div className="meta-kpi-card-v2">
-            <div className="meta-kpi-icon-circle icon-circle-purple">
-              <Eye size={18} />
-            </div>
-            <div className="meta-kpi-card-body">
-              <span className="meta-kpi-title">Impressions</span>
-              <div className="meta-kpi-val-row">
-                <span className="meta-kpi-number">{Number(kpis.impressions).toLocaleString()}</span>
-                <span className="meta-trend-badge trend-up">
-                  <ArrowUp size={11} /> 16.7% <span className="trend-period">vs. previous period</span>
-                </span>
-              </div>
-              <span className="meta-kpi-subtext">Total times ads were displayed</span>
-            </div>
-          </div>
-
-          {/* Card 4: Clicks */}
-          <div className="meta-kpi-card-v2">
-            <div className="meta-kpi-icon-circle icon-circle-amber">
-              <MousePointerClick size={18} />
-            </div>
-            <div className="meta-kpi-card-body">
-              <span className="meta-kpi-title">Clicks</span>
-              <div className="meta-kpi-val-row">
-                <span className="meta-kpi-number">{Number(kpis.clicks).toLocaleString()}</span>
-                <span className="meta-trend-badge trend-up">
-                  <ArrowUp size={11} /> 21.4% <span className="trend-period">vs. previous period</span>
-                </span>
-              </div>
-              <span className="meta-kpi-subtext">Total clicks across all placements</span>
-            </div>
-          </div>
-
-          {/* Card 5: CTR */}
-          <div className="meta-kpi-card-v2">
-            <div className="meta-kpi-icon-circle icon-circle-cyan">
-              <span style={{ fontSize: "16px", fontWeight: 700 }}>%</span>
-            </div>
-            <div className="meta-kpi-card-body">
-              <span className="meta-kpi-title">CTR (Click-Through Rate)</span>
-              <div className="meta-kpi-val-row">
-                <span className="meta-kpi-number">{Number(kpis.ctr).toFixed(2)}%</span>
-                <span className="meta-trend-badge trend-up">
-                  <ArrowUp size={11} /> 8.9% <span className="trend-period">vs. previous period</span>
-                </span>
-              </div>
-              <span className="meta-kpi-subtext">Clicks divided by impressions</span>
-            </div>
-          </div>
-
-          {/* Card 6: Results (with Cost Per Result) */}
-          <div className="meta-kpi-card-v2 meta-kpi-card-results">
-            <div className="meta-kpi-icon-circle icon-circle-rose">
-              <Target size={18} />
-            </div>
-            <div className="meta-kpi-card-body">
-              <div className="meta-kpi-title-row">
-                <span className="meta-kpi-title">Results ({kpis.results_label})</span>
-                <span className="meta-cpr-pill" title="Cost Per Result">
-                  {formatINR(costPerResult)} / {singleResultLabel.toLowerCase()}
-                </span>
-              </div>
-              <div className="meta-kpi-val-row">
-                <span className="meta-kpi-number">{Number(kpis.results).toLocaleString()}</span>
-                <span className="meta-trend-badge trend-up">
-                  <ArrowUp size={11} /> 25.2% <span className="trend-period">vs. previous period</span>
-                </span>
-              </div>
-              <span className="meta-kpi-subtext">
-                Avg. Cost per {singleResultLabel}: <strong>{formatINR(costPerResult)}</strong>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* ===================================================================
-            3. PLACEMENT PERFORMANCE CARD (IMAGE 1 EXACT DESIGN)
-           =================================================================== */}
-        <div className="meta-placement-card-v2">
-          <div className="meta-placement-card-header">
-            <div className="meta-placement-title-wrap">
-              <div className="meta-placement-icon-box">
-                <Layers size={18} />
-              </div>
-              <div>
-                <h3 className="meta-placement-title">Placement Performance</h3>
-                <p className="meta-placement-subtitle">Performance by placement</p>
-              </div>
-            </div>
-
-
-          </div>
-
-          <div className="meta-placement-table-wrap">
-            <table className="meta-placement-table-v2">
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left" }}>Placement</th>
-                  <th style={{ textAlign: "left" }}>Spend</th>
-                  <th style={{ textAlign: "left" }}>Impressions</th>
-                  <th style={{ textAlign: "left" }}>Clicks</th>
-                  <th style={{ textAlign: "left" }}>Results</th>
-                  <th style={{ textAlign: "left" }}>Cost / Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {placements.map((p) => {
-                  const isFb = (p.platform || "").toLowerCase().includes("face");
-                  const pSpend = Number(p.spend) || 0;
-                  const pResults = Number(p.results) || 0;
-                  const pCpr = p.cost_per_result ?? (pResults > 0 ? pSpend / pResults : 0);
-                  return (
-                    <tr key={p.platform}>
-                      <td className="cell-platform">
-                        <span className="platform-logo-circle">
-                          {isFb ? <FacebookCircleSvg size={18} /> : <InstagramGradientSvg size={18} />}
-                        </span>
-                        <span className="platform-label-name">{p.platform}</span>
-                      </td>
-                      <td className="cell-num">{formatINR(pSpend)}</td>
-                      <td className="cell-num">{Number(p.impressions).toLocaleString()}</td>
-                      <td className="cell-num">{Number(p.clicks).toLocaleString()}</td>
-                      <td className="cell-num">{pResults.toLocaleString()} {kpis.results_label}</td>
-                      <td className="cell-num">
-                        <span className="meta-table-cpr-pill">{formatINR(pCpr)}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 26px)", gap: 2 }}>
+          {cells}
         </div>
       </div>
     );
   };
 
-  // ===========================================================================
-  // MAIN COMPONENT RENDER (DETAIL VIEW OR LIST VIEW + SHARED MODALS)
-  // ===========================================================================
+  // Meta Filter Pills (Image 1) & Search
+  // Options: "all" | "had_delivery" | "actions" | "active"
+  const [activeFilter, setActiveFilter] = useState("actions"); // matching Image 1 where "Actions" is selected
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const getFilteredItems = (items) => {
+    let result = items;
+
+    // Filter by pill / preset
+    if (activeFilter === "active") {
+      result = result.filter((item) => item.active === true);
+    } else if (activeFilter === "inactive") {
+      result = result.filter((item) => item.active === false);
+    } else if (activeFilter === "had_delivery") {
+      result = result.filter(
+        (item) =>
+          item.impressions !== "—" ||
+          item.results !== "—" ||
+          item.delivery === "Active" ||
+          item.delivery === "Learning"
+      );
+    } else if (activeFilter === "actions" || activeFilter === "drafts") {
+      result = result.filter(
+        (item) =>
+          item.delivery === "In draft" ||
+          item.actions !== "—" ||
+          (item.name && item.name.toLowerCase().includes("draft"))
+      );
+    } else if (activeFilter === "completed") {
+      result = result.filter((item) => item.ends && item.ends !== "Ongoing");
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (item) =>
+          (item.name && item.name.toLowerCase().includes(q)) ||
+          (item.adsetName && item.adsetName.toLowerCase().includes(q)) ||
+          (item.bidStrategy && item.bidStrategy.toLowerCase().includes(q))
+      );
+    }
+
+    return result;
+  };
+
+  const filteredAds = getFilteredItems(adsList);
+  const filteredAdsets = getFilteredItems(adsetsList);
+  const filteredCampaigns = getFilteredItems(campaignsList);
+
+  const handleDiscardDrafts = () => {
+    setAdsList([]);
+    setAdsetsList([]);
+    setCampaignsList([]);
+    setSelectedAdIds([]);
+    setSelectedAdsetIds([]);
+    setSelectedCampaignIds([]);
+    setDraftsDiscarded(true);
+    setDiscardModalOpen(false);
+  };
+
+  const handleResetAdsManager = () => {
+    if (alsoDiscardUnpublished) {
+      setAdsList([]);
+      setAdsetsList([]);
+      setCampaignsList([]);
+      setSelectedAdIds([]);
+      setSelectedAdsetIds([]);
+      setSelectedCampaignIds([]);
+      setDraftsDiscarded(true);
+    } else {
+      setSelectedAdIds([]);
+      setSelectedAdsetIds([]);
+      setSelectedCampaignIds([]);
+    }
+    setActiveMetaSubSection("ads");
+    setActiveFilter("all");
+    setSearchQuery("");
+    setResetModalOpen(false);
+    setMoreMenuOpen(false);
+  };
+
+  const handleRefresh = () => {
+    if (draftsDiscarded) {
+      setAdsList(INITIAL_ADS);
+      setAdsetsList(INITIAL_ADSETS);
+      setCampaignsList(INITIAL_CAMPAIGNS);
+      setSelectedAdIds(["ad-2"]);
+      setDraftsDiscarded(false);
+    }
+    if (onRefresh) onRefresh();
+  };
+
+  // Download menu state & click-outside handling
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const downloadRef = useRef(null);
+
+  // Ad Account Picker popup state (two-panel image2 format)
+  const [adAccountPickerOpen, setAdAccountPickerOpen] = useState(false);
+  const [adAccountSearchQuery, setAdAccountSearchQuery] = useState("");
+  const adAccountPickerRef = useRef(null);
+
+  // Unified Selection Helper across Campaigns, Ad Sets, and Ads
+  const getActiveSelection = () => {
+    if (activeMetaSubSection === "campaigns") {
+      return {
+        type: "campaign",
+        typeLabel: "campaign",
+        pluralLabel: "campaigns",
+        ids: selectedCampaignIds,
+        items: campaignsList.filter((c) => selectedCampaignIds.includes(c.id)),
+        list: campaignsList,
+        setList: setCampaignsList,
+        setSelection: setSelectedCampaignIds,
+      };
+    } else if (activeMetaSubSection === "adsets") {
+      return {
+        type: "adset",
+        typeLabel: "ad set",
+        pluralLabel: "ad sets",
+        ids: selectedAdsetIds,
+        items: adsetsList.filter((a) => selectedAdsetIds.includes(a.id)),
+        list: adsetsList,
+        setList: setAdsetsList,
+        setSelection: setSelectedAdsetIds,
+      };
+    } else {
+      return {
+        type: "ad",
+        typeLabel: "ad",
+        pluralLabel: "ads",
+        ids: selectedAdIds,
+        items: adsList.filter((a) => selectedAdIds.includes(a.id)),
+        list: adsList,
+        setList: setAdsList,
+        setSelection: setSelectedAdIds,
+      };
+    }
+  };
+
+  const activeSelection = getActiveSelection();
+  const activeSelectionDrafts =
+    activeSelection.ids.length > 0
+      ? activeSelection.items.filter((item) => item.delivery === "In draft" || !item.active)
+      : activeSelection.list.filter((item) => item.delivery === "In draft");
+  const activeSelectionDraftCount = activeSelectionDrafts.length;
+
+  // 1. Publish Action (Meta Ads Manager format)
+  const handlePublish = () => {
+    const activeSel = getActiveSelection();
+    let toPublish = [];
+    if (activeSel.ids.length > 0) {
+      toPublish = activeSel.items;
+    } else {
+      toPublish = activeSel.list.filter((item) => item.delivery === "In draft" || !item.active);
+    }
+
+    if (toPublish.length === 0) {
+      showToast("Nothing to publish. All items are already active.", "info");
+      return;
+    }
+
+    setPublishingTotal(toPublish.length);
+    setPublishingProgress(20);
+    setPublishingItemName(toPublish[0]?.name || "Item");
+    setPublishingModalOpen(true);
+
+    setTimeout(() => {
+      setPublishingProgress(65);
+    }, 250);
+
+    setTimeout(() => {
+      setPublishingProgress(100);
+      const publishIds = toPublish.map((item) => item.id);
+      activeSel.setList((prev) =>
+        prev.map((item) =>
+          publishIds.includes(item.id)
+            ? { ...item, delivery: "Active", active: true, lastSignificantEdit: "Just now" }
+            : item
+        )
+      );
+      if (draftsDiscarded) setDraftsDiscarded(false);
+
+      setTimeout(() => {
+        setPublishingModalOpen(false);
+        showToast(
+          `Published ${toPublish.length} ${toPublish.length === 1 ? activeSel.typeLabel : activeSel.pluralLabel
+          } successfully!`
+        );
+      }, 350);
+    }, 600);
+  };
+
+  // 2. Duplicate Action (Meta Quick Duplicate & Custom Copies)
+  const handleQuickDuplicate = (customCopies = 1) => {
+    const activeSel = getActiveSelection();
+    if (activeSel.ids.length === 0) {
+      showToast(`Please select at least one ${activeSel.typeLabel} to duplicate.`, "info");
+      return;
+    }
+
+    const newItems = [];
+    const newIds = [];
+    activeSel.items.forEach((item) => {
+      for (let i = 1; i <= customCopies; i++) {
+        const copySuffix = customCopies === 1 ? " - Copy" : ` - Copy (${i})`;
+        const newId = `${activeSel.type}-copy-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const newItem = {
+          ...item,
+          id: newId,
+          name: `${item.name}${copySuffix}`,
+          delivery: "In draft",
+          active: true,
+          lastSignificantEdit: "Just now",
+        };
+        newItems.push(newItem);
+        newIds.push(newId);
+      }
+    });
+
+    activeSel.setList((prev) => [...newItems, ...prev]);
+    activeSel.setSelection(newIds);
+    setDuplicateMenuOpen(false);
+    setDuplicateModalOpen(false);
+    showToast(
+      `Duplicated ${newItems.length} ${newItems.length === 1 ? activeSel.typeLabel : activeSel.pluralLabel
+      } as draft.`
+    );
+  };
+
+  // 3. Edit Action & Slide-over Drawer
+  const handleOpenEditDrawer = () => {
+    const activeSel = getActiveSelection();
+    if (activeSel.ids.length === 0) {
+      showToast(`Please select at least one ${activeSel.typeLabel} to edit.`, "info");
+      return;
+    }
+    if (activeMetaSubSection === "campaigns") {
+      handleOpenStandaloneEditorForCampaign(activeSel.items[0]);
+      setEditMenuOpen(false);
+      return;
+    }
+    setEditingItemData({ ...activeSel.items[0] });
+    setEditDrawerOpen(true);
+    setEditMenuOpen(false);
+  };
+
+  const handleSaveEditDrawer = () => {
+    if (!editingItemData) return;
+    const activeSel = getActiveSelection();
+    activeSel.setList((prev) =>
+      prev.map((item) =>
+        item.id === editingItemData.id ? { ...editingItemData, lastSignificantEdit: "Just now" } : item
+      )
+    );
+    setEditDrawerOpen(false);
+    showToast(`Saved changes to "${editingItemData.name}".`);
+  };
+
+  const handleOpenQuickEdit = () => {
+    const activeSel = getActiveSelection();
+    if (activeSel.ids.length === 0) {
+      showToast(`Please select at least one ${activeSel.typeLabel} to edit.`, "info");
+      return;
+    }
+    setQuickEditName(activeSel.items[0]?.name || "");
+    setQuickEditBudget(activeSel.items[0]?.budget || "₹200.00");
+    setQuickEditModalOpen(true);
+    setEditMenuOpen(false);
+  };
+
+  const handleSaveQuickEdit = () => {
+    const activeSel = getActiveSelection();
+    activeSel.setList((prev) =>
+      prev.map((item) =>
+        activeSel.ids.includes(item.id)
+          ? {
+            ...item,
+            name: quickEditName || item.name,
+            budget: quickEditBudget || item.budget,
+            lastSignificantEdit: "Just now",
+          }
+          : item
+      )
+    );
+    setQuickEditModalOpen(false);
+    showToast(`Quick edit updated ${activeSel.ids.length} ${activeSel.pluralLabel}.`);
+  };
+
+  const handleOpenFindReplace = () => {
+    const activeSel = getActiveSelection();
+    if (activeSel.ids.length === 0) {
+      showToast(`Please select at least one ${activeSel.typeLabel} to edit.`, "info");
+      return;
+    }
+    setFindText("");
+    setReplaceText("");
+    setFindReplaceModalOpen(true);
+    setEditMenuOpen(false);
+  };
+
+  const handleExecuteFindReplace = () => {
+    if (!findText) {
+      showToast("Please enter text to find.", "info");
+      return;
+    }
+    const activeSel = getActiveSelection();
+    let updatedCount = 0;
+    activeSel.setList((prev) =>
+      prev.map((item) => {
+        if (!activeSel.ids.includes(item.id)) return item;
+        const flags = matchCase ? "g" : "gi";
+        const newName = item.name.replace(new RegExp(findText, flags), replaceText);
+        if (newName !== item.name) updatedCount++;
+        return { ...item, name: newName, lastSignificantEdit: "Just now" };
+      })
+    );
+    setFindReplaceModalOpen(false);
+    showToast(`Replaced text in ${updatedCount} ${activeSel.pluralLabel}.`);
+  };
+
+  const handleBatchTurnOn = () => {
+    const activeSel = getActiveSelection();
+    if (activeSel.ids.length === 0) {
+      showToast(`Please select at least one ${activeSel.typeLabel}.`, "info");
+      return;
+    }
+    activeSel.setList((prev) =>
+      prev.map((item) =>
+        activeSel.ids.includes(item.id)
+          ? {
+            ...item,
+            active: true,
+            delivery: item.delivery === "Off" || item.delivery === "Paused" ? "Active" : item.delivery,
+            lastSignificantEdit: "Just now",
+          }
+          : item
+      )
+    );
+    setEditMenuOpen(false);
+    showToast(`Turned on ${activeSel.ids.length} ${activeSel.pluralLabel}.`);
+  };
+
+  const handleBatchTurnOff = () => {
+    const activeSel = getActiveSelection();
+    if (activeSel.ids.length === 0) {
+      showToast(`Please select at least one ${activeSel.typeLabel}.`, "info");
+      return;
+    }
+    activeSel.setList((prev) =>
+      prev.map((item) =>
+        activeSel.ids.includes(item.id)
+          ? { ...item, active: false, delivery: "Off", lastSignificantEdit: "Just now" }
+          : item
+      )
+    );
+    setEditMenuOpen(false);
+    showToast(`Turned off ${activeSel.ids.length} ${activeSel.pluralLabel}.`);
+  };
+
+  // 4. Delete Action
+  const handleOpenDelete = () => {
+    const activeSel = getActiveSelection();
+    if (activeSel.ids.length === 0) {
+      showToast(`Please select at least one ${activeSel.typeLabel} to delete.`, "info");
+      return;
+    }
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    const activeSel = getActiveSelection();
+    const count = activeSel.ids.length;
+    activeSel.setList((prev) => prev.filter((item) => !activeSel.ids.includes(item.id)));
+    activeSel.setSelection([]);
+    setDeleteModalOpen(false);
+    showToast(`Deleted ${count} ${count === 1 ? activeSel.typeLabel : activeSel.pluralLabel}.`);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (downloadRef.current && !downloadRef.current.contains(event.target)) {
+        setDownloadMenuOpen(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setMoreMenuOpen(false);
+      }
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+        setDatePickerOpen(false);
+      }
+      if (adAccountPickerRef.current && !adAccountPickerRef.current.contains(event.target)) {
+        setAdAccountPickerOpen(false);
+      }
+      if (duplicateRef.current && !duplicateRef.current.contains(event.target)) {
+        setDuplicateMenuOpen(false);
+      }
+      if (editRef.current && !editRef.current.contains(event.target)) {
+        setEditMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      // Ctrl + Shift + / -> Shortcuts
+      if (e.ctrlKey && e.shiftKey && (e.key === "/" || e.key === "?")) {
+        e.preventDefault();
+        setShortcutsModalOpen((prev) => !prev);
+      }
+      // Ctrl + D -> Quick Duplicate
+      if (e.ctrlKey && e.key.toLowerCase() === "d" && !e.shiftKey) {
+        e.preventDefault();
+        handleQuickDuplicate(1);
+      }
+      // Ctrl + U -> Edit Selected
+      if (e.ctrlKey && e.key.toLowerCase() === "u") {
+        e.preventDefault();
+        handleOpenEditDrawer();
+      }
+      if (e.key === "Escape") {
+        setMoreMenuOpen(false);
+        setDownloadMenuOpen(false);
+        setDiscardModalOpen(false);
+        setResetModalOpen(false);
+        setShortcutsModalOpen(false);
+        setDatePickerOpen(false);
+        setAdAccountPickerOpen(false);
+        setDuplicateMenuOpen(false);
+        setEditMenuOpen(false);
+        setDuplicateModalOpen(false);
+        setEditDrawerOpen(false);
+        setQuickEditModalOpen(false);
+        setFindReplaceModalOpen(false);
+        setDeleteModalOpen(false);
+        setPublishingModalOpen(false);
+      }
+    };
+
+    if (
+      downloadMenuOpen ||
+      moreMenuOpen ||
+      datePickerOpen ||
+      adAccountPickerOpen ||
+      duplicateMenuOpen ||
+      editMenuOpen
+    ) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    downloadMenuOpen,
+    moreMenuOpen,
+    datePickerOpen,
+    adAccountPickerOpen,
+    duplicateMenuOpen,
+    editMenuOpen,
+    selectedAdIds,
+    selectedAdsetIds,
+    selectedCampaignIds,
+    activeMetaSubSection,
+  ]);
+
+  const handleExport = (format) => {
+    const activeData =
+      activeMetaSubSection === "ads"
+        ? adsList.map((a) => ({
+          Name: a.name,
+          Delivery: a.delivery,
+          Budget: `${a.budget} ${a.budgetSub}`.trim(),
+          Ends: a.ends,
+          "Bid Strategy": `${a.bidStrategy} ${a.bidStrategySub}`.trim(),
+          "Ad Set": a.adsetName,
+          Status: a.active ? "Active" : "Paused",
+        }))
+        : activeMetaSubSection === "adsets"
+          ? adsetsList.map((as) => ({
+            Name: as.name,
+            Delivery: as.delivery,
+            Budget: `${as.budget} ${as.budgetSub}`.trim(),
+            Ends: as.ends,
+            "Bid Strategy": `${as.bidStrategy} ${as.bidStrategySub}`.trim(),
+            Attribution: as.attribution,
+            Status: as.active ? "Active" : "Paused",
+          }))
+          : campaignsList.map((c) => ({
+            Name: c.name,
+            Delivery: c.delivery,
+            Budget: `${c.budget} ${c.budgetSub}`.trim(),
+            Ends: c.ends,
+            "Bid Strategy": `${c.bidStrategy} ${c.bidStrategySub}`.trim(),
+            Attribution: c.attribution,
+            Status: c.active ? "Active" : "Paused",
+          }));
+
+    if (!activeData.length) return;
+
+    const headers = Object.keys(activeData[0]);
+    const csvRows = [
+      headers.join(","),
+      ...activeData.map((row) =>
+        headers.map((h) => `"${String(row[h] || "").replace(/"/g, '""')}"`).join(",")
+      ),
+    ];
+    const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(csvRows.join("\n"));
+    const link = document.createElement("a");
+    link.href = csvContent;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.download = `Meta_${activeMetaSubSection.toUpperCase()}_Export_${dateStr}.${format === "xlsx" ? "xlsx" : "csv"}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setDownloadMenuOpen(false);
+  };
+
+
+  const toggleAdActive = (id) => {
+    setAdsList((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, active: !item.active } : item))
+    );
+  };
+
+  const toggleAdsetActive = (id) => {
+    setAdsetsList((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, active: !item.active } : item))
+    );
+  };
+
+  const toggleCampaignActive = (id) => {
+    setCampaignsList((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, active: !item.active } : item))
+    );
+  };
+
   return (
-    <>
-      {campaignSubView === "reports" ? (
-        <CampaignReportsSection
-          campaigns={allDisplayCampaigns}
-          clients={clients}
-          onBackToManager={() => {
-            setCampaignSubView("manager");
-            setReportSelectedCampaignId(null);
+    <div
+      style={{
+        width: "100%",
+        minHeight: "75vh",
+        background: "#ffffff",
+        borderRadius: 14,
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
+        overflow: "hidden",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      }}
+    >
+      {/* ── Top Header Row with Platform Radio Selectors on Right Side ── */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "14px 20px",
+          borderBottom: "1px solid #f1f5f9",
+          background: "#ffffff",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        {/* 3 Radio Buttons aligned on Right Side */}
+        <div
+          role="radiogroup"
+          aria-label="Ad Platform Selection"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 18,
+            flexWrap: "wrap",
           }}
-          onViewCampaignDetail={(camp) => {
-            setActiveCampaign(camp);
-            setViewMode("detail");
-            setCampaignSubView("manager");
-          }}
-          onRefresh={onRefresh}
-        />
-      ) : viewMode === "detail" && activeCampaign ? (
-        renderDetailView()
-      ) : (
-        <div className="campaigns-container">
-          {/* Top Sub-Navigation Bar */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              background: "#ffffff",
-              border: "1px solid #e2e8f0",
-              borderRadius: 14,
-              padding: "8px 12px",
-              marginBottom: 20,
-              flexWrap: "wrap",
-              gap: 10,
-              boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
-            }}
-          >
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <button
-                type="button"
-                onClick={() => setCampaignSubView("manager")}
+        >
+          {AD_PLATFORMS.map((platform) => {
+            const isChecked = selectedPlatform === platform.id;
+            return (
+              <label
+                key={platform.id}
                 style={{
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
                   gap: 8,
-                  padding: "8px 16px",
-                  borderRadius: 10,
-                  fontSize: "0.85rem",
-                  fontWeight: 750,
-                  border: "none",
                   cursor: "pointer",
-                  background: "#0f172a",
-                  color: "#ffffff",
+                  fontSize: "0.88rem",
+                  fontWeight: isChecked ? 650 : 500,
+                  color: isChecked ? "#0f172a" : "#475569",
+                  userSelect: "none",
+                  padding: "5px 10px",
+                  borderRadius: 8,
+                  transition: "all 0.15s ease",
+                  background: isChecked ? "#f8fafc" : "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isChecked) e.currentTarget.style.background = "#f1f5f9";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isChecked) e.currentTarget.style.background = "transparent";
                 }}
               >
-                <Layers size={16} />
-                <span>Campaign Manager</span>
+                <input
+                  type="radio"
+                  name="ad_platform"
+                  value={platform.id}
+                  checked={isChecked}
+                  onChange={() => setSelectedPlatform(platform.id)}
+                  style={{
+                    position: "absolute",
+                    opacity: 0,
+                    width: 0,
+                    height: 0,
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {/* Custom Styled Radio Circle */}
                 <span
                   style={{
-                    background: "#334155",
-                    color: "#ffffff",
-                    padding: "2px 7px",
-                    borderRadius: 9999,
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
+                    width: 17,
+                    height: 17,
+                    borderRadius: "50%",
+                    border: isChecked ? "2px solid #2563eb" : "2px solid #cbd5e1",
+                    background: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    transition: "all 0.15s ease",
+                    boxShadow: isChecked ? "0 0 0 3px rgba(37, 99, 235, 0.12)" : "none",
                   }}
                 >
-                  {allDisplayCampaigns.length}
+                  {isChecked && (
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: "#2563eb",
+                        transition: "all 0.15s ease",
+                      }}
+                    />
+                  )}
                 </span>
-              </button>
 
+                {/* Brand Logo & Text */}
+                <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+                  {platform.icon}
+                </span>
+                <span>{platform.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── META ADS SECTION (Exact Meta Ads Manager Format from Images 1, 2, 3) ── */}
+      {selectedPlatform === "meta" && (
+        <div style={{ width: "100%", background: "#ffffff" }}>
+          {/* 1. Meta Ads Manager Main Header Bar */}
+          <div
+            style={{
+              padding: "10px 18px",
+              background: "#ffffff",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span style={{ fontSize: "1.1rem", fontWeight: 750, color: "#0f172a" }}>Ads</span>
+              </div>
+
+              {/* Account Dropdown — two-panel picker (image2 format) */}
+              <div ref={adAccountPickerRef} style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdAccountPickerOpen((prev) => !prev);
+                    setAdAccountSearchQuery("");
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "5px 10px",
+                    borderRadius: 6,
+                    background: adAccountPickerOpen ? "#f1f5f9" : "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.82rem",
+                    color: "#1e293b",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    transition: "background 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "0.88rem" }}>🪪</span>
+                  <span>1405144991733037 (14051449...</span>
+                  <ChevronDown
+                    size={14}
+                    color="#64748b"
+                    style={{
+                      transform: adAccountPickerOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </button>
+
+                {/* Two-panel popup */}
+                {adAccountPickerOpen && (() => {
+                  const ALL_ACCOUNTS = [
+                    { id: "1405144991733037", name: "Athira S", platform: "meta" },
+                  ];
+                  const filtered = ALL_ACCOUNTS.filter((a) =>
+                    !adAccountSearchQuery.trim() ||
+                    a.name.toLowerCase().includes(adAccountSearchQuery.toLowerCase()) ||
+                    a.id.includes(adAccountSearchQuery)
+                  );
+                  const selectedId = "1405144991733037";
+
+                  return (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 6px)",
+                        left: 0,
+                        width: 560,
+                        maxWidth: "calc(100vw - 32px)",
+                        background: "#ffffff",
+                        border: "1px solid #dadde1",
+                        borderRadius: 8,
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08)",
+                        zIndex: 300,
+                        overflow: "hidden",
+                        animation: "ctAdAcctIn 0.14s ease-out",
+                      }}
+                    >
+                      <style>{`@keyframes ctAdAcctIn { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }`}</style>
+
+                      {/* Search row */}
+                      <div style={{ position: "relative", padding: "10px 12px", borderBottom: "1px solid #f0f2f5" }}>
+                        <Search size={14} style={{ position: "absolute", left: 22, top: "50%", transform: "translateY(-50%)", color: "#65676b", pointerEvents: "none" }} />
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Search for an ad account"
+                          value={adAccountSearchQuery}
+                          onChange={(e) => setAdAccountSearchQuery(e.target.value)}
+                          style={{
+                            width: "100%",
+                            height: 38,
+                            padding: "0 32px 0 36px",
+                            border: "1.5px solid #e2e8f0",
+                            borderRadius: 6,
+                            fontSize: "0.86rem",
+                            color: "#1c1e21",
+                            background: "#f0f2f5",
+                            outline: "none",
+                            boxSizing: "border-box",
+                          }}
+                          onFocus={(e) => { e.target.style.borderColor = "#1877f2"; e.target.style.background = "#fff"; }}
+                          onBlur={(e) => { e.target.style.borderColor = "#e2e8f0"; e.target.style.background = "#f0f2f5"; }}
+                        />
+                        {adAccountSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setAdAccountSearchQuery("")}
+                            style={{ position: "absolute", right: 22, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#8a8d91", display: "flex", alignItems: "center", padding: 2, borderRadius: "50%" }}
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Two-panel body */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 260 }}>
+                        {/* LEFT panel */}
+                        <div style={{ padding: "12px 12px 12px 14px", borderRight: "1px solid #f0f2f5", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
+                          {/* Client Email section */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 12, borderBottom: "1px solid #e4e6ea", marginBottom: 4 }}>
+                            <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1c1e21" }}>Client Email</label>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px solid #ccd0d5", borderRadius: 8, padding: "7px 10px", background: "#fff" }}>
+                              <Send size={14} style={{ color: "#606770", flexShrink: 0 }} />
+                              <input
+                                type="email"
+                                placeholder="client@email.com"
+                                style={{ flex: 1, border: "none", outline: "none", fontSize: "0.83rem", color: "#1c1e21", background: "transparent" }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "9px 12px", background: "#1877f2", color: "#ffffff", border: "none", borderRadius: 8, fontSize: "0.84rem", fontWeight: 700, cursor: "pointer", gap: 6 }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "#166fe5")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "#1877f2")}
+                            >
+                              <Send size={14} />
+                              Send Connection Request
+                            </button>
+                          </div>
+
+                          {/* Other assets */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.76rem", fontWeight: 700, color: "#606770", padding: "10px 0 4px 0", marginTop: 4 }}>
+                            <span>Other assets</span>
+                            <Info size={13} style={{ color: "#8a8d91", cursor: "help" }} />
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
+                            {filtered.map((acc) => (
+                              <button
+                                key={acc.id}
+                                type="button"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 10,
+                                  padding: "9px 8px",
+                                  borderRadius: 8,
+                                  border: "none",
+                                  background: acc.id === selectedId ? "#e7f3ff" : "#ffffff",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  width: "100%",
+                                  transition: "background 0.12s ease",
+                                }}
+                                onMouseEnter={(e) => { if (acc.id !== selectedId) e.currentTarget.style.background = "#f0f2f5"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = acc.id === selectedId ? "#e7f3ff" : "#ffffff"; }}
+                                onClick={() => setAdAccountPickerOpen(false)}
+                              >
+                                <div style={{ width: 28, height: 28, borderRadius: 6, background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                  <MetaLogoIcon size={16} />
+                                </div>
+                                <span style={{ flex: 1, fontSize: "0.84rem", fontWeight: 600, color: "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {acc.name}
+                                </span>
+                                <ChevronRight size={14} style={{ flexShrink: 0, color: "#8a8d91" }} />
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Footer */}
+                          <button
+                            type="button"
+                            onClick={() => setAdAccountPickerOpen(false)}
+                            style={{ width: "100%", marginTop: 10, padding: "9px 12px", background: "#1877f2", color: "#ffffff", border: "none", borderRadius: 8, fontSize: "0.84rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 0.15s ease" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#1565d8")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#1877f2")}
+                          >
+                            Create ad using Meta Ads
+                          </button>
+                        </div>
+
+                        {/* RIGHT panel */}
+                        <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                          <div style={{ padding: "12px 16px 8px", fontSize: "0.8rem", fontWeight: 700, color: "#1c1e21", borderBottom: "1px solid #f0f2f5" }}>
+                            {filtered.length} ad account{filtered.length !== 1 ? "s" : ""}
+                          </div>
+                          <div style={{ flex: 1, overflowY: "auto", padding: "6px 8px" }}>
+                            {filtered.length === 0 ? (
+                              <div style={{ padding: "20px 12px", fontSize: "0.84rem", color: "#65676b", textAlign: "center" }}>No accounts found</div>
+                            ) : filtered.map((acc) => {
+                              const isSel = acc.id === selectedId;
+                              return (
+                                <button
+                                  key={acc.id}
+                                  type="button"
+                                  onClick={() => setAdAccountPickerOpen(false)}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 10,
+                                    padding: "10px 8px",
+                                    borderRadius: 8,
+                                    border: "none",
+                                    background: isSel ? "#e7f3ff" : "#ffffff",
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                    width: "100%",
+                                    transition: "background 0.12s ease",
+                                  }}
+                                  onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.background = "#f0f2f5"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = isSel ? "#e7f3ff" : "#ffffff"; }}
+                                >
+                                  <span style={{
+                                    width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
+                                    background: isSel ? "#1877f2" : "#dadde1",
+                                    border: `2px solid ${isSel ? "#1877f2" : "#dadde1"}`,
+                                    boxShadow: isSel ? "0 0 0 2px rgba(24,119,242,0.2)" : "none",
+                                  }} />
+                                  <div style={{ width: 26, height: 26, borderRadius: 5, background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <MetaLogoIcon size={15} />
+                                  </div>
+                                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                                    <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{acc.name}</span>
+                                    <span style={{ fontSize: "0.72rem", color: "#65676b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Ad account ID: {acc.id}</span>
+                                  </div>
+                                  <MoreHorizontal size={16} style={{ flexShrink: 0, color: "#8a8d91" }} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Right Meta Action Controls */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Updated just now</span>
               <button
                 type="button"
-                onClick={() => {
-                  setReportSelectedCampaignId("all");
-                  setCampaignSubView("reports");
-                }}
+                onClick={handleRefresh}
+                title="Refresh"
                 style={{
+                  padding: "5px 7px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  cursor: "pointer",
+                  color: "#475569",
                   display: "flex",
                   alignItems: "center",
-                  gap: 8,
-                  padding: "8px 16px",
-                  borderRadius: 10,
-                  fontSize: "0.85rem",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+              >
+                <RefreshCw size={13} />
+              </button>
+
+              {/* Discard Drafts Button (Hidden after discard, matching Image 2) */}
+              {!draftsDiscarded && (
+                <button
+                  type="button"
+                  onClick={() => setDiscardModalOpen(true)}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    color: "#334155",
+                    fontWeight: 550,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                >
+                  <Trash2 size={13} />
+                  <span>Discard Drafts</span>
+                </button>
+              )}
+
+              {/* Review and publish button (Disabled grey without count badge after discard, matching Image 2) */}
+              <button
+                type="button"
+                disabled={draftsDiscarded}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: 6,
+                  border: draftsDiscarded ? "1px solid #cbd5e1" : "none",
+                  background: draftsDiscarded ? "#f1f5f9" : "#0064e1",
+                  color: draftsDiscarded ? "#94a3b8" : "#ffffff",
+                  fontSize: "0.84rem",
                   fontWeight: 650,
-                  border: "none",
-                  cursor: "pointer",
-                  background: campaignSubView === "reports" ? "#0f172a" : "transparent",
-                  color: campaignSubView === "reports" ? "#ffffff" : "#475569",
+                  cursor: draftsDiscarded ? "not-allowed" : "pointer",
+                  boxShadow: draftsDiscarded ? "none" : "0 1px 2px rgba(0, 100, 225, 0.2)",
                   transition: "all 0.15s ease",
                 }}
               >
-                <BarChart3 size={16} color={campaignSubView === "reports" ? "#ffffff" : "#0866FF"} />
-                <span>Report</span>
+                {draftsDiscarded ? "Review and publish" : "Review and publish (22)"}
               </button>
+              {/* 3-Dots More Button & Dropdown Menu (matching Image 2) */}
+              <div ref={moreMenuRef} style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setMoreMenuOpen((prev) => !prev)}
+                  title="More actions"
+                  style={{
+                    padding: "6px 8px",
+                    borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    background: moreMenuOpen ? "#f1f5f9" : "#ffffff",
+                    cursor: "pointer",
+                    color: "#475569",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!moreMenuOpen) e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!moreMenuOpen) e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+
+                {/* Dropdown Menu matching Image 2 */}
+                {moreMenuOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 6px)",
+                      right: 0,
+                      width: 290,
+                      background: "#ffffff",
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06)",
+                      zIndex: 100,
+                      overflow: "hidden",
+                      padding: "6px 0",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMoreMenuOpen(false);
+                        setResetModalOpen(true);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "10px 18px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.88rem",
+                        color: "#1c1e21",
+                        cursor: "pointer",
+                        display: "block",
+                        fontWeight: 500,
+                        transition: "background 0.12s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      Reset Ads Manager...
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMoreMenuOpen(false);
+                        setShortcutsModalOpen(true);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "10px 18px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.88rem",
+                        color: "#1c1e21",
+                        cursor: "pointer",
+                        display: "block",
+                        fontWeight: 500,
+                        transition: "background 0.12s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      Keyboard shortcuts (Ctrl + Shift + /)
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* 1. PAGE HEADER */}
-      <div className="campaigns-page-header">
-        <div className="campaigns-header-text">
-          <h1 className="campaigns-title">Social Marketing Campaigns & ROI</h1>
-          <p className="campaigns-subtitle">
-            Plan, manage and track your social media campaigns.
-          </p>
-        </div>
 
-        <div className="campaigns-header-actions">
-          <button
-            id="btn-create-campaign-trigger"
-            onClick={() => {
-              if (clients.length > 0 && !clientId) {
-                setClientId(clients[0].id);
-              }
-              setCreateModalOpen(true);
+
+          {/* 2. FILTER PILLS & SEARCH BAR (From Image 1 & Image 2) */}
+          <div
+            style={{
+              padding: "10px 18px 10px 18px",
+              background: "#ffffff",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
             }}
-            className="btn-create-campaign"
           >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>Create Campaign</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. CAMPAIGN KPI SUMMARY ROW (Subtle, compact cards with light borders) */}
-      <div className="campaigns-kpi-row">
-        {/* Total Campaigns */}
-        <div className="kpi-metric-card">
-          <div className="kpi-label">Total Campaigns</div>
-          <div className="kpi-value">{kpiMetrics.totalCampaigns}</div>
-        </div>
-
-        {/* Active Campaigns */}
-        <div className="kpi-metric-card">
-          <div className="kpi-label">Active Campaigns</div>
-          <div className="kpi-value text-emerald-700">{kpiMetrics.activeCampaigns}</div>
-        </div>
-
-        {/* Total Spend */}
-        <div className="kpi-metric-card">
-          <div className="kpi-label">Total Spend</div>
-          <div className="kpi-value">{kpiMetrics.totalSpend}</div>
-        </div>
-
-        {/* Total Reach */}
-        <div className="kpi-metric-card">
-          <div className="kpi-label">Total Reach</div>
-          <div className="kpi-value">{kpiMetrics.totalReach}</div>
-        </div>
-
-        {/* Total Leads */}
-        <div className="kpi-metric-card">
-          <div className="kpi-label">Total Leads</div>
-          <div className="kpi-value">{kpiMetrics.totalLeads}</div>
-        </div>
-
-        {/* ROI */}
-        <div className="kpi-metric-card kpi-roi-card">
-          <div className="kpi-label">ROI</div>
-          <div className="kpi-value text-indigo-700">{kpiMetrics.roi}</div>
-        </div>
-      </div>
-
-      {/* 3. SEARCH + FILTER BAR */}
-      <div className="campaigns-filter-bar">
-        {/* Single-line: Search + All Filters + Sort + Count */}
-        <div className="campaigns-filter-single-row">
-          {/* Search Box */}
-          <div className="campaigns-search-box campaigns-search-inline">
-            <Search size={16} className="campaigns-search-icon" />
-            <input
-              type="text"
-              placeholder="Search campaigns..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
+            {/* Filter Pills Row matching Image 1 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {/* 1. All ads */}
               <button
                 type="button"
-                className="campaigns-clear-search"
-                onClick={() => setSearchQuery("")}
-                title="Clear search"
+                onClick={() => setActiveFilter("all")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: activeFilter === "all" ? "1.5px solid #0064e1" : "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: activeFilter === "all" ? 650 : 500,
+                  color: activeFilter === "all" ? "#0064e1" : "#334155",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeFilter !== "all") e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (activeFilter !== "all") e.currentTarget.style.background = "#ffffff";
+                }}
               >
-                <X size={14} />
+                <Folder size={14} color={activeFilter === "all" ? "#0064e1" : "#64748b"} strokeWidth={1.8} />
+                <span>All ads</span>
               </button>
-            )}
-          </div>
 
-          {/* Divider */}
-          <div className="campaigns-filter-divider" />
+              {/* 2. Had delivery */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter(activeFilter === "had_delivery" ? "all" : "had_delivery")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: activeFilter === "had_delivery" ? "1.5px solid #0064e1" : "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: activeFilter === "had_delivery" ? 650 : 500,
+                  color: activeFilter === "had_delivery" ? "#0064e1" : "#334155",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeFilter !== "had_delivery") e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (activeFilter !== "had_delivery") e.currentTarget.style.background = "#ffffff";
+                }}
+              >
+                <Mail size={14} color={activeFilter === "had_delivery" ? "#0064e1" : "#64748b"} strokeWidth={1.8} />
+                <span>Had delivery</span>
+              </button>
 
-          {/* Objective Filter */}
-          <div className="campaigns-filter-select-wrap">
-            <select
-              value={selectedObjective}
-              onChange={(e) => setSelectedObjective(e.target.value)}
-              className="campaigns-filter-select"
-            >
-              <option value="all">Objective: All</option>
-              <option value="lead_generation">Lead Generation</option>
-              <option value="brand_awareness">Brand Awareness</option>
-              <option value="conversions">Sales &amp; Conversions</option>
-              <option value="engagement">Engagement</option>
-              <option value="traffic">Website Traffic</option>
-            </select>
-            <ChevronDown size={14} className="campaigns-filter-select-icon" />
-          </div>
+              {/* 3. Actions (Active by default, matching Image 1) */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter(activeFilter === "actions" ? "all" : "actions")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: activeFilter === "actions" ? "1.5px solid #0064e1" : "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: activeFilter === "actions" ? 650 : 500,
+                  color: activeFilter === "actions" ? "#0064e1" : "#334155",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeFilter !== "actions") e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (activeFilter !== "actions") e.currentTarget.style.background = "#ffffff";
+                }}
+              >
+                {/* (↑) Actions icon matching Image 1 */}
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="10" cy="10" r="8" stroke={activeFilter === "actions" ? "#0064e1" : "#64748b"} strokeWidth="1.6" />
+                  <path
+                    d="M10 13.5V6.5M10 6.5L7 9.5M10 6.5L13 9.5"
+                    stroke={activeFilter === "actions" ? "#0064e1" : "#64748b"}
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span>Actions</span>
+              </button>
 
-          {/* Brand Name Filter */}
-          <div className="campaigns-filter-select-wrap">
-            <select
-              value={selectedBrand}
-              onChange={(e) => setSelectedBrand(e.target.value)}
-              className="campaigns-filter-select"
-            >
-              <option value="all">Brand: All</option>
-              {uniqueBrands.map((b) => (
-                <option key={b.name} value={b.name}>{b.name}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="campaigns-filter-select-icon" />
-          </div>
-
-          {/* Ad Type Filter */}
-          <div className="campaigns-filter-select-wrap">
-            <select
-              value={selectedAdType}
-              onChange={(e) => setSelectedAdType(e.target.value)}
-              className="campaigns-filter-select"
-            >
-              <option value="all">Ad Type: All</option>
-              <option value="video">Video Ad</option>
-              <option value="image">Image Ad</option>
-              <option value="carousel">Carousel Ad</option>
-              <option value="collection">Collection Ad</option>
-            </select>
-            <ChevronDown size={14} className="campaigns-filter-select-icon" />
-          </div>
-
-          {/* Placement Filter */}
-          <div className="campaigns-filter-select-wrap">
-            <select
-              value={selectedChannel}
-              onChange={(e) => setSelectedChannel(e.target.value)}
-              className="campaigns-filter-select"
-            >
-              <option value="all">Placement: All</option>
-              {META_CAMPAIGN_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="campaigns-filter-select-icon" />
-          </div>
-
-          {/* Date Range Filter */}
-          <div className="campaigns-filter-select-wrap">
-            <select
-              value={selectedDateRange}
-              onChange={(e) => setSelectedDateRange(e.target.value)}
-              className="campaigns-filter-select"
-            >
-              <option value="all">Date Range: All</option>
-              <option value="7d">Last 7 Days</option>
-              <option value="30d">Last 30 Days</option>
-              <option value="active_now">Active Now</option>
-            </select>
-            <ChevronDown size={14} className="campaigns-filter-select-icon" />
-          </div>
-
-          {/* Divider */}
-          <div className="campaigns-filter-divider" />
-
-          {/* Source Filter */}
-          <div className="campaigns-filter-select-wrap">
-            <select
-              value={selectedSource}
-              onChange={(e) => setSelectedSource(e.target.value)}
-              className="campaigns-filter-select"
-              style={{ paddingLeft: 8 }}
-            >
-              <option value="all">Source: All</option>
-              <option value="dashboard">Dashboard</option>
-              <option value="meta">Meta</option>
-            </select>
-            <ChevronDown size={14} className="campaigns-filter-select-icon" />
-          </div>
-
-          {/* Divider */}
-          <div className="campaigns-filter-divider" />
-          <div className="campaigns-filter-select-wrap">
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="campaigns-filter-select font-medium"
-            >
-              <option value="newest">Sort: Newest</option>
-              <option value="budget_desc">Sort: Highest Budget</option>
-              <option value="budget_asc">Sort: Lowest Budget</option>
-              <option value="ending_soon">Sort: Ending Soonest</option>
-              <option value="most_leads">Sort: Most Leads</option>
-            </select>
-            <ChevronDown size={14} className="campaigns-filter-select-icon" />
-          </div>
-
-          {/* Count Badge */}
-          <span className="campaigns-count-badge">
-            Showing <strong>{filteredCampaigns.length}</strong> of {allDisplayCampaigns.length}
-            {allDisplayCampaigns.some(c => c._source === "meta") && (
-              <span style={{ marginLeft: 6, background: "#eff6ff", color: "#0866FF", border: "1px solid #bfdbfe", padding: "1px 7px", borderRadius: 9999, fontSize: "0.7rem", fontWeight: 800 }}>META SYNCED</span>
-            )}
-          </span>
-
-          {/* Reset */}
-          {hasActiveFilters && (
-            <button
-              onClick={handleResetFilters}
-              className="campaigns-reset-filters-btn"
-              title="Reset all applied filters"
-            >
-              <RotateCcw size={12} style={{ display: "inline", marginRight: 4 }} />
-              Reset
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 4. CAMPAIGN LIST (3 Columns Grid Desktop, 2 Tablet, 1 Mobile) */}
-      <div className="campaigns-grid">
-        {filteredCampaigns.length === 0 ? (
-          <div className="campaigns-empty-state">
-            <div className="campaigns-empty-icon">
-              <Layers size={28} />
+              {/* 4. Active ads */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter(activeFilter === "active" ? "all" : "active")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: activeFilter === "active" ? "1.5px solid #0064e1" : "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: activeFilter === "active" ? 650 : 500,
+                  color: activeFilter === "active" ? "#0064e1" : "#334155",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeFilter !== "active") e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (activeFilter !== "active") e.currentTarget.style.background = "#ffffff";
+                }}
+              >
+                <Send size={13} color={activeFilter === "active" ? "#0064e1" : "#64748b"} style={{ transform: "rotate(-10deg)" }} />
+                <span>Active ads</span>
+              </button>
             </div>
-            <h3 className="campaigns-empty-title">
-              {allDisplayCampaigns.length === 0 ? "No Campaigns Found" : "No Matching Campaigns Found"}
-            </h3>
-            <p className="campaigns-empty-desc">
-              {allDisplayCampaigns.length === 0
-                ? "Create your first social media campaign to track platform telemetry, budget pacing, and conversion targets."
-                : "No campaigns match your selected filter criteria. Try clearing or relaxing your filters."}
-            </p>
-            {hasActiveFilters ? (
-              <button onClick={handleResetFilters} className="campaigns-reset-filters-btn">
-                Clear Filters
-              </button>
-            ) : (
-              <button onClick={() => setCreateModalOpen(true)} className="btn-create-campaign">
-                <Plus size={16} /> Create Campaign
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredCampaigns.map((camp) => {
-            const budgetNum = parseFloat(camp.budget) || 1;
-            const spentNum = camp._meta_data ? parseFloat(camp._meta_data.spend) || 0 : parseFloat(camp.spent) || 0;
-            const spentPercent = Math.min(100, Math.round((spentNum / budgetNum) * 100));
-            const isMetaNative = camp._source === "meta";
-            const isDashboard = camp._source === "dashboard";
-            const hasLiveMetaData = Boolean(camp._meta_data);
 
-            return (
-              <div
-                key={camp.id}
-                className={`campaign-card${isMetaNative ? " campaign-card-meta-native" : ""}`}
-                onClick={() => handleOpenDetail(camp)}
-                title={`Click to view ${camp.name} details`}
-              >
-                {/* Source Badge */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: isMetaNative ? "space-between" : "flex-end", marginBottom: 6 }}>
-                  {isMetaNative && (
-                    <span style={{ background: "#1877F2", color: "#fff", padding: "2px 9px", borderRadius: 9999, fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <Facebook size={10} /> Meta
-                    </span>
-                  )}
-                  <div onClick={(e) => e.stopPropagation()}>
-                    {renderObjectiveBadge(camp.objective)}
-                  </div>
-                </div>
-
-                {/* 2. Campaign Name & Brand */}
-                <div className="campaign-card-header">
-                  <h3
-                    className="campaign-name"
-                    onClick={(e) => { e.stopPropagation(); handleOpenDetail(camp); }}
-                  >
-                    {camp.name}
-                  </h3>
-                  <div className="campaign-brand-row">
-                    <span>Brand:</span>
-                    <span className="brand-name">{camp.client_name || "Adstra Digital"}</span>
-                  </div>
-                </div>
-
-                {/* 3. Target Audience (skip for Meta-native) */}
-                {camp.target_audience && !isMetaNative && (
-                  <div className="campaign-audience" onClick={(e) => e.stopPropagation()}>
-                    <Target size={13} className="campaign-audience-icon" />
-                    <span className="campaign-audience-text" title={camp.target_audience}>
-                      {camp.target_audience}
-                    </span>
-                  </div>
-                )}
-
-                {/* 3b. Meta metrics row for Meta-native or live campaigns */}
-                {hasLiveMetaData && (
-                  <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "6px 0" }}>
-                    {camp._meta_data.impressions > 0 && (
-                      <span style={{ fontSize: "0.75rem", background: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>
-                        👁 {Number(camp._meta_data.impressions).toLocaleString()} imp
-                      </span>
-                    )}
-                    {camp._meta_data.clicks > 0 && (
-                      <span style={{ fontSize: "0.75rem", background: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>
-                        🖱 {Number(camp._meta_data.clicks).toLocaleString()} clicks
-                      </span>
-                    )}
-                    {camp._meta_data.leads > 0 && (
-                      <span style={{ fontSize: "0.75rem", background: "#ecfdf5", color: "#059669", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
-                        🎯 {Number(camp._meta_data.leads).toLocaleString()} leads
-                      </span>
-                    )}
-                    {camp._meta_data.ctr > 0 && (
-                      <span style={{ fontSize: "0.75rem", background: "#eff6ff", color: "#0866FF", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
-                        CTR {Number(camp._meta_data.ctr).toFixed(2)}%
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* 4. Budget Pacing */}
-                <div className="campaign-budget-section">
-                  <div className="campaign-budget-header">
-                    <span className="campaign-budget-label">Budget Pacing</span>
-                    <span className="campaign-budget-values">
-                      {formatINR(spentNum)} / {formatINR(budgetNum)}
-                      <span className="pacing-pct">{spentPercent}%</span>
-                    </span>
-                  </div>
-                  <div className="campaign-progress-track">
-                    <div
-                      className={`campaign-progress-bar ${spentPercent > 90 ? "near-limit" : ""} ${spentPercent >= 100 ? "exceeded" : ""}`}
-                      style={{ width: `${Math.max(spentPercent === 0 ? 2 : spentPercent, 4)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* 5. Footer: dates + actions */}
-                <div className="campaign-card-footer">
-                  <div className="campaign-dates">
-                    <Calendar size={13} />
-                    <span>{formatDisplayDate(camp.start_date)} — {formatDisplayDate(camp.end_date)}</span>
-                  </div>
-                  <div className="campaign-card-actions">
-                    {/* Only show edit/delete for dashboard campaigns */}
-                    {!isMetaNative && (
-                      <>
-                        <button
-                          type="button"
-                          className="campaign-card-quick-edit"
-                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(camp); }}
-                          title={`Edit ${camp.name}`}
-                        >
-                          <Edit3 size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          className="campaign-card-quick-delete"
-                          onClick={(e) => { e.stopPropagation(); handleDeleteCampaign(camp); }}
-                          title={`Delete ${camp.name}`}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </>
-                    )}
-                    {/* Open in Meta Ads Manager for Meta-native campaigns */}
-                    {isMetaNative && camp._meta_data?.meta_manager_url && (
-                      <a
-                        href={camp._meta_data.meta_manager_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        title="Open in Meta Ads Manager"
-                        style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, background: "#eff6ff", color: "#0866FF", border: "1px solid #bfdbfe", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}
-                      >
-                        <ExternalLink size={12} /> Meta Manager
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  )}
-
-      {/* ===================================================================
-          CONFIRMATION MODAL (Shared between List & Detail views)
-          =================================================================== */}
-      {confirmDialog.isOpen && (
-        <div className="campaign-confirm-overlay">
-          <div className="campaign-confirm-card" role="dialog" aria-modal="true">
-            <div className="confirm-icon-wrap">
-              {confirmDialog.isDanger ? (
-                <AlertTriangle size={24} className="text-red-600" />
-              ) : (
-                <CheckCircle2 size={24} className="text-indigo-600" />
+            {/* Search Input Bar matching Image 2 */}
+            <div style={{ position: "relative", width: "100%" }}>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Describe what you're looking for"
+                style={{
+                  width: "100%",
+                  padding: "8px 36px 8px 14px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "0.85rem",
+                  color: "#0f172a",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  transition: "all 0.15s ease",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#0064e1";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 100, 225, 0.12)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#cbd5e1";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  title="Clear search"
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 4,
+                    color: "#94a3b8",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <X size={14} />
+                </button>
               )}
             </div>
-            <h3 className="confirm-title">{confirmDialog.title}</h3>
-            <p className="confirm-message">{confirmDialog.message}</p>
-            <div className="confirm-actions">
+          </div>
+
+          {/* 3. The 3 Subsections Tabs: Campaigns, Ad sets, Ads (Directly from Images 1, 2, 3) */}
+          <div
+            style={{
+              padding: "10px 18px 0 18px",
+              background: "#f8fafc",
+              borderBottom: "1px solid #cbd5e1",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* The 3 Subsection Tabs */}
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
+              {/* Tab 1: Campaigns */}
               <button
                 type="button"
-                onClick={() =>
-                  setConfirmDialog({
-                    isOpen: false,
-                    title: "",
-                    message: "",
-                    onConfirm: null,
-                    isDanger: false,
-                  })
+                onClick={() => setActiveMetaSubSection("campaigns")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 20px",
+                  borderRadius: "7px 7px 0 0",
+                  border: activeMetaSubSection === "campaigns" ? "1px solid #cbd5e1" : "1px solid transparent",
+                  borderBottom: activeMetaSubSection === "campaigns" ? "1px solid #ffffff" : "1px solid transparent",
+                  background: activeMetaSubSection === "campaigns" ? "#ffffff" : "transparent",
+                  color: activeMetaSubSection === "campaigns" ? "#0f172a" : "#475569",
+                  fontSize: "0.88rem",
+                  fontWeight: activeMetaSubSection === "campaigns" ? 700 : 550,
+                  cursor: "pointer",
+                  position: "relative",
+                  marginBottom: -1,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <MetaFolderIcon size={16} active={activeMetaSubSection === "campaigns"} />
+                <span>Campaigns</span>
+                {selectedCampaignIds.length > 0 && (
+                  <span
+                    style={{
+                      background: "#0064e1",
+                      color: "#ffffff",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      borderRadius: 4,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      marginLeft: 4,
+                    }}
+                  >
+                    <span>{selectedCampaignIds.length} selected</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCampaignIds([]);
+                      }}
+                      style={{ cursor: "pointer", opacity: 0.9 }}
+                    >
+                      ✕
+                    </span>
+                  </span>
+                )}
+              </button>
+
+              {/* Tab 2: Ad sets */}
+              <button
+                type="button"
+                onClick={() => setActiveMetaSubSection("adsets")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 20px",
+                  borderRadius: "7px 7px 0 0",
+                  border: activeMetaSubSection === "adsets" ? "1px solid #cbd5e1" : "1px solid transparent",
+                  borderBottom: activeMetaSubSection === "adsets" ? "1px solid #ffffff" : "1px solid transparent",
+                  background: activeMetaSubSection === "adsets" ? "#ffffff" : "transparent",
+                  color: activeMetaSubSection === "adsets" ? "#0f172a" : "#475569",
+                  fontSize: "0.88rem",
+                  fontWeight: activeMetaSubSection === "adsets" ? 700 : 550,
+                  cursor: "pointer",
+                  position: "relative",
+                  marginBottom: -1,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <LayoutGrid size={16} color={activeMetaSubSection === "adsets" ? "#0064e1" : "#64748b"} />
+                <span>Ad sets</span>
+                {selectedAdsetIds.length > 0 && (
+                  <span
+                    style={{
+                      background: "#0064e1",
+                      color: "#ffffff",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      borderRadius: 4,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      marginLeft: 4,
+                    }}
+                  >
+                    <span>{selectedAdsetIds.length} selected</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAdsetIds([]);
+                      }}
+                      style={{ cursor: "pointer", opacity: 0.9 }}
+                    >
+                      ✕
+                    </span>
+                  </span>
+                )}
+              </button>
+
+              {/* Tab 3: Ads (with blue selected counter badge matching Images 1, 2, 3) */}
+              <button
+                type="button"
+                onClick={() => setActiveMetaSubSection("ads")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 20px",
+                  borderRadius: "7px 7px 0 0",
+                  border: activeMetaSubSection === "ads" ? "1px solid #cbd5e1" : "1px solid transparent",
+                  borderBottom: activeMetaSubSection === "ads" ? "1px solid #ffffff" : "1px solid transparent",
+                  background: activeMetaSubSection === "ads" ? "#ffffff" : "transparent",
+                  color: activeMetaSubSection === "ads" ? "#0f172a" : "#475569",
+                  fontSize: "0.88rem",
+                  fontWeight: activeMetaSubSection === "ads" ? 700 : 550,
+                  cursor: "pointer",
+                  position: "relative",
+                  marginBottom: -1,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <MetaAdIcon size={16} active={activeMetaSubSection === "ads"} />
+                <span>Ads</span>
+
+                {/* Blue "1 selected ✕" pill badge shown in Images 1, 2, 3 */}
+                {selectedAdIds.length > 0 && (
+                  <span
+                    style={{
+                      background: "#0064e1",
+                      color: "#ffffff",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      borderRadius: 4,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      marginLeft: 4,
+                    }}
+                  >
+                    <span>{selectedAdIds.length} selected</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAdIds([]);
+                      }}
+                      style={{ cursor: "pointer", opacity: 0.9 }}
+                    >
+                      ✕
+                    </span>
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Date Range Selector matching Images 1, 2, 3 */}
+            <div
+              style={{
+                position: "relative",
+                marginBottom: 6,
+              }}
+              ref={datePickerRef}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  if (!datePickerOpen) {
+                    setTempDatePreset(selectedDatePreset);
+                    setTempStartDate(appliedStartDate);
+                    setTempEndDate(appliedEndDate);
+                    setCalMonth(appliedStartDate.getMonth());
+                    setCalYear(appliedStartDate.getFullYear());
+                  }
+                  setDatePickerOpen((prev) => !prev);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  background: datePickerOpen ? "#f1f5f9" : "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "0.8rem",
+                  color: "#334155",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Calendar size={14} color="#64748b" />
+                <span>{appliedDateLabel}</span>
+                <ChevronDown size={14} color="#64748b" />
+              </button>
+
+              {/* Image 1 Date Picker Modal / Popover */}
+              {datePickerOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    right: 0,
+                    width: 660,
+                    background: "#ffffff",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    boxShadow: "0 10px 28px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08)",
+                    zIndex: 500,
+                    display: "flex",
+                    flexDirection: "column",
+                    boxSizing: "border-box",
+                  }}
+                  onClick={() => closeAllDateDropdowns()}
+                >
+                  {/* Top Body Row: Left Presets + Right Dual Calendar */}
+                  <div style={{ display: "flex" }}>
+                    {/* Left Pane: Presets Sidebar */}
+                    <div
+                      style={{
+                        width: 170,
+                        borderRight: "1px solid #e2e8f0",
+                        display: "flex",
+                        flexDirection: "column",
+                        background: "#ffffff",
+                        paddingTop: 4,
+                      }}
+                    >
+                      {/* Recently Used Section */}
+                      <div style={{ padding: "8px 12px 4px 12px" }}>
+                        <div
+                          style={{
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            color: "#1c1e21",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Recently used
+                        </div>
+                        {/* Top Today preset button */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeAllDateDropdowns();
+                            handleSelectPreset("today");
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "4px 2px",
+                            cursor: "pointer",
+                            borderRadius: 4,
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <div
+                            style={{
+                              width: 15,
+                              height: 15,
+                              borderRadius: "50%",
+                              border: tempDatePreset === "today" ? "2px solid #0064e1" : "1.5px solid #cbd5e1",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              background: "#ffffff",
+                            }}
+                          >
+                            {tempDatePreset === "today" && (
+                              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#0064e1" }} />
+                            )}
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "0.82rem",
+                              color: "#1c1e21",
+                              fontWeight: tempDatePreset === "today" ? 600 : 400,
+                            }}
+                          >
+                            Today
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ height: 1, background: "#e4e6eb", margin: "3px 12px 5px 12px" }} />
+
+                      {/* Presets List */}
+                      <div
+                        style={{
+                          height: 200,
+                          overflowY: "auto",
+                          padding: "0 12px 6px 12px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 2,
+                          scrollbarWidth: "thin",
+                          scrollbarColor: "#94a3b8 #f1f5f9",
+                        }}
+                      >
+                        {DATE_PRESET_OPTIONS.map((item) => {
+                          const isSelected = tempDatePreset === item.id;
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeAllDateDropdowns();
+                                handleSelectPreset(item.id);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "4px 2px",
+                                borderRadius: 4,
+                                cursor: "pointer",
+                                background: "transparent",
+                                transition: "background 0.1s ease",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                            >
+                              <div
+                                style={{
+                                  width: 15,
+                                  height: 15,
+                                  borderRadius: "50%",
+                                  border: isSelected ? "2px solid #0064e1" : "1.5px solid #cbd5e1",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  background: "#ffffff",
+                                }}
+                              >
+                                {isSelected && (
+                                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#0064e1" }} />
+                                )}
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: "0.82rem",
+                                  color: "#1c1e21",
+                                  fontWeight: isSelected ? 600 : 400,
+                                }}
+                              >
+                                {item.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Right Pane: Dual Calendar + Range Inputs */}
+                    <div style={{ flex: 1, padding: "10px 14px", display: "flex", flexDirection: "column" }}>
+                      {/* Calendar Month Header Navigation (matching Image 3) */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: 8,
+                          position: "relative",
+                        }}
+                      >
+                        {/* Prev month button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeAllDateDropdowns();
+                            if (calMonth === 0) {
+                              setCalMonth(11);
+                              setCalYear((prev) => prev - 1);
+                            } else {
+                              setCalMonth((prev) => prev - 1);
+                            }
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "2px 4px",
+                            borderRadius: 4,
+                            display: "flex",
+                            alignItems: "center",
+                            color: "#334155",
+                          }}
+                          title="Previous month"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+
+                        {/* Month 1 & Year 1 Dropdown Buttons matching Image 3 */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {/* Month 1 Dropdown */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const next = !month1DropdownOpen;
+                                closeAllDateDropdowns();
+                                setMonth1DropdownOpen(next);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "3px 8px",
+                                borderRadius: 5,
+                                border: "none",
+                                background: month1DropdownOpen ? "#e4e6eb" : "transparent",
+                                fontSize: "0.86rem",
+                                fontWeight: 650,
+                                color: "#1c1e21",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <span>{MONTH_NAMES[calMonth]}</span>
+                              <ChevronDown size={13} color="#65676b" />
+                            </button>
+
+                            {month1DropdownOpen && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "calc(100% + 4px)",
+                                  left: 0,
+                                  width: 86,
+                                  maxHeight: 185,
+                                  overflowY: "auto",
+                                  background: "#ffffff",
+                                  borderRadius: 8,
+                                  border: "1px solid #cbd5e1",
+                                  boxShadow: "0 6px 20px rgba(0, 0, 0, 0.16)",
+                                  zIndex: 600,
+                                  padding: "4px 0",
+                                  scrollbarWidth: "thin",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {MONTH_NAMES.map((name, idx) => (
+                                  <div
+                                    key={name}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCalMonth(idx);
+                                      setMonth1DropdownOpen(false);
+                                    }}
+                                    style={{
+                                      padding: "5px 12px",
+                                      fontSize: "0.82rem",
+                                      color: "#1c1e21",
+                                      fontWeight: calMonth === idx ? 650 : 400,
+                                      background: calMonth === idx ? "#f0f2f5" : "transparent",
+                                      cursor: "pointer",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                                    onMouseLeave={(e) => {
+                                      if (calMonth !== idx) e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
+                                    {name}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Year 1 Dropdown */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const next = !year1DropdownOpen;
+                                closeAllDateDropdowns();
+                                setYear1DropdownOpen(next);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "3px 8px",
+                                borderRadius: 5,
+                                border: "none",
+                                background: year1DropdownOpen ? "#e4e6eb" : "transparent",
+                                fontSize: "0.86rem",
+                                fontWeight: 650,
+                                color: "#1c1e21",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <span>{calYear}</span>
+                              <ChevronDown size={13} color="#65676b" />
+                            </button>
+
+                            {year1DropdownOpen && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "calc(100% + 4px)",
+                                  left: 0,
+                                  width: 86,
+                                  maxHeight: 185,
+                                  overflowY: "auto",
+                                  background: "#ffffff",
+                                  borderRadius: 8,
+                                  border: "1px solid #cbd5e1",
+                                  boxShadow: "0 6px 20px rgba(0, 0, 0, 0.16)",
+                                  zIndex: 600,
+                                  padding: "4px 0",
+                                  scrollbarWidth: "thin",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {YEAR_OPTIONS.map((yr) => (
+                                  <div
+                                    key={yr}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCalYear(yr);
+                                      setYear1DropdownOpen(false);
+                                    }}
+                                    style={{
+                                      padding: "5px 12px",
+                                      fontSize: "0.82rem",
+                                      color: "#1c1e21",
+                                      fontWeight: calYear === yr ? 650 : 400,
+                                      background: calYear === yr ? "#f0f2f5" : "transparent",
+                                      cursor: "pointer",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                                    onMouseLeave={(e) => {
+                                      if (calYear !== yr) e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
+                                    {yr}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Month 2 & Year 2 Dropdown Buttons */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {/* Month 2 Dropdown */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const next = !month2DropdownOpen;
+                                closeAllDateDropdowns();
+                                setMonth2DropdownOpen(next);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "3px 8px",
+                                borderRadius: 5,
+                                border: "none",
+                                background: month2DropdownOpen ? "#e4e6eb" : "transparent",
+                                fontSize: "0.86rem",
+                                fontWeight: 650,
+                                color: "#1c1e21",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <span>{MONTH_NAMES[(calMonth + 1) % 12]}</span>
+                              <ChevronDown size={13} color="#65676b" />
+                            </button>
+
+                            {month2DropdownOpen && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "calc(100% + 4px)",
+                                  left: 0,
+                                  width: 86,
+                                  maxHeight: 185,
+                                  overflowY: "auto",
+                                  background: "#ffffff",
+                                  borderRadius: 8,
+                                  border: "1px solid #cbd5e1",
+                                  boxShadow: "0 6px 20px rgba(0, 0, 0, 0.16)",
+                                  zIndex: 600,
+                                  padding: "4px 0",
+                                  scrollbarWidth: "thin",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {MONTH_NAMES.map((name, idx) => (
+                                  <div
+                                    key={name}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCalMonth((idx - 1 + 12) % 12);
+                                      setMonth2DropdownOpen(false);
+                                    }}
+                                    style={{
+                                      padding: "5px 12px",
+                                      fontSize: "0.82rem",
+                                      color: "#1c1e21",
+                                      fontWeight: (calMonth + 1) % 12 === idx ? 650 : 400,
+                                      background: (calMonth + 1) % 12 === idx ? "#f0f2f5" : "transparent",
+                                      cursor: "pointer",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                                    onMouseLeave={(e) => {
+                                      if ((calMonth + 1) % 12 !== idx) e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
+                                    {name}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Year 2 Dropdown */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const next = !year2DropdownOpen;
+                                closeAllDateDropdowns();
+                                setYear2DropdownOpen(next);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "3px 8px",
+                                borderRadius: 5,
+                                border: "none",
+                                background: year2DropdownOpen ? "#e4e6eb" : "transparent",
+                                fontSize: "0.86rem",
+                                fontWeight: 650,
+                                color: "#1c1e21",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <span>{calMonth === 11 ? calYear + 1 : calYear}</span>
+                              <ChevronDown size={13} color="#65676b" />
+                            </button>
+
+                            {year2DropdownOpen && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "calc(100% + 4px)",
+                                  left: 0,
+                                  width: 86,
+                                  maxHeight: 185,
+                                  overflowY: "auto",
+                                  background: "#ffffff",
+                                  borderRadius: 8,
+                                  border: "1px solid #cbd5e1",
+                                  boxShadow: "0 6px 20px rgba(0, 0, 0, 0.16)",
+                                  zIndex: 600,
+                                  padding: "4px 0",
+                                  scrollbarWidth: "thin",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {YEAR_OPTIONS.map((yr) => (
+                                  <div
+                                    key={yr}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCalYear(calMonth === 11 ? yr - 1 : yr);
+                                      setYear2DropdownOpen(false);
+                                    }}
+                                    style={{
+                                      padding: "5px 12px",
+                                      fontSize: "0.82rem",
+                                      color: "#1c1e21",
+                                      fontWeight: (calMonth === 11 ? calYear + 1 : calYear) === yr ? 650 : 400,
+                                      background: (calMonth === 11 ? calYear + 1 : calYear) === yr ? "#f0f2f5" : "transparent",
+                                      cursor: "pointer",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                                    onMouseLeave={(e) => {
+                                      if ((calMonth === 11 ? calYear + 1 : calYear) !== yr) e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
+                                    {yr}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Next month button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeAllDateDropdowns();
+                            if (calMonth === 11) {
+                              setCalMonth(0);
+                              setCalYear((prev) => prev + 1);
+                            } else {
+                              setCalMonth((prev) => prev + 1);
+                            }
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "2px 4px",
+                            borderRadius: 4,
+                            display: "flex",
+                            alignItems: "center",
+                            color: "#334155",
+                          }}
+                          title="Next month"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+
+                      {/* Dual Calendar Side-by-Side */}
+                      <div style={{ display: "flex", gap: 16, justifyContent: "space-between" }}>
+                        {renderCalendarMonth(calYear, calMonth)}
+                        {renderCalendarMonth(
+                          calMonth === 11 ? calYear + 1 : calYear,
+                          (calMonth + 1) % 12
+                        )}
+                      </div>
+
+                      {/* Compare Checkbox & Range Inputs */}
+                      <div style={{ marginTop: 8 }}>
+                        <label
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 7,
+                            cursor: "pointer",
+                            fontSize: "0.82rem",
+                            color: "#1c1e21",
+                            marginBottom: 6,
+                            userSelect: "none",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={compareEnabled}
+                            onChange={(e) => setCompareEnabled(e.target.checked)}
+                            style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#0064e1" }}
+                          />
+                          <span>Compare</span>
+                        </label>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
+                          {/* Blue indicator badge */}
+                          <div
+                            style={{
+                              width: 13,
+                              height: 13,
+                              borderRadius: 3,
+                              background: "#93c5fd",
+                              flexShrink: 0,
+                            }}
+                          />
+
+                          {/* Preset Dropdown Button */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const next = !presetDropdownOpen;
+                                closeAllDateDropdowns();
+                                setPresetDropdownOpen(next);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 5,
+                                padding: "4px 8px",
+                                borderRadius: 5,
+                                border: "1px solid #cbd5e1",
+                                background: "#ffffff",
+                                fontSize: "0.82rem",
+                                color: "#1c1e21",
+                                fontWeight: 500,
+                                cursor: "pointer",
+                              }}
+                            >
+                              <span>
+                                {DATE_PRESET_OPTIONS.find((o) => o.id === tempDatePreset)?.label || "Custom"}
+                              </span>
+                              <ChevronDown size={13} color="#65676b" />
+                            </button>
+
+                            {presetDropdownOpen && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  bottom: "calc(100% + 4px)",
+                                  left: 0,
+                                  width: 160,
+                                  maxHeight: 200,
+                                  overflowY: "auto",
+                                  background: "#ffffff",
+                                  borderRadius: 8,
+                                  border: "1px solid #cbd5e1",
+                                  boxShadow: "0 6px 20px rgba(0, 0, 0, 0.16)",
+                                  zIndex: 600,
+                                  padding: "4px 0",
+                                  scrollbarWidth: "thin",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {DATE_PRESET_OPTIONS.map((opt) => (
+                                  <div
+                                    key={opt.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectPreset(opt.id);
+                                      setPresetDropdownOpen(false);
+                                    }}
+                                    style={{
+                                      padding: "5px 12px",
+                                      fontSize: "0.82rem",
+                                      color: "#1c1e21",
+                                      fontWeight: tempDatePreset === opt.id ? 650 : 400,
+                                      background: tempDatePreset === opt.id ? "#f0f2f5" : "transparent",
+                                      cursor: "pointer",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                                    onMouseLeave={(e) => {
+                                      if (tempDatePreset !== opt.id) e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
+                                    {opt.label}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Start Date Box */}
+                          <div
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: 5,
+                              border: "1px solid #cbd5e1",
+                              background: "#ffffff",
+                              fontSize: "0.82rem",
+                              color: "#1c1e21",
+                              maxWidth: 120,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            title={formatFullInputDate(tempStartDate)}
+                          >
+                            {formatFullInputDate(tempStartDate)}
+                          </div>
+
+                          <span style={{ color: "#65676b", fontSize: "0.82rem" }}>-</span>
+
+                          {/* End Date Box */}
+                          <div
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: 5,
+                              border: "1px solid #cbd5e1",
+                              background: "#ffffff",
+                              fontSize: "0.82rem",
+                              color: "#1c1e21",
+                              maxWidth: 120,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            title={formatFullInputDate(tempEndDate)}
+                          >
+                            {formatFullInputDate(tempEndDate)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Footer matching Image 2 */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 16px",
+                      borderTop: "1px solid #e2e8f0",
+                      background: "#ffffff",
+                      borderRadius: "0 0 8px 8px",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.75rem", color: "#65676b" }}>
+                      Dates are shown in Kolkata Time
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTempDatePreset(selectedDatePreset);
+                          setTempStartDate(appliedStartDate);
+                          setTempEndDate(appliedEndDate);
+                          closeAllDateDropdowns();
+                          setDatePickerOpen(false);
+                        }}
+                        style={{
+                          padding: "5px 14px",
+                          borderRadius: 5,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#1c1e21",
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "background 0.12s",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDatePreset(tempDatePreset);
+                          setAppliedStartDate(tempStartDate);
+                          setAppliedEndDate(tempEndDate);
+                          setAppliedDateLabel(getPresetLabel(tempDatePreset, tempStartDate, tempEndDate));
+                          closeAllDateDropdowns();
+                          setDatePickerOpen(false);
+                        }}
+                        style={{
+                          padding: "5px 18px",
+                          borderRadius: 5,
+                          border: "none",
+                          background: "#0064e1",
+                          color: "#ffffff",
+                          fontSize: "0.82rem",
+                          fontWeight: 650,
+                          cursor: "pointer",
+                          boxShadow: "0 1px 2px rgba(0, 100, 225, 0.2)",
+                          transition: "background 0.12s",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#0053ba")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#0064e1")}
+                      >
+                        Update
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Action Bar Toolbar below tabs (Exact Buttons from Images 1, 2, 3) */}
+          <div
+            style={{
+              padding: "9px 18px",
+              background: "#ffffff",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Left Action Buttons (Meta Ads Manager Action Toolbar) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+              {/* 1. + Create (Green Button) */}
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                title="Create new campaign, ad set, or ad"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#008000",
+                  color: "#ffffff",
+                  fontSize: "0.84rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 2px rgba(0, 128, 0, 0.2)",
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#006600")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#008000")}
+              >
+                <Plus size={16} strokeWidth={2.8} />
+                <span>Create</span>
+              </button>
+
+              {/* 2. Publish button */}
+              <button
+                type="button"
+                onClick={handlePublish}
+                title={
+                  activeSelectionDraftCount > 0
+                    ? `Publish ${activeSelectionDraftCount} draft changes to live`
+                    : "Publish changes to Meta Ads Manager"
                 }
-                className="btn-confirm-cancel"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#334155",
+                  fontSize: "0.82rem",
+                  fontWeight: 550,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+              >
+                <UploadCloud size={14} color="#64748b" />
+                <span>Publish</span>
+                {activeSelectionDraftCount > 0 && (
+                  <span
+                    style={{
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                    }}
+                  >
+                    {activeSelectionDraftCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 3. Duplicate ▾ */}
+              <div ref={duplicateRef} style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setDuplicateMenuOpen((prev) => !prev)}
+                  title="Duplicate selected item(s) (Ctrl+D)"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    background: duplicateMenuOpen ? "#f1f5f9" : "#ffffff",
+                    color: "#334155",
+                    fontSize: "0.82rem",
+                    fontWeight: 550,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!duplicateMenuOpen) e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!duplicateMenuOpen) e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  <Copy size={13} color="#64748b" />
+                  <span>Duplicate</span>
+                  <ChevronDown size={13} color="#64748b" />
+                </button>
+
+                {duplicateMenuOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 5px)",
+                      left: 0,
+                      width: 215,
+                      background: "#ffffff",
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06)",
+                      zIndex: 80,
+                      overflow: "hidden",
+                      padding: "4px 0",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleQuickDuplicate(1)}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        fontWeight: 500,
+                        transition: "background 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Copy size={13} color="#64748b" />
+                        <span>Quick duplicate</span>
+                      </div>
+                      <kbd
+                        style={{
+                          background: "#f1f5f9",
+                          padding: "2px 5px",
+                          borderRadius: 4,
+                          border: "1px solid #e2e8f0",
+                          fontSize: "0.72rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Ctrl + D
+                      </kbd>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const activeSel = getActiveSelection();
+                        if (activeSel.ids.length === 0) {
+                          showToast(`Please select at least one ${activeSel.typeLabel} to duplicate.`, "info");
+                          return;
+                        }
+                        setDuplicateCopies(1);
+                        setDuplicateDestination("original");
+                        setDuplicateModalOpen(true);
+                        setDuplicateMenuOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontWeight: 500,
+                        transition: "background 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <SlidersHorizontal size={13} color="#64748b" />
+                      <span>Duplicate...</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Edit ▾ */}
+              <div ref={editRef} style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setEditMenuOpen((prev) => !prev)}
+                  title="Edit selected item(s) (Ctrl+U)"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    background: editMenuOpen ? "#f1f5f9" : "#ffffff",
+                    color: "#334155",
+                    fontSize: "0.82rem",
+                    fontWeight: 550,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!editMenuOpen) e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!editMenuOpen) e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  <Edit2 size={13} color="#64748b" />
+                  <span>Edit</span>
+                  <ChevronDown size={13} color="#64748b" />
+                </button>
+
+                {editMenuOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 5px)",
+                      left: 0,
+                      width: 220,
+                      background: "#ffffff",
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06)",
+                      zIndex: 80,
+                      overflow: "hidden",
+                      padding: "4px 0",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleOpenEditDrawer}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        fontWeight: 500,
+                        transition: "background 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Edit2 size={13} color="#64748b" />
+                        <span>Edit</span>
+                      </div>
+                      <kbd
+                        style={{
+                          background: "#f1f5f9",
+                          padding: "2px 5px",
+                          borderRadius: 4,
+                          border: "1px solid #e2e8f0",
+                          fontSize: "0.72rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Ctrl + U
+                      </kbd>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenQuickEdit}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontWeight: 500,
+                        transition: "background 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Sliders size={13} color="#64748b" />
+                      <span>Quick edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenFindReplace}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontWeight: 500,
+                        transition: "background 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Search size={13} color="#64748b" />
+                      <span>Find and replace...</span>
+                    </button>
+                    <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
+                    <button
+                      type="button"
+                      onClick={handleBatchTurnOn}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontWeight: 500,
+                        transition: "background 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "#16a34a",
+                          display: "inline-block",
+                        }}
+                      />
+                      <span>Turn on</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBatchTurnOff}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontWeight: 500,
+                        transition: "background 0.1s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "#94a3b8",
+                          display: "inline-block",
+                        }}
+                      />
+                      <span>Turn off</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Trash (Delete) */}
+              <button
+                type="button"
+                onClick={handleOpenDelete}
+                title="Delete selected item(s)"
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#fee2e2";
+                  e.currentTarget.style.color = "#dc2626";
+                  e.currentTarget.style.borderColor = "#fca5a5";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#ffffff";
+                  e.currentTarget.style.color = "#64748b";
+                  e.currentTarget.style.borderColor = "#cbd5e1";
+                }}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+
+            {/* Right Action: Download Button with 2 Options (Export as .csv, Export as .xlsx) matching Image 2 */}
+            <div ref={downloadRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => setDownloadMenuOpen((prev) => !prev)}
+                title="Download / Export"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "6px 9px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: downloadMenuOpen ? "#f1f5f9" : "#ffffff",
+                  cursor: "pointer",
+                  color: "#334155",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Download size={14} color="#334155" />
+                <ChevronDown size={13} color="#64748b" />
+              </button>
+
+              {downloadMenuOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    width: 170,
+                    background: "#ffffff",
+                    borderRadius: 8,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06)",
+                    zIndex: 50,
+                    overflow: "hidden",
+                    padding: "4px 0",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleExport("csv")}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "9px 16px",
+                      background: "transparent",
+                      border: "none",
+                      fontSize: "0.85rem",
+                      color: "#1e293b",
+                      cursor: "pointer",
+                      display: "block",
+                      fontWeight: 500,
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    Export as .csv
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExport("xlsx")}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "9px 16px",
+                      background: "transparent",
+                      border: "none",
+                      fontSize: "0.85rem",
+                      color: "#1e293b",
+                      cursor: "pointer",
+                      display: "block",
+                      fontWeight: 500,
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    Export as .xlsx
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 5. FULL HORIZONTAL SCROLLING TABLE WITH ALL 19 COLUMNS (From Images 1, 2, 3) */}
+          <div
+            style={{
+              width: "100%",
+              overflowX: "auto",
+              background: "#ffffff",
+              position: "relative",
+            }}
+          >
+            {/* ═══ ADS TABLE: ALL 19 COLUMNS COVERING IMAGES 1, 2, 3 ═══ */}
+            {activeMetaSubSection === "ads" && (
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "separate",
+                  borderSpacing: 0,
+                  minWidth: 2350,
+                  fontSize: "0.83rem",
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#f8fafc" }}>
+                    {/* 1. Checkbox (Sticky Left) */}
+                    <th
+                      style={{
+                        width: 44,
+                        minWidth: 44,
+                        padding: "10px 14px",
+                        position: "sticky",
+                        left: 0,
+                        zIndex: 3,
+                        background: "#f8fafc",
+                        borderBottom: "1px solid #cbd5e1",
+                        borderRight: "1px solid #f1f5f9",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedAdIds.length === filteredAds.length && filteredAds.length > 0}
+                        onChange={(e) =>
+                          setSelectedAdIds(e.target.checked ? filteredAds.map((a) => a.id) : [])
+                        }
+                        style={{ cursor: "pointer", width: 15, height: 15 }}
+                      />
+                    </th>
+
+                    {/* 2. Off... ↑↓ (Sticky Left) */}
+                    <th
+                      style={{
+                        width: 70,
+                        minWidth: 70,
+                        padding: "10px 10px",
+                        position: "sticky",
+                        left: 44,
+                        zIndex: 3,
+                        background: "#f8fafc",
+                        borderBottom: "1px solid #cbd5e1",
+                        borderRight: "1px solid #f1f5f9",
+                        color: "#475569",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Off...</span>
+                        <ArrowUpDown size={11} color="#64748b" />
+                      </div>
+                    </th>
+
+                    {/* 3. Ad ↑ (Sticky Left with Shadow separator) */}
+                    <th
+                      style={{
+                        minWidth: 260,
+                        width: 260,
+                        padding: "10px 16px",
+                        position: "sticky",
+                        left: 114,
+                        zIndex: 3,
+                        background: "#f8fafc",
+                        borderBottom: "1px solid #cbd5e1",
+                        borderRight: "1px solid #cbd5e1",
+                        boxShadow: "2px 0 5px rgba(0,0,0,0.04)",
+                        color: "#475569",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ color: "#0064e1" }}>Ad</span>
+                        <ArrowUp size={12} color="#0064e1" />
+                        <ChevronDown size={12} color="#64748b" style={{ marginLeft: "auto" }} />
+                      </div>
+                    </th>
+
+                    {/* 4. Delivery ↑↓ (Image 1) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Delivery</span>
+                        <ArrowUpDown size={11} />
+                        <ChevronDown size={11} style={{ marginLeft: "auto" }} />
+                      </div>
+                    </th>
+
+                    {/* 5. Actions ▾ (Image 1) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Actions</span>
+                        <ChevronDown size={11} style={{ marginLeft: "auto" }} />
+                      </div>
+                    </th>
+
+                    {/* 6. Results ↑↓ (Image 1) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Results</span>
+                        <ArrowUpDown size={11} />
+                        <ChevronDown size={11} style={{ marginLeft: "auto" }} />
+                      </div>
+                    </th>
+
+                    {/* 7. Cost per result ↑↓ (Image 1) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Cost per result</span>
+                        <ArrowUpDown size={11} />
+                      </div>
+                    </th>
+
+                    {/* 8. Budget (Ad set) ▾ (Image 1) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div>
+                          <div>Budget</div>
+                          <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 400 }}>Ad set</div>
+                        </div>
+                        <ChevronDown size={11} style={{ marginLeft: "auto" }} />
+                      </div>
+                    </th>
+
+                    {/* 9. Amount spent ↑↓ (Image 1 & 2) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Amount spent</span>
+                        <ArrowUpDown size={11} />
+                      </div>
+                    </th>
+
+                    {/* 10. Impressions ↑↓ (Image 2) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Impressions</span>
+                        <ArrowUpDown size={11} />
+                      </div>
+                    </th>
+
+                    {/* 11. Reach ↑↓ (Image 2) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Reach</span>
+                        <ArrowUpDown size={11} />
+                      </div>
+                    </th>
+
+                    {/* 12. Ends ↑↓ (Image 2) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Ends</span>
+                        <ArrowUpDown size={11} />
+                      </div>
+                    </th>
+
+                    {/* 13. Attribution setting (Image 2) */}
+                    <th style={thStyle}>
+                      <span>Attribution setting</span>
+                    </th>
+
+                    {/* 14. Bid strategy (Ad set) ▾ (Image 2 & 3) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div>
+                          <div>Bid strategy</div>
+                          <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 400 }}>Ad set</div>
+                        </div>
+                        <ChevronDown size={11} style={{ marginLeft: "auto" }} />
+                      </div>
+                    </th>
+
+                    {/* 15. Last significant edit (Image 2 & 3) */}
+                    <th style={thStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Last significant edit</span>
+                        <ChevronDown size={11} style={{ marginLeft: "auto" }} />
+                      </div>
+                    </th>
+
+                    {/* 16. Quality ranking (Ad relevance...) ↑↓ (Image 3) */}
+                    <th style={thStyle}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <span>Quality ranking</span>
+                          <ArrowUpDown size={11} />
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 400 }}>Ad relevance...</div>
+                      </div>
+                    </th>
+
+                    {/* 17. Engagement rate ranking (Ad relevance...) ↑↓ (Image 3) */}
+                    <th style={thStyle}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <span>Engage...</span>
+                          <ArrowUpDown size={11} />
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 400 }}>Ad relevance...</div>
+                      </div>
+                    </th>
+
+                    {/* 18. Conversion rate ranking (Ad relevance...) ↑↓ (Image 3) */}
+                    <th style={thStyle}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <span>Conver...</span>
+                          <ArrowUpDown size={11} />
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 400 }}>Ad relevance...</div>
+                      </div>
+                    </th>
+
+                    {/* 19. Ad set name ↑↓ (Image 3) */}
+                    <th style={{ ...thStyle, minWidth: 200 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <span>Ad set name</span>
+                        <ArrowUpDown size={11} />
+                        <span style={{ marginLeft: "auto", color: "#94a3b8" }}>+</span>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {draftsDiscarded || adsList.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={19}
+                        style={{
+                          padding: 0,
+                          background: "#ffffff",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "sticky",
+                            left: 0,
+                            width: "100%",
+                            maxWidth: "100vw",
+                            minHeight: 340,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "60px 20px 80px 20px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <div style={{ marginBottom: 16 }}>
+                            <Search size={48} strokeWidth={1.4} color="#94a3b8" />
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "1.05rem",
+                              fontWeight: 700,
+                              color: "#0f172a",
+                              marginBottom: 6,
+                            }}
+                          >
+                            Get set up to run ads
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.86rem",
+                              color: "#64748b",
+                              maxWidth: 520,
+                              marginBottom: 18,
+                              lineHeight: 1.45,
+                            }}
+                          >
+                            Confirm a few details in Account overview so that you can publish your first ad campaign.
+                          </div>
+                          <button
+                            type="button"
+                            style={{
+                              padding: "8px 18px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#f1f5f9",
+                              color: "#0f172a",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                          >
+                            Go to Account overview
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredAds.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={19}
+                        style={{
+                          padding: "50px 20px",
+                          textAlign: "center",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 10,
+                          }}
+                        >
+                          <Search size={32} color="#94a3b8" />
+                          <span style={{ fontSize: "1rem", fontWeight: 600, color: "#0f172a" }}>
+                            No ads match your search or filter
+                          </span>
+                          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                            Try selecting another filter pill or clearing your search.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveFilter("all");
+                              setSearchQuery("");
+                            }}
+                            style={{
+                              marginTop: 4,
+                              padding: "6px 16px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#ffffff",
+                              color: "#0064e1",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Clear filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAds.map((ad, idx) => {
+                      const isSelected = selectedAdIds.includes(ad.id);
+                      // Selected row background matching Meta teal/green highlight from Images 1, 2, 3
+                      const rowBg = isSelected ? "#e2f3ec" : idx % 2 === 0 ? "#ffffff" : "#fbfcfd";
+
+                      return (
+                        <tr
+                          key={ad.id}
+                          style={{
+                            background: rowBg,
+                            transition: "background 0.15s ease",
+                          }}
+                        >
+                          {/* 1. Checkbox (Sticky) */}
+                          <td
+                            style={{
+                              padding: "12px 14px",
+                              position: "sticky",
+                              left: 0,
+                              zIndex: 2,
+                              background: rowBg,
+                              borderBottom: "1px solid #e2e8f0",
+                              borderRight: "1px solid #f1f5f9",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                setSelectedAdIds((prev) =>
+                                  e.target.checked
+                                    ? [...prev, ad.id]
+                                    : prev.filter((id) => id !== ad.id)
+                                );
+                              }}
+                              style={{ cursor: "pointer", width: 15, height: 15 }}
+                            />
+                          </td>
+
+                          {/* 2. Off/On Switch (Sticky) */}
+                          <td
+                            style={{
+                              padding: "12px 10px",
+                              position: "sticky",
+                              left: 44,
+                              zIndex: 2,
+                              background: rowBg,
+                              borderBottom: "1px solid #e2e8f0",
+                              borderRight: "1px solid #f1f5f9",
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => toggleAdActive(ad.id)}
+                              style={{
+                                width: 32,
+                                height: 18,
+                                borderRadius: 9,
+                                background: ad.active ? "#0064e1" : "#cbd5e1",
+                                border: "none",
+                                padding: "2px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: ad.active ? "flex-end" : "flex-start",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                                outline: "none",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: "50%",
+                                  background: "#ffffff",
+                                  boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
+                                }}
+                              />
+                            </button>
+                          </td>
+
+                          {/* 3. Ad Name & Thumbnail (Sticky with Shadow) */}
+                          <td
+                            style={{
+                              padding: "10px 16px",
+                              position: "sticky",
+                              left: 114,
+                              zIndex: 2,
+                              background: rowBg,
+                              borderBottom: "1px solid #e2e8f0",
+                              borderRight: "1px solid #cbd5e1",
+                              boxShadow: "2px 0 5px rgba(0,0,0,0.04)",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              {ad.thumb ? (
+                                <img
+                                  src={ad.thumb}
+                                  alt={ad.name}
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 4,
+                                    objectFit: "cover",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              ) : (
+                                <AdPlaceholderIcon />
+                              )}
+                              <span
+                                style={{
+                                  fontSize: "0.85rem",
+                                  fontWeight: 550,
+                                  color: "#0f172a",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {ad.name}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* 4. Delivery (In draft with green circle) */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: "50%",
+                                  border: "2px solid #16a34a",
+                                  background: "transparent",
+                                  display: "inline-block",
+                                }}
+                              />
+                              <span style={{ color: "#334155", fontWeight: 500 }}>{ad.delivery}</span>
+                            </div>
+                          </td>
+
+                          {/* 5. Actions */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.actions}
+                          </td>
+
+                          {/* 6. Results */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.results}
+                          </td>
+
+                          {/* 7. Cost per result */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.costPerResult}
+                          </td>
+
+                          {/* 8. Budget (Ad set) */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                            <div>
+                              <div style={{ color: "#0f172a", fontWeight: 500 }}>{ad.budget}</div>
+                              {ad.budgetSub && (
+                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.budgetSub}</div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 9. Amount spent */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.amountSpent}
+                          </td>
+
+                          {/* 10. Impressions */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.impressions}
+                          </td>
+
+                          {/* 11. Reach */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.reach}
+                          </td>
+
+                          {/* 12. Ends */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#334155" }}>
+                            {ad.ends}
+                          </td>
+
+                          {/* 13. Attribution setting */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.attribution}
+                          </td>
+
+                          {/* 14. Bid strategy (Ad set) */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                            <div>
+                              <div style={{ color: "#0f172a", fontWeight: 500 }}>{ad.bidStrategy}</div>
+                              {ad.bidStrategySub && (
+                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.bidStrategySub}</div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 15. Last significant edit */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.lastSignificantEdit}
+                          </td>
+
+                          {/* 16. Quality ranking */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.qualityRanking}
+                          </td>
+
+                          {/* 17. Engagement rate ranking */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.engagementRanking}
+                          </td>
+
+                          {/* 18. Conversion rate ranking */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                            {ad.conversionRanking}
+                          </td>
+
+                          {/* 19. Ad set name */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                            <div>
+                              <div style={{ color: "#0064e1", fontWeight: 500, cursor: "pointer" }}>
+                                {ad.adsetName}
+                              </div>
+                              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                                {ad.activeAdsCount}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {/* ═══ AD SETS TABLE ═══ */}
+            {activeMetaSubSection === "adsets" && (
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "separate",
+                  borderSpacing: 0,
+                  minWidth: 1600,
+                  fontSize: "0.83rem",
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#f8fafc" }}>
+                    <th style={{ width: 44, padding: "10px 14px", position: "sticky", left: 0, background: "#f8fafc", zIndex: 3, borderBottom: "1px solid #cbd5e1" }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedAdsetIds.length === filteredAdsets.length && filteredAdsets.length > 0}
+                        onChange={(e) =>
+                          setSelectedAdsetIds(e.target.checked ? filteredAdsets.map((a) => a.id) : [])
+                        }
+                        style={{ cursor: "pointer" }}
+                      />
+                    </th>
+                    <th style={{ width: 70, padding: "10px 10px", position: "sticky", left: 44, background: "#f8fafc", zIndex: 3, borderBottom: "1px solid #cbd5e1", color: "#475569", fontWeight: 700 }}>
+                      Off...
+                    </th>
+                    <th style={{ minWidth: 260, padding: "10px 16px", position: "sticky", left: 114, background: "#f8fafc", zIndex: 3, borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1", color: "#475569", fontWeight: 700 }}>
+                      Ad set
+                    </th>
+                    <th style={thStyle}>Delivery</th>
+                    <th style={thStyle}>Bid strategy</th>
+                    <th style={thStyle}>Budget</th>
+                    <th style={thStyle}>Attribution setting</th>
+                    <th style={thStyle}>Results</th>
+                    <th style={thStyle}>Reach</th>
+                    <th style={thStyle}>Impressions</th>
+                    <th style={thStyle}>Ends</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {draftsDiscarded || adsetsList.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={12}
+                        style={{
+                          padding: 0,
+                          background: "#ffffff",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "sticky",
+                            left: 0,
+                            width: "100%",
+                            maxWidth: "100vw",
+                            minHeight: 340,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "60px 20px 80px 20px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <div style={{ marginBottom: 16 }}>
+                            <Search size={48} strokeWidth={1.4} color="#94a3b8" />
+                          </div>
+                          <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
+                            Get set up to run ads
+                          </div>
+                          <div style={{ fontSize: "0.86rem", color: "#64748b", maxWidth: 520, marginBottom: 18, lineHeight: 1.45 }}>
+                            Confirm a few details in Account overview so that you can publish your first ad campaign.
+                          </div>
+                          <button
+                            type="button"
+                            style={{
+                              padding: "8px 18px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#f1f5f9",
+                              color: "#0f172a",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                          >
+                            Go to Account overview
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredAdsets.length === 0 ? (
+                    <tr>
+                      <td colSpan={12} style={{ padding: "50px 20px", textAlign: "center", background: "#ffffff" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                          <Search size={32} color="#94a3b8" />
+                          <span style={{ fontSize: "1rem", fontWeight: 600, color: "#0f172a" }}>No ad sets match your search or filter</span>
+                          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>Try selecting another filter pill or clearing your search.</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveFilter("all");
+                              setSearchQuery("");
+                            }}
+                            style={{
+                              marginTop: 4,
+                              padding: "6px 16px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#ffffff",
+                              color: "#0064e1",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Clear filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAdsets.map((as, idx) => (
+                      <tr key={as.id} style={{ background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd" }}>
+                        <td style={{ padding: "12px 14px", position: "sticky", left: 0, background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd", zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAdsetIds.includes(as.id)}
+                            onChange={(e) => {
+                              setSelectedAdsetIds((prev) =>
+                                e.target.checked ? [...prev, as.id] : prev.filter((id) => id !== as.id)
+                              );
+                            }}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </td>
+                        <td style={{ padding: "12px 10px", position: "sticky", left: 44, background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd", zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+                          <button
+                            type="button"
+                            onClick={() => toggleAdsetActive(as.id)}
+                            style={{
+                              width: 32,
+                              height: 18,
+                              borderRadius: 9,
+                              background: as.active ? "#0064e1" : "#cbd5e1",
+                              border: "none",
+                              padding: "2px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: as.active ? "flex-end" : "flex-start",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#ffffff" }} />
+                          </button>
+                        </td>
+                        <td style={{ padding: "12px 16px", position: "sticky", left: 114, background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd", zIndex: 2, borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #cbd5e1", color: "#0064e1", fontWeight: 600 }}>
+                          {as.name}
+                        </td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #16a34a" }} />
+                            <span style={{ color: "#334155" }}>{as.delivery}</span>
+                          </div>
+                        </td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <div>
+                            <div>{as.bidStrategy}</div>
+                            {as.bidStrategySub && <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{as.bidStrategySub}</div>}
+                          </div>
+                        </td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <div>
+                            <div>{as.budget}</div>
+                            {as.budgetSub && <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{as.budgetSub}</div>}
+                          </div>
+                        </td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{as.attribution}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{as.results}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{as.reach}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{as.impressions}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#334155" }}>{as.ends}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {/* ═══ CAMPAIGNS TABLE ═══ */}
+            {activeMetaSubSection === "campaigns" && (
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "separate",
+                  borderSpacing: 0,
+                  minWidth: 1600,
+                  fontSize: "0.83rem",
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#f8fafc" }}>
+                    <th style={{ width: 44, padding: "10px 14px", position: "sticky", left: 0, background: "#f8fafc", zIndex: 3, borderBottom: "1px solid #cbd5e1" }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCampaignIds.length === filteredCampaigns.length && filteredCampaigns.length > 0}
+                        onChange={(e) =>
+                          setSelectedCampaignIds(e.target.checked ? filteredCampaigns.map((c) => c.id) : [])
+                        }
+                        style={{ cursor: "pointer" }}
+                      />
+                    </th>
+                    <th style={{ width: 70, padding: "10px 10px", position: "sticky", left: 44, background: "#f8fafc", zIndex: 3, borderBottom: "1px solid #cbd5e1", color: "#475569", fontWeight: 700 }}>
+                      Off...
+                    </th>
+                    <th style={{ minWidth: 260, padding: "10px 16px", position: "sticky", left: 114, background: "#f8fafc", zIndex: 3, borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1", color: "#475569", fontWeight: 700 }}>
+                      Campaign
+                    </th>
+                    <th style={thStyle}>Delivery</th>
+                    <th style={thStyle}>Bid strategy</th>
+                    <th style={thStyle}>Budget</th>
+                    <th style={thStyle}>Attribution setting</th>
+                    <th style={thStyle}>Results</th>
+                    <th style={thStyle}>Reach</th>
+                    <th style={thStyle}>Impressions</th>
+                    <th style={thStyle}>Ends</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {draftsDiscarded || campaignsList.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={10}
+                        style={{
+                          padding: 0,
+                          background: "#ffffff",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "sticky",
+                            left: 0,
+                            width: "100%",
+                            maxWidth: "100vw",
+                            minHeight: 340,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "60px 20px 80px 20px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <div style={{ marginBottom: 16 }}>
+                            <Search size={48} strokeWidth={1.4} color="#94a3b8" />
+                          </div>
+                          <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
+                            Get set up to run ads
+                          </div>
+                          <div style={{ fontSize: "0.86rem", color: "#64748b", maxWidth: 520, marginBottom: 18, lineHeight: 1.45 }}>
+                            Confirm a few details in Account overview so that you can publish your first ad campaign.
+                          </div>
+                          <button
+                            type="button"
+                            style={{
+                              padding: "8px 18px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#f1f5f9",
+                              color: "#0f172a",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                          >
+                            Go to Account overview
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredCampaigns.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} style={{ padding: "50px 20px", textAlign: "center", background: "#ffffff" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                          <Search size={32} color="#94a3b8" />
+                          <span style={{ fontSize: "1rem", fontWeight: 600, color: "#0f172a" }}>No campaigns match your search or filter</span>
+                          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>Try selecting another filter pill or clearing your search.</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveFilter("all");
+                              setSearchQuery("");
+                            }}
+                            style={{
+                              marginTop: 4,
+                              padding: "6px 16px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#ffffff",
+                              color: "#0064e1",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Clear filters
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCampaigns.map((camp, idx) => (
+                      <tr key={camp.id} style={{ background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd" }}>
+                        <td style={{ padding: "12px 14px", position: "sticky", left: 0, background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd", zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedCampaignIds.includes(camp.id)}
+                            onChange={(e) => {
+                              setSelectedCampaignIds((prev) =>
+                                e.target.checked ? [...prev, camp.id] : prev.filter((id) => id !== camp.id)
+                              );
+                            }}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </td>
+                        <td style={{ padding: "12px 10px", position: "sticky", left: 44, background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd", zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+                          <button
+                            type="button"
+                            onClick={() => toggleCampaignActive(camp.id)}
+                            style={{
+                              width: 32,
+                              height: 18,
+                              borderRadius: 9,
+                              background: camp.active ? "#0064e1" : "#cbd5e1",
+                              border: "none",
+                              padding: "2px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: camp.active ? "flex-end" : "flex-start",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#ffffff" }} />
+                          </button>
+                        </td>
+                        <td style={{ padding: "12px 16px", position: "sticky", left: 114, background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd", zIndex: 2, borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #cbd5e1", color: "#0064e1", fontWeight: 600 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                            <span
+                              onClick={() => handleOpenStandaloneEditorForCampaign(camp)}
+                              title="Click to edit campaign in Meta Ads Manager"
+                              style={{ cursor: "pointer", textDecoration: "none" }}
+                              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                            >
+                              {camp.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenStandaloneEditorForCampaign(camp)}
+                              title="Edit campaign in Meta Ads Manager"
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 4,
+                                borderRadius: 4,
+                                color: "#64748b",
+                                display: "inline-flex",
+                                alignItems: "center",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#e2e8f0";
+                                e.currentTarget.style.color = "#0064e1";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "transparent";
+                                e.currentTarget.style.color = "#64748b";
+                              }}
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          </div>
+                        </td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #16a34a" }} />
+                            <span style={{ color: "#334155" }}>{camp.delivery}</span>
+                          </div>
+                        </td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#475569" }}>{camp.bidStrategy}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <div>
+                            <div>{camp.budget}</div>
+                            {camp.budgetSub && <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{camp.budgetSub}</div>}
+                          </div>
+                        </td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{camp.attribution}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{camp.results}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{camp.reach}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>{camp.impressions}</td>
+                        <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#334155" }}>{camp.ends}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {/* Table Footer Count matching Images 1, 2, 3 */}
+            <div
+              style={{
+                padding: "12px 20px",
+                borderTop: "1px solid #e2e8f0",
+                background: "#f8fafc",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                fontSize: "0.82rem",
+                color: "#64748b",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span>
+                  Results from{" "}
+                  {activeMetaSubSection === "ads"
+                    ? `${filteredAds.length} ads`
+                    : activeMetaSubSection === "adsets"
+                      ? `${filteredAdsets.length} ad sets`
+                      : `${filteredCampaigns.length} campaigns`}
+                </span>
+                <Info size={13} color="#64748b" style={{ cursor: "pointer" }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.76rem", color: "#0064e1", cursor: "pointer" }}>
+                <span>👁️</span>
+                <span>View results</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── GOOGLE ADS SECTION ── */}
+      {selectedPlatform === "google" && (
+        <div
+          style={{
+            padding: "48px 32px",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "55vh",
+            color: "#64748b",
+          }}
+        >
+          <GoogleAdsLogoIcon size={48} style={{ marginBottom: 16 }} />
+          <h3 style={{ margin: "0 0 8px 0", color: "#0f172a", fontSize: "1.2rem", fontWeight: 700 }}>
+            Google Ads Management
+          </h3>
+          <p style={{ margin: 0, fontSize: "0.88rem", maxWidth: 460 }}>
+            Connect and manage Google Search, Display, and Performance Max campaigns directly from this workspace.
+          </p>
+        </div>
+      )}
+
+      {/* ── LINKEDIN ADS SECTION ── */}
+      {selectedPlatform === "linkedin" && (
+        <div
+          style={{
+            padding: "48px 32px",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "55vh",
+            color: "#64748b",
+          }}
+        >
+          <LinkedInLogoIcon size={48} style={{ marginBottom: 16 }} />
+          <h3 style={{ margin: "0 0 8px 0", color: "#0f172a", fontSize: "1.2rem", fontWeight: 700 }}>
+            LinkedIn Ads Management
+          </h3>
+          <p style={{ margin: 0, fontSize: "0.88rem", maxWidth: 460 }}>
+            Run sponsored content, lead gen forms, and InMail campaigns targeted to verified B2B decision makers.
+          </p>
+        </div>
+      )}
+
+      {/* ── IMAGE 1: DISCARD DRAFTS MODAL POPUP ── */}
+      {discardModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="discard-drafts-title"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={() => setDiscardModalOpen(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 8,
+              width: "100%",
+              maxWidth: 480,
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+              overflow: "hidden",
+              position: "relative",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "18px 24px 10px 24px",
+              }}
+            >
+              <h3
+                id="discard-drafts-title"
+                style={{
+                  margin: 0,
+                  fontSize: "1.15rem",
+                  fontWeight: 700,
+                  color: "#1c1e21",
+                }}
+              >
+                Discard drafts
+              </h3>
+              <button
+                type="button"
+                onClick={() => setDiscardModalOpen(false)}
+                aria-label="Close"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#1c1e21",
+                  borderRadius: "50%",
+                }}
+              >
+                <X size={20} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              style={{
+                padding: "6px 24px 24px 24px",
+                fontSize: "0.92rem",
+                color: "#1c1e21",
+                lineHeight: 1.45,
+              }}
+            >
+              Any changes in this ad account{" "}
+              <strong style={{ fontWeight: 700 }}>
+                Athira S [1405144991733037]
+              </strong>{" "}
+              that haven't yet been published will be discarded.
+            </div>
+
+            {/* Modal Actions */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "12px 24px 20px 24px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setDiscardModalOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#1c1e21",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={confirmDialog.onConfirm}
-                disabled={statusUpdating}
-                className={`btn-confirm-proceed ${confirmDialog.isDanger ? "is-danger" : ""}`}
+                onClick={handleDiscardDrafts}
+                style={{
+                  padding: "7px 22px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.88rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 2px rgba(0, 100, 225, 0.2)",
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#0053bf")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#0064e1")}
               >
-                {statusUpdating ? "Processing..." : "Confirm"}
+                Discard
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ===================================================================
-          CREATE CAMPAIGN MODAL (Shared)
-          =================================================================== */}
+      {/* ── IMAGE 1: RESET ADS MANAGER MODAL POPUP ── */}
+      {resetModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-ads-manager-title"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={() => setResetModalOpen(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 8,
+              width: "100%",
+              maxWidth: 480,
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+              overflow: "hidden",
+              position: "relative",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "18px 24px 10px 24px",
+              }}
+            >
+              <h3
+                id="reset-ads-manager-title"
+                style={{
+                  margin: 0,
+                  fontSize: "1.15rem",
+                  fontWeight: 700,
+                  color: "#1c1e21",
+                }}
+              >
+                Reset Ads Manager?
+              </h3>
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                aria-label="Close"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#1c1e21",
+                  borderRadius: "50%",
+                }}
+              >
+                <X size={20} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              style={{
+                padding: "6px 24px 20px 24px",
+                fontSize: "0.92rem",
+                color: "#1c1e21",
+                lineHeight: 1.45,
+              }}
+            >
+              <div style={{ marginBottom: 16 }}>
+                Any settings you've saved in Ads Manager will be deleted. Are you sure?
+              </div>
+
+              {/* Checkbox: Also discard unpublished changes for this account */}
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={alsoDiscardUnpublished}
+                  onChange={(e) => setAlsoDiscardUnpublished(e.target.checked)}
+                  style={{
+                    width: 17,
+                    height: 17,
+                    cursor: "pointer",
+                    accentColor: "#0064e1",
+                  }}
+                />
+                <span style={{ fontSize: "0.91rem", color: "#1c1e21", fontWeight: 500 }}>
+                  Also discard unpublished changes for this account
+                </span>
+              </label>
+            </div>
+
+            {/* Modal Actions */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "12px 24px 20px 24px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#1c1e21",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetAdsManager}
+                style={{
+                  padding: "7px 22px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.88rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 2px rgba(0, 100, 225, 0.2)",
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#0053bf")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#0064e1")}
+              >
+                Reset Ads Manager
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── KEYBOARD SHORTCUTS MODAL ── */}
+      {shortcutsModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={() => setShortcutsModalOpen(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 8,
+              width: "100%",
+              maxWidth: 480,
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+              overflow: "hidden",
+              position: "relative",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "18px 24px 12px 24px",
+                borderBottom: "1px solid #f1f5f9",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700, color: "#1c1e21" }}>
+                Keyboard shortcuts
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShortcutsModalOpen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#1c1e21",
+                }}
+              >
+                <X size={20} strokeWidth={2} />
+              </button>
+            </div>
+            <div style={{ padding: "16px 24px", fontSize: "0.88rem", color: "#334155" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f8fafc" }}>
+                <span>Show keyboard shortcuts</span>
+                <kbd style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1", fontSize: "0.8rem", fontWeight: 600 }}>Ctrl + Shift + /</kbd>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f8fafc" }}>
+                <span>Close dialogs / menus</span>
+                <kbd style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1", fontSize: "0.8rem", fontWeight: 600 }}>Esc</kbd>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f8fafc" }}>
+                <span>Duplicate selected item</span>
+                <kbd style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1", fontSize: "0.8rem", fontWeight: 600 }}>Ctrl + D</kbd>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 18px 24px" }}>
+              <button
+                type="button"
+                onClick={() => setShortcutsModalOpen(false)}
+                style={{
+                  padding: "7px 20px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.88rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CREATE MODAL (Meta Ads Manager Style — Image 1 & Image 2) ── */}
       {createModalOpen && (
         <div
-          className="social-modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setCreateModalOpen(false);
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
           }}
+          onClick={() => setCreateModalOpen(false)}
         >
-          <div className="social-modal-content" style={{ maxWidth: 680 }}>
-            <div className="social-modal-header">
-              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 750, color: "#0f172a" }}>
-                Create Campaign
-              </h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setCreateModalOpen(false);
-                  resetCreateForm();
-                }}
-                className="btn-close-modal"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateCampaign}>
-              <div className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {Object.keys(validationErrors).length > 0 && (
-                  <div className="campaign-validation-banner">
-                    <AlertCircle size={16} />
-                    <span>Please review and fill in all required fields marked below.</span>
-                  </div>
-                )}
-
-                {/* ── CAMPAIGN ── */}
-                <div className="campaign-modal-section-divider"><span>Campaign</span></div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Client / Brand *</label>
-                  <select
-                    value={clientId}
-                    onChange={(e) => setClientId(Number(e.target.value) || e.target.value)}
-                    className="campaign-modal-select"
-                  >
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Campaign Name *</label>
-                  <input
-                    type="text"
-                    value={campaignName}
-                    onChange={(e) => {
-                      setCampaignName(e.target.value);
-                      if (validationErrors.campaignName) {
-                        setValidationErrors((prev) => { const n = { ...prev }; delete n.campaignName; return n; });
-                      }
-                    }}
-                    placeholder="e.g. Vorion Enterprise AI Q4 Drive"
-                    className={`campaign-modal-input ${validationErrors.campaignName ? "input-has-error" : ""}`}
-                  />
-                  {validationErrors.campaignName && (
-                    <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.campaignName}</div>
-                  )}
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Objective *</label>
-                  <select
-                    value={objective}
-                    onChange={(e) => setObjective(e.target.value)}
-                    className="campaign-modal-select"
-                  >
-                    <option value="lead_generation">Lead Generation</option>
-                    <option value="conversions">Sales &amp; Conversions</option>
-                    <option value="brand_awareness">Brand Awareness</option>
-                    <option value="engagement">Engagement</option>
-                    <option value="traffic">Website Traffic</option>
-                  </select>
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Budget (INR ₹) *</label>
-                  <input
-                    type="number"
-                    value={budget}
-                    onChange={(e) => {
-                      setBudget(e.target.value);
-                      if (validationErrors.budget) {
-                        setValidationErrors((prev) => { const n = { ...prev }; delete n.budget; return n; });
-                      }
-                    }}
-                    className={`campaign-modal-input ${validationErrors.budget ? "input-has-error" : ""}`}
-                  />
-                  {validationErrors.budget && (
-                    <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.budget}</div>
-                  )}
-                </div>
-
-                <div className="campaign-modal-grid-2">
-                  <div className="campaign-modal-form-group">
-                    <label className="campaign-modal-label">Start Date *</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value);
-                        if (validationErrors.startDate) {
-                          setValidationErrors((prev) => { const n = { ...prev }; delete n.startDate; return n; });
-                        }
-                      }}
-                      className={`campaign-modal-input ${validationErrors.startDate ? "input-has-error" : ""}`}
-                    />
-                    {validationErrors.startDate && (
-                      <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.startDate}</div>
-                    )}
-                  </div>
-
-                  <div className="campaign-modal-form-group">
-                    <label className="campaign-modal-label">End Date *</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => {
-                        setEndDate(e.target.value);
-                        if (validationErrors.endDate) {
-                          setValidationErrors((prev) => { const n = { ...prev }; delete n.endDate; return n; });
-                        }
-                      }}
-                      className={`campaign-modal-input ${validationErrors.endDate ? "input-has-error" : ""}`}
-                    />
-                    {validationErrors.endDate && (
-                      <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.endDate}</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── AD SET ── */}
-                <div className="campaign-modal-section-divider"><span>Ad Set</span></div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Audience</label>
-                  <input
-                    type="text"
-                    value={targetAudience}
-                    onChange={(e) => setTargetAudience(e.target.value)}
-                    placeholder="e.g. Students · 18–25 · Kerala"
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Location</label>
-                  <input
-                    type="text"
-                    value={targetLocations}
-                    onChange={(e) => setTargetLocations(e.target.value)}
-                    placeholder="e.g. Kerala, India, Dubai"
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Age</label>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input
-                      type="number"
-                      value={targetAgeMin}
-                      onChange={(e) => setTargetAgeMin(Number(e.target.value))}
-                      min={13}
-                      max={65}
-                      placeholder="Min age"
-                      className="campaign-modal-input"
-                    />
-                    <span style={{ color: "#94a3b8", fontWeight: 600, flexShrink: 0 }}>–</span>
-                    <input
-                      type="number"
-                      value={targetAgeMax}
-                      onChange={(e) => setTargetAgeMax(Number(e.target.value))}
-                      min={13}
-                      max={65}
-                      placeholder="Max age"
-                      className="campaign-modal-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Placements</label>
-                  <select
-                    value={campaignType}
-                    onChange={(e) => setCampaignType(e.target.value)}
-                    className="campaign-modal-select"
-                  >
-                    {META_CAMPAIGN_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* ── AD ── */}
-                <div className="campaign-modal-section-divider"><span>Ad</span></div>
-
-                {/* Format selection */}
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Ad Format *</label>
-                  <p className="ad-creative-subhead">Choose how you'd like to structure your ad.</p>
-                  <div className="ad-format-radio-group">
-                    {[
-                      { id: "image",      title: "Image",      desc: "Single image ad" },
-                      { id: "video",      title: "Video",      desc: "Single video ad with thumbnail" },
-                      { id: "carousel",   title: "Carousel",   desc: "Two or more scrollable cards" },
-                      { id: "collection", title: "Collection", desc: "Cover media with a product catalog collection" },
-                    ].map((fmt) => (
-                      <div
-                        key={fmt.id}
-                        onClick={() => {
-                          setAdFormat(fmt.id);
-                          setValidationErrors({});
-                        }}
-                        className={`ad-format-radio-card ${adFormat === fmt.id ? "selected" : ""}`}
-                      >
-                        <div className="ad-format-radio-indicator">
-                          {adFormat === fmt.id && <div className="ad-format-radio-indicator-dot" />}
-                        </div>
-                        <div className="ad-format-info">
-                          <span className="ad-format-title">{fmt.title}</span>
-                          <span className="ad-format-desc">{fmt.desc}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {validationErrors.adFormat && (
-                    <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.adFormat}</div>
-                  )}
-                </div>
-
-                {/* ── FORMAT 1: IMAGE ── */}
-                {adFormat === "image" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    {/* Image * */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Image *</label>
-                      {!imageMedia ? (
-                        <>
-                          <div
-                            onDragOver={(e) => { e.preventDefault(); setImageDragging(true); }}
-                            onDragLeave={() => setImageDragging(false)}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              setImageDragging(false);
-                              const file = e.dataTransfer.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (m) => {
-                                  setImageMedia(m);
-                                  setValidationErrors((prev) => { const n = { ...prev }; delete n.imageMedia; return n; });
-                                }, "image");
-                              }
-                            }}
-                            onClick={() => imageInputRef.current?.click()}
-                            className={`ad-media-dropzone ${imageDragging ? "dragging" : ""} ${validationErrors.imageMedia ? "has-error" : ""}`}
-                          >
-                            <div className="ad-media-dropzone-icon"><ImageIcon size={22} color="#6366f1" /></div>
-                            <div className="ad-media-dropzone-prompt">
-                              <div className="ad-media-dropzone-main-text">Click to upload or drag &amp; drop image</div>
-                              <div className="ad-media-dropzone-sub-text">Supports JPG, PNG, WEBP</div>
-                            </div>
-                            <button type="button" className="btn-media-replace" style={{ marginTop: 4 }}
-                              onClick={(e) => { e.stopPropagation(); imageInputRef.current?.click(); }}>
-                              <Upload size={13} /> Upload Image
-                            </button>
-                          </div>
-                          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (m) => {
-                                  setImageMedia(m);
-                                  setValidationErrors((prev) => { const n = { ...prev }; delete n.imageMedia; return n; });
-                                }, "image");
-                              }
-                            }}
-                          />
-                        </>
-                      ) : (
-                        <div className="ad-media-preview-box">
-                          <div className="ad-media-preview-thumb-wrap">
-                            <img src={imageMedia.url} alt="Image creative" className="ad-media-preview-thumb" />
-                          </div>
-                          <div className="ad-media-preview-details">
-                            <div className="ad-media-preview-name">{imageMedia.name}</div>
-                            <div className="ad-media-preview-meta">
-                              <span>Image</span>
-                              {imageMedia.size && <span>• {imageMedia.size}</span>}
-                            </div>
-                          </div>
-                          <div className="ad-media-preview-actions">
-                            <button type="button" onClick={() => imageInputRef.current?.click()} className="btn-media-replace">Replace</button>
-                            <button type="button" onClick={() => setImageMedia(null)} className="btn-media-remove"><X size={14} /></button>
-                          </div>
-                          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (m) => {
-                                  setImageMedia(m);
-                                  setValidationErrors((prev) => { const n = { ...prev }; delete n.imageMedia; return n; });
-                                }, "image");
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-                      {validationErrors.imageMedia && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.imageMedia}</div>
-                      )}
-                    </div>
-
-                    {/* Primary Text */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Primary Text</label>
-                      <textarea
-                        value={primaryText}
-                        onChange={(e) => {
-                          setPrimaryText(e.target.value);
-                          if (validationErrors.primaryText) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.primaryText; return n; });
-                          }
-                        }}
-                        rows={2}
-                        maxLength={250}
-                        placeholder="Main ad text (optional)"
-                        className={`campaign-modal-input ${validationErrors.primaryText ? "input-has-error" : ""}`}
-                        style={{ resize: "vertical", minHeight: 60 }}
-                      />
-                      {validationErrors.primaryText && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.primaryText}</div>
-                      )}
-                    </div>
-
-                    {/* Headline */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Headline</label>
-                      <input
-                        type="text"
-                        value={headline}
-                        onChange={(e) => {
-                          setHeadline(e.target.value);
-                          if (validationErrors.headline) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.headline; return n; });
-                          }
-                        }}
-                        maxLength={50}
-                        placeholder="Ad headline (optional)"
-                        className={`campaign-modal-input ${validationErrors.headline ? "input-has-error" : ""}`}
-                      />
-                      {validationErrors.headline && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.headline}</div>
-                      )}
-                    </div>
-
-                    {/* Description */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Description</label>
-                      <input
-                        type="text"
-                        value={creativeDescription}
-                        onChange={(e) => setCreativeDescription(e.target.value)}
-                        maxLength={100}
-                        placeholder="Optional ad description"
-                        className="campaign-modal-input"
-                      />
-                    </div>
-
-                    {/* CTA */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">CTA</label>
-                      <select
-                        value={ctaValue}
-                        onChange={(e) => {
-                          setCtaValue(e.target.value);
-                          if (validationErrors.ctaValue) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.ctaValue; return n; });
-                          }
-                        }}
-                        className={`campaign-modal-select ${validationErrors.ctaValue ? "input-has-error" : ""}`}
-                      >
-                        {CTA_OPTIONS.map((cta) => (
-                          <option key={cta.value} value={cta.value}>{cta.label}</option>
-                        ))}
-                      </select>
-                      {validationErrors.ctaValue && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.ctaValue}</div>
-                      )}
-                    </div>
-
-                    {/* Website URL */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Website URL</label>
-                      <input
-                        type="url"
-                        value={landingPageUrl}
-                        onChange={(e) => {
-                          setLandingPageUrl(e.target.value);
-                          if (validationErrors.landingPageUrl) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.landingPageUrl; return n; });
-                          }
-                        }}
-                        placeholder="https://yourwebsite.com/landing-page (optional)"
-                        className={`campaign-modal-input ${validationErrors.landingPageUrl ? "input-has-error" : ""}`}
-                      />
-                      {validationErrors.landingPageUrl && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.landingPageUrl}</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── FORMAT 2: VIDEO ── */}
-                {adFormat === "video" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    {/* Video * */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Video *</label>
-                      {!videoMedia ? (
-                        <>
-                          <div
-                            onDragOver={(e) => { e.preventDefault(); setVideoDragging(true); }}
-                            onDragLeave={() => setVideoDragging(false)}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              setVideoDragging(false);
-                              const file = e.dataTransfer.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (m) => {
-                                  setVideoMedia(m);
-                                  setValidationErrors((prev) => { const n = { ...prev }; delete n.videoMedia; return n; });
-                                }, "video");
-                              }
-                            }}
-                            onClick={() => videoInputRef.current?.click()}
-                            className={`ad-media-dropzone ${videoDragging ? "dragging" : ""} ${validationErrors.videoMedia ? "has-error" : ""}`}
-                          >
-                            <div className="ad-media-dropzone-icon"><Video size={22} color="#6366f1" /></div>
-                            <div className="ad-media-dropzone-prompt">
-                              <div className="ad-media-dropzone-main-text">Click to upload or drag &amp; drop video</div>
-                              <div className="ad-media-dropzone-sub-text">Supports MP4, MOV, WEBM</div>
-                            </div>
-                            <button type="button" className="btn-media-replace" style={{ marginTop: 4 }}
-                              onClick={(e) => { e.stopPropagation(); videoInputRef.current?.click(); }}>
-                              <Upload size={13} /> Upload Video
-                            </button>
-                          </div>
-                          <input ref={videoInputRef} type="file" accept="video/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (m) => {
-                                  setVideoMedia(m);
-                                  setValidationErrors((prev) => { const n = { ...prev }; delete n.videoMedia; return n; });
-                                }, "video");
-                              }
-                            }}
-                          />
-                        </>
-                      ) : (
-                        <div className="ad-media-preview-box">
-                          <div className="ad-media-preview-thumb-wrap">
-                            <Video size={22} color="#ffffff" />
-                          </div>
-                          <div className="ad-media-preview-details">
-                            <div className="ad-media-preview-name">{videoMedia.name}</div>
-                            <div className="ad-media-preview-meta">
-                              <span>Video</span>
-                              {videoMedia.size && <span>• {videoMedia.size}</span>}
-                            </div>
-                          </div>
-                          <div className="ad-media-preview-actions">
-                            <button type="button" onClick={() => videoInputRef.current?.click()} className="btn-media-replace">Replace</button>
-                            <button type="button" onClick={() => setVideoMedia(null)} className="btn-media-remove"><X size={14} /></button>
-                          </div>
-                          <input ref={videoInputRef} type="file" accept="video/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (m) => {
-                                  setVideoMedia(m);
-                                  setValidationErrors((prev) => { const n = { ...prev }; delete n.videoMedia; return n; });
-                                }, "video");
-                              }
-                            }}
-                          />
-                        </div>
-                      )}
-                      {validationErrors.videoMedia && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.videoMedia}</div>
-                      )}
-                    </div>
-
-                    {/* Thumbnail */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Thumbnail</label>
-                      {!videoThumbnail ? (
-                        <>
-                          <div
-                            onDragOver={(e) => { e.preventDefault(); setThumbnailDragging(true); }}
-                            onDragLeave={() => setThumbnailDragging(false)}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              setThumbnailDragging(false);
-                              const file = e.dataTransfer.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (m) => setVideoThumbnail(m), "image");
-                              }
-                            }}
-                            onClick={() => thumbnailInputRef.current?.click()}
-                            className={`ad-media-dropzone ${thumbnailDragging ? "dragging" : ""}`}
-                            style={{ padding: "12px 14px" }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <ImageIcon size={18} color="#6366f1" />
-                              <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1e293b" }}>Upload / Select Thumbnail (Optional)</span>
-                            </div>
-                          </div>
-                          <input ref={thumbnailInputRef} type="file" accept="image/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleMediaFileSelection(file, (m) => setVideoThumbnail(m), "image");
-                            }}
-                          />
-                        </>
-                      ) : (
-                        <div className="ad-media-preview-box">
-                          <div className="ad-media-preview-thumb-wrap" style={{ width: 44, height: 44 }}>
-                            <img src={videoThumbnail.url} alt="Video thumbnail" className="ad-media-preview-thumb" />
-                          </div>
-                          <div className="ad-media-preview-details">
-                            <div className="ad-media-preview-name">{videoThumbnail.name}</div>
-                            <div className="ad-media-preview-meta">
-                              <span>Thumbnail Image</span>
-                              {videoThumbnail.size && <span>• {videoThumbnail.size}</span>}
-                            </div>
-                          </div>
-                          <div className="ad-media-preview-actions">
-                            <button type="button" onClick={() => thumbnailInputRef.current?.click()} className="btn-media-replace">Replace</button>
-                            <button type="button" onClick={() => setVideoThumbnail(null)} className="btn-media-remove"><X size={14} /></button>
-                          </div>
-                          <input ref={thumbnailInputRef} type="file" accept="image/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleMediaFileSelection(file, (m) => setVideoThumbnail(m), "image");
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Primary Text */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Primary Text</label>
-                      <textarea
-                        value={primaryText}
-                        onChange={(e) => {
-                          setPrimaryText(e.target.value);
-                          if (validationErrors.primaryText) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.primaryText; return n; });
-                          }
-                        }}
-                        rows={2}
-                        maxLength={250}
-                        placeholder="Main ad text (optional)"
-                        className={`campaign-modal-input ${validationErrors.primaryText ? "input-has-error" : ""}`}
-                        style={{ resize: "vertical", minHeight: 60 }}
-                      />
-                      {validationErrors.primaryText && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.primaryText}</div>
-                      )}
-                    </div>
-
-                    {/* Headline */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Headline</label>
-                      <input
-                        type="text"
-                        value={headline}
-                        onChange={(e) => {
-                          setHeadline(e.target.value);
-                          if (validationErrors.headline) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.headline; return n; });
-                          }
-                        }}
-                        maxLength={50}
-                        placeholder="Headline (optional)"
-                        className={`campaign-modal-input ${validationErrors.headline ? "input-has-error" : ""}`}
-                      />
-                      {validationErrors.headline && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.headline}</div>
-                      )}
-                    </div>
-
-                    {/* Description */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Description</label>
-                      <input
-                        type="text"
-                        value={creativeDescription}
-                        onChange={(e) => setCreativeDescription(e.target.value)}
-                        maxLength={100}
-                        placeholder="Optional ad description"
-                        className="campaign-modal-input"
-                      />
-                    </div>
-
-                    {/* CTA */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">CTA</label>
-                      <select
-                        value={ctaValue}
-                        onChange={(e) => {
-                          setCtaValue(e.target.value);
-                          if (validationErrors.ctaValue) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.ctaValue; return n; });
-                          }
-                        }}
-                        className={`campaign-modal-select ${validationErrors.ctaValue ? "input-has-error" : ""}`}
-                      >
-                        {CTA_OPTIONS.map((cta) => (
-                          <option key={cta.value} value={cta.value}>{cta.label}</option>
-                        ))}
-                      </select>
-                      {validationErrors.ctaValue && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.ctaValue}</div>
-                      )}
-                    </div>
-
-                    {/* Website URL */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Website URL</label>
-                      <input
-                        type="url"
-                        value={landingPageUrl}
-                        onChange={(e) => {
-                          setLandingPageUrl(e.target.value);
-                          if (validationErrors.landingPageUrl) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.landingPageUrl; return n; });
-                          }
-                        }}
-                        placeholder="https://yourwebsite.com/landing-page (optional)"
-                        className={`campaign-modal-input ${validationErrors.landingPageUrl ? "input-has-error" : ""}`}
-                      />
-                      {validationErrors.landingPageUrl && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.landingPageUrl}</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── FORMAT 3: CAROUSEL ── */}
-                {adFormat === "carousel" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    {/* Primary Text */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Primary Text</label>
-                      <textarea
-                        value={primaryText}
-                        onChange={(e) => {
-                          setPrimaryText(e.target.value);
-                          if (validationErrors.primaryText) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.primaryText; return n; });
-                          }
-                        }}
-                        rows={2}
-                        maxLength={250}
-                        placeholder="Main ad text (optional)"
-                        className={`campaign-modal-input ${validationErrors.primaryText ? "input-has-error" : ""}`}
-                        style={{ resize: "vertical", minHeight: 60 }}
-                      />
-                      {validationErrors.primaryText && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.primaryText}</div>
-                      )}
-                    </div>
-
-                    {/* Carousel Cards List */}
-                    <div className="carousel-builder-section">
-                      <div className="carousel-builder-header">
-                        <span className="carousel-builder-title">CAROUSEL CARDS</span>
-                        <span className="carousel-builder-count">{carouselCards.length} Cards (Min 2 required)</span>
-                      </div>
-                      <div className="carousel-cards-list">
-                        {carouselCards.map((card, idx) => (
-                          <div key={card.id} className="carousel-card-item">
-                            <div className="carousel-card-header">
-                              <span className="carousel-card-badge">Card {idx + 1}</span>
-                              <div className="carousel-card-actions">
-                                <button type="button" disabled={idx === 0} onClick={() => handleMoveCarouselCard(idx, "up")} className="btn-card-reorder" title="Move Up"><ArrowUp size={13} /></button>
-                                <button type="button" disabled={idx === carouselCards.length - 1} onClick={() => handleMoveCarouselCard(idx, "down")} className="btn-card-reorder" title="Move Down"><ArrowDown size={13} /></button>
-                                <button type="button" disabled={carouselCards.length <= 2} onClick={() => handleRemoveCarouselCard(card.id)} className="btn-card-remove" title={carouselCards.length <= 2 ? "Minimum 2 cards required" : "Remove Card"}><Trash2 size={13} /></button>
-                              </div>
-                            </div>
-
-                            {/* Image/Video * */}
-                            <div className="campaign-modal-form-group">
-                              <label className="campaign-modal-label">Image/Video *</label>
-                              {!card.media ? (
-                                <div
-                                  onClick={() => document.getElementById(`carousel-file-${card.id}`)?.click()}
-                                  className={`ad-media-dropzone ${validationErrors[`card_${card.id}_media`] ? "has-error" : ""}`}
-                                  style={{ padding: "14px 12px" }}
-                                >
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <ImageIcon size={18} color="#6366f1" />
-                                    <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#1e293b" }}>Upload Card Media</span>
-                                  </div>
-                                  <input id={`carousel-file-${card.id}`} type="file" accept="image/*,video/*" style={{ display: "none" }}
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleMediaFileSelection(file, (media) => handleUpdateCarouselCard(card.id, "media", media));
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="ad-media-preview-box">
-                                  <div className="ad-media-preview-thumb-wrap" style={{ width: 44, height: 44 }}>
-                                    {card.media.type === "video" ? <Video size={18} color="#ffffff" /> : <img src={card.media.url} alt="Card preview" className="ad-media-preview-thumb" />}
-                                  </div>
-                                  <div className="ad-media-preview-details">
-                                    <div className="ad-media-preview-name">{card.media.name}</div>
-                                    <div className="ad-media-preview-meta">
-                                      <span>{card.media.type === "video" ? "Video" : "Image"}</span>
-                                      {card.media.size && <span>• {card.media.size}</span>}
-                                    </div>
-                                  </div>
-                                  <div className="ad-media-preview-actions">
-                                    <button type="button" onClick={() => document.getElementById(`carousel-file-${card.id}`)?.click()} className="btn-media-replace">Replace</button>
-                                    <button type="button" onClick={() => handleUpdateCarouselCard(card.id, "media", null)} className="btn-media-remove"><X size={14} /></button>
-                                  </div>
-                                  <input id={`carousel-file-${card.id}`} type="file" accept="image/*,video/*" style={{ display: "none" }}
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleMediaFileSelection(file, (media) => handleUpdateCarouselCard(card.id, "media", media));
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              {validationErrors[`card_${card.id}_media`] && (
-                                <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors[`card_${card.id}_media`]}</div>
-                              )}
-                            </div>
-
-                            {/* Headline */}
-                            <div className="campaign-modal-form-group">
-                              <label className="campaign-modal-label">Headline</label>
-                              <input
-                                type="text"
-                                value={card.headline}
-                                onChange={(e) => handleUpdateCarouselCard(card.id, "headline", e.target.value)}
-                                maxLength={40}
-                                placeholder="Card headline (optional)"
-                                className={`campaign-modal-input ${validationErrors[`card_${card.id}_headline`] ? "input-has-error" : ""}`}
-                              />
-                              {validationErrors[`card_${card.id}_headline`] && (
-                                <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors[`card_${card.id}_headline`]}</div>
-                              )}
-                            </div>
-
-                            {/* Description */}
-                            <div className="campaign-modal-form-group">
-                              <label className="campaign-modal-label">Description</label>
-                              <input
-                                type="text"
-                                value={card.description}
-                                onChange={(e) => handleUpdateCarouselCard(card.id, "description", e.target.value)}
-                                maxLength={50}
-                                placeholder="Card description (optional)"
-                                className="campaign-modal-input"
-                              />
-                            </div>
-
-                            {/* Website URL */}
-                            <div className="campaign-modal-form-group">
-                              <label className="campaign-modal-label">Website URL</label>
-                              <input
-                                type="url"
-                                value={card.destinationUrl}
-                                onChange={(e) => handleUpdateCarouselCard(card.id, "destinationUrl", e.target.value)}
-                                placeholder="https://yourwebsite.com/page (optional)"
-                                className={`campaign-modal-input ${validationErrors[`card_${card.id}_url`] ? "input-has-error" : ""}`}
-                              />
-                              {validationErrors[`card_${card.id}_url`] && (
-                                <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors[`card_${card.id}_url`]}</div>
-                              )}
-                            </div>
-
-                            {/* CTA */}
-                            <div className="campaign-modal-form-group">
-                              <label className="campaign-modal-label">CTA</label>
-                              <select
-                                value={card.cta || "learn_more"}
-                                onChange={(e) => handleUpdateCarouselCard(card.id, "cta", e.target.value)}
-                                className="campaign-modal-select"
-                              >
-                                {CTA_OPTIONS.map((cta) => (
-                                  <option key={cta.value} value={cta.value}>{cta.label}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <button type="button" onClick={handleAddCarouselCard} className="btn-add-carousel-card">
-                        <Plus size={14} /> Add Card
-                      </button>
-
-                      {validationErrors.carousel && (
-                        <div className="campaign-field-error" style={{ marginTop: 6 }}><AlertCircle size={13} /> {validationErrors.carousel}</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── FORMAT 4: COLLECTION ── */}
-                {adFormat === "collection" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    {/* Cover Image/Video * */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Cover Image/Video *</label>
-                      {!collectionCover ? (
-                        <>
-                          <div onClick={() => collectionInputRef.current?.click()} className={`ad-media-dropzone ${validationErrors.collectionCover ? "has-error" : ""}`}>
-                            <div className="ad-media-dropzone-icon"><Package size={18} /></div>
-                            <div className="ad-media-dropzone-prompt">
-                              <div className="ad-media-dropzone-main-text">Upload Cover Media</div>
-                              <div className="ad-media-dropzone-sub-text">Supports JPG, PNG, MP4, MOV</div>
-                            </div>
-                          </div>
-                          <input ref={collectionInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleMediaFileSelection(file, (media) => {
-                                  setCollectionCover(media);
-                                  setValidationErrors((prev) => { const n = { ...prev }; delete n.collectionCover; return n; });
-                                });
-                              }
-                            }}
-                          />
-                        </>
-                      ) : (
-                        <div className="ad-media-preview-box">
-                          <div className="ad-media-preview-thumb-wrap">
-                            {collectionCover.type === "video"
-                              ? <div className="ad-media-preview-video-icon"><Video size={22} /></div>
-                              : <img src={collectionCover.url} alt="Collection cover" className="ad-media-preview-thumb" />
-                            }
-                          </div>
-                          <div className="ad-media-preview-details">
-                            <div className="ad-media-preview-name">{collectionCover.name}</div>
-                            <div className="ad-media-preview-meta">
-                              <span>{collectionCover.type === "video" ? "Video Cover" : "Image Cover"}</span>
-                              {collectionCover.size && <span>• {collectionCover.size}</span>}
-                            </div>
-                          </div>
-                          <div className="ad-media-preview-actions">
-                            <button type="button" onClick={() => collectionInputRef.current?.click()} className="btn-media-replace">Replace</button>
-                            <button type="button" onClick={() => setCollectionCover(null)} className="btn-media-remove"><X size={14} /></button>
-                          </div>
-                          <input ref={collectionInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleMediaFileSelection(file, (media) => setCollectionCover(media));
-                            }}
-                          />
-                        </div>
-                      )}
-                      {validationErrors.collectionCover && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.collectionCover}</div>
-                      )}
-                    </div>
-
-                    {/* Primary Text */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Primary Text</label>
-                      <textarea
-                        value={primaryText}
-                        onChange={(e) => {
-                          setPrimaryText(e.target.value);
-                          if (validationErrors.primaryText) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.primaryText; return n; });
-                          }
-                        }}
-                        rows={2}
-                        maxLength={250}
-                        placeholder="Main ad text (optional)"
-                        className={`campaign-modal-input ${validationErrors.primaryText ? "input-has-error" : ""}`}
-                        style={{ resize: "vertical", minHeight: 60 }}
-                      />
-                      {validationErrors.primaryText && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.primaryText}</div>
-                      )}
-                    </div>
-
-                    {/* Headline */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Headline</label>
-                      <input
-                        type="text"
-                        value={headline}
-                        onChange={(e) => setHeadline(e.target.value)}
-                        maxLength={50}
-                        placeholder="Headline (optional)"
-                        className="campaign-modal-input"
-                      />
-                    </div>
-
-                    {/* CTA */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">CTA</label>
-                      <select
-                        value={ctaValue}
-                        onChange={(e) => {
-                          setCtaValue(e.target.value);
-                          if (validationErrors.ctaValue) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.ctaValue; return n; });
-                          }
-                        }}
-                        className={`campaign-modal-select ${validationErrors.ctaValue ? "input-has-error" : ""}`}
-                      >
-                        {CTA_OPTIONS.map((cta) => (
-                          <option key={cta.value} value={cta.value}>{cta.label}</option>
-                        ))}
-                      </select>
-                      {validationErrors.ctaValue && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.ctaValue}</div>
-                      )}
-                    </div>
-
-                    {/* Website URL */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Website URL</label>
-                      <input
-                        type="url"
-                        value={landingPageUrl}
-                        onChange={(e) => {
-                          setLandingPageUrl(e.target.value);
-                          if (validationErrors.landingPageUrl) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.landingPageUrl; return n; });
-                          }
-                        }}
-                        placeholder="https://yourwebsite.com/collection (optional)"
-                        className={`campaign-modal-input ${validationErrors.landingPageUrl ? "input-has-error" : ""}`}
-                      />
-                      {validationErrors.landingPageUrl && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.landingPageUrl}</div>
-                      )}
-                    </div>
-
-                    {/* Product / Catalog * */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Product / Catalog *</label>
-                      <select
-                        value={collectionCatalog}
-                        onChange={(e) => {
-                          setCollectionCatalog(e.target.value);
-                          if (validationErrors.collectionCatalog) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.collectionCatalog; return n; });
-                          }
-                        }}
-                        className={`campaign-modal-select ${validationErrors.collectionCatalog ? "input-has-error" : ""}`}
-                      >
-                        {CATALOG_OPTIONS.map((cat) => (
-                          <option key={cat.value} value={cat.value}>{cat.label}</option>
-                        ))}
-                      </select>
-                      {validationErrors.collectionCatalog && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.collectionCatalog}</div>
-                      )}
-                    </div>
-
-                    {/* Product Set * */}
-                    <div className="campaign-modal-form-group">
-                      <label className="campaign-modal-label">Product Set *</label>
-                      <select
-                        value={collectionProductSet}
-                        onChange={(e) => {
-                          setCollectionProductSet(e.target.value);
-                          if (validationErrors.collectionProductSet) {
-                            setValidationErrors((prev) => { const n = { ...prev }; delete n.collectionProductSet; return n; });
-                          }
-                        }}
-                        className={`campaign-modal-select ${validationErrors.collectionProductSet ? "input-has-error" : ""}`}
-                      >
-                        {PRODUCT_SET_OPTIONS.map((ps) => (
-                          <option key={ps.value} value={ps.value}>{ps.label}</option>
-                        ))}
-                      </select>
-                      {validationErrors.collectionProductSet && (
-                        <div className="campaign-field-error"><AlertCircle size={13} /> {validationErrors.collectionProductSet}</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="social-modal-footer">
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 8,
+              width: "100%",
+              maxWidth: 500,
+              boxShadow: "0 10px 32px rgba(0, 0, 0, 0.22)",
+              overflow: "hidden",
+              position: "relative",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "90vh",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header with two tabs */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 20px 0 20px",
+                borderBottom: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 0 }}>
+                {/* Tab 1: Create new campaign */}
                 <button
                   type="button"
-                  onClick={() => { setCreateModalOpen(false); resetCreateForm(); }}
-                  className="btn-modal-cancel"
+                  onClick={() => setCreateModalTab("campaign")}
+                  style={{
+                    padding: "8px 18px 12px 18px",
+                    background: "transparent",
+                    border: "none",
+                    borderBottom: createModalTab === "campaign" ? "2.5px solid #0064e1" : "2.5px solid transparent",
+                    fontSize: "0.9rem",
+                    fontWeight: createModalTab === "campaign" ? 700 : 500,
+                    color: createModalTab === "campaign" ? "#0f172a" : "#65676b",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    whiteSpace: "nowrap",
+                    paddingBottom: 10,
+                  }}
                 >
-                  Cancel
+                  Create new campaign
                 </button>
-                <button type="submit" disabled={submitting} className="btn-create-campaign">
-                  {submitting ? "Creating..." : "Create Campaign"}
+                {/* Tab 2: New ad set or ad */}
+                <button
+                  type="button"
+                  onClick={() => setCreateModalTab("adset")}
+                  style={{
+                    padding: "8px 18px 12px 18px",
+                    background: createModalTab === "adset" ? "#e7f0fd" : "transparent",
+                    border: "none",
+                    borderBottom: createModalTab === "adset" ? "2.5px solid #0064e1" : "2.5px solid transparent",
+                    borderRadius: createModalTab === "adset" ? "6px 6px 0 0" : 0,
+                    fontSize: "0.9rem",
+                    fontWeight: createModalTab === "adset" ? 700 : 500,
+                    color: createModalTab === "adset" ? "#1877f2" : "#65676b",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    whiteSpace: "nowrap",
+                    paddingBottom: 10,
+                  }}
+                >
+                  New ad set or ad
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ===================================================================
-          EDIT CAMPAIGN MODAL (Shared)
-          =================================================================== */}
-      {editModalOpen && activeCampaign && (
-        <div
-          className="social-modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditModalOpen(false);
-          }}
-        >
-          <div className="social-modal-content" style={{ maxWidth: 680 }}>
-            <div className="social-modal-header">
-              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 750, color: "#0f172a" }}>
-                Edit Campaign
-              </h3>
+              {/* Close X */}
               <button
                 type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="btn-close-modal"
+                onClick={() => setCreateModalOpen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#65676b",
+                  borderRadius: 6,
+                  marginBottom: 4,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <X size={18} />
+                <X size={18} strokeWidth={2.2} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditCampaign}>
-              <div className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Modal Body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px" }}>
 
-                {/* ── CAMPAIGN ── */}
-                <div className="campaign-modal-section-divider"><span>Campaign</span></div>
+              {/* ── TAB 1: Create new campaign ── */}
+              {createModalTab === "campaign" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Campaign Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="e.g. Vorion Enterprise AI Q4 Drive"
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Objective *</label>
-                  <select
-                    value={editObjective}
-                    onChange={(e) => setEditObjective(e.target.value)}
-                    className="campaign-modal-select"
-                  >
-                    <option value="lead_generation">Lead Generation</option>
-                    <option value="conversions">Sales &amp; Conversions</option>
-                    <option value="brand_awareness">Brand Awareness</option>
-                    <option value="engagement">Engagement</option>
-                    <option value="traffic">Website Traffic</option>
-                  </select>
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Budget (INR ₹) *</label>
-                  <input
-                    type="number"
-                    required
-                    value={editBudget}
-                    onChange={(e) => setEditBudget(e.target.value)}
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-                <div className="campaign-modal-grid-2">
-                  <div className="campaign-modal-form-group">
-                    <label className="campaign-modal-label">Start Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={editStartDate}
-                      onChange={(e) => setEditStartDate(e.target.value)}
-                      className="campaign-modal-input"
-                    />
+                  {/* Buying type */}
+                  <div>
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.88rem", fontWeight: 650, color: "#1c1e21", marginBottom: 6 }}>
+                      Choose a buying type
+                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", background: "#e4e6eb", fontSize: "0.7rem", color: "#65676b", fontWeight: 700, cursor: "help" }} title="Buying type determines how you buy your ads.">?</span>
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <select
+                        value={createBuyingType}
+                        onChange={(e) => setCreateBuyingType(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "8px 32px 8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          fontSize: "0.9rem",
+                          color: "#1c1e21",
+                          cursor: "pointer",
+                          appearance: "none",
+                          outline: "none",
+                        }}
+                      >
+                        <option value="Auction">Auction</option>
+                        <option value="Reach and Frequency">Reach and Frequency</option>
+                      </select>
+                      <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                    </div>
                   </div>
 
-                  <div className="campaign-modal-form-group">
-                    <label className="campaign-modal-label">End Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={editEndDate}
-                      onChange={(e) => setEditEndDate(e.target.value)}
-                      className="campaign-modal-input"
-                    />
+                  {/* Campaign objective */}
+                  <div>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 650, color: "#1c1e21", marginBottom: 10 }}>
+                      Choose a campaign objective
+                    </div>
+                    {/* Objectives list */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {CREATE_OBJECTIVES.map((obj) => {
+                        const isSelected = createObjective === obj.id;
+                        return (
+                          <button
+                            key={obj.id}
+                            type="button"
+                            onClick={() => setCreateObjective(obj.id)}
+                            onDoubleClick={() => handleLaunchStandaloneEditor(obj.id)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                              padding: "9px 12px",
+                              borderRadius: 6,
+                              border: isSelected ? "1.5px solid #0064e1" : "1px solid transparent",
+                              background: isSelected ? "#f0f7ff" : "transparent",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              transition: "all 0.13s ease",
+                            }}
+                            onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f7f8fa"; }}
+                            onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                          >
+                            {/* Radio circle */}
+                            <span
+                              style={{
+                                width: 16,
+                                height: 16,
+                                borderRadius: "50%",
+                                border: isSelected ? "2px solid #0064e1" : "2px solid #cbd5e1",
+                                background: "#ffffff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {isSelected && (
+                                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#0064e1" }} />
+                              )}
+                            </span>
+                            <span style={{ fontSize: "0.88rem", color: "#1c1e21", fontWeight: isSelected ? 650 : 450 }}>
+                              {obj.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* ── AD SET ── */}
-                <div className="campaign-modal-section-divider"><span>Ad Set</span></div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Audience</label>
-                  <input
-                    type="text"
-                    value={editTargetAudience}
-                    onChange={(e) => setEditTargetAudience(e.target.value)}
-                    placeholder="e.g. Students · 18–25 · Kerala"
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Location</label>
-                  <input
-                    type="text"
-                    value={editTargetLocations}
-                    onChange={(e) => setEditTargetLocations(e.target.value)}
-                    placeholder="e.g. Kerala, India, Dubai"
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Age</label>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input
-                      type="number"
-                      value={editTargetAgeMin}
-                      onChange={(e) => setEditTargetAgeMin(Number(e.target.value))}
-                      min={13}
-                      max={65}
-                      placeholder="Min age"
-                      className="campaign-modal-input"
-                    />
-                    <span style={{ color: "#94a3b8", fontWeight: 600, flexShrink: 0 }}>–</span>
-                    <input
-                      type="number"
-                      value={editTargetAgeMax}
-                      onChange={(e) => setEditTargetAgeMax(Number(e.target.value))}
-                      min={13}
-                      max={65}
-                      placeholder="Max age"
-                      className="campaign-modal-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Placements</label>
-                  <select
-                    value={editCampaignType}
-                    onChange={(e) => setEditCampaignType(e.target.value)}
-                    className="campaign-modal-select"
-                  >
-                    {META_CAMPAIGN_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* ── AD ── */}
-                <div className="campaign-modal-section-divider"><span>Ad</span></div>
-
-                {/* Current Media Preview if available */}
-                {(activeCampaign.creative_image_url || activeCampaign.creative_video_url) && (
-                  <div className="campaign-modal-form-group">
-                    <label className="campaign-modal-label">Current Creative</label>
-                    <div className="ad-media-preview-box">
-                      <div className="ad-media-preview-thumb-wrap">
-                        {activeCampaign.creative_video_url ? (
-                          <div className="ad-media-preview-video-icon"><Video size={22} /></div>
-                        ) : (
-                          <img src={activeCampaign.creative_image_url} alt="Ad creative" className="ad-media-preview-thumb" />
+              {/* ── TAB 2: New ad set or ad ── */}
+              {createModalTab === "adset" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.88rem", fontWeight: 650, color: "#1c1e21", marginBottom: 8 }}>
+                      {/* Folder icon */}
+                      <svg width={16} height={16} viewBox="0 0 20 20" fill="none">
+                        <path d="M3 5a2 2 0 0 1 2-2h3.586a1 1 0 0 1 .707.293L10.707 5H15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z" stroke="#334155" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Campaign
+                    </label>
+                    {/* Campaign search / select input */}
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type="text"
+                        value={createCampaignSearch}
+                        onChange={(e) => {
+                          setCreateCampaignSearch(e.target.value);
+                          setSelectedCreateCampaign("");
+                        }}
+                        placeholder="Choose a campaign"
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          fontSize: "0.9rem",
+                          color: "#1c1e21",
+                          outline: "none",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.15s",
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = "#0064e1";
+                          e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 100, 225, 0.12)";
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = "#cbd5e1";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      />
+                    </div>
+                    {/* Filtered campaign suggestions */}
+                    {createCampaignSearch && (
+                      <div
+                        style={{
+                          border: "1px solid #e2e8f0",
+                          borderTop: "none",
+                          borderRadius: "0 0 6px 6px",
+                          background: "#ffffff",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                          maxHeight: 160,
+                          overflowY: "auto",
+                        }}
+                      >
+                        {campaignsList
+                          .filter((c) => c.name.toLowerCase().includes(createCampaignSearch.toLowerCase()))
+                          .map((c) => (
+                            <div
+                              key={c.id}
+                              onClick={() => {
+                                setSelectedCreateCampaign(c.name);
+                                setCreateCampaignSearch(c.name);
+                              }}
+                              style={{
+                                padding: "9px 14px",
+                                fontSize: "0.88rem",
+                                color: "#1c1e21",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                transition: "background 0.1s",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                            >
+                              <svg width={14} height={14} viewBox="0 0 20 20" fill="none">
+                                <path d="M3 5a2 2 0 0 1 2-2h3.586a1 1 0 0 1 .707.293L10.707 5H15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                              {c.name}
+                            </div>
+                          ))}
+                        {campaignsList.filter((c) => c.name.toLowerCase().includes(createCampaignSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding: "10px 14px", fontSize: "0.85rem", color: "#94a3b8", textAlign: "center" }}>
+                            No campaigns found
+                          </div>
                         )}
                       </div>
-                      <div className="ad-media-preview-details">
-                        <div className="ad-media-preview-name">{activeCampaign.name} Creative</div>
-                        <div className="ad-media-preview-meta">
-                          <span>{activeCampaign.creative_video_url ? "Video Ad" : "Image Ad"}</span>
-                          {activeCampaign.ad_format && <span>• {activeCampaign.ad_format.replace("_", " ")}</span>}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                )}
-
-                {/* Primary Text */}
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Primary Text *</label>
-                  <textarea
-                    required
-                    value={editPrimaryText}
-                    onChange={(e) => setEditPrimaryText(e.target.value)}
-                    rows={2}
-                    maxLength={250}
-                    placeholder="Tell people what your ad is about"
-                    className="campaign-modal-input"
-                    style={{ resize: "vertical", minHeight: 60 }}
-                  />
                 </div>
+              )}
+            </div>
 
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Headline</label>
-                  <input
-                    type="text"
-                    value={editHeadline}
-                    onChange={(e) => setEditHeadline(e.target.value)}
-                    maxLength={50}
-                    placeholder="Write a short headline"
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">CTA (Call to Action) *</label>
-                  <select
-                    value={editCtaValue}
-                    onChange={(e) => setEditCtaValue(e.target.value)}
-                    className="campaign-modal-select"
-                  >
-                    {CTA_OPTIONS.map((cta) => (
-                      <option key={cta.value} value={cta.value}>{cta.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="campaign-modal-form-group">
-                  <label className="campaign-modal-label">Website URL</label>
-                  <input
-                    type="url"
-                    value={editLandingPageUrl}
-                    onChange={(e) => setEditLandingPageUrl(e.target.value)}
-                    placeholder="https://yourwebsite.com/landing-page"
-                    className="campaign-modal-input"
-                  />
-                </div>
-
-              </div>
-
-              <div className="social-modal-footer">
-                <button
-                  type="button"
-                  onClick={() => setEditModalOpen(false)}
-                  className="btn-modal-cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="btn-create-campaign"
-                >
-                  {submitting ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
+            {/* Modal Footer */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "12px 20px 16px 20px",
+                borderTop: "1px solid #e2e8f0",
+                background: "#ffffff",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setCreateModalOpen(false)}
+                style={{
+                  padding: "7px 20px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#1c1e21",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "background 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={createModalTab === "adset" && !selectedCreateCampaign}
+                onClick={() => {
+                  // Proceed: open real Meta Ads Manager campaign creation page
+                  if (createModalTab === "campaign") {
+                    handleLaunchStandaloneEditor(createObjective);
+                  } else {
+                    setActiveMetaSubSection("adsets");
+                    const newAdset = {
+                      id: `as-new-${Date.now()}`,
+                      name: selectedCreateCampaign ? `${selectedCreateCampaign} - New Ad Set` : "New Ad Set",
+                      delivery: "In draft",
+                      bidStrategy: "Highest volume",
+                      bidStrategySub: "Leads",
+                      budget: "₹200.00",
+                      budgetSub: "Daily",
+                      results: "—",
+                      costPerResult: "—",
+                      amountSpent: "—",
+                      impressions: "—",
+                      reach: "—",
+                      ends: "Ongoing",
+                      attribution: "7-day click or 1-day view",
+                      lastSignificantEdit: "Just now",
+                      active: true,
+                    };
+                    setAdsetsList((prev) => [newAdset, ...prev]);
+                    setSelectedAdsetIds([newAdset.id]);
+                    showToast(`Created ad set "${newAdset.name}" as draft.`);
+                    setCreateModalOpen(false);
+                  }
+                }}
+                style={{
+                  padding: "7px 22px",
+                  borderRadius: 6,
+                  border: "none",
+                  background:
+                    createModalTab === "adset" && !selectedCreateCampaign
+                      ? "#d1d5db"
+                      : "#0064e1",
+                  color: createModalTab === "adset" && !selectedCreateCampaign ? "#9ca3af" : "#ffffff",
+                  fontSize: "0.88rem",
+                  fontWeight: 650,
+                  cursor: createModalTab === "adset" && !selectedCreateCampaign ? "not-allowed" : "pointer",
+                  boxShadow:
+                    createModalTab === "adset" && !selectedCreateCampaign
+                      ? "none"
+                      : "0 1px 2px rgba(0, 100, 225, 0.2)",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!(createModalTab === "adset" && !selectedCreateCampaign)) {
+                    e.currentTarget.style.background = "#0053bf";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!(createModalTab === "adset" && !selectedCreateCampaign)) {
+                    e.currentTarget.style.background = "#0064e1";
+                  }
+                }}
+              >
+                Continue
+              </button>
+            </div>
           </div>
         </div>
       )}
-    </>
+
+      {/* ── 1. PUBLISHING PROGRESS MODAL (Meta Ads Manager Publishing Dialog) ── */}
+      {publishingModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              background: "#ffffff",
+              borderRadius: 12,
+              boxShadow: "0 20px 40px rgba(0,0,0,0.22)",
+              padding: "24px 28px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: "50%",
+                background: publishingProgress >= 100 ? "#ecfdf5" : "#eff6ff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 16,
+              }}
+            >
+              {publishingProgress >= 100 ? (
+                <CheckCircle2 size={28} color="#10b981" />
+              ) : (
+                <UploadCloud size={26} color="#0064e1" style={{ animation: "pulse 1.2s infinite" }} />
+              )}
+            </div>
+
+            <h3 style={{ margin: "0 0 6px 0", fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
+              {publishingProgress >= 100 ? "Publish complete!" : "Publishing to Meta..."}
+            </h3>
+            <p style={{ margin: "0 0 20px 0", fontSize: "0.86rem", color: "#64748b" }}>
+              {publishingProgress >= 100
+                ? `${publishingTotal} item(s) are now active in Meta Ads Manager.`
+                : `Publishing 1 of ${publishingTotal}: "${publishingItemName}"`}
+            </p>
+
+            {/* Progress track */}
+            <div
+              style={{
+                width: "100%",
+                height: 7,
+                background: "#f1f5f9",
+                borderRadius: 4,
+                overflow: "hidden",
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: `${publishingProgress}%`,
+                  height: "100%",
+                  background: publishingProgress >= 100 ? "#10b981" : "#0064e1",
+                  borderRadius: 4,
+                  transition: "width 0.25s ease",
+                }}
+              />
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 600 }}>
+              {publishingProgress}% complete
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2. META EDIT DRAWER (Slide-over panel matching Meta Ads Manager) ── */}
+      {editDrawerOpen && editingItemData && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.4)",
+            zIndex: 1500,
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+          onClick={() => setEditDrawerOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 520,
+              maxWidth: "92vw",
+              height: "100vh",
+              background: "#ffffff",
+              boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.16)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "#ffffff",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span
+                  style={{
+                    background: "#eff6ff",
+                    color: "#0064e1",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                    padding: "3px 8px",
+                    borderRadius: 5,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {activeMetaSubSection.slice(0, -1) || "Ad"}
+                </span>
+                <span style={{ fontSize: "1rem", fontWeight: 700, color: "#0f172a" }}>
+                  Edit {editingItemData.name}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditDrawerOpen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  padding: 4,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "20px 24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 18,
+              }}
+            >
+              {/* Item Name */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editingItemData.name || ""}
+                  onChange={(e) => setEditingItemData((prev) => ({ ...prev, name: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    color: "#0f172a",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              {/* Status & Delivery */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    Delivery
+                  </label>
+                  <select
+                    value={editingItemData.delivery || "In draft"}
+                    onChange={(e) => setEditingItemData((prev) => ({ ...prev, delivery: e.target.value }))}
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "0.86rem",
+                      color: "#0f172a",
+                      background: "#ffffff",
+                    }}
+                  >
+                    <option value="In draft">In draft</option>
+                    <option value="Active">Active</option>
+                    <option value="Off">Off / Paused</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    State Toggle
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, height: 38 }}>
+                    <button
+                      type="button"
+                      onClick={() => setEditingItemData((prev) => ({ ...prev, active: !prev.active }))}
+                      style={{
+                        width: 44,
+                        height: 24,
+                        borderRadius: 12,
+                        background: editingItemData.active ? "#0064e1" : "#cbd5e1",
+                        border: "none",
+                        padding: 3,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: editingItemData.active ? "flex-end" : "flex-start",
+                        transition: "background 0.2s ease",
+                      }}
+                    >
+                      <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#ffffff" }} />
+                    </button>
+                    <span style={{ fontSize: "0.84rem", fontWeight: 600, color: editingItemData.active ? "#0064e1" : "#64748b" }}>
+                      {editingItemData.active ? "ON" : "OFF"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Budget */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Budget
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8 }}>
+                  <input
+                    type="text"
+                    value={editingItemData.budget || ""}
+                    onChange={(e) => setEditingItemData((prev) => ({ ...prev, budget: e.target.value }))}
+                    placeholder="e.g. ₹500.00"
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: 6,
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "0.88rem",
+                      color: "#0f172a",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <select
+                    value={editingItemData.budgetSub || "Daily"}
+                    onChange={(e) => setEditingItemData((prev) => ({ ...prev, budgetSub: e.target.value }))}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "0.86rem",
+                      color: "#0f172a",
+                      background: "#ffffff",
+                    }}
+                  >
+                    <option value="Daily">Daily</option>
+                    <option value="Lifetime">Lifetime</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Bid Strategy */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Bid Strategy
+                </label>
+                <select
+                  value={editingItemData.bidStrategy || "Highest volume"}
+                  onChange={(e) => setEditingItemData((prev) => ({ ...prev, bidStrategy: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.86rem",
+                    color: "#0f172a",
+                    background: "#ffffff",
+                  }}
+                >
+                  <option value="Highest volume">Highest volume</option>
+                  <option value="Lowest cost">Lowest cost</option>
+                  <option value="Cost per result goal">Cost per result goal</option>
+                  <option value="Bid cap">Bid cap</option>
+                </select>
+              </div>
+
+              {/* Ad Set Parent (if editing an ad) */}
+              {editingItemData.adsetName && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                    Ad Set
+                  </label>
+                  <input
+                    type="text"
+                    value={editingItemData.adsetName || ""}
+                    onChange={(e) => setEditingItemData((prev) => ({ ...prev, adsetName: e.target.value }))}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: 6,
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "0.88rem",
+                      color: "#0f172a",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Schedule / Ends */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Schedule & Ends
+                </label>
+                <input
+                  type="text"
+                  value={editingItemData.ends || "Ongoing"}
+                  onChange={(e) => setEditingItemData((prev) => ({ ...prev, ends: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    color: "#0f172a",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: "14px 20px",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 10,
+                background: "#ffffff",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setEditDrawerOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#334155",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Discard Changes
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditDrawer}
+                style={{
+                  padding: "7px 22px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 2px rgba(0, 100, 225, 0.2)",
+                }}
+              >
+                Save & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. DUPLICATE MODAL (Meta Custom Copies & Destination) ── */}
+      {duplicateModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setDuplicateModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              background: "#ffffff",
+              borderRadius: 10,
+              boxShadow: "0 16px 36px rgba(0, 0, 0, 0.2)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
+                Duplicate {activeSelection.typeLabel}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setDuplicateModalOpen(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Number of copies */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 650, color: "#1c1e21", marginBottom: 6 }}>
+                  Number of copies
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setDuplicateCopies((prev) => Math.max(1, prev - 1))}
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 6,
+                      border: "1px solid #cbd5e1",
+                      background: "#f8fafc",
+                      fontSize: "1.1rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={duplicateCopies}
+                    onChange={(e) => setDuplicateCopies(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                    style={{
+                      width: 60,
+                      height: 34,
+                      textAlign: "center",
+                      borderRadius: 6,
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: "0.92rem",
+                      fontWeight: 650,
+                      color: "#0f172a",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDuplicateCopies((prev) => Math.min(10, prev + 1))}
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 6,
+                      border: "1px solid #cbd5e1",
+                      background: "#f8fafc",
+                      fontSize: "1.1rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    +
+                  </button>
+                  <span style={{ fontSize: "0.82rem", color: "#64748b" }}>copies per item</span>
+                </div>
+              </div>
+
+              {/* Destination */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 650, color: "#1c1e21", marginBottom: 8 }}>
+                  Destination
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    { id: "original", label: "Original campaign" },
+                    { id: "existing", label: "Existing campaign" },
+                    { id: "new", label: "New campaign" },
+                  ].map((dest) => (
+                    <label
+                      key={dest.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: "0.86rem",
+                        color: "#1e293b",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="duplicate_destination"
+                        value={dest.id}
+                        checked={duplicateDestination === dest.id}
+                        onChange={() => setDuplicateDestination(dest.id)}
+                        style={{ accentColor: "#0064e1" }}
+                      />
+                      <span>{dest.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "12px 20px 16px 20px",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setDuplicateModalOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#334155",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDuplicate(duplicateCopies)}
+                style={{
+                  padding: "7px 22px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 2px rgba(0, 100, 225, 0.2)",
+                }}
+              >
+                Duplicate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 4. QUICK EDIT MODAL ── */}
+      {quickEditModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setQuickEditModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              background: "#ffffff",
+              borderRadius: 10,
+              boxShadow: "0 16px 36px rgba(0, 0, 0, 0.2)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
+                Quick edit {activeSelection.typeLabel}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setQuickEditModalOpen(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={quickEditName}
+                  onChange={(e) => setQuickEditName(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Budget
+                </label>
+                <input
+                  type="text"
+                  value={quickEditBudget}
+                  onChange={(e) => setQuickEditBudget(e.target.value)}
+                  placeholder="₹200.00"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                padding: "12px 20px 16px 20px",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setQuickEditModalOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#334155",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveQuickEdit}
+                style={{
+                  padding: "7px 22px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 5. FIND AND REPLACE MODAL (Meta Feature) ── */}
+      {findReplaceModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setFindReplaceModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              background: "#ffffff",
+              borderRadius: 10,
+              boxShadow: "0 16px 36px rgba(0, 0, 0, 0.2)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
+                Find and replace text
+              </h3>
+              <button
+                type="button"
+                onClick={() => setFindReplaceModalOpen(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <p style={{ margin: "0 0 4px 0", fontSize: "0.84rem", color: "#64748b" }}>
+                Find and replace text in the names of the {activeSelection.ids.length} selected {activeSelection.pluralLabel}.
+              </p>
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Find
+                </label>
+                <input
+                  type="text"
+                  value={findText}
+                  onChange={(e) => setFindText(e.target.value)}
+                  placeholder="e.g. Awareness"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                  Replace with
+                </label>
+                <input
+                  type="text"
+                  value={replaceText}
+                  onChange={(e) => setReplaceText(e.target.value)}
+                  placeholder="e.g. Conversion"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", color: "#334155", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={matchCase}
+                  onChange={(e) => setMatchCase(e.target.checked)}
+                  style={{ accentColor: "#0064e1" }}
+                />
+                <span>Match case</span>
+              </label>
+            </div>
+            <div
+              style={{
+                padding: "12px 20px 16px 20px",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setFindReplaceModalOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#334155",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteFindReplace}
+                style={{
+                  padding: "7px 22px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                }}
+              >
+                Replace All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 6. DELETE CONFIRMATION MODAL ── */}
+      {deleteModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setDeleteModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              background: "#ffffff",
+              borderRadius: 10,
+              boxShadow: "0 16px 36px rgba(0, 0, 0, 0.2)",
+              padding: "24px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: "#fee2e2",
+                  color: "#dc2626",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: "0 0 6px 0", fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
+                  Delete {activeSelection.ids.length}{" "}
+                  {activeSelection.ids.length === 1 ? activeSelection.typeLabel : activeSelection.pluralLabel}?
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.86rem", color: "#64748b", lineHeight: 1.45 }}>
+                  Are you sure you want to delete the selected {activeSelection.pluralLabel}? This action cannot be
+                  undone and will permanently delete them from Ads Manager.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22 }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#334155",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                style={{
+                  padding: "7px 20px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  fontSize: "0.85rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 2px rgba(220, 38, 38, 0.25)",
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 7. FLOATING TOAST NOTIFICATION ── */}
+      {toast && (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            left: 24,
+            background: "#1e293b",
+            color: "#ffffff",
+            padding: "10px 16px",
+            borderRadius: 8,
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.25)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            fontSize: "0.85rem",
+            fontWeight: 500,
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          {toast.type === "success" && <CheckCircle2 size={16} color="#4ade80" />}
+          {toast.type === "info" && <Info size={16} color="#60a5fa" />}
+          {toast.type === "error" && <AlertCircle size={16} color="#f87171" />}
+          <span>{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "#94a3b8",
+              padding: 2,
+              marginLeft: 6,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ── REAL META ADS MANAGER STANDALONE CAMPAIGN EDITOR (Matching Images 1, 2, 3) ── */}
+      <MetaAdsManagerCampaignEditor
+        isOpen={standaloneEditorOpen}
+        initialData={standaloneEditorData}
+        onClose={() => setStandaloneEditorOpen(false)}
+        onPublish={handlePublishStandaloneCampaign}
+        onSaveDraft={handleSaveDraftStandaloneCampaign}
+      />
+    </div>
   );
 }
+
+// Consistent Table Header & Cell Styles
+const thStyle = {
+  padding: "10px 16px",
+  fontSize: "0.78rem",
+  color: "#475569",
+  fontWeight: 700,
+  borderBottom: "1px solid #cbd5e1",
+  textAlign: "left",
+  whiteSpace: "nowrap",
+};
+
+const tdStyle = {
+  padding: "12px 16px",
+  whiteSpace: "nowrap",
+  color: "#0f172a",
+};

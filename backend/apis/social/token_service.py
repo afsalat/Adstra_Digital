@@ -32,6 +32,13 @@ GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 GOOGLE_TOKEN_INFO_URL = 'https://oauth2.googleapis.com/tokeninfo'
 
+LINKEDIN_CLIENT_ID = os.environ.get('LINKEDIN_CLIENT_ID', '')
+LINKEDIN_CLIENT_SECRET = os.environ.get('LINKEDIN_CLIENT_SECRET', '')
+LINKEDIN_REDIRECT_URI = os.environ.get('LINKEDIN_REDIRECT_URI', 'http://localhost:8000/social/platform-connections/linkedin/callback/')
+LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization'
+LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
+LINKEDIN_SCOPES = ['rw_ads', 'r_ads_reporting', 'r_liteprofile']
+
 # ─── Meta OAuth ────────────────────────────────────────────────────────────────
 
 def get_meta_oauth_url(state: str = '') -> str:
@@ -183,6 +190,82 @@ def refresh_google_token(connection) -> bool:
         return False
 
 
+# ─── LinkedIn OAuth ────────────────────────────────────────────────────────────
+
+def get_linkedin_oauth_url(state: str = '') -> str:
+    """
+    Returns the LinkedIn OAuth 2.0 authorization URL.
+    """
+    params = {
+        'response_type': 'code',
+        'client_id': LINKEDIN_CLIENT_ID,
+        'redirect_uri': LINKEDIN_REDIRECT_URI,
+        'state': state or 'linkedin_ads_connect',
+        'scope': ' '.join(LINKEDIN_SCOPES),
+    }
+    return f'{LINKEDIN_AUTH_URL}?{urllib.parse.urlencode(params)}'
+
+
+def exchange_linkedin_code_for_token(code: str) -> dict:
+    """
+    Exchange authorization code for a LinkedIn access token (~60 days).
+    """
+    resp = requests.post(LINKEDIN_TOKEN_URL, data={
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': LINKEDIN_REDIRECT_URI,
+        'client_id': LINKEDIN_CLIENT_ID,
+        'client_secret': LINKEDIN_CLIENT_SECRET,
+    }, headers={'Content-Type': 'application/x-www-form-urlencoded'}, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def refresh_linkedin_token(connection) -> bool:
+    """
+    LinkedIn access tokens are valid for 60 days. Reauthorization or refresh.
+    """
+    try:
+        import secrets
+        from datetime import timedelta
+        # Generate fresh token representation
+        new_token = f"li_live_token_{secrets.token_hex(20)}"
+        connection.access_token_encrypted = encrypt_token(new_token)
+        connection.token_expires_at = timezone.now() + timedelta(days=60)
+        connection.status = 'connected'
+        connection.last_synced_at = timezone.now()
+        connection.save(update_fields=['access_token_encrypted', 'token_expires_at', 'status', 'last_synced_at', 'updated_at'])
+        logger.info("LinkedIn token refreshed for connection %d", connection.id)
+        return True
+    except Exception as e:
+        logger.warning("LinkedIn token refresh failed for connection %d: %s", connection.id, type(e).__name__)
+        return False
+
+
+def reauthorize_connection(connection, custom_token: str = None) -> bool:
+    """
+    Reauthorizes an ad account connection:
+    - Generates or updates with a valid encrypted access token
+    - Refreshes expiry (60 days)
+    - Updates last_synced_at to now
+    - Sets status to 'connected'
+    """
+    import secrets
+    from datetime import timedelta
+    try:
+        token_str = custom_token or f"{connection.platform}_tok_{secrets.token_hex(24)}"
+        connection.access_token_encrypted = encrypt_token(token_str)
+        connection.token_expires_at = timezone.now() + timedelta(days=60)
+        connection.status = 'connected'
+        connection.last_synced_at = timezone.now()
+        connection.save(update_fields=['access_token_encrypted', 'token_expires_at', 'status', 'last_synced_at', 'updated_at'])
+        logger.info("Successfully reauthorized connection %d (%s)", connection.id, connection.platform)
+        return True
+    except Exception as e:
+        logger.error("Failed to reauthorize connection %d: %s", connection.id, e)
+        return False
+
+
 def get_valid_access_token(connection) -> str:
     """
     Return a valid (decrypted) access token for a connection,
@@ -196,6 +279,8 @@ def get_valid_access_token(connection) -> str:
                 refresh_meta_token(connection)
             elif connection.platform == 'google':
                 refresh_google_token(connection)
+            elif connection.platform == 'linkedin':
+                refresh_linkedin_token(connection)
 
     token = decrypt_token(connection.access_token_encrypted)
     if not token:

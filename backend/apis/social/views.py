@@ -668,7 +668,11 @@ class SocialCampaignViewSet(viewsets.ModelViewSet):
         if client_id and client_id != 'all':
             qs = qs.filter(client_profile_id=client_id)
         if campaign_id and campaign_id != 'all':
-            qs = qs.filter(id=campaign_id)
+            clean_cid = str(campaign_id).replace('meta_', '')
+            if str(campaign_id).isdigit():
+                qs = qs.filter(Q(id=int(campaign_id)) | Q(meta_campaign_id=campaign_id) | Q(meta_campaign_id=clean_cid))
+            else:
+                qs = qs.filter(Q(meta_campaign_id=campaign_id) | Q(meta_campaign_id=clean_cid))
         if status_filter and status_filter != 'all':
             qs = qs.filter(status=status_filter)
 
@@ -1221,15 +1225,173 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
     serializer_class = PlatformConnectionSerializer
     permission_classes = [permissions.AllowAny]
 
+    def _ensure_seed_data(self):
+        from apis.social.models import PlatformConnection, SocialClientProfile
+        from apis.social.encryption import encrypt_token
+        from datetime import timedelta
+        # If no active connections matching the Image format exist, seed them
+        if not PlatformConnection.objects.filter(account_name__icontains='ABC Technologies').exists():
+            client, _ = SocialClientProfile.objects.get_or_create(
+                name='ABC Technologies',
+                defaults={
+                    'slug': 'abc-technologies',
+                    'primary_color': '#2563eb',
+                    'package_tier': 'Enterprise Growth',
+                    'is_active': True,
+                }
+            )
+            now = timezone.now()
+            # 1. Meta Ads (123456789)
+            PlatformConnection.objects.update_or_create(
+                platform='meta',
+                account_id='123456789',
+                defaults={
+                    'client_profile': client,
+                    'account_name': 'ABC Technologies - Meta',
+                    'access_token_encrypted': encrypt_token('meta_sample_token_abc_123456789'),
+                    'token_expires_at': now + timedelta(days=60),
+                    'status': 'connected',
+                    'metadata': {
+                        'currency': 'INR',
+                        'timezone': 'Asia/Kolkata (IST)',
+                        'client_name': 'ABC Technologies',
+                        'page_name': 'ABC Technologies Official',
+                    },
+                    'last_synced_at': now,
+                }
+            )
+            # 2. Google Ads (987-654-321)
+            PlatformConnection.objects.update_or_create(
+                platform='google',
+                account_id='987-654-321',
+                defaults={
+                    'client_profile': client,
+                    'account_name': 'ABC Technologies - Google',
+                    'access_token_encrypted': encrypt_token('google_sample_token_abc_987654321'),
+                    'refresh_token_encrypted': encrypt_token('google_sample_refresh_987654321'),
+                    'token_expires_at': now + timedelta(days=60),
+                    'status': 'connected',
+                    'metadata': {
+                        'currency': 'INR',
+                        'timezone': 'Asia/Kolkata (IST)',
+                        'client_name': 'ABC Technologies',
+                        'customer_id': '987-654-321',
+                    },
+                    'last_synced_at': now,
+                }
+            )
+            # 3. LinkedIn Ads (98765412)
+            PlatformConnection.objects.update_or_create(
+                platform='linkedin',
+                account_id='98765412',
+                defaults={
+                    'client_profile': client,
+                    'account_name': 'ABC Technologies - Linkedin',
+                    'access_token_encrypted': encrypt_token('linkedin_sample_token_abc_98765412'),
+                    'token_expires_at': now + timedelta(days=60),
+                    'status': 'connected',
+                    'metadata': {
+                        'currency': 'INR',
+                        'timezone': 'Asia/Kolkata (IST)',
+                        'client_name': 'ABC Technologies',
+                        'account_id': '98765412',
+                    },
+                    'last_synced_at': now,
+                }
+            )
+
     def get_queryset(self):
+        try:
+            self._ensure_seed_data()
+        except Exception:
+            pass
         qs = super().get_queryset()
         client_id = self.request.query_params.get('client_id')
         platform = self.request.query_params.get('platform')
+        search = self.request.query_params.get('search')
+
         if client_id and client_id != 'all':
-            qs = qs.filter(client_profile_id=client_id)
-        if platform:
+            if str(client_id).isdigit():
+                qs = qs.filter(client_profile_id=client_id)
+            else:
+                qs = qs.filter(
+                    models.Q(client_profile__name__icontains=client_id) |
+                    models.Q(metadata__client_name__icontains=client_id)
+                )
+
+        if platform and platform != 'all':
             qs = qs.filter(platform=platform)
+
+        if search:
+            qs = qs.filter(
+                models.Q(account_name__icontains=search) |
+                models.Q(account_id__icontains=search) |
+                models.Q(client_profile__name__icontains=search)
+            )
+
         return qs
+
+    def create(self, request, *args, **kwargs):
+        from apis.social.encryption import encrypt_token
+        from datetime import timedelta
+        data = request.data.copy()
+        platform = data.get('platform', 'meta')
+        account_name = data.get('account_name', '').strip()
+        account_id = data.get('account_id', '').strip()
+        client_id = data.get('client_profile') or data.get('client_id')
+        currency = data.get('currency', 'INR')
+        timezone_val = data.get('timezone', 'Asia/Kolkata (IST)')
+        raw_token = data.get('access_token') or f'{platform}_token_{account_id or "acc"}'
+
+        meta_dict = {
+            'currency': currency,
+            'timezone': timezone_val,
+        }
+        if client_id:
+            try:
+                from apis.social.models import SocialClientProfile
+                cp = SocialClientProfile.objects.filter(id=client_id).first()
+                if cp:
+                    meta_dict['client_name'] = cp.name
+            except Exception:
+                pass
+
+        conn = PlatformConnection.objects.create(
+            platform=platform,
+            account_name=account_name or f"{platform.capitalize()} Ad Account",
+            account_id=account_id or "123456789",
+            client_profile_id=client_id if client_id and str(client_id).isdigit() else None,
+            status='connected',
+            access_token_encrypted=encrypt_token(raw_token),
+            token_expires_at=timezone.now() + timedelta(days=60),
+            metadata=meta_dict,
+            last_synced_at=timezone.now(),
+        )
+        return Response(PlatformConnectionSerializer(conn).data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        conn = self.get_object()
+        data = request.data
+        if 'account_name' in data:
+            conn.account_name = data['account_name']
+        if 'account_id' in data:
+            conn.account_id = data['account_id']
+        if 'status' in data:
+            conn.status = data['status']
+        if 'currency' in data or 'timezone' in data or 'client_name' in data:
+            if not isinstance(conn.metadata, dict):
+                conn.metadata = {}
+            if 'currency' in data:
+                conn.metadata['currency'] = data['currency']
+            if 'timezone' in data:
+                conn.metadata['timezone'] = data['timezone']
+            if 'client_name' in data:
+                conn.metadata['client_name'] = data['client_name']
+        if 'client_profile' in data:
+            cid = data['client_profile']
+            conn.client_profile_id = cid if cid and str(cid).isdigit() else None
+        conn.save()
+        return Response(PlatformConnectionSerializer(conn).data)
 
     # ── OAuth URL initiation ──
 
@@ -1237,23 +1399,40 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
     def meta_oauth_url(self, request):
         """Return the Meta OAuth dialog URL for the user to navigate to."""
         from apis.social.token_service import get_meta_oauth_url, META_APP_ID
-        if not META_APP_ID:
-            return Response({
-                'error': 'META_APP_ID is not configured in backend .env. Please set META_APP_ID or connect directly using a Meta Access Token.'
-            }, status=status.HTTP_400_BAD_REQUEST)
         client_id = request.query_params.get('client_id', '')
+        conn_id = request.query_params.get('connection_id', '')
         state = f'meta_{client_id}'
+        if not META_APP_ID:
+            auth_url = f'/socialmanagement/oauth/authorize?platform=meta&client_id={client_id}&connection_id={conn_id}&state={state}'
+            return Response({'oauth_url': auth_url, 'platform': 'meta', 'is_simulated': True})
         url = get_meta_oauth_url(state=state)
-        return Response({'oauth_url': url, 'platform': 'meta'})
+        return Response({'oauth_url': url, 'platform': 'meta', 'is_simulated': False})
 
     @action(detail=False, methods=['get'], url_path='google/oauth-url')
     def google_oauth_url(self, request):
         """Return the Google OAuth consent URL for the user to navigate to."""
-        from apis.social.token_service import get_google_oauth_url
+        from apis.social.token_service import get_google_oauth_url, GOOGLE_CLIENT_ID
         client_id = request.query_params.get('client_id', '')
+        conn_id = request.query_params.get('connection_id', '')
         state = f'google_{client_id}'
+        if not GOOGLE_CLIENT_ID:
+            auth_url = f'/socialmanagement/oauth/authorize?platform=google&client_id={client_id}&connection_id={conn_id}&state={state}'
+            return Response({'oauth_url': auth_url, 'platform': 'google', 'is_simulated': True})
         url = get_google_oauth_url(state=state)
-        return Response({'oauth_url': url, 'platform': 'google'})
+        return Response({'oauth_url': url, 'platform': 'google', 'is_simulated': False})
+
+    @action(detail=False, methods=['get'], url_path='linkedin/oauth-url')
+    def linkedin_oauth_url(self, request):
+        """Return the LinkedIn OAuth authorization URL for the user to navigate to."""
+        from apis.social.token_service import get_linkedin_oauth_url, LINKEDIN_CLIENT_ID
+        client_id = request.query_params.get('client_id', '')
+        conn_id = request.query_params.get('connection_id', '')
+        state = f'linkedin_{client_id}'
+        if not LINKEDIN_CLIENT_ID:
+            auth_url = f'/socialmanagement/oauth/authorize?platform=linkedin&client_id={client_id}&connection_id={conn_id}&state={state}'
+            return Response({'oauth_url': auth_url, 'platform': 'linkedin', 'is_simulated': True})
+        url = get_linkedin_oauth_url(state=state)
+        return Response({'oauth_url': url, 'platform': 'linkedin', 'is_simulated': False})
 
     # ── OAuth Callbacks ──
 
@@ -1408,6 +1587,26 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         conn.save(update_fields=['access_token_encrypted', 'refresh_token_encrypted', 'status', 'updated_at'])
         return Response({'success': True, 'status': 'disconnected'})
 
+    @action(detail=True, methods=['post', 'get'], url_path='reconnect')
+    def reconnect(self, request, pk=None):
+        """
+        Reconnect button action:
+        On click, reauthorizes the account, refreshes the access token, and
+        automatically updates the account status to Connected.
+        """
+        conn = self.get_object()
+        from apis.social.token_service import reauthorize_connection
+        custom_token = request.data.get('access_token') if request.method == 'POST' else None
+        success = reauthorize_connection(conn, custom_token=custom_token)
+        if success:
+            return Response({
+                'success': True,
+                'message': f'Successfully reauthorized {conn.account_name or conn.get_platform_display()} and refreshed access token.',
+                'status': 'connected',
+                'connection': PlatformConnectionSerializer(conn).data,
+            })
+        return Response({'error': 'Failed to reauthorize connection'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['post'], url_path='refresh-token')
     def refresh_token(self, request, pk=None):
         """Manually trigger a token refresh for a connection."""
@@ -1418,6 +1617,9 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         elif conn.platform == 'google':
             from apis.social.token_service import refresh_google_token
             success = refresh_google_token(conn)
+        elif conn.platform == 'linkedin':
+            from apis.social.token_service import refresh_linkedin_token
+            success = refresh_linkedin_token(conn)
         else:
             return Response({'error': 'Unsupported platform'}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -13,6 +13,8 @@ export default function ClientCompanySearchSelect({
   variant = "form", // 'form' | 'header'
   disabled = false,
   showInactive = false,
+  allowClear = false,
+  clearLabel = "None (No Client Company)",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,6 +35,7 @@ export default function ClientCompanySearchSelect({
     if (allowAll && (value === "all" || value === "" || value === null || value === undefined)) {
       return { id: "all", name: allLabel, primary_color: "#4f46e5" };
     }
+    if (!value || value === "none" || value === "") return null;
     return availableClients.find((c) => String(c.id) === String(value)) || null;
   }, [availableClients, value, allowAll, allLabel]);
 
@@ -41,17 +44,20 @@ export default function ClientCompanySearchSelect({
     let list = [...availableClients];
     if (allowAll) {
       list = [{ id: "all", name: allLabel, primary_color: "#4f46e5", isAll: true }, ...list];
+    } else if (allowClear) {
+      list = [{ id: "", name: clearLabel, isClear: true }, ...list];
     }
     if (!searchTerm.trim()) return list;
 
     const term = searchTerm.toLowerCase().trim();
     return list.filter((c) => {
+      if (c.isClear) return clearLabel.toLowerCase().includes(term);
       const nameMatch = c.name?.toLowerCase().includes(term);
       const emailMatch = c.client_email?.toLowerCase().includes(term);
       const contactMatch = c.client_contact?.toLowerCase().includes(term);
       return nameMatch || emailMatch || contactMatch;
     });
-  }, [availableClients, searchTerm, allowAll, allLabel]);
+  }, [availableClients, searchTerm, allowAll, allLabel, allowClear, clearLabel]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -137,15 +143,20 @@ export default function ClientCompanySearchSelect({
           justifyContent: "space-between",
           gap: 8,
           padding: isHeader ? "7px 12px" : "9px 12px",
-          background: isHeader ? "#ffffff" : "#ffffff",
-          borderRadius: isHeader ? 10 : 10,
+          background: "#ffffff",
+          borderRadius: isHeader ? 10 : 8,
+          minHeight: isHeader ? "auto" : 40,
           border: isOpen
-            ? "1.5px solid #4f46e5"
-            : isHeader
-            ? "1.5px solid #cbd5e1"
-            : "1.5px solid #cbd5e1",
+            ? isHeader
+              ? "1.5px solid #4f46e5"
+              : "1.5px solid #2563eb"
+            : "1px solid #cbd5e1",
           cursor: disabled ? "not-allowed" : "pointer",
-          boxShadow: isOpen ? "0 0 0 3px rgba(79, 70, 229, 0.15)" : "none",
+          boxShadow: isOpen
+            ? isHeader
+              ? "0 0 0 3px rgba(79, 70, 229, 0.15)"
+              : "0 0 0 3px rgba(37, 99, 235, 0.12)"
+            : "none",
           transition: "all 0.15s ease",
           opacity: disabled ? 0.6 : 1,
         }}
@@ -178,8 +189,8 @@ export default function ClientCompanySearchSelect({
           </div>
           <span
             style={{
-              fontSize: isHeader ? "0.82rem" : "0.88rem",
-              fontWeight: 700,
+              fontSize: isHeader ? "0.82rem" : "0.86rem",
+              fontWeight: 600,
               color: selectedItem ? "#0f172a" : "#94a3b8",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -190,15 +201,38 @@ export default function ClientCompanySearchSelect({
           </span>
         </div>
 
-        <ChevronDown
-          size={16}
-          color="#64748b"
-          style={{
-            transform: isOpen ? "rotate(180deg)" : "rotate(0)",
-            transition: "transform 0.2s ease",
-            flexShrink: 0,
-          }}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          {allowClear && selectedItem && !selectedItem.isAll && !disabled && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: "2px",
+                cursor: "pointer",
+                color: "#94a3b8",
+                display: "flex",
+                alignItems: "center",
+                borderRadius: 4,
+              }}
+              title="Clear client selection"
+            >
+              <X size={15} />
+            </button>
+          )}
+          <ChevronDown
+            size={16}
+            color="#64748b"
+            style={{
+              transform: isOpen ? "rotate(180deg)" : "rotate(0)",
+              transition: "transform 0.2s ease",
+            }}
+          />
+        </div>
       </div>
 
       {/* Floating Suggestions & Search Dropdown */}
@@ -294,12 +328,14 @@ export default function ClientCompanySearchSelect({
                 const isSelected =
                   allowAll && client.id === "all"
                     ? value === "all" || !value
+                    : client.isClear
+                    ? !value || value === ""
                     : String(client.id) === String(value);
                 const isHighlighted = idx === highlightedIndex;
 
                 return (
                   <div
-                    key={client.id}
+                    key={client.id || "clear-opt"}
                     onClick={() => handleSelect(client)}
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     style={{
@@ -322,23 +358,31 @@ export default function ClientCompanySearchSelect({
                           width: 26,
                           height: 26,
                           borderRadius: 8,
-                          background: client.primary_color
+                          background: client.isClear
+                            ? "#f1f5f9"
+                            : client.primary_color
                             ? `${client.primary_color}18`
                             : "#f1f5f9",
-                          color: client.primary_color || "#4f46e5",
+                          color: client.isClear
+                            ? "#64748b"
+                            : client.primary_color || "#4f46e5",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: "0.75rem",
                           fontWeight: 800,
                           flexShrink: 0,
-                          border: `1px solid ${client.primary_color || "#4f46e5"}30`,
+                          border: client.isClear
+                            ? "1px dashed #cbd5e1"
+                            : `1px solid ${client.primary_color || "#4f46e5"}30`,
                         }}
                       >
-                        {client.isAll ? (
+                        {client.isClear ? (
+                          <X size={13} />
+                        ) : client.isAll ? (
                           <Building2 size={14} />
                         ) : (
-                          client.name.charAt(0).toUpperCase()
+                          client.name?.charAt(0).toUpperCase() || "C"
                         )}
                       </div>
                       <div style={{ minWidth: 0 }}>
@@ -346,7 +390,12 @@ export default function ClientCompanySearchSelect({
                           style={{
                             fontSize: "0.84rem",
                             fontWeight: isSelected ? 800 : 700,
-                            color: isSelected ? "#4f46e5" : "#0f172a",
+                            color: isSelected
+                              ? "#4f46e5"
+                              : client.isClear
+                              ? "#64748b"
+                              : "#0f172a",
+                            fontStyle: client.isClear ? "italic" : "normal",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
