@@ -34,6 +34,7 @@ import SocialSettingsTab from "./components/SocialSettingsTab";
 import CreatePostModal from "./components/CreatePostModal";
 import AIAssistantModal from "./components/AIAssistantModal";
 import ClientCompanySearchSelect from "./components/ClientCompanySearchSelect";
+import MentionsBell from "./components/MentionsBell";
 import { SocialFeedbackHost } from "./components/SocialFeedback";
 
 function SocialManagementInner() {
@@ -65,6 +66,9 @@ function SocialManagementInner() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [prefilledPostData, setPrefilledPostData] = useState(null);
+
+  // Request to open a post's drawer (e.g. clicking an @mention): { postId, tab, nonce }
+  const [focusRequest, setFocusRequest] = useState(null);
 
   // Sync tab from URL if it changes
   useEffect(() => {
@@ -161,6 +165,15 @@ function SocialManagementInner() {
     setCreateModalOpen(true);
   };
 
+  const handleOpenMention = (mention) => {
+    setActiveMainModule("social");
+    // The post may belong to a client that's filtered out right now
+    if (selectedClientId !== "all" && String(selectedClientId) !== String(mention.client_id)) {
+      setSelectedClientId("all");
+    }
+    setFocusRequest({ postId: mention.post_id, tab: "comments", nonce: Date.now() });
+  };
+
   const handleApplyAiContent = ({ caption, hashtags }) => {
     setPrefilledPostData({
       primary_caption: caption,
@@ -202,6 +215,9 @@ function SocialManagementInner() {
             allLabel="All Client Companies"
             variant="header"
           />
+
+          {/* @mentions inbox */}
+          <MentionsBell onOpenMention={handleOpenMention} />
 
           {/* AI Content Studio button */}
           <button
@@ -307,6 +323,7 @@ function SocialManagementInner() {
             }}
             onOpenCreateWithAsset={handleOpenCreateWithAsset}
             onOpenAiStudio={() => setAiModalOpen(true)}
+            focusRequest={focusRequest}
           />
         )}
 

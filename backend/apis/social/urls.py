@@ -15,6 +15,8 @@ from apis.social.views import (
     CampaignPublishingViewSet,
     MistakeInsightsView,
     MistakeFixApplyView,
+    SocialMentionsView,
+    SocialTeamMembersView,
 )
 
 router = DefaultRouter()
@@ -34,6 +36,8 @@ urlpatterns = [
     path('insights/mistakes/', MistakeInsightsView.as_view(), name='social-mistake-insights'),
     path('insights/apply-fix/', MistakeFixApplyView.as_view(), name='social-mistake-apply-fix'),
     path('ai/', SocialAIView.as_view(), name='social-ai'),
+    path('mentions/', SocialMentionsView.as_view(), name='social-mentions'),
+    path('team-members/', SocialTeamMembersView.as_view(), name='social-team-members'),
     path('review/<str:token>/', PublicClientReviewView.as_view(), name='social-public-review'),
     path('', include(router.urls)),
 ]

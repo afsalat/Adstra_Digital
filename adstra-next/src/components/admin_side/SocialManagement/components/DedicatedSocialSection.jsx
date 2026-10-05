@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   FileText,
@@ -16,6 +16,7 @@ import {
 
 import WorkflowStageSection from "./WorkflowStageSection";
 import AnalyticsReportsTab from "./AnalyticsReportsTab";
+import { SOCIAL_KPIS, ownStageOf } from "./workflowUtils";
 
 const SOCIAL_STAGE_IDS = [
   "scripts",
@@ -40,6 +41,7 @@ export default function DedicatedSocialSection({
   onOpenCreatePost,
   onOpenCreateWithAsset,
   onOpenAiStudio,
+  focusRequest = null,
 }) {
   const searchParams = useSearchParams();
   const [socialSubTab, setSocialSubTab] = useState(
@@ -74,6 +76,38 @@ export default function DedicatedSocialSection({
     rejected: posts.filter((p) => p.status === "content_rejected").length,
   };
 
+  // Cross-stage quick filters (Overdue, Due this week, ...)
+  const [kpiFilter, setKpiFilter] = useState(null);
+  const kpiCounts = useMemo(() => {
+    const now = new Date();
+    const scoped = posts.filter((p) => selectedClientId === "all" || String(p.client_profile) === String(selectedClientId));
+    return Object.fromEntries(SOCIAL_KPIS.map((k) => [k.id, scoped.filter((p) => k.match(p, now)).length]));
+  }, [posts, selectedClientId]);
+
+  const openStage = (id) => {
+    setKpiFilter(null);
+    setSocialSubTab(id);
+  };
+
+  // Jump to the stage that owns a requested post (the stage section then opens its drawer)
+  const handledFocusRef = useRef(null);
+  useEffect(() => {
+    if (!focusRequest || handledFocusRef.current === focusRequest.nonce) return;
+    const target = posts.find((p) => p.id === focusRequest.postId);
+    if (!target) return; // posts may still be reloading after a client switch
+    handledFocusRef.current = focusRequest.nonce;
+    openStage(ownStageOf(target));
+  }, [focusRequest, posts]);
+
+  const toggleKpi = (id) => {
+    if (kpiFilter === id) {
+      setKpiFilter(null);
+      return;
+    }
+    if (socialSubTab === "reporting") setSocialSubTab("scripts");
+    setKpiFilter(id);
+  };
+
   // Main pipeline, left to right
   const pipelineSteps = [
     { id: "scripts", label: "Script", fullLabel: "Scripts & Content Ideation", icon: FileText, color: "#4f46e5" },
@@ -87,12 +121,41 @@ export default function DedicatedSocialSection({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* KPI strip: clickable quick filters across every stage */}
+      <div className="sm-kpi-strip no-print">
+        {SOCIAL_KPIS.map((kpi) => {
+          const KpiIcon = kpi.icon;
+          const isActive = kpiFilter === kpi.id;
+          const count = kpiCounts[kpi.id] || 0;
+          return (
+            <button
+              key={kpi.id}
+              type="button"
+              className={`sm-kpi ${isActive ? "active" : ""} ${count === 0 ? "is-zero" : ""}`}
+              style={{ "--kpi-color": kpi.color, "--kpi-bg": kpi.bg }}
+              onClick={() => toggleKpi(kpi.id)}
+              aria-pressed={isActive}
+              title={isActive ? "Click again to clear this filter" : kpi.desc}
+            >
+              <span className="sm-kpi-icon">
+                <KpiIcon size={18} />
+              </span>
+              <span className="sm-kpi-text">
+                <span className="sm-kpi-value">{count}</span>
+                <span className="sm-kpi-label">{kpi.label}</span>
+              </span>
+              <span className="sm-kpi-cta">{isActive ? "Clear ✕" : "View →"}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Workflow pipeline stepper + side sections (Rejected, Analytics) */}
       <div className="sm-pipeline no-print">
         <ol className="sm-pipeline-steps">
           {pipelineSteps.map((step, idx) => {
             const StepIcon = step.icon;
-            const isActive = socialSubTab === step.id;
+            const isActive = !kpiFilter && socialSubTab === step.id;
             const count = counts[step.id] || 0;
             return (
               <li key={step.id} className="sm-step-wrap">
@@ -100,7 +163,7 @@ export default function DedicatedSocialSection({
                   type="button"
                   className={`sm-step ${isActive ? "active" : ""} ${count > 0 ? "has-items" : ""}`}
                   style={{ "--step-color": step.color }}
-                  onClick={() => setSocialSubTab(step.id)}
+                  onClick={() => openStage(step.id)}
                   title={`${idx + 1}. ${step.fullLabel} · ${count} ${count === 1 ? "item" : "items"}`}
                   aria-current={isActive ? "step" : undefined}
                 >
@@ -116,8 +179,8 @@ export default function DedicatedSocialSection({
         <div className="sm-pipeline-side">
           <button
             type="button"
-            className={`sm-side-btn sm-side-rejected ${socialSubTab === "rejected" ? "active" : ""}`}
-            onClick={() => setSocialSubTab("rejected")}
+            className={`sm-side-btn sm-side-rejected ${!kpiFilter && socialSubTab === "rejected" ? "active" : ""}`}
+            onClick={() => openStage("rejected")}
             title="Content rejected outright by the client or team"
           >
             <Ban size={15} />
@@ -126,8 +189,8 @@ export default function DedicatedSocialSection({
           </button>
           <button
             type="button"
-            className={`sm-side-btn sm-side-reports ${socialSubTab === "reporting" ? "active" : ""}`}
-            onClick={() => setSocialSubTab("reporting")}
+            className={`sm-side-btn sm-side-reports ${!kpiFilter && socialSubTab === "reporting" ? "active" : ""}`}
+            onClick={() => openStage("reporting")}
             title="Analytics & Reports"
           >
             <BarChart2 size={15} />
@@ -138,7 +201,7 @@ export default function DedicatedSocialSection({
 
       {/* Sub-tab view: Active Workflow Section */}
       <div>
-        {socialSubTab === "reporting" ? (
+        {socialSubTab === "reporting" && !kpiFilter ? (
           <AnalyticsReportsTab selectedClientId={selectedClientId} clients={clients} posts={posts} />
         ) : (
           <WorkflowStageSection
@@ -149,7 +212,10 @@ export default function DedicatedSocialSection({
             selectedClientId={selectedClientId}
             onRefresh={onRefresh}
             onOpenCreatePost={onOpenCreatePost}
-            onNavigateStage={setSocialSubTab}
+            onNavigateStage={openStage}
+            kpiFilter={kpiFilter}
+            onClearKpi={() => setKpiFilter(null)}
+            focusRequest={focusRequest}
           />
         )}
       </div>

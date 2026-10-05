@@ -20,6 +20,8 @@ from apis.social.models import (
     PostApprovalHistory,
     SocialInboxMessage,
     SocialDailyAnalytics,
+    PostComment,
+    PostCommentMention,
 )
 from apis.social.serializers import (
     SocialClientProfileSerializer,
@@ -30,7 +32,10 @@ from apis.social.serializers import (
     PostApprovalHistorySerializer,
     SocialInboxMessageSerializer,
     SocialDailyAnalyticsSerializer,
+    PostCommentSerializer,
+    PostCommentMentionSerializer,
 )
+from apis.user.models import CustomUser
 from apis.social.services import (
     convert_inbox_to_crm_lead,
     record_approval_action,
@@ -222,7 +227,62 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-        return qs
+        return qs.annotate(comment_count=Count('comments', distinct=True))
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticated])
+    def comments(self, request, pk=None):
+        """GET: the post's comment thread (also marks your mentions on it read). POST: add a comment."""
+        post = self.get_object()
+        if request.method == 'GET':
+            PostCommentMention.objects.filter(user=request.user, comment__post=post, is_read=False).update(is_read=True)
+            qs = post.comments.select_related('author').prefetch_related('mentions')
+            return Response(PostCommentSerializer(qs, many=True, context={'request': request}).data)
+
+        body = (request.data.get('body') or '').strip()
+        if not body:
+            return Response({'error': 'Comment text is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(body) > 5000:
+            return Response({'error': 'Comments are limited to 5000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_ids = request.data.get('mention_ids') or []
+        if not isinstance(raw_ids, list):
+            return Response({'error': 'mention_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        mention_ids = {int(i) for i in raw_ids if str(i).isdigit()}
+
+        user = request.user
+        comment = PostComment.objects.create(
+            post=post,
+            author=user,
+            author_name=getattr(user, 'fullname', '') or user.username,
+            author_role=getattr(user, 'designation', '') or getattr(user, 'role', '') or '',
+            body=body,
+        )
+
+        # Only keep mentions whose @name is still in the text (the user may have deleted it after picking)
+        lowered = body.lower()
+        mentioned = [
+            u for u in CustomUser.objects.filter(id__in=mention_ids, is_active=True).exclude(id=user.id)
+            if f'@{(u.fullname or u.username).lower()}' in lowered or f'@{u.username.lower()}' in lowered
+        ]
+        PostCommentMention.objects.bulk_create([PostCommentMention(comment=comment, user=u) for u in mentioned])
+
+        return Response(PostCommentSerializer(comment, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=['delete'],
+        url_path=r'comments/(?P<comment_id>[0-9]+)',
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def delete_comment(self, request, pk=None, comment_id=None):
+        post = self.get_object()
+        comment = post.comments.filter(id=comment_id).first()
+        if not comment:
+            return Response({'error': 'Comment not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not PostCommentSerializer(comment, context={'request': request}).data['can_delete']:
+            return Response({'error': 'You can only delete your own comments.'}, status=status.HTTP_403_FORBIDDEN)
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
@@ -1269,6 +1329,47 @@ class SocialInboxViewSet(viewsets.ModelViewSet):
             'lead': LeadSerializer(lead).data,
             'inbox_message': SocialInboxMessageSerializer(msg).data,
         })
+
+
+class SocialMentionsView(APIView):
+    """The signed-in user's @mentions in post comments (newest first)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        qs = PostCommentMention.objects.filter(user=request.user).select_related('comment__post__client_profile')
+        unread_count = qs.filter(is_read=False).count()
+        if request.query_params.get('unread') in ('1', 'true'):
+            qs = qs.filter(is_read=False)
+        return Response({
+            'unread_count': unread_count,
+            'results': PostCommentMentionSerializer(qs[:50], many=True).data,
+        })
+
+    def post(self, request):
+        """Mark mentions read: {"ids": [...]} or {} for all."""
+        qs = PostCommentMention.objects.filter(user=request.user, is_read=False)
+        ids = request.data.get('ids')
+        if isinstance(ids, list):
+            qs = qs.filter(id__in=[i for i in ids if str(i).isdigit()])
+        return Response({'updated': qs.update(is_read=True)})
+
+
+class SocialTeamMembersView(APIView):
+    """Active team members who can be @mentioned."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        users = CustomUser.objects.filter(is_active=True).order_by('fullname', 'username')
+        return Response([
+            {
+                'id': u.id,
+                'name': u.fullname or u.username,
+                'username': u.username,
+                'role': u.role,
+                'designation': u.designation or '',
+            }
+            for u in users
+        ])
 
 
 class MistakeInsightsView(APIView):

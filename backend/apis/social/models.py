@@ -687,3 +687,45 @@ class SocialDailyAnalytics(models.Model):
 
     def __str__(self):
         return f'{self.client_profile.name} - {self.platform} on {self.date}'
+
+
+class PostComment(models.Model):
+    """Team discussion on a post, separate from the workflow timeline."""
+
+    post = models.ForeignKey(SocialPost, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='social_post_comments'
+    )
+    author_name = models.CharField(max_length=150)
+    author_role = models.CharField(max_length=50, blank=True)
+    body = models.TextField()
+    mentions = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='PostCommentMention',
+        related_name='social_comment_mentions',
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+    def __str__(self):
+        return f'{self.author_name} on post {self.post_id}: {self.body[:40]}'
+
+
+class PostCommentMention(models.Model):
+    """An @mention of a team member in a comment; doubles as their unread notification."""
+
+    comment = models.ForeignKey(PostComment, on_delete=models.CASCADE, related_name='mention_links')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='social_mentions')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        unique_together = ('comment', 'user')
