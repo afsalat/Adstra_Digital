@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 import {
   X,
   ChevronUp,
@@ -20,10 +22,12 @@ import {
   MessageSquare,
   History,
   RotateCcw,
+  Users,
 } from "lucide-react";
 import { renderPlatformIcon } from "./PlatformIcons";
 import { STAGE_LABELS } from "./WorkflowDecisionModals";
 import CommentThread from "./CommentThread";
+import { toast, apiErrorMessage } from "./SocialFeedback";
 import {
   FORMAT_META,
   PLATFORM_NAMES,
@@ -31,6 +35,9 @@ import {
   relativeTime,
   shortDate,
   plural,
+  ASSIGNEE_ROLES,
+  PRIORITY_META,
+  loadTeamMembers,
 } from "./workflowUtils";
 
 const isVideoUrl = (url, post) =>
@@ -75,7 +82,13 @@ export default function PostPreviewDrawer({
 }) {
   const [tab, setTab] = useState("overview");
   const [commentCount, setCommentCount] = useState(post?.comment_count || 0);
+  const [team, setTeam] = useState([]);
+  const [savingField, setSavingField] = useState(null);
   const bodyRef = useRef(null);
+
+  useEffect(() => {
+    loadTeamMembers().then(setTeam);
+  }, []);
 
   useEffect(() => {
     setCommentCount(post?.comment_count || 0);
@@ -134,6 +147,30 @@ export default function PostPreviewDrawer({
   const isLive = ["published", "archived"].includes(post.status);
   const hoursLeft = when ? (when.getTime() - Date.now()) / 3600000 : null;
   const dateTone = !when || isLive ? "#475569" : hoursLeft < 0 ? "#dc2626" : hoursLeft <= 24 ? "#d97706" : "#0284c7";
+
+  const saveOwner = async (role, value) => {
+    setSavingField(role);
+    try {
+      await axios.post(`${API_BASE_URL}/social/posts/${post.id}/assign/`, { role, user_id: value ? Number(value) : null });
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not update the assignment."));
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  const savePriority = async (value) => {
+    setSavingField("priority");
+    try {
+      await axios.post(`${API_BASE_URL}/social/posts/${post.id}/set_priority/`, { priority: value });
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not change priority."));
+    } finally {
+      setSavingField(null);
+    }
+  };
 
   return (
     <aside className="ppd-drawer no-print" role="dialog" aria-label={`Preview: ${post.title || "Untitled Post"}`}>
@@ -259,6 +296,49 @@ export default function PostPreviewDrawer({
                 </div>
               </div>
             )}
+
+            <Section icon={Users} title="Owners & priority">
+              <div className="ppd-owners">
+                {ASSIGNEE_ROLES.map((role) => {
+                  const current = post[role.id];
+                  const known = team.some((m) => m.id === current);
+                  const details = post[`${role.id}_details`];
+                  return (
+                    <label key={role.id} className="ppd-owner">
+                      <span>{role.label}</span>
+                      <select
+                        value={current || ""}
+                        disabled={savingField === role.id}
+                        onChange={(e) => saveOwner(role.id, e.target.value)}
+                      >
+                        <option value="">Unassigned</option>
+                        {current && !known && details && <option value={current}>{details.name}</option>}
+                        {team.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  );
+                })}
+                <label className="ppd-owner">
+                  <span>Priority</span>
+                  <select
+                    value={post.priority || "medium"}
+                    disabled={savingField === "priority"}
+                    onChange={(e) => savePriority(e.target.value)}
+                    style={{ color: (PRIORITY_META[post.priority] || PRIORITY_META.medium).color, fontWeight: 700 }}
+                  >
+                    {Object.entries(PRIORITY_META).map(([id, meta]) => (
+                      <option key={id} value={id}>
+                        {meta.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </Section>
 
             <Section icon={Paperclip} title={`Assets${media.length ? ` (${media.length})` : ""}`}>
               {media.length ? (

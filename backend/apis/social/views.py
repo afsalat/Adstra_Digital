@@ -227,7 +227,55 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
+        qs = qs.select_related('client_profile', 'campaign', 'created_by', 'assigned_to', 'writer', 'designer', 'reviewer')
+        if self.action == 'list':
+            # Only for the read-only list: detail actions append history and must not serialize a stale cache
+            qs = qs.prefetch_related('approval_history')
         return qs.annotate(comment_count=Count('comments', distinct=True))
+
+    ASSIGNABLE_ROLES = {'writer': 'Writer', 'designer': 'Designer', 'reviewer': 'Reviewer'}
+
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        """Set (or clear with user_id=null) the writer / designer / reviewer of a post."""
+        post = self.get_object()
+        role = request.data.get('role')
+        if role not in self.ASSIGNABLE_ROLES:
+            return Response({'error': 'role must be writer, designer or reviewer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_id = request.data.get('user_id')
+        assignee = None
+        if user_id not in (None, ''):
+            assignee = CustomUser.objects.filter(id=user_id, is_active=True).first()
+            if not assignee:
+                return Response({'error': 'That team member was not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if getattr(post, f'{role}_id') != (assignee.id if assignee else None):
+            setattr(post, role, assignee)
+            post.save(update_fields=[role, 'updated_at'])
+            label = self.ASSIGNABLE_ROLES[role]
+            user = request.user if request.user.is_authenticated else None
+            actor = getattr(user, 'fullname', '') or getattr(user, 'username', '') or 'Team Member'
+            note = f'{label}: {assignee.fullname or assignee.username}' if assignee else f'{label} unassigned'
+            record_approval_action(post, f'{label} Assigned' if assignee else f'{label} Unassigned', actor, 'Team Member', note, event_type='note')
+        post = self.get_queryset().get(pk=post.pk)
+        return Response(SocialPostSerializer(post, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def set_priority(self, request, pk=None):
+        post = self.get_object()
+        priority = request.data.get('priority')
+        valid = dict(SocialPost.PRIORITY_CHOICES)
+        if priority not in valid:
+            return Response({'error': f'priority must be one of: {", ".join(valid)}.'}, status=status.HTTP_400_BAD_REQUEST)
+        if post.priority != priority:
+            post.priority = priority
+            post.save(update_fields=['priority', 'updated_at'])
+            user = request.user if request.user.is_authenticated else None
+            actor = getattr(user, 'fullname', '') or getattr(user, 'username', '') or 'Team Member'
+            record_approval_action(post, 'Priority Changed', actor, 'Team Member', f'Priority set to {valid[priority]}', event_type='note')
+        post = self.get_queryset().get(pk=post.pk)
+        return Response(SocialPostSerializer(post, context={'request': request}).data)
 
     @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticated])
     def comments(self, request, pk=None):

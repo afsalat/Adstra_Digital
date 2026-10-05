@@ -43,6 +43,10 @@ import {
   Ban,
   Undo2,
   MessageSquare,
+  Flag,
+  UserPlus,
+  ArrowRightLeft,
+  CheckSquare,
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
@@ -54,6 +58,7 @@ import MediaPreviewModal from "./MediaPreviewModal";
 import { toast, confirmDialog, apiErrorMessage } from "./SocialFeedback";
 import { renderPlatformIcon } from "./PlatformIcons";
 import PostPreviewDrawer from "./PostPreviewDrawer";
+import { BulkAssignModal, BulkRescheduleModal } from "./BulkActionModals";
 import {
   STATUS_TO_STAGE,
   ownStageOf,
@@ -64,6 +69,11 @@ import {
   relativeTime,
   shortDate,
   KPI_BY_ID,
+  PIPELINE_STAGES,
+  pipelineProgress,
+  PRIORITY_META,
+  ASSIGNEE_ROLES,
+  initials,
 } from "./workflowUtils";
 import {
   RevisionRequestModal,
@@ -144,6 +154,15 @@ const scriptMatchesFilter = (bucket, filter) =>
   filter === "all" || (filter === "active" ? bucket === "draft" || bucket === "revision" : bucket === filter);
 
 const SCRIPT_EDITABLE_BUCKETS = ["draft", "revision", "under_review"];
+
+// Bulk "advance" from each stage: same transitions as the per-row primary buttons
+const BULK_ADVANCE = {
+  scripts: { target: "script_approval", label: "Submit all", verb: "submitted for approval", note: "Submitted script for internal review" },
+  script_approval: { target: "designing", label: "Approve all → Design", verb: "approved and moved to Designing", note: "Script approved, ready for design" },
+  designing: { target: "team_review", label: "Send all to QA", verb: "sent to Team Review", note: "Creative design attached, ready for QA", needsMedia: true },
+  team_review: { target: "client_review", label: "QA pass all → Client", verb: "sent to Client Review", note: "Team QA passed, sent to client review" },
+  client_review: { target: "approved", label: "Mark all approved", verb: "marked approved", note: "Client approved design & copy" },
+};
 
 // redo    = sent back with feedback and not yet resubmitted
 // revised = reworked and resubmitted at least once
@@ -239,11 +258,34 @@ export default function WorkflowStageSection({
   const previewPost = useMemo(() => posts.find((p) => p.id === previewPostId) || null, [posts, previewPostId]);
 
   const [previewTabRequest, setPreviewTabRequest] = useState(null);
+
+  // Row selection for bulk actions
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkModal, setBulkModal] = useState(null); // 'assign' | 'reschedule'
+  const [bulkBusy, setBulkBusy] = useState(null); // { label, done, total }
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
   const handledFocusRef = useRef(null);
 
   useEffect(() => {
     setPreviewPostId(null);
   }, [stageId, kpiFilter]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setMoveMenuOpen(false);
+  }, [stageId, kpiFilter, scriptSubFilter, viewMode]);
+
+  useEffect(() => {
+    if (!moveMenuOpen) return;
+    const close = (e) => !e.target.closest(".sm-bulk-menu-wrap") && setMoveMenuOpen(false);
+    const onKey = (e) => e.key === "Escape" && setMoveMenuOpen(false);
+    document.addEventListener("mousedown", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [moveMenuOpen]);
 
   // Open a specific post (e.g. from an @mention) once the parent has switched to its stage
   useEffect(() => {
@@ -444,6 +486,22 @@ export default function WorkflowStageSection({
     return stageBasePosts.filter((p) => getWorkKind(p).kind === workFilter);
   }, [stageBasePosts, showWorkKind, workFilter]);
 
+  // Only rows still visible count as selected (filters may hide some)
+  const selectedPosts = useMemo(() => stagePosts.filter((p) => selectedIds.has(p.id)), [stagePosts, selectedIds]);
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setSelectedIds((prev) =>
+      stagePosts.length && stagePosts.every((p) => prev.has(p.id)) ? new Set() : new Set(stagePosts.map((p) => p.id))
+    );
+
   const getActor = () => {
     let actorName = "Creative Team";
     let actorRole = "Team Member";
@@ -638,6 +696,154 @@ export default function WorkflowStageSection({
     setEditAnalytics(post.analytics || {});
   };
 
+  // Runs `task` for each post (4 at a time), then one refresh and one summary toast.
+  // Failed posts stay selected so they can be retried.
+  const runBulk = async (label, items, task, verb) => {
+    if (!items.length) return;
+    setMoveMenuOpen(false);
+    setBulkBusy({ label, done: 0, total: items.length });
+    const failures = [];
+    const queue = [...items];
+    let done = 0;
+    const worker = async () => {
+      while (queue.length) {
+        const post = queue.shift();
+        try {
+          await task(post);
+        } catch (err) {
+          failures.push({ post, message: apiErrorMessage(err, "request failed") });
+        }
+        done += 1;
+        setBulkBusy((b) => (b ? { ...b, done } : b));
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(4, items.length) }, worker));
+    setBulkBusy(null);
+    const ok = items.length - failures.length;
+    if (ok) toast.success(`${plural(ok, "post")} ${verb}.`, { title: label });
+    if (failures.length) {
+      const sample = failures
+        .slice(0, 3)
+        .map((f) => `"${f.post.title || "Untitled"}" (${f.message})`)
+        .join(", ");
+      toast.error(`${sample}${failures.length > 3 ? ` and ${failures.length - 3} more` : ""}`, {
+        title: `${plural(failures.length, "post")} could not be updated`,
+      });
+    }
+    setSelectedIds(new Set(failures.map((f) => f.post.id)));
+    onRefresh();
+  };
+
+  const transitionRequest = (post, target, actionType, notes) => {
+    const { actorName, actorRole } = getActor();
+    return axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
+      target_stage: target,
+      action_type: actionType,
+      notes,
+      actor_name: actorName,
+      actor_role: actorRole,
+    });
+  };
+
+  // Which selected posts the "advance" button applies to (each post moves on from its own stage)
+  const bulkAdvance = useMemo(() => {
+    const eligible = [];
+    const skipped = { stage: 0, media: 0 };
+    selectedPosts.forEach((p) => {
+      const own = ownStageOf(p);
+      const rule = BULK_ADVANCE[own];
+      if (!rule || (listStage !== "kpi" && own !== stageId)) skipped.stage += 1;
+      else if (rule.needsMedia && !(p.media_urls || []).length) skipped.media += 1;
+      else eligible.push(p);
+    });
+    const rule = listStage === "kpi" ? null : BULK_ADVANCE[stageId];
+    return {
+      eligible,
+      skipped,
+      label: rule ? rule.label : "Advance all →",
+      visible: listStage === "kpi" ? eligible.length > 0 : Boolean(rule),
+    };
+  }, [selectedPosts, listStage, stageId]);
+
+  const handleBulkAdvance = async () => {
+    const { eligible, skipped, label } = bulkAdvance;
+    if (!eligible.length) {
+      toast.warning(
+        skipped.media
+          ? "None of the selected designs have a deliverable uploaded yet."
+          : "None of the selected posts are in a stage that can be advanced from here.",
+        { title: "Nothing to submit" }
+      );
+      return;
+    }
+    const notes = [];
+    if (skipped.stage) notes.push(`${plural(skipped.stage, "post")} not in this stage will be skipped.`);
+    if (skipped.media) notes.push(`${plural(skipped.media, "design")} without an uploaded deliverable will be skipped.`);
+    const ok = await confirmDialog({
+      title: `${label.replace(/ →.*$/, "")}?`,
+      message: `${plural(eligible.length, "post")} will move to the next stage.${notes.length ? ` ${notes.join(" ")}` : ""}`,
+      confirmLabel: `${label.replace(/ →.*$/, "")} (${eligible.length})`,
+    });
+    if (!ok) return;
+    runBulk(
+      label,
+      eligible,
+      (post) => {
+        const rule = BULK_ADVANCE[ownStageOf(post)];
+        return transitionRequest(post, rule.target, "advance", `${rule.note} (bulk action)`);
+      },
+      listStage === "kpi" ? "moved to their next stage" : BULK_ADVANCE[stageId].verb
+    );
+  };
+
+  const handleBulkMove = async (stage) => {
+    const items = selectedPosts.filter((p) => ownStageOf(p) !== stage.id);
+    const already = selectedPosts.length - items.length;
+    if (!items.length) {
+      toast.info(`All selected posts are already in ${stage.label}.`);
+      return;
+    }
+    const ok = await confirmDialog({
+      title: `Move to ${stage.label}?`,
+      message: `${plural(items.length, "post")} will be moved straight to ${stage.label}, skipping the normal review buttons. Each move is recorded on the post's timeline.${
+        already ? ` ${plural(already, "post")} already there will be left alone.` : ""
+      }`,
+      confirmLabel: `Move ${plural(items.length, "post")}`,
+    });
+    if (!ok) return;
+    runBulk(
+      "Move to stage",
+      items,
+      (post) => transitionRequest(post, stage.status, "move", `Moved to ${stage.label} (bulk action)`),
+      `moved to ${stage.label}`
+    );
+  };
+
+  const handleBulkAssign = (role, userId) => {
+    setBulkModal(null);
+    const roleLabel = ASSIGNEE_ROLES.find((r) => r.id === role)?.label || role;
+    runBulk(
+      "Assign",
+      selectedPosts,
+      (post) => axios.post(`${API_BASE_URL}/social/posts/${post.id}/assign/`, { role, user_id: userId }),
+      userId === null ? `had their ${roleLabel.toLowerCase()} cleared` : `assigned a ${roleLabel.toLowerCase()}`
+    );
+  };
+
+  const handleBulkReschedule = ({ mode, at, days }) => {
+    setBulkModal(null);
+    const items = mode === "shift" ? selectedPosts.filter((p) => p.scheduled_at) : selectedPosts;
+    runBulk(
+      "Reschedule",
+      items,
+      (post) => {
+        const next = mode === "shift" ? new Date(new Date(post.scheduled_at).getTime() + days * 86400000) : at;
+        return axios.post(`${API_BASE_URL}/social/posts/${post.id}/reschedule/`, { scheduled_at: next.toISOString() });
+      },
+      mode === "shift" ? `shifted ${days > 0 ? "later" : "earlier"} by ${plural(Math.abs(days), "day")}` : `rescheduled to ${shortDate(at, true)}`
+    );
+  };
+
   const actionHandlers = {
     onTransition: handleTransition,
     onPublishNow: handlePublishNow,
@@ -670,7 +876,7 @@ export default function WorkflowStageSection({
   );
 
   const anyModalOpen = Boolean(
-    modalAction || decision || scriptModalOpen || timelinePost || viewingScriptPost || viewingWorkDetailsPost || previewingMediaPost
+    modalAction || decision || scriptModalOpen || timelinePost || viewingScriptPost || viewingWorkDetailsPost || previewingMediaPost || bulkModal
   );
 
   const StageIcon = stageMeta.icon;
@@ -1049,6 +1255,9 @@ export default function WorkflowStageSection({
               selectedPostId={previewPost ? previewPost.id : null}
               onOpenPreview={(post) => setPreviewPostId(post.id)}
               renderActions={renderStageActions}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleSelectAll={toggleSelectAll}
               {...actionHandlers}
             />
           )}
@@ -1911,6 +2120,65 @@ export default function WorkflowStageSection({
         />
       )}
 
+      {/* Bulk action bar */}
+      {viewMode === "listing" && selectedPosts.length > 0 && (
+        <div className={`sm-bulk-bar no-print ${previewPost ? "with-drawer" : ""}`} role="toolbar" aria-label="Bulk actions">
+          <span className="sm-bulk-count">
+            <CheckSquare size={16} /> {selectedPosts.length} selected
+          </span>
+          {bulkBusy ? (
+            <span className="sm-bulk-progress">
+              {bulkBusy.label}… {bulkBusy.done}/{bulkBusy.total}
+              <span className="sm-bulk-progress-track">
+                <span style={{ width: `${(bulkBusy.done / bulkBusy.total) * 100}%` }} />
+              </span>
+            </span>
+          ) : (
+            <>
+              {bulkAdvance.visible && (
+                <button type="button" className="sm-bulk-btn primary" onClick={handleBulkAdvance} style={{ background: stageMeta.color }}>
+                  <Send size={14} /> {bulkAdvance.label}
+                  {bulkAdvance.eligible.length !== selectedPosts.length && ` (${bulkAdvance.eligible.length})`}
+                </button>
+              )}
+              <button type="button" className="sm-bulk-btn" onClick={() => setBulkModal("assign")}>
+                <UserPlus size={14} /> Assign to…
+              </button>
+              <button type="button" className="sm-bulk-btn" onClick={() => setBulkModal("reschedule")}>
+                <CalendarIcon size={14} /> Reschedule
+              </button>
+              <div className="sm-bulk-menu-wrap">
+                <button type="button" className={`sm-bulk-btn ${moveMenuOpen ? "open" : ""}`} onClick={() => setMoveMenuOpen((o) => !o)} aria-expanded={moveMenuOpen}>
+                  <ArrowRightLeft size={14} /> Move to <ChevronDown size={13} />
+                </button>
+                {moveMenuOpen && (
+                  <ul className="sm-bulk-menu" role="menu">
+                    {PIPELINE_STAGES.filter((st) => st.id !== "published").map((st) => (
+                      <li key={st.id}>
+                        <button type="button" role="menuitem" onClick={() => handleBulkMove(st)}>
+                          <span className="sm-bulk-menu-dot" style={{ background: (STAGE_COLORS[st.id] || STAGE_COLORS.scripts).color }} />
+                          {st.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <button type="button" className="sm-bulk-btn ghost" onClick={() => setSelectedIds(new Set())} title="Clear selection">
+                <X size={15} />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {bulkModal === "assign" && (
+        <BulkAssignModal count={selectedPosts.length} onClose={() => setBulkModal(null)} onConfirm={handleBulkAssign} />
+      )}
+      {bulkModal === "reschedule" && (
+        <BulkRescheduleModal posts={selectedPosts} onClose={() => setBulkModal(null)} onConfirm={handleBulkReschedule} />
+      )}
+
       {/* Row preview drawer */}
       {previewPost && viewMode === "listing" && (
         <PostPreviewDrawer
@@ -1929,6 +2197,50 @@ export default function WorkflowStageSection({
       )}
 
     </div>
+  );
+}
+
+// Seven-segment bar showing how far a post is through the pipeline
+function PipelineProgressBar({ post }) {
+  const { index, total, rejected } = pipelineProgress(post);
+  const done = post.status === "published" || post.status === "archived";
+  const color = rejected ? "#dc2626" : done ? "#10b981" : (STAGE_COLORS[PIPELINE_STAGES[index].id] || STAGE_COLORS.scripts).color;
+  return (
+    <span
+      className="sm-progress"
+      title={rejected ? `Rejected at ${PIPELINE_STAGES[index].label}` : `Step ${index + 1} of ${total}: ${PIPELINE_STAGES[index].label}`}
+    >
+      <span className="sm-progress-track">
+        {PIPELINE_STAGES.map((st, i) => (
+          <span key={st.id} style={{ background: i <= index ? color : undefined }} />
+        ))}
+      </span>
+      <span className="sm-progress-label" style={{ color }}>
+        {rejected ? "Dropped" : `${index + 1}/${total}`}
+      </span>
+    </span>
+  );
+}
+
+// Overlapping writer / designer / reviewer avatars; empty roles show a dashed placeholder
+function AssigneeAvatars({ post }) {
+  return (
+    <span className="sm-avatars">
+      {ASSIGNEE_ROLES.map((role) => {
+        const fallback = role.id === "writer" && !post.writer_details ? post.created_by_details : null;
+        const person = post[`${role.id}_details`] || fallback;
+        const name = person?.name || person?.fullname || person?.username;
+        return name ? (
+          <span key={role.id} className={`sm-avatar sm-avatar-${role.id}`} title={`${role.label}: ${name}${fallback ? " (creator)" : ""}`}>
+            {initials(name)}
+          </span>
+        ) : (
+          <span key={role.id} className="sm-avatar sm-avatar-empty" title={`No ${role.label.toLowerCase()} assigned — open the post to assign`}>
+            {role.short}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
@@ -1957,7 +2269,14 @@ function StageListingTable({
   selectedPostId = null,
   onOpenPreview,
   renderActions,
+  selectedIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll,
 }) {
+  const allChecked = stagePosts.length > 0 && stagePosts.every((p) => selectedIds.has(p.id));
+  const someChecked = !allChecked && stagePosts.some((p) => selectedIds.has(p.id));
+  const thStyle = { padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" };
+
   return (
     <div
       style={{
@@ -1968,15 +2287,27 @@ function StageListingTable({
       }}
     >
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", minWidth: 880, borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
+        <table style={{ width: "100%", minWidth: 1020, borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
           <thead>
             <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+              <th style={{ ...thStyle, width: 40, padding: "14px 0 14px 16px" }}>
+                <input
+                  type="checkbox"
+                  className="sm-row-check"
+                  style={{ accentColor: stageMeta.color }}
+                  checked={allChecked}
+                  ref={(el) => el && (el.indeterminate = someChecked)}
+                  onChange={() => onToggleSelectAll && onToggleSelectAll()}
+                  aria-label="Select all rows"
+                />
+              </th>
               <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 230 }}>
                 Post & Content
               </th>
               <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 140, whiteSpace: "nowrap" }}>
                 Client
               </th>
+              <th style={{ ...thStyle, width: 100 }}>Team</th>
               <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 80, whiteSpace: "nowrap" }}>
                 Format
               </th>
@@ -2000,7 +2331,9 @@ function StageListingTable({
               const StageIcon = stageMeta.icon;
               const kindStyle = showWorkKind ? WORK_KIND_STYLE[getWorkKind(post).kind] : null;
               const isSelected = selectedPostId === post.id;
-              const rowBg = isSelected ? "#eef2ff" : kindStyle?.rowBg || "transparent";
+              const isChecked = selectedIds.has(post.id);
+              const rowBg = isSelected ? "#eef2ff" : isChecked ? "#f5f7ff" : kindStyle?.rowBg || "transparent";
+              const priority = PRIORITY_META[post.priority];
 
               return (
                 <tr
@@ -2018,6 +2351,17 @@ function StageListingTable({
                   onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = rowBg)}
                 >
+                  <td style={{ padding: "14px 0 14px 16px", verticalAlign: "middle", width: 40 }}>
+                    <input
+                      type="checkbox"
+                      className="sm-row-check"
+                      style={{ accentColor: stageMeta.color }}
+                      checked={isChecked}
+                      onChange={() => onToggleSelect && onToggleSelect(post.id)}
+                      aria-label={`Select ${post.title || "post"}`}
+                    />
+                  </td>
+
                   {/* 1. Post & Content */}
                   <td style={{ padding: "14px 20px", verticalAlign: "middle", boxShadow: isSelected ? `inset 4px 0 0 ${stageMeta.color}` : kindStyle?.bar ? `inset 4px 0 0 ${kindStyle.bar}` : "none" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2107,15 +2451,12 @@ function StageListingTable({
                             flexWrap: "wrap",
                           }}
                         >
-                          <span>{post.title || "Untitled Post"}</span>
-                          {post.comment_count > 0 && (
-                            <span
-                              title={`${plural(post.comment_count, "comment")} — click to open`}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.7rem", fontWeight: 700, color: "#64748b" }}
-                            >
-                              <MessageSquare size={12} /> {post.comment_count}
+                          {priority && ["urgent", "high"].includes(post.priority) && (
+                            <span title={`${priority.label} priority`} style={{ display: "inline-flex", color: priority.color, marginRight: -3 }}>
+                              <Flag size={13} fill={priority.color} />
                             </span>
                           )}
+                          <span>{post.title || "Untitled Post"}</span>
                           {stageId === "kpi" && (
                             <span
                               style={{
@@ -2178,13 +2519,24 @@ function StageListingTable({
                           {post.primary_caption || post.script_notes || "No draft caption"}
                         </div>
 
-                        {/* Revision round badge */}
-                        {(post.revision_count || 0) > 0 && rowStage !== "rejected" && !showWorkKind && (
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 4, marginRight: 6, fontSize: "0.68rem", fontWeight: 800, color: post.revision_count >= 3 ? "#b91c1c" : "#92400e", background: post.revision_count >= 3 ? "#fef2f2" : "#fffbeb", border: `1px solid ${post.revision_count >= 3 ? "#fecaca" : "#fde68a"}`, padding: "2px 7px", borderRadius: 6 }} title={`${post.revision_count} revision round(s), ${post.client_revision_count || 0} requested by client`}>
-                            <RotateCcw size={11} /> Round {post.revision_count}
-                            {(post.client_revision_count || 0) > 0 && <span style={{ fontWeight: 700 }}>• {post.client_revision_count} client</span>}
-                          </div>
-                        )}
+                        {/* Pipeline progress · comments · revision rounds */}
+                        <div className="sm-row-meta">
+                          <PipelineProgressBar post={post} />
+                          {post.comment_count > 0 && (
+                            <span className="sm-row-chip" title={plural(post.comment_count, "comment")}>
+                              <MessageSquare size={11} /> {post.comment_count}
+                            </span>
+                          )}
+                          {(post.revision_count || 0) > 0 && rowStage !== "rejected" && !showWorkKind && (
+                            <span
+                              className={`sm-row-chip ${post.revision_count >= 3 ? "danger" : "warn"}`}
+                              title={`${post.revision_count} revision round(s), ${post.client_revision_count || 0} requested by client`}
+                            >
+                              <RotateCcw size={11} /> Round {post.revision_count}
+                              {(post.client_revision_count || 0) > 0 && ` · ${post.client_revision_count} client`}
+                            </span>
+                          )}
+                        </div>
 
                         {/* Rejected tab: full rejection summary */}
                         {rowStage === "rejected" && (
@@ -2268,6 +2620,11 @@ function StageListingTable({
                     >
                       {post.client_name || "Adstra Client"}
                     </span>
+                  </td>
+
+                  {/* Team: writer / designer / reviewer */}
+                  <td style={{ padding: "14px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                    <AssigneeAvatars post={post} />
                   </td>
 
                   {/* 3. Format */}

@@ -1,3 +1,5 @@
+import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 import {
   AlertTriangle,
   CalendarClock,
@@ -35,6 +37,61 @@ export function ownStageOf(post) {
     return post.client_feedback?.toLowerCase().includes("script") ? "scripts" : "designing";
   }
   return STATUS_TO_STAGE[post.status] || "scripts";
+}
+
+// Main pipeline order, used for row progress bars and bulk "Move to stage"
+export const PIPELINE_STAGES = [
+  { id: "scripts", label: "Script", status: "script" },
+  { id: "script_approval", label: "Approval", status: "script_approval" },
+  { id: "designing", label: "Design", status: "designing" },
+  { id: "team_review", label: "Team Review", status: "team_review" },
+  { id: "client_review", label: "Client Review", status: "client_review" },
+  { id: "post_schedule", label: "Scheduled", status: "approved" },
+  { id: "published", label: "Published", status: "published" },
+];
+
+// Position in the pipeline (rejected posts report where they were dropped)
+export function pipelineProgress(post) {
+  const rejected = post.status === "content_rejected";
+  const stage = rejected ? STATUS_TO_STAGE[post.rejected_from_stage] || "scripts" : ownStageOf(post);
+  const index = Math.max(0, PIPELINE_STAGES.findIndex((s) => s.id === stage));
+  return { index, total: PIPELINE_STAGES.length, rejected };
+}
+
+export const PRIORITY_META = {
+  urgent: { label: "Urgent", color: "#dc2626", bg: "#fef2f2" },
+  high: { label: "High", color: "#ea580c", bg: "#fff7ed" },
+  medium: { label: "Medium", color: "#64748b", bg: "#f1f5f9" },
+  low: { label: "Low", color: "#94a3b8", bg: "#f8fafc" },
+};
+
+export const ASSIGNEE_ROLES = [
+  { id: "writer", label: "Writer", short: "W" },
+  { id: "designer", label: "Designer", short: "D" },
+  { id: "reviewer", label: "Reviewer", short: "R" },
+];
+
+export const initials = (name = "") =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("") || "?";
+
+// Active team members (for @mentions and assignment) — fetched once per page load
+let teamMembersPromise = null;
+export function loadTeamMembers() {
+  if (!teamMembersPromise) {
+    teamMembersPromise = axios
+      .get(`${API_BASE_URL}/social/team-members/`)
+      .then((res) => (Array.isArray(res.data) ? res.data : []))
+      .catch(() => {
+        teamMembersPromise = null;
+        return [];
+      });
+  }
+  return teamMembersPromise;
 }
 
 export const STAGE_COLORS = {

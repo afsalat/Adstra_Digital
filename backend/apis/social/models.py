@@ -496,6 +496,16 @@ class SocialPost(models.Model):
         blank=True,
         related_name='created_social_posts'
     )
+    # Per-role owners shown as avatars on the workflow board
+    writer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='written_social_posts'
+    )
+    designer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='designed_social_posts'
+    )
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_social_posts'
+    )
     checklist = models.JSONField(default=list, blank=True)
     script_data = models.JSONField(default=dict, blank=True)
     client_approval_token = models.CharField(max_length=64, blank=True, db_index=True)

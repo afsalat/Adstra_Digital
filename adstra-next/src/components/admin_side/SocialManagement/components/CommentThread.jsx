@@ -5,30 +5,7 @@ import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import { Send, Trash2, AtSign } from "lucide-react";
 import { toast, confirmDialog, apiErrorMessage } from "./SocialFeedback";
-import { relativeTime } from "./workflowUtils";
-
-// Team list is the same for every post — fetch once per page load
-let teamMembersPromise = null;
-function loadTeamMembers() {
-  if (!teamMembersPromise) {
-    teamMembersPromise = axios
-      .get(`${API_BASE_URL}/social/team-members/`)
-      .then((res) => (Array.isArray(res.data) ? res.data : []))
-      .catch(() => {
-        teamMembersPromise = null;
-        return [];
-      });
-  }
-  return teamMembersPromise;
-}
-
-const initials = (name = "") =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("") || "?";
+import { relativeTime, initials, loadTeamMembers } from "./workflowUtils";
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 

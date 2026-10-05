@@ -175,6 +175,9 @@ class SocialPostSerializer(serializers.ModelSerializer):
     approval_history = PostApprovalHistorySerializer(many=True, read_only=True)
     created_by_details = UserMiniSerializer(source='created_by', read_only=True)
     assigned_to_details = UserMiniSerializer(source='assigned_to', read_only=True)
+    writer_details = UserMiniSerializer(source='writer', read_only=True)
+    designer_details = UserMiniSerializer(source='designer', read_only=True)
+    reviewer_details = UserMiniSerializer(source='reviewer', read_only=True)
     comment_count = serializers.SerializerMethodField()
 
     class Meta:
