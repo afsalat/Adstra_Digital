@@ -188,6 +188,7 @@ class PlatformConnection(models.Model):
     PLATFORM_CHOICES = [
         ('meta', 'Meta Ads (Facebook / Instagram)'),
         ('google', 'Google Ads'),
+        ('linkedin', 'LinkedIn Ads'),
     ]
 
     STATUS_CHOICES = [
@@ -246,6 +247,7 @@ class CampaignPlatform(models.Model):
     PLATFORM_CHOICES = [
         ('meta', 'Meta Ads'),
         ('google', 'Google Ads'),
+        ('linkedin', 'LinkedIn Ads'),
     ]
 
     PUBLISH_STATUS_CHOICES = [

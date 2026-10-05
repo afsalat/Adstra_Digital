@@ -187,6 +187,10 @@ class PlatformConnectionSerializer(serializers.ModelSerializer):
     Tokens are EXCLUDED from output - never exposed to the frontend.
     """
     platform_display = serializers.CharField(source='get_platform_display', read_only=True)
+    client_name = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
+    timezone = serializers.SerializerMethodField()
+    connected_on_display = serializers.SerializerMethodField()
     is_token_valid = serializers.SerializerMethodField()
 
     class Meta:
@@ -194,6 +198,28 @@ class PlatformConnectionSerializer(serializers.ModelSerializer):
         exclude = ['access_token_encrypted', 'refresh_token_encrypted']
         extra_kwargs = {
             'metadata': {'read_only': True},
+        }
+
+    def get_client_name(self, obj):
+        if obj.client_profile:
+            return obj.client_profile.name
+        return obj.metadata.get('client_name', 'ABC Technologies')
+
+    def get_currency(self, obj):
+        return obj.metadata.get('currency', 'INR')
+
+    def get_timezone(self, obj):
+        return obj.metadata.get('timezone', 'Asia/Kolkata (IST)')
+
+    def get_connected_on_display(self, obj):
+        dt = obj.last_synced_at or obj.created_at
+        if not dt:
+            return {'date': '25 Apr 2025', 'time': '10:32 AM'}
+        from django.utils import timezone as dj_tz
+        local_dt = dj_tz.localtime(dt)
+        return {
+            'date': local_dt.strftime('%d %b %Y'),
+            'time': local_dt.strftime('%I:%M %p')
         }
 
     def get_is_token_valid(self, obj):

@@ -1,0 +1,1626 @@
+/* ==========================================================================
+   Meta Ads Manager — Audience Section Styles
+   Pixel-perfect replica of Meta Ads Manager Audience View
+   ========================================================================== */
+
+.meta-aud-root {
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1c1e21;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #ced0d4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.meta-aud-root * {
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Top Header Bar (Meta Logo, "Audience", Account Switcher, Standard View Btn)
+   -------------------------------------------------------------------------- */
+.meta-aud-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e4e6eb;
+  background: #ffffff;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.meta-aud-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.meta-aud-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0064e1;
+}
+
+.meta-aud-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1c1e21;
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Account selector dropdown pill */
+.meta-aud-acct-pill-wrapper {
+  position: relative;
+}
+
+.meta-aud-acct-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f0f2f5;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #1c1e21;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  max-width: 320px;
+}
+
+.meta-aud-acct-pill:hover {
+  background: #e4e6eb;
+  border-color: #bec3c9;
+}
+
+.meta-aud-acct-pill-id {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta-aud-acct-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 340px;
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  padding: 6px 0;
+  animation: metaAudSlideDown 0.15s ease-out;
+}
+
+@keyframes metaAudSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.meta-aud-acct-dropdown-header {
+  padding: 8px 14px 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #65676b;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.meta-aud-acct-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  font-size: 0.84rem;
+}
+
+.meta-aud-acct-item:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-acct-item.active {
+  background: #ebf5ff;
+  color: #0064e1;
+  font-weight: 600;
+}
+
+.meta-aud-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meta-aud-switch-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #1c1e21;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-aud-switch-view-btn:hover {
+  background: #f0f2f5;
+  border-color: #bec3c9;
+}
+
+/* --------------------------------------------------------------------------
+   Filter Pills Bar (All audiences, Active ads, Action needed, Unlabelled)
+   -------------------------------------------------------------------------- */
+.meta-aud-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 8px;
+  background: #ffffff;
+  overflow-x: auto;
+}
+
+.meta-aud-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid #ced0d4;
+  background: #ffffff;
+  color: #4b4f56;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.meta-aud-tab-btn:hover {
+  background: #f2f4f7;
+  border-color: #bec3c9;
+  color: #1c1e21;
+}
+
+.meta-aud-tab-btn.active {
+  background: #ebf5ff;
+  border-color: #0064e1;
+  color: #0064e1;
+}
+
+.meta-aud-tab-badge {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #e4e6eb;
+  color: #4b4f56;
+}
+
+.meta-aud-tab-btn.active .meta-aud-tab-badge {
+  background: #0064e1;
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Search Bar (Full width input)
+   -------------------------------------------------------------------------- */
+.meta-aud-search-row {
+  padding: 6px 20px 10px;
+  background: #ffffff;
+}
+
+.meta-aud-search-box {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.meta-aud-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #65676b;
+  pointer-events: none;
+}
+
+.meta-aud-search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 36px 0 36px;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  color: #1c1e21;
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.meta-aud-search-input:focus {
+  border-color: #0064e1;
+  box-shadow: 0 0 0 2px rgba(0, 100, 225, 0.2);
+}
+
+.meta-aud-search-input::placeholder {
+  color: #8a8d91;
+}
+
+.meta-aud-search-clear {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #8a8d91;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.meta-aud-search-clear:hover {
+  background: #f0f2f5;
+  color: #1c1e21;
+}
+
+/* --------------------------------------------------------------------------
+   Action / Controls Bar (Create Audience, Edit, Delete, Filter, Columns)
+   -------------------------------------------------------------------------- */
+.meta-aud-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 12px;
+  background: #ffffff;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.meta-aud-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-aud-create-dropdown-wrap {
+  position: relative;
+}
+
+.meta-aud-btn-create-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #0064e1;
+  border: 1px solid #0064e1;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.meta-aud-btn-create-primary:hover {
+  background: #0053ba;
+  border-color: #0053ba;
+}
+
+.meta-aud-create-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 320px;
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  z-index: 120;
+  padding: 6px;
+  animation: metaAudSlideDown 0.15s ease-out;
+}
+
+.meta-aud-create-menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-align: left;
+  border: none;
+  background: transparent;
+  width: 100%;
+}
+
+.meta-aud-create-menu-item:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-create-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #ebf5ff;
+  color: #0064e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.meta-aud-create-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-aud-create-item-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1c1e21;
+}
+
+.meta-aud-create-item-desc {
+  font-size: 0.74rem;
+  color: #65676b;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.meta-aud-btn-icon-sec {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  color: #1c1e21;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-aud-btn-icon-sec:hover:not(:disabled) {
+  background: #f0f2f5;
+  border-color: #bec3c9;
+}
+
+.meta-aud-btn-icon-sec:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: #8a8d91;
+  border-color: #e4e6eb;
+}
+
+.meta-aud-selection-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #ebf5ff;
+  color: #0064e1;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.meta-aud-clear-sel-btn {
+  background: none;
+  border: none;
+  color: #0064e1;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0;
+}
+
+.meta-aud-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+/* Filter & Columns dropdowns */
+.meta-aud-btn-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  color: #1c1e21;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-aud-btn-tool:hover {
+  background: #f0f2f5;
+  border-color: #bec3c9;
+}
+
+.meta-aud-btn-tool-active {
+  background: #ebf5ff !important;
+  border-color: #0064e1 !important;
+  color: #0064e1 !important;
+}
+
+.meta-aud-tools-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 260px;
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 110;
+  padding: 8px;
+  animation: metaAudSlideDown 0.15s ease-out;
+}
+
+.meta-aud-popover-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #65676b;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #f0f2f5;
+  margin-bottom: 6px;
+}
+
+.meta-aud-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  color: #1c1e21;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.meta-aud-popover-item:hover {
+  background: #f0f2f5;
+}
+
+/* --------------------------------------------------------------------------
+   Authentic Meta Ads Manager Multi-level Filter Dropdown (Images 1, 2, 3)
+   -------------------------------------------------------------------------- */
+.meta-aud-filter-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 340px;
+  max-height: min(460px, calc(100vh - 200px));
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  animation: metaAudSlideDown 0.15s ease-out;
+  overflow: hidden;
+}
+
+.meta-aud-filter-search-box {
+  padding: 12px 14px 10px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e4e6eb;
+  flex-shrink: 0;
+}
+
+.meta-aud-filter-search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  color: #1c1e21;
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.meta-aud-filter-search-input:focus {
+  border-color: #0064e1;
+  box-shadow: 0 0 0 2px rgba(0, 100, 225, 0.2);
+}
+
+.meta-aud-filter-search-icon {
+  position: absolute;
+  left: 24px;
+  color: #65676b;
+  pointer-events: none;
+}
+
+.meta-aud-filter-back-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #f0f2f5;
+  cursor: pointer;
+  color: #1c1e21;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+  transition: color 0.12s ease;
+  flex-shrink: 0;
+}
+
+.meta-aud-filter-back-row:hover {
+  color: #0064e1;
+}
+
+.meta-aud-filter-menu-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  max-height: min(290px, calc(100vh - 340px));
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #8a8d91 #f0f2f5;
+}
+
+.meta-aud-filter-menu-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.meta-aud-filter-menu-body::-webkit-scrollbar-track {
+  background: #f0f2f5;
+}
+
+.meta-aud-filter-menu-body::-webkit-scrollbar-thumb {
+  background: #8a8d91;
+  border-radius: 4px;
+}
+
+.meta-aud-filter-menu-body::-webkit-scrollbar-thumb:hover {
+  background: #65676b;
+}
+
+.meta-aud-filter-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e4e6eb;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #1c1e21;
+  cursor: pointer;
+  background: #ffffff;
+  transition: background 0.12s ease;
+}
+
+.meta-aud-filter-nav-row:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-filter-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e4e6eb;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  user-select: none;
+}
+
+.meta-aud-filter-item-row:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-filter-item-row.selected {
+  background: #f0f7ff;
+}
+
+.meta-aud-filter-cb {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1.5px solid #ced0d4;
+  accent-color: #0064e1;
+  margin-top: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.meta-aud-filter-item-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-aud-filter-item-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #1c1e21;
+}
+
+.meta-aud-filter-item-desc {
+  font-size: 0.74rem;
+  color: #65676b;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+.meta-aud-filter-item-chevron {
+  align-self: center;
+  color: #65676b;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  cursor: pointer;
+}
+
+.meta-aud-filter-footer {
+  padding: 10px 14px 12px;
+  border-top: 1px solid #e4e6eb;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.meta-aud-filter-clear-btn {
+  width: 100%;
+  padding: 8px 14px;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #65676b;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.meta-aud-filter-clear-btn.active {
+  color: #1c1e21;
+  border-color: #bec3c9;
+}
+
+.meta-aud-filter-clear-btn.active:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-filter-clear-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.meta-aud-filter-empty-search {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #8a8d91;
+}
+
+.meta-aud-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-aud-customer-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.70rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  background: #f0f2f5;
+  color: #374151;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Audience Table
+   -------------------------------------------------------------------------- */
+.meta-aud-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid #e4e6eb;
+  background: #ffffff;
+}
+
+.meta-aud-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+  min-width: 980px;
+}
+
+.meta-aud-table thead {
+  background: #fafbfd;
+  border-bottom: 1px solid #ced0d4;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.meta-aud-th {
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #4b4f56;
+  white-space: nowrap;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.meta-aud-th.sortable {
+  cursor: pointer;
+}
+
+.meta-aud-th.sortable:hover {
+  color: #1c1e21;
+}
+
+.meta-aud-th-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-aud-sort-icon {
+  color: #8a8d91;
+}
+
+.meta-aud-info-icon {
+  color: #8a8d91;
+  cursor: help;
+  display: inline-flex;
+}
+
+.meta-aud-info-icon:hover {
+  color: #0064e1;
+}
+
+.meta-aud-cb-cell {
+  width: 44px;
+  text-align: center;
+  padding: 10px 8px;
+}
+
+.meta-aud-cb-input {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1.5px solid #ced0d4;
+  accent-color: #0064e1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* --------------------------------------------------------------------------
+   Group Accordion Row (Customers, Engaged, Other, Unlabelled, Lookalikes, Saved)
+   -------------------------------------------------------------------------- */
+.meta-aud-group-row {
+  background: #f7f8fa;
+  border-bottom: 1px solid #e4e6eb;
+  transition: background 0.12s ease;
+  font-weight: 600;
+  color: #1c1e21;
+}
+
+.meta-aud-group-row:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-group-cell-name {
+  padding: 11px 14px;
+  white-space: nowrap;
+}
+
+.meta-aud-group-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.meta-aud-chevron-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #65676b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.meta-aud-group-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1c1e21;
+}
+
+.meta-aud-group-count-badge {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #65676b;
+  margin-left: 4px;
+}
+
+.meta-aud-group-type-label {
+  color: #65676b;
+  font-weight: 500;
+  font-size: 0.80rem;
+}
+
+.meta-aud-group-dash {
+  color: #8a8d91;
+}
+
+/* Empty group inside row */
+.meta-aud-empty-subrow {
+  background: #fafbfd;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.meta-aud-empty-subcell {
+  padding: 12px 16px 12px 64px;
+  color: #8a8d91;
+  font-size: 0.80rem;
+  font-style: normal;
+}
+
+/* --------------------------------------------------------------------------
+   Audience Item Rows (Expanded items)
+   -------------------------------------------------------------------------- */
+.meta-aud-item-row {
+  border-bottom: 1px solid #eef0f4;
+  transition: background 0.12s ease;
+  background: #ffffff;
+}
+
+.meta-aud-item-row:hover {
+  background: #f9fafb;
+}
+
+.meta-aud-item-row.selected {
+  background: #f0f7ff;
+}
+
+.meta-aud-td {
+  padding: 10px 14px;
+  vertical-align: middle;
+  color: #1c1e21;
+  white-space: nowrap;
+}
+
+.meta-aud-item-name-cell {
+  padding-left: 46px; /* indented under parent */
+}
+
+.meta-aud-item-name-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meta-aud-item-name-link {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #0064e1;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.meta-aud-item-name-link:hover {
+  text-decoration: underline;
+}
+
+.meta-aud-item-desc {
+  font-size: 0.73rem;
+  color: #65676b;
+}
+
+.meta-aud-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: #4b4f56;
+}
+
+.meta-aud-est-size {
+  font-weight: 500;
+  color: #1c1e21;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-aud-match-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.meta-aud-match-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.meta-aud-match-dot.med {
+  background: #eab308;
+}
+
+.meta-aud-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #1c1e21;
+}
+
+.meta-aud-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+
+.meta-aud-status-dot.updating {
+  background: #0064e1;
+  box-shadow: 0 0 0 2px rgba(0, 100, 225, 0.15);
+}
+
+.meta-aud-status-dot.warning {
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+.meta-aud-id-copy-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #65676b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.meta-aud-copy-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  color: #8a8d91;
+  cursor: pointer;
+  border-radius: 3px;
+  display: inline-flex;
+  opacity: 0.6;
+  transition: all 0.12s ease;
+}
+
+.meta-aud-id-copy-cell:hover .meta-aud-copy-btn {
+  opacity: 1;
+}
+
+.meta-aud-copy-btn:hover {
+  color: #0064e1;
+  background: #ebf5ff;
+}
+
+/* --------------------------------------------------------------------------
+   Table Footer / Summary Row
+   -------------------------------------------------------------------------- */
+.meta-aud-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #fafbfd;
+  border-top: 1px solid #e4e6eb;
+  font-size: 0.78rem;
+  color: #65676b;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.meta-aud-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Creation Modals (Custom, Lookalike, Saved)
+   -------------------------------------------------------------------------- */
+.meta-aud-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: metaAudFadeIn 0.15s ease-out;
+}
+
+@keyframes metaAudFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.meta-aud-modal-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: metaAudModalZoom 0.18s ease-out;
+}
+
+.meta-aud-modal-card.wide {
+  max-width: 860px;
+}
+
+@keyframes metaAudModalZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.meta-aud-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid #e4e6eb;
+  background: #ffffff;
+}
+
+.meta-aud-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meta-aud-modal-icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #ebf5ff;
+  color: #0064e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meta-aud-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c1e21;
+  margin: 0;
+}
+
+.meta-aud-modal-close-btn {
+  background: none;
+  border: none;
+  color: #65676b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease;
+}
+
+.meta-aud-modal-close-btn:hover {
+  background: #f0f2f5;
+  color: #1c1e21;
+}
+
+.meta-aud-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  max-height: calc(90vh - 140px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.meta-aud-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .meta-aud-sources-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.meta-aud-source-category-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #65676b;
+  margin-bottom: 8px;
+}
+
+.meta-aud-source-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #ced0d4;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.meta-aud-source-card:hover {
+  border-color: #0064e1;
+  background: #f8fafc;
+}
+
+.meta-aud-source-card.selected {
+  border-color: #0064e1;
+  background: #ebf5ff;
+  box-shadow: 0 0 0 1px #0064e1;
+}
+
+.meta-aud-source-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f0f2f5;
+  color: #0064e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.meta-aud-source-card.selected .meta-aud-source-card-icon {
+  background: #0064e1;
+  color: #ffffff;
+}
+
+.meta-aud-source-name {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #1c1e21;
+}
+
+.meta-aud-source-desc {
+  font-size: 0.73rem;
+  color: #65676b;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.meta-aud-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meta-aud-form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1c1e21;
+}
+
+.meta-aud-form-sublabel {
+  font-size: 0.74rem;
+  color: #65676b;
+  margin-top: -2px;
+}
+
+.meta-aud-form-input,
+.meta-aud-form-select,
+.meta-aud-form-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  color: #1c1e21;
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.meta-aud-form-input:focus,
+.meta-aud-form-select:focus,
+.meta-aud-form-textarea:focus {
+  border-color: #0064e1;
+  box-shadow: 0 0 0 2px rgba(0, 100, 225, 0.2);
+}
+
+.meta-aud-form-textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+/* Slider for lookalike percentage */
+.meta-aud-lookalike-slider-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  border: 1px solid #e4e6eb;
+}
+
+.meta-aud-slider-val-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meta-aud-slider-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0064e1;
+}
+
+.meta-aud-slider-reach {
+  font-size: 0.82rem;
+  color: #65676b;
+}
+
+.meta-aud-range-input {
+  width: 100%;
+  accent-color: #0064e1;
+  cursor: pointer;
+  height: 6px;
+}
+
+.meta-aud-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #8a8d91;
+  padding: 0 4px;
+}
+
+/* Modal Footer */
+.meta-aud-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #e4e6eb;
+  background: #fafbfd;
+}
+
+.meta-aud-btn-modal-cancel {
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #ced0d4;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1c1e21;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-aud-btn-modal-cancel:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-btn-modal-submit {
+  padding: 8px 18px;
+  background: #0064e1;
+  border: 1px solid #0064e1;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.meta-aud-btn-modal-submit:hover:not(:disabled) {
+  background: #0053ba;
+}
+
+.meta-aud-btn-modal-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   Details Drawer (Slide out from right)
+   -------------------------------------------------------------------------- */
+.meta-aud-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: metaAudFadeIn 0.15s ease-out;
+}
+
+.meta-aud-drawer-panel {
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  animation: metaAudSlideInRight 0.2s ease-out;
+}
+
+@keyframes metaAudSlideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.meta-aud-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e4e6eb;
+}
+
+.meta-aud-drawer-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.meta-aud-detail-card {
+  padding: 14px;
+  border: 1px solid #e4e6eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meta-aud-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.meta-aud-detail-lbl {
+  color: #65676b;
+}
+
+.meta-aud-detail-val {
+  font-weight: 600;
+  color: #1c1e21;
+}
+
+/* --------------------------------------------------------------------------
+   Floating Toast Feedback
+   -------------------------------------------------------------------------- */
+.meta-aud-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1c1e21;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2000;
+  animation: metaAudToastIn 0.2s ease-out;
+}
+
+@keyframes metaAudToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ==========================================================================
+   Active and Action Toolbar & Row Styles for Edit & Delete
+   ========================================================================== */
+.meta-aud-btn-icon-sec.active-selection {
+  background: #ebf5ff !important;
+  border-color: #0064e1 !important;
+  color: #0064e1 !important;
+  font-weight: 600;
+}
+
+.meta-aud-btn-icon-sec.active-danger {
+  background: #fef2f2 !important;
+  border-color: #f87171 !important;
+  color: #dc2626 !important;
+  font-weight: 600;
+}
+
+.meta-aud-row-actions-cell {
+  text-align: center;
+  padding: 6px 10px !important;
+  white-space: nowrap;
+}
+
+.meta-aud-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.meta-aud-row-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #ced0d4;
+  background: #ffffff;
+  color: #4b4f56;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-aud-row-action-btn:hover {
+  background: #f0f2f5;
+  border-color: #bec3c9;
+  color: #1c1e21;
+}
+
+.meta-aud-row-action-btn.edit:hover {
+  background: #ebf5ff;
+  border-color: #0064e1;
+  color: #0064e1;
+}
+
+.meta-aud-row-action-btn.delete:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #dc2626;
+}
+
+/* Delete confirmation modal interactive checklist */
+.meta-aud-delete-list {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e4e6eb;
+  border-radius: 6px;
+  margin-top: 10px;
+  background: #fafbfd;
+}
+
+.meta-aud-delete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e4e6eb;
+  cursor: pointer;
+  font-size: 0.83rem;
+  transition: background 0.12s ease;
+}
+
+.meta-aud-delete-item:last-child {
+  border-bottom: none;
+}
+
+.meta-aud-delete-item:hover {
+  background: #f0f2f5;
+}
+
+.meta-aud-delete-item.checked {
+  background: #f0f7ff;
+}
+
+.meta-aud-delete-badges-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 6px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.meta-aud-delete-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #334155;
+}

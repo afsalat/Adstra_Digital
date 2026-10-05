@@ -277,15 +277,15 @@ class Lead(models.Model):
                 name="lead_unique_nonblank_email_ci",
             ),
             models.CheckConstraint(
-                condition=models.Q(lead_score__gte=0, lead_score__lte=100),
+                check=models.Q(lead_score__gte=0, lead_score__lte=100),
                 name="lead_score_between_0_100",
             ),
             models.CheckConstraint(
-                condition=models.Q(conversion_probability__gte=0, conversion_probability__lte=100),
+                check=models.Q(conversion_probability__gte=0, conversion_probability__lte=100),
                 name="lead_probability_0_100",
             ),
             models.CheckConstraint(
-                condition=models.Q(estimated_value__isnull=True) | models.Q(estimated_value__gte=0),
+                check=models.Q(estimated_value__isnull=True) | models.Q(estimated_value__gte=0),
                 name="lead_estimated_value_nonnegative",
             ),
         ]
@@ -436,7 +436,7 @@ class LeadCall(models.Model):
         indexes = [models.Index(fields=["lead", "started_at"], name="lead_call_started")]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(ended_at__isnull=True) | models.Q(ended_at__gte=models.F("started_at")),
+                check=models.Q(ended_at__isnull=True) | models.Q(ended_at__gte=models.F("started_at")),
                 name="lead_call_end_after_start",
             )
         ]
@@ -531,7 +531,7 @@ class LeadMeeting(models.Model):
         indexes = [models.Index(fields=["status", "scheduled_start"], name="meeting_status_start")]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(scheduled_end__gt=models.F("scheduled_start")),
+                check=models.Q(scheduled_end__gt=models.F("scheduled_start")),
                 name="lead_meeting_end_after_start",
             )
         ]
@@ -585,7 +585,7 @@ class ProductDemo(models.Model):
         ordering = ["-completed_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                condition=(
+                check=(
                     models.Q(trial_start__isnull=True)
                     | models.Q(trial_end__isnull=True)
                     | models.Q(trial_end__gte=models.F("trial_start"))
@@ -655,11 +655,11 @@ class ServiceRequirement(models.Model):
         ordering = ["-updated_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(estimated_budget__isnull=True) | models.Q(estimated_budget__gte=0),
+                check=models.Q(estimated_budget__isnull=True) | models.Q(estimated_budget__gte=0),
                 name="lead_requirement_budget_nonnegative",
             ),
             models.CheckConstraint(
-                condition=(
+                check=(
                     models.Q(expected_start_date__isnull=True)
                     | models.Q(expected_completion_date__isnull=True)
                     | models.Q(expected_completion_date__gte=models.F("expected_start_date"))
@@ -754,7 +754,7 @@ class LeadCostEstimate(models.Model):
         ordering = ["-created_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                condition=(
+                check=(
                     models.Q(development_cost__gte=0)
                     & models.Q(product_cost__gte=0)
                     & models.Q(infrastructure_cost__gte=0)
@@ -829,7 +829,7 @@ class LeadTask(models.Model):
         ordering = ["due_at", "id"]
         constraints = [
             models.CheckConstraint(
-                condition=(
+                check=(
                     models.Q(start_at__isnull=True)
                     | models.Q(due_at__isnull=True)
                     | models.Q(due_at__gte=models.F("start_at"))
@@ -959,7 +959,7 @@ class LeadConversion(models.Model):
         ordering = ["-converted_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(final_value__gte=0) & models.Q(discount__gte=0),
+                check=models.Q(final_value__gte=0) & models.Q(discount__gte=0),
                 name="lead_conversion_values_nonnegative",
             )
         ]
