@@ -521,6 +521,7 @@ export default function AnalyticsReportsTab({
           useCORS: true,
           logging: false,
           scrollY: 0,
+          ignoreElements: (el) => el.classList && el.classList.contains("no-print"),
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
@@ -623,6 +624,36 @@ export default function AnalyticsReportsTab({
           margin: 0 auto;
         }
 
+        .report-param-strip {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .report-kpi-matrix {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        @media (max-width: 900px) {
+          .report-param-strip {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+          .report-kpi-matrix {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 600px) {
+          .report-param-strip {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .report-kpi-matrix {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
         /* --- PRINT MEDIA STYLES (Strict A4 Layout) --- */
         @media print {
           @page {
@@ -639,11 +670,15 @@ export default function AnalyticsReportsTab({
             print-color-adjust: exact !important;
             margin: 0 !important;
             padding: 0 !important;
+            min-height: auto !important;
+            height: auto !important;
           }
 
           /* Hide UI Chrome */
           .no-print,
+          .no-print *,
           .social-header-bar,
+          .social-nav-tabs,
           nav,
           header,
           aside,
@@ -651,8 +686,23 @@ export default function AnalyticsReportsTab({
           .dashboard-controls,
           .filter-select,
           .btn-action,
+          .cr-toolbar,
+          .cr-graph-tabs,
           button {
             display: none !important;
+          }
+
+          .social-mgmt-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+            min-height: auto !important;
+            height: auto !important;
+          }
+
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
           }
 
           /* Document Fills Page Cleanly in Print */
@@ -660,6 +710,13 @@ export default function AnalyticsReportsTab({
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
+          }
+
+          #executive-report-document,
+          #executive-report-document *,
+          #campaign-report-document,
+          #campaign-report-document * {
+            visibility: visible !important;
           }
 
           .executive-document {
@@ -670,11 +727,21 @@ export default function AnalyticsReportsTab({
             margin: 0 !important;
             max-width: 100% !important;
             width: 100% !important;
+            background: #ffffff !important;
           }
 
           .print-break-inside-avoid {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+          }
+
+          .report-param-strip {
+            grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+          }
+
+          .report-kpi-matrix {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 10px !important;
           }
         }
       `}</style>
@@ -843,16 +910,13 @@ export default function AnalyticsReportsTab({
 
         {/* AUDIT PARAMETERS STRIP */}
         <div
-          className="print-break-inside-avoid"
+          className="report-param-strip print-break-inside-avoid"
           style={{
             background: "#f8fafc",
             border: "1px solid #cbd5e1",
             borderRadius: 10,
             padding: "12px 16px",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-            gap: 12,
-            marginBottom: 22,
+            marginBottom: 20,
           }}
         >
           <div>
@@ -887,62 +951,59 @@ export default function AnalyticsReportsTab({
 
         {/* EXECUTIVE KPI MATRIX (4 Boxes) */}
         <div
-          className="print-break-inside-avoid"
+          className="report-kpi-matrix print-break-inside-avoid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-            gap: 14,
-            marginBottom: 22,
+            marginBottom: 20,
           }}
         >
           {/* Active Pipeline */}
-          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "14px 16px", background: "#ffffff" }}>
+          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", background: "#ffffff" }}>
             <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.4px" }}>
               ACTIVE PIPELINE
             </div>
-            <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "#0f172a", margin: "4px 0" }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#0f172a", margin: "3px 0" }}>
               {kpis.active}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+            <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
               In Production ({kpis.activeRate}%)
             </div>
           </div>
 
           {/* Published */}
-          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "14px 16px", background: "#ffffff" }}>
+          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", background: "#ffffff" }}>
             <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#047857", textTransform: "uppercase", letterSpacing: "0.4px" }}>
               TOTAL PUBLISHED
             </div>
-            <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "#059669", margin: "4px 0" }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#059669", margin: "3px 0" }}>
               {kpis.published}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#047857" }}>
+            <div style={{ fontSize: "0.7rem", color: "#047857" }}>
               Delivery Rate: {kpis.completionRate}%
             </div>
           </div>
 
           {/* Pending Approval */}
-          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "14px 16px", background: "#ffffff" }}>
+          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", background: "#ffffff" }}>
             <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#c2410c", textTransform: "uppercase", letterSpacing: "0.4px" }}>
               PENDING REVIEW
             </div>
-            <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "#ea580c", margin: "4px 0" }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#ea580c", margin: "3px 0" }}>
               {kpis.pendingApproval}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#c2410c" }}>
+            <div style={{ fontSize: "0.7rem", color: "#c2410c" }}>
               Client Sign-off Queue
             </div>
           </div>
 
           {/* Action Required */}
-          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "14px 16px", background: "#ffffff" }}>
+          <div style={{ border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", background: "#ffffff" }}>
             <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "0.4px" }}>
               ACTION REQUIRED
             </div>
-            <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "#dc2626", margin: "4px 0" }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: 900, color: "#dc2626", margin: "3px 0" }}>
               {kpis.revisions}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#b91c1c" }}>
+            <div style={{ fontSize: "0.7rem", color: "#b91c1c" }}>
               Revision Loopbacks
             </div>
           </div>

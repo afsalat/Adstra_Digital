@@ -155,7 +155,7 @@ function SocialManagementInner() {
     <div className="social-mgmt-container">
 
       {/* Top Header Bar */}
-      <header className="social-header-bar">
+      <header className="social-header-bar no-print">
         <div className="social-header-left">
           <button
             onClick={() => router.push("/admindashboard/")}
@@ -208,6 +208,7 @@ function SocialManagementInner() {
 
       {/* Main Separate Modules Navigation */}
       <nav
+        className="social-nav-tabs no-print"
         style={{
           display: "flex",
           background: "#ffffff",
