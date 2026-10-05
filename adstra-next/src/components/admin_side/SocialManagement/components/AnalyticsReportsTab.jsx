@@ -1013,10 +1013,11 @@ export default function AnalyticsReportsTab({
         <div
           className="print-break-inside-avoid"
           style={{
-            borderLeft: `4px solid ${healthDiagnosis.color}`,
             background: healthDiagnosis.bg,
-            border: `1px solid ${healthDiagnosis.border}`,
-            borderLeftWidth: 4,
+            borderTop: `1px solid ${healthDiagnosis.border}`,
+            borderRight: `1px solid ${healthDiagnosis.border}`,
+            borderBottom: `1px solid ${healthDiagnosis.border}`,
+            borderLeft: `4px solid ${healthDiagnosis.color}`,
             padding: "12px 18px",
             borderRadius: "0 8px 8px 0",
             marginBottom: 24,
