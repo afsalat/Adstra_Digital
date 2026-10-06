@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import axios from "axios";
+import API_BASE_URL from "@/utils/apiBase";
 import {
+  ClipboardList,
   FileText,
   CheckCircle2,
   Palette,
@@ -16,9 +19,11 @@ import {
 
 import WorkflowStageSection from "./WorkflowStageSection";
 import AnalyticsReportsTab from "./AnalyticsReportsTab";
+import PlanningTab from "./planning/PlanningTab";
 import { SOCIAL_KPIS, ownStageOf } from "./workflowUtils";
 
 const SOCIAL_STAGE_IDS = [
+  "planning",
   "scripts",
   "script_approval",
   "designing",
@@ -37,6 +42,7 @@ export default function DedicatedSocialSection({
   mediaAssets = [],
   inboxMessages = [],
   selectedClientId = "all",
+  onSelectClient,
   onRefresh,
   onOpenCreatePost,
   onOpenCreateWithAsset,
@@ -76,6 +82,24 @@ export default function DedicatedSocialSection({
     rejected: posts.filter((p) => p.status === "content_rejected").length,
   };
 
+  // Plan badge: planned slots whose script should start within a week
+  const [planAttention, setPlanAttention] = useState(0);
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/social/plans/attention/`, { params: { client_id: selectedClientId } })
+      .then((res) => setPlanAttention(res.data?.count || 0))
+      .catch(() => {});
+  }, [selectedClientId, posts, socialSubTab]);
+  counts.planning = planAttention;
+
+  // Jump from a plan slot to its post in the workflow (merged with mention jumps from the parent)
+  const [localFocus, setLocalFocus] = useState(null);
+  const effectiveFocus = useMemo(() => {
+    if (!localFocus) return focusRequest;
+    if (!focusRequest) return localFocus;
+    return localFocus.nonce > focusRequest.nonce ? localFocus : focusRequest;
+  }, [focusRequest, localFocus]);
+
   // Cross-stage quick filters (Overdue, Due this week, ...)
   const [kpiFilter, setKpiFilter] = useState(null);
   const kpiCounts = useMemo(() => {
@@ -92,24 +116,25 @@ export default function DedicatedSocialSection({
   // Jump to the stage that owns a requested post (the stage section then opens its drawer)
   const handledFocusRef = useRef(null);
   useEffect(() => {
-    if (!focusRequest || handledFocusRef.current === focusRequest.nonce) return;
-    const target = posts.find((p) => p.id === focusRequest.postId);
+    if (!effectiveFocus || handledFocusRef.current === effectiveFocus.nonce) return;
+    const target = posts.find((p) => p.id === effectiveFocus.postId);
     if (!target) return; // posts may still be reloading after a client switch
-    handledFocusRef.current = focusRequest.nonce;
+    handledFocusRef.current = effectiveFocus.nonce;
     openStage(ownStageOf(target));
-  }, [focusRequest, posts]);
+  }, [effectiveFocus, posts]);
 
   const toggleKpi = (id) => {
     if (kpiFilter === id) {
       setKpiFilter(null);
       return;
     }
-    if (socialSubTab === "reporting") setSocialSubTab("scripts");
+    if (socialSubTab === "reporting" || socialSubTab === "planning") setSocialSubTab("scripts");
     setKpiFilter(id);
   };
 
   // Main pipeline, left to right
   const pipelineSteps = [
+    { id: "planning", label: "Plan", fullLabel: "Monthly Content Plan (badge: scripts to start this week)", icon: ClipboardList, color: "#0f766e" },
     { id: "scripts", label: "Script", fullLabel: "Scripts & Content Ideation", icon: FileText, color: "#4f46e5" },
     { id: "script_approval", label: "Approval", fullLabel: "Script Approval", icon: CheckCircle2, color: "#8b5cf6" },
     { id: "designing", label: "Design", fullLabel: "Scheduled / Designing", icon: Palette, color: "#ec4899" },
@@ -201,7 +226,16 @@ export default function DedicatedSocialSection({
 
       {/* Sub-tab view: Active Workflow Section */}
       <div>
-        {socialSubTab === "reporting" && !kpiFilter ? (
+        {socialSubTab === "planning" && !kpiFilter ? (
+          <PlanningTab
+            clients={clients}
+            posts={posts}
+            selectedClientId={selectedClientId}
+            onSelectClient={onSelectClient}
+            onRefresh={onRefresh}
+            onOpenPost={(info) => setLocalFocus({ postId: info.id, tab: "overview", nonce: Date.now() })}
+          />
+        ) : socialSubTab === "reporting" && !kpiFilter ? (
           <AnalyticsReportsTab selectedClientId={selectedClientId} clients={clients} posts={posts} />
         ) : (
           <WorkflowStageSection
@@ -215,7 +249,7 @@ export default function DedicatedSocialSection({
             onNavigateStage={openStage}
             kpiFilter={kpiFilter}
             onClearKpi={() => setKpiFilter(null)}
-            focusRequest={focusRequest}
+            focusRequest={effectiveFocus}
           />
         )}
       </div>

@@ -51,15 +51,6 @@ function SocialManagementInner() {
       : "dashboard"
   );
   const [selectedClientId, setSelectedClientId] = useState("all");
-  const [filterFloating, setFilterFloating] = useState(false);
-
-  // Show the floating client rail + mentions once the header scrolls out of view
-  useEffect(() => {
-    const onScroll = () => setFilterFloating(window.scrollY > 140);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   // Data states
   const [dashboardData, setDashboardData] = useState(null);
@@ -226,9 +217,6 @@ function SocialManagementInner() {
             variant="header"
           />
 
-          {/* @mentions inbox (moves into the floating rail while scrolled) */}
-          {!filterFloating && <MentionsBell onOpenMention={handleOpenMention} />}
-
           {/* AI Content Studio button */}
           <button
             onClick={() => setAiModalOpen(true)}
@@ -250,15 +238,14 @@ function SocialManagementInner() {
         </div>
       </header>
 
-      {filterFloating && (
-        <ClientQuickRail
-          clients={activeClients}
-          value={selectedClientId}
-          onChange={(newId) => setSelectedClientId(newId)}
-        >
-          <MentionsBell onOpenMention={handleOpenMention} />
-        </ClientQuickRail>
-      )}
+      {/* Floating client rail + @mentions inbox (always visible) */}
+      <ClientQuickRail
+        clients={activeClients}
+        value={selectedClientId}
+        onChange={(newId) => setSelectedClientId(newId)}
+      >
+        <MentionsBell onOpenMention={handleOpenMention} />
+      </ClientQuickRail>
 
       {/* Main Separate Modules Navigation */}
       <nav
@@ -339,6 +326,7 @@ function SocialManagementInner() {
             mediaAssets={mediaAssets}
             inboxMessages={inboxMessages}
             selectedClientId={selectedClientId}
+            onSelectClient={setSelectedClientId}
             onRefresh={fetchData}
             onOpenCreatePost={(data = null) => {
               setPrefilledPostData(data || null);

@@ -64,7 +64,7 @@ const ALL_ITEM = { id: "all", name: "All Client Companies", isAll: true, primary
 const isTyping = (el) =>
   el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
-// Compact floating rail shown once the header scrolls away: the selected client with
+// Compact floating rail, always visible: the selected client with
 // ▲/▼ to hop between clients that have work in progress, extra controls (mentions bell)
 // below, and a searchable picker when the logo is clicked.
 export default function ClientQuickRail({ clients = [], value, onChange, children }) {
