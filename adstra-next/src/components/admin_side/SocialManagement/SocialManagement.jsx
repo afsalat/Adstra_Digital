@@ -35,6 +35,7 @@ import CreatePostModal from "./components/CreatePostModal";
 import AIAssistantModal from "./components/AIAssistantModal";
 import ClientCompanySearchSelect from "./components/ClientCompanySearchSelect";
 import MentionsBell from "./components/MentionsBell";
+import ClientQuickRail from "./components/ClientQuickRail";
 import { SocialFeedbackHost } from "./components/SocialFeedback";
 
 function SocialManagementInner() {
@@ -50,6 +51,15 @@ function SocialManagementInner() {
       : "dashboard"
   );
   const [selectedClientId, setSelectedClientId] = useState("all");
+  const [filterFloating, setFilterFloating] = useState(false);
+
+  // Show the floating client rail + mentions once the header scrolls out of view
+  useEffect(() => {
+    const onScroll = () => setFilterFloating(window.scrollY > 140);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Data states
   const [dashboardData, setDashboardData] = useState(null);
@@ -216,8 +226,8 @@ function SocialManagementInner() {
             variant="header"
           />
 
-          {/* @mentions inbox */}
-          <MentionsBell onOpenMention={handleOpenMention} />
+          {/* @mentions inbox (moves into the floating rail while scrolled) */}
+          {!filterFloating && <MentionsBell onOpenMention={handleOpenMention} />}
 
           {/* AI Content Studio button */}
           <button
@@ -240,6 +250,16 @@ function SocialManagementInner() {
         </div>
       </header>
 
+      {filterFloating && (
+        <ClientQuickRail
+          clients={activeClients}
+          value={selectedClientId}
+          onChange={(newId) => setSelectedClientId(newId)}
+        >
+          <MentionsBell onOpenMention={handleOpenMention} />
+        </ClientQuickRail>
+      )}
+
       {/* Main Separate Modules Navigation */}
       <nav
         className="social-nav-tabs no-print"
@@ -253,6 +273,9 @@ function SocialManagementInner() {
           gap: 6,
           boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
           overflowX: "auto",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
         }}
       >
         {[
