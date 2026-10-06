@@ -8,6 +8,8 @@ from apis.social.models import (
     PostApprovalHistory,
     SocialInboxMessage,
     SocialDailyAnalytics,
+    PostComment,
+    PostCommentMention,
 )
 from apis.user.models import CustomUser
 
@@ -27,13 +29,44 @@ class SocialClientProfileSerializer(serializers.ModelSerializer):
     accounts_count = serializers.IntegerField(source='accounts.count', read_only=True)
     posts_count = serializers.IntegerField(source='posts.count', read_only=True)
     pending_approvals_count = serializers.SerializerMethodField()
+    active_work = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialClientProfile
         fields = '__all__'
 
+    # Pipeline stage -> post statuses (legacy aliases included)
+    ACTIVE_STAGES = {
+        'script': ['script', 'draft'],
+        'approval': ['script_approval'],
+        'design': ['designing'],
+        'team_review': ['team_review', 'internal_review'],
+        'client_review': ['client_review'],
+        'scheduled': ['approved', 'scheduled', 'publishing'],
+        'rejected': ['content_rejected', 'rejected', 'failed'],
+    }
+
     def get_pending_approvals_count(self, obj):
         return obj.posts.filter(status__in=['internal_review', 'client_review']).count()
+
+    def get_active_work(self, obj):
+        """In-progress posts per pipeline stage, for the quick client switcher."""
+        from django.db.models import Count, Max
+
+        status_to_stage = {s: stage for stage, statuses in self.ACTIVE_STAGES.items() for s in statuses}
+        rows = (
+            obj.posts.filter(status__in=status_to_stage.keys())
+            .values('status')
+            .annotate(n=Count('id'), last=Max('updated_at'))
+        )
+        stages, total, last = {}, 0, None
+        for row in rows:
+            stage = status_to_stage[row['status']]
+            stages[stage] = stages.get(stage, 0) + row['n']
+            total += row['n']
+            if row['last'] and (last is None or row['last'] > last):
+                last = row['last']
+        return {'total': total, 'stages': stages, 'last_activity': last.isoformat() if last else None}
 
 
 class SocialAccountSerializer(serializers.ModelSerializer):
@@ -128,6 +161,44 @@ class PostApprovalHistorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class PostCommentSerializer(serializers.ModelSerializer):
+    mentions = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PostComment
+        fields = ['id', 'post', 'author', 'author_name', 'author_role', 'body', 'mentions', 'can_delete', 'created_at']
+        read_only_fields = fields
+
+    def get_mentions(self, obj):
+        return [{'id': u.id, 'name': u.fullname or u.username, 'username': u.username} for u in obj.mentions.all()]
+
+    def get_can_delete(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+        return obj.author_id == user.id or user.is_superuser or getattr(user, 'role', '') in ('admin', 'super_admin')
+
+
+class PostCommentMentionSerializer(serializers.ModelSerializer):
+    comment_id = serializers.IntegerField(source='comment.id', read_only=True)
+    body = serializers.CharField(source='comment.body', read_only=True)
+    author_name = serializers.CharField(source='comment.author_name', read_only=True)
+    post_id = serializers.IntegerField(source='comment.post.id', read_only=True)
+    post_title = serializers.CharField(source='comment.post.title', read_only=True)
+    post_status = serializers.CharField(source='comment.post.status', read_only=True)
+    client_id = serializers.IntegerField(source='comment.post.client_profile_id', read_only=True)
+    client_name = serializers.CharField(source='comment.post.client_profile.name', read_only=True)
+
+    class Meta:
+        model = PostCommentMention
+        fields = [
+            'id', 'is_read', 'created_at', 'comment_id', 'body', 'author_name',
+            'post_id', 'post_title', 'post_status', 'client_id', 'client_name',
+        ]
+
+
 class SocialPostSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client_profile.name', read_only=True)
     client_primary_color = serializers.CharField(source='client_profile.primary_color', read_only=True)
@@ -135,10 +206,18 @@ class SocialPostSerializer(serializers.ModelSerializer):
     approval_history = PostApprovalHistorySerializer(many=True, read_only=True)
     created_by_details = UserMiniSerializer(source='created_by', read_only=True)
     assigned_to_details = UserMiniSerializer(source='assigned_to', read_only=True)
+    writer_details = UserMiniSerializer(source='writer', read_only=True)
+    designer_details = UserMiniSerializer(source='designer', read_only=True)
+    reviewer_details = UserMiniSerializer(source='reviewer', read_only=True)
+    comment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialPost
         fields = '__all__'
+
+    def get_comment_count(self, obj):
+        annotated = getattr(obj, 'comment_count', None)
+        return annotated if annotated is not None else obj.comments.count()
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

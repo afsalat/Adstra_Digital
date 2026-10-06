@@ -19,6 +19,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import { notify, askConfirm } from "./SocialFeedback";
 
 // Kerala & Indian Festival/Holiday Calendar Milestones
 const FESTIVALS_AND_HOLIDAYS = [
@@ -63,6 +64,24 @@ const PRIORITY_CONFIG = {
     rank: 1,
   },
 };
+
+// Stage colours shared by the legend and the calendar chips
+const STAGE_STYLES = {
+  script: { label: "Script", color: "#6366f1", bg: "#eef2ff" },
+  script_approval: { label: "Approval", color: "#8b5cf6", bg: "#f5f3ff" },
+  designing: { label: "Designing", color: "#ec4899", bg: "#fdf2f8" },
+  team_review: { label: "Team Review", color: "#f59e0b", bg: "#fffbeb" },
+  client_review: { label: "Client Review", color: "#ea580c", bg: "#fff7ed" },
+  scheduled: { label: "Scheduled", color: "#0ea5e9", bg: "#f0f9ff" },
+  published: { label: "Published", color: "#10b981", bg: "#ecfdf5" },
+};
+
+const getStageKey = (status) =>
+  status === "approved" ? "scheduled" : status === "internal_review" ? "team_review" : status;
+
+const getStageStyle = (status) => STAGE_STYLES[getStageKey(status)] || STAGE_STYLES.script;
+
+const MAX_CHIPS_PER_DAY = 2;
 
 export default function ContentCalendarTab({
   posts = [],
@@ -121,6 +140,27 @@ export default function ContentCalendarTab({
       return true;
     });
   }, [posts, platformFilter, statusFilter]);
+
+  // Per-stage counts for the visible month (ignores the stage filter so the legend always shows the full picture)
+  const monthStageCounts = useMemo(() => {
+    const prefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const counts = {};
+    let total = 0;
+    posts.forEach((p) => {
+      const d = p.scheduled_at || p.published_at;
+      if (!d || !d.startsWith(prefix)) return;
+      if (platformFilter !== "all" && !p.platforms?.includes(platformFilter)) return;
+      const key = getStageKey(p.status);
+      counts[key] = (counts[key] || 0) + 1;
+      total += 1;
+    });
+    return { counts, total };
+  }, [posts, year, month, platformFilter]);
+
+  const openPostPreview = (post) => {
+    setSelectedPostDetail(post);
+    setNewScheduleTime(post.scheduled_at ? post.scheduled_at.slice(0, 16) : "");
+  };
 
   // Generate calendar days for monthly view (properly aligned 35 or 42 cells)
   const monthDays = useMemo(() => {
@@ -220,7 +260,7 @@ export default function ContentCalendarTab({
       setSelectedPostDetail(null);
       onRefresh();
     } catch (err) {
-      alert("Error rescheduling post.");
+      notify("Error rescheduling post.");
     } finally {
       setRescheduling(false);
     }
@@ -228,13 +268,13 @@ export default function ContentCalendarTab({
 
   // Handle Quick Publish
   const handlePublishNow = async (postId) => {
-    if (!confirm("Are you sure you want to publish this post immediately across platforms?")) return;
+    if (!await askConfirm("Are you sure you want to publish this post immediately across platforms?")) return;
     try {
       await axios.post(`${API_BASE_URL}/social/posts/${postId}/publish_now/`);
       setSelectedPostDetail(null);
       onRefresh();
     } catch (err) {
-      alert("Error publishing post.");
+      notify("Error publishing post.");
     }
   };
 
@@ -288,7 +328,7 @@ export default function ContentCalendarTab({
       });
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Failed to update post priority.");
+      notify("Failed to update post priority.");
     } finally {
       setUpdatingPriorityPostId(null);
     }
@@ -388,6 +428,70 @@ export default function ContentCalendarTab({
         </div>
       </div>
 
+      {/* Hover helpers for the grid */}
+      <style>{`
+        .cal-cell .cal-add { opacity: 0; transform: scale(0.85); transition: all 0.15s ease; }
+        .cal-cell:hover .cal-add { opacity: 1; transform: scale(1); }
+        .cal-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(15,23,42,0.12) !important; }
+        .cal-legend-btn:hover { background: #f1f5f9 !important; }
+      `}</style>
+
+      {/* Stage legend = quick filter + monthly summary */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
+          marginBottom: 14,
+        }}
+      >
+        <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#475569", marginRight: 4 }}>
+          {monthStageCounts.total} {monthStageCounts.total === 1 ? "post" : "posts"} in {monthNames[month]}
+        </span>
+        {Object.entries(STAGE_STYLES).map(([key, st]) => {
+          const active = statusFilter === key;
+          const count = monthStageCounts.counts[key] || 0;
+          return (
+            <button
+              key={key}
+              className="cal-legend-btn"
+              onClick={() => setStatusFilter(active ? "all" : key)}
+              title={active ? "Click to show all stages" : `Show only ${st.label}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 10px",
+                borderRadius: 999,
+                border: `1px solid ${active ? st.color : "#e2e8f0"}`,
+                background: active ? st.bg : "#ffffff",
+                color: active ? st.color : "#475569",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                opacity: count === 0 && !active ? 0.55 : 1,
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: st.color }} />
+              {st.label}
+              <span style={{ fontWeight: 800, color: st.color }}>{count}</span>
+            </button>
+          );
+        })}
+        {(statusFilter !== "all" || platformFilter !== "all") && (
+          <button
+            onClick={() => {
+              setStatusFilter("all");
+              setPlatformFilter("all");
+            }}
+            style={{ background: "none", border: "none", color: "#2563eb", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
       {/* Monthly Grid */}
       <div
         style={{
@@ -434,7 +538,9 @@ export default function ContentCalendarTab({
             return (
               <div
                 key={cell.key}
+                className="cal-cell"
                 onClick={() => setSelectedDayDetail(cell)}
+                title={cell.posts.length === 0 ? "Click to open this day" : undefined}
                 style={{
                   minHeight: 126,
                   borderRight: isLastCol ? "none" : "1px solid #e2e8f0",
@@ -528,6 +634,32 @@ export default function ContentCalendarTab({
                     )}
                   </div>
 
+                  {onOpenCreatePost && cell.isCurrentMonth && !cell.festival && (
+                    <button
+                      className="cal-add"
+                      title="Schedule a post on this day"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenCreatePost({ scheduled_at: `${cell.dateStr}T10:00:00` });
+                      }}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: "50%",
+                        border: "none",
+                        background: "#4f46e5",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  )}
+
                   {cell.festival && (
                     <span
                       title={cell.festival.prompt}
@@ -555,25 +687,9 @@ export default function ContentCalendarTab({
                 </div>
 
                 {/* Posts in this day */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1, overflowY: "auto" }}>
-                  {cell.posts.map((post) => {
-                    const postColor =
-                      post.status === "published" ? "#10b981" :
-                      post.status === "approved" || post.status === "scheduled" ? "#0ea5e9" :
-                      post.status === "client_review" ? "#ea580c" :
-                      post.status === "team_review" || post.status === "internal_review" ? "#f59e0b" :
-                      post.status === "designing" ? "#ec4899" :
-                      post.status === "script_approval" ? "#8b5cf6" :
-                      "#6366f1";
-
-                    const postBg =
-                      post.status === "published" ? "#ecfdf5" :
-                      post.status === "approved" || post.status === "scheduled" ? "#f0f9ff" :
-                      post.status === "client_review" ? "#fff7ed" :
-                      post.status === "team_review" || post.status === "internal_review" ? "#fffbeb" :
-                      post.status === "designing" ? "#fdf2f8" :
-                      post.status === "script_approval" ? "#f5f3ff" :
-                      "#eef2ff";
+                <div style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
+                  {cell.posts.slice(0, MAX_CHIPS_PER_DAY).map((post) => {
+                    const { color: postColor, bg: postBg } = getStageStyle(post.status);
 
                     const timeStr = post.scheduled_at
                       ? new Date(post.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -584,11 +700,12 @@ export default function ContentCalendarTab({
                     return (
                       <div
                         key={post.id}
+                        className="cal-chip"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedDayDetail(cell);
+                          openPostPreview(post);
                         }}
-                        title={`${post.title || "Post"} | Priority: ${prConf.label} (${post.status})`}
+                        title={`${post.title || "Post"} | ${getStageStyle(post.status).label} | Priority: ${prConf.label} — click to preview`}
                         style={{
                           background: postBg,
                           border: `1px solid ${postColor}40`,
@@ -609,7 +726,12 @@ export default function ContentCalendarTab({
                         onMouseEnter={(e) => (e.currentTarget.style.borderColor = postColor)}
                         onMouseLeave={(e) => (e.currentTarget.style.borderColor = `${postColor}40`)}
                       >
-                        <span style={{ fontSize: "0.65rem", flexShrink: 0 }}>{prConf.dot}</span>
+                        {(post.priority === "urgent" || post.priority === "high") && (
+                          <span
+                            title={`${prConf.label} priority`}
+                            style={{ width: 6, height: 6, borderRadius: "50%", background: prConf.badgeColor, flexShrink: 0 }}
+                          />
+                        )}
                         {timeStr && (
                           <span style={{ fontSize: "0.66rem", color: "#64748b", fontWeight: 600, flexShrink: 0 }}>
                             {timeStr}
@@ -621,6 +743,20 @@ export default function ContentCalendarTab({
                       </div>
                     );
                   })}
+
+                  {cell.posts.length > MAX_CHIPS_PER_DAY && (
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        color: "#2563eb",
+                        padding: "1px 6px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      +{cell.posts.length - MAX_CHIPS_PER_DAY} more
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -1370,7 +1506,7 @@ export default function ContentCalendarTab({
                   </span>
                 </div>
                 <div>
-                  <strong>Scheduled:</strong> {selectedPostDetail.scheduled_at ? new Date(selectedPostDetail.scheduled_at).toLocaleString() : "Not scheduled"}
+                  <strong>Scheduled:</strong> {selectedPostDetail.scheduled_at ? new Date(selectedPostDetail.scheduled_at).toLocaleString("en-IN") : "Not scheduled"}
                 </div>
                 <div>
                   <strong>Status:</strong> {selectedPostDetail.status}

@@ -35,6 +35,9 @@ import SocialSettingsTab from "./components/SocialSettingsTab";
 import CreatePostModal from "./components/CreatePostModal";
 import AIAssistantModal from "./components/AIAssistantModal";
 import ClientCompanySearchSelect from "./components/ClientCompanySearchSelect";
+import MentionsBell from "./components/MentionsBell";
+import ClientQuickRail from "./components/ClientQuickRail";
+import { SocialFeedbackHost } from "./components/SocialFeedback";
 
 function SocialManagementInner() {
   const router = useRouter();
@@ -66,6 +69,9 @@ function SocialManagementInner() {
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [prefilledPostData, setPrefilledPostData] = useState(null);
 
+  // Request to open a post's drawer (e.g. clicking an @mention): { postId, tab, nonce }
+  const [focusRequest, setFocusRequest] = useState(null);
+
   // Sync tab from URL if it changes
   useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -77,6 +83,23 @@ function SocialManagementInner() {
       setCampaignSubTab(subTabParam);
     }
   }, [searchParams]);
+
+  // Persist active tab/subtab in the URL so a reload keeps the user on the same module
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", activeMainModule);
+    if (activeMainModule === "campaigns") {
+      params.set("subtab", campaignSubTab);
+    } else {
+      params.delete("subtab");
+    }
+    if (activeMainModule !== "social") params.delete("stage");
+    const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  }, [activeMainModule, campaignSubTab]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -144,6 +167,15 @@ function SocialManagementInner() {
     setCreateModalOpen(true);
   };
 
+  const handleOpenMention = (mention) => {
+    setActiveMainModule("social");
+    // The post may belong to a client that's filtered out right now
+    if (selectedClientId !== "all" && String(selectedClientId) !== String(mention.client_id)) {
+      setSelectedClientId("all");
+    }
+    setFocusRequest({ postId: mention.post_id, tab: "comments", nonce: Date.now() });
+  };
+
   const handleApplyAiContent = ({ caption, hashtags }) => {
     setPrefilledPostData({
       primary_caption: caption,
@@ -170,7 +202,7 @@ function SocialManagementInner() {
               <Share2 size={24} color="#4f46e5" /> Adstra Digital Marketing Hub
             </h2>
             <p>
-              Dedicated modules for microsoft & Adstra Digital marketing operations
+              Dedicated modules for Microsoft & Adstra Digital marketing operations
             </p>
           </div>
         </div>
@@ -202,10 +234,19 @@ function SocialManagementInner() {
             }}
             className="social-create-btn"
           >
-            <Plus size={18} /> + Create Post
+            <Plus size={18} /> Create Post
           </button>
         </div>
       </header>
+
+      {/* Floating client rail + @mentions inbox (always visible) */}
+      <ClientQuickRail
+        clients={activeClients}
+        value={selectedClientId}
+        onChange={(newId) => setSelectedClientId(newId)}
+      >
+        <MentionsBell onOpenMention={handleOpenMention} />
+      </ClientQuickRail>
 
       {/* Main Separate Modules Navigation */}
       <nav
@@ -220,6 +261,9 @@ function SocialManagementInner() {
           gap: 6,
           boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
           overflowX: "auto",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
         }}
       >
         {[
@@ -283,6 +327,7 @@ function SocialManagementInner() {
             mediaAssets={mediaAssets}
             inboxMessages={inboxMessages}
             selectedClientId={selectedClientId}
+            onSelectClient={setSelectedClientId}
             onRefresh={fetchData}
             onOpenCreatePost={(data = null) => {
               setPrefilledPostData(data || null);
@@ -290,6 +335,7 @@ function SocialManagementInner() {
             }}
             onOpenCreateWithAsset={handleOpenCreateWithAsset}
             onOpenAiStudio={() => setAiModalOpen(true)}
+            focusRequest={focusRequest}
           />
         )}
 
@@ -469,6 +515,7 @@ function SocialManagementInner() {
         />
       )}
 
+      <SocialFeedbackHost />
     </div>
   );
 }

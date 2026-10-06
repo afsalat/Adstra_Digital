@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   UserCheck,
 } from "lucide-react";
+import { notify, askConfirm } from "./SocialFeedback";
 
 // Storage key dedicated to Marketing, Social Media & Designers hierarchy
 const STORAGE_KEY = "adstra_marketing_social_design_tree_v3";
@@ -458,13 +459,13 @@ export default function TeamDesignationTreeTab() {
   };
 
   // Direct Quick Remove / Delete Function
-  const handleDirectRemove = (memberId, memberName) => {
+  const handleDirectRemove = async (memberId, memberName) => {
     if (memberId === treeData.id) {
-      alert("Executive Leadership (Root) cannot be removed.");
+      notify("Executive Leadership (Root) cannot be removed.");
       return;
     }
 
-    if (!confirm(`Are you sure you want to remove "${memberName}" from the team hierarchy?`)) {
+    if (!await askConfirm(`Are you sure you want to remove "${memberName}" from the team hierarchy?`)) {
       return;
     }
 
@@ -544,12 +545,12 @@ export default function TeamDesignationTreeTab() {
   // Execute Swap of Two Members' Positions
   const handleExecuteSwap = () => {
     if (!swapMemberA || !swapMemberB || swapMemberA === swapMemberB) {
-      alert("Please select two different team members to swap positions.");
+      notify("Please select two different team members to swap positions.");
       return;
     }
 
     if (swapMemberA === treeData.id || swapMemberB === treeData.id) {
-      alert("The Executive Leadership (Founder) position cannot be swapped.");
+      notify("The Executive Leadership (Founder) position cannot be swapped.");
       return;
     }
 
@@ -826,8 +827,8 @@ export default function TeamDesignationTreeTab() {
   };
 
   // Reset to default organization structure
-  const handleResetDefault = () => {
-    if (confirm("Reset the team chart to the standard Digital Marketing, Social Media & Designers structure? Any custom edits will be refreshed.")) {
+  const handleResetDefault = async () => {
+    if (await askConfirm("Reset the team chart to the standard Digital Marketing, Social Media & Designers structure? Any custom edits will be refreshed.")) {
       setTreeData(DEFAULT_TEAM_HIERARCHY);
       if (typeof window !== "undefined") {
         localStorage.removeItem(STORAGE_KEY);

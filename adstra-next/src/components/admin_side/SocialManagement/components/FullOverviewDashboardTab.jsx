@@ -247,10 +247,10 @@ export default function FullOverviewDashboardTab({
       {/* ══ ROW 1 · 5 KPI CARDS ══════════════════════════════════════════ */}
       <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16 }}>
         {[
-          { label:"Total Audience",    value:totalFollowers.toLocaleString(),   growth:"+12.4% vs previous 30 days", color:"#4f46e5",bg:"#eef2ff",icon:<Users size={19}/>,   spark:[110,125,118,135,140,130,149] },
-          { label:"Total Reach",       value:totalReach.toLocaleString(),       growth:"+18.2% vs previous 30 days", color:"#16a34a",bg:"#f0fdf4",icon:<Eye size={19}/>,    spark:[180,210,195,230,245,255,262] },
+          { label:"Total Audience",    value:totalFollowers.toLocaleString("en-IN"),   growth:"+12.4% vs previous 30 days", color:"#4f46e5",bg:"#eef2ff",icon:<Users size={19}/>,   spark:[110,125,118,135,140,130,149] },
+          { label:"Total Reach",       value:totalReach.toLocaleString("en-IN"),       growth:"+18.2% vs previous 30 days", color:"#16a34a",bg:"#f0fdf4",icon:<Eye size={19}/>,    spark:[180,210,195,230,245,255,262] },
           { label:"Engagement Rate",   value:`${engagementRate}%`,              growth:"+0.8% vs previous 30 days",  color:"#db2777",bg:"#fdf2f8",icon:<Heart size={19}/>,  spark:[4.8,5.1,5.3,5.0,5.4,5.6,5.87] },
-          { label:"Impressions",       value:totalImpressions.toLocaleString(), growth:"+21% vs previous 30 days",   color:"#2563eb",bg:"#eff6ff",icon:<BarChart2 size={19}/>,spark:[310,360,340,390,420,460,482] },
+          { label:"Impressions",       value:totalImpressions.toLocaleString("en-IN"), growth:"+21% vs previous 30 days",   color:"#2563eb",bg:"#eff6ff",icon:<BarChart2 size={19}/>,spark:[310,360,340,390,420,460,482] },
           { label:"Posts Published",   value:String(postsPublished),            growth:"+15.3% vs previous 30 days", color:"#ea580c",bg:"#fff7ed",icon:<Send size={19}/>,   spark:[110,128,120,140,155,170,186] },
         ].map(kpi => (
           <div key={kpi.label} style={{ ...panel,display:"flex",flexDirection:"column",gap:10 }}>

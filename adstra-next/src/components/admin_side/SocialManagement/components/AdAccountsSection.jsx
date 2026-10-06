@@ -32,6 +32,7 @@ import {
   GoogleAdsLogoIcon,
   LinkedInLogoIcon,
 } from "./PlatformIcons";
+import { askConfirm } from "./SocialFeedback";
 
 // -----------------------------------------------------------------------------
 // Baseline accounts matching Image 3 design precisely
@@ -338,9 +339,11 @@ export default function AdAccountsSection({
   };
 
   // Disconnect Account
-  const handleDisconnect = (acc) => {
+  const handleDisconnect = async (acc) => {
     setActiveActionsId(null);
-    const confirmed = window.confirm(`Disconnect "${acc.account_name}"? You can reconnect it at any time.`);
+    const confirmed = await askConfirm(
+      `Disconnect "${acc.account_name}"? You can reconnect it at any time.`
+    );
     if (!confirmed) return;
 
     setAccounts((prev) =>
@@ -350,9 +353,9 @@ export default function AdAccountsSection({
   };
 
   // Delete Account
-  const handleDelete = (acc) => {
+  const handleDelete = async (acc) => {
     setActiveActionsId(null);
-    const confirmed = window.confirm(`Delete connection for "${acc.account_name}" (${acc.account_id})?`);
+    const confirmed = await askConfirm(`Delete connection for "${acc.account_name}" (${acc.account_id})?`);
     if (!confirmed) return;
 
     setAccounts((prev) => prev.filter((item) => item.id !== acc.id));

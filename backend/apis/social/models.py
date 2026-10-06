@@ -42,6 +42,22 @@ class SocialClientProfile(models.Model):
     brand_guidelines = models.TextField(blank=True, default='')
     social_handles = models.JSONField(default=dict, blank=True)
     notes = models.TextField(blank=True)
+    # Monthly content planning: what happens to undelivered items when a month is closed
+    carry_over_policy = models.CharField(
+        max_length=20,
+        default='adjust_billing',
+        choices=[
+            ('carry_over', 'Carry over to next month'),
+            ('adjust_billing', 'Reduce the bill (no carry-over)'),
+        ]
+    )
+    default_package = models.ForeignKey(
+        'ContentPackage',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='default_for_clients'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -448,6 +464,7 @@ class SocialPost(models.Model):
         ('approved', 'Approved / Post Schedule'),
         ('published', 'Published / Posted'),
         ('archived', 'Archived'),
+        ('content_rejected', 'Rejected / Dropped'),
         # Backward compatibility aliases
         ('draft', 'Draft / Script'),
         ('internal_review', 'Team Review'),
@@ -511,10 +528,30 @@ class SocialPost(models.Model):
         blank=True,
         related_name='created_social_posts'
     )
+    # Per-role owners shown as avatars on the workflow board
+    writer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='written_social_posts'
+    )
+    designer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='designed_social_posts'
+    )
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_social_posts'
+    )
     checklist = models.JSONField(default=list, blank=True)
     script_data = models.JSONField(default=dict, blank=True)
     client_approval_token = models.CharField(max_length=64, blank=True, db_index=True)
     client_feedback = models.TextField(blank=True)
+    # Revision loop tracking (incremented every time content is sent back for rework)
+    revision_count = models.PositiveIntegerField(default=0)
+    client_revision_count = models.PositiveIntegerField(default=0)
+    last_revision_categories = models.JSONField(default=list, blank=True)
+    # Full rejection (content dropped entirely or restarted from scratch)
+    rejection_reason = models.TextField(blank=True)
+    rejection_categories = models.JSONField(default=list, blank=True)
+    rejected_by = models.CharField(max_length=20, blank=True)  # 'client' | 'internal'
+    rejected_from_stage = models.CharField(max_length=30, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -536,14 +573,56 @@ class PostApprovalHistory(models.Model):
         on_delete=models.CASCADE,
         related_name='approval_history'
     )
+    EVENT_TYPE_CHOICES = [
+        ('transition', 'Transition'),
+        ('revision', 'Revision Requested'),
+        ('rejection', 'Content Rejected'),
+        ('approval', 'Approval'),
+        ('note', 'Note'),
+    ]
+
     action = models.CharField(max_length=50)
     actor_name = models.CharField(max_length=150)
     actor_role = models.CharField(max_length=50, blank=True)
     notes = models.TextField(blank=True)
+    event_type = models.CharField(max_length=20, default='transition', choices=EVENT_TYPE_CHOICES)
+    from_stage = models.CharField(max_length=30, blank=True)
+    to_stage = models.CharField(max_length=30, blank=True)
+    reason_categories = models.JSONField(default=list, blank=True)
+    severity = models.CharField(max_length=20, blank=True)  # 'minor' | 'major'
+    revision_round = models.PositiveIntegerField(default=0)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-timestamp']
+
+
+class MistakeFix(models.Model):
+    """A corrective action applied against a recurring rejection/revision reason.
+
+    Stores the baseline at apply-time so the insights engine can later measure
+    whether the mistake rate for that category actually dropped.
+    """
+    client_profile = models.ForeignKey(
+        SocialClientProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='mistake_fixes'
+    )  # null = applies to all clients
+    category = models.CharField(max_length=60)
+    title = models.CharField(max_length=200)
+    checklist_items = models.JSONField(default=list, blank=True)
+    lesson = models.TextField(blank=True)
+    baseline_count_30d = models.PositiveIntegerField(default=0)
+    applied_by = models.CharField(max_length=150, blank=True)
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+
+    def __str__(self):
+        return f'{self.category}: {self.title}'
 
 
 class SocialInboxMessage(models.Model):
@@ -650,3 +729,337 @@ class SocialDailyAnalytics(models.Model):
 
     def __str__(self):
         return f'{self.client_profile.name} - {self.platform} on {self.date}'
+
+
+class PostComment(models.Model):
+    """Team discussion on a post, separate from the workflow timeline."""
+
+    post = models.ForeignKey(SocialPost, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='social_post_comments'
+    )
+    author_name = models.CharField(max_length=150)
+    author_role = models.CharField(max_length=50, blank=True)
+    body = models.TextField()
+    mentions = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='PostCommentMention',
+        related_name='social_comment_mentions',
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+    def __str__(self):
+        return f'{self.author_name} on post {self.post_id}: {self.body[:40]}'
+
+
+class PostCommentMention(models.Model):
+    """An @mention of a team member in a comment; doubles as their unread notification."""
+
+    comment = models.ForeignKey(PostComment, on_delete=models.CASCADE, related_name='mention_links')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='social_mentions')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        unique_together = ('comment', 'user')
+
+
+# ─── Monthly content planning (the "Plan" stage before Script) ───
+
+CONTENT_TYPE_CHOICES = SocialPost.POST_TYPE_CHOICES
+
+CONTENT_PILLAR_CHOICES = [
+    ('educational', 'Educational'),
+    ('promotional', 'Promotional'),
+    ('engagement', 'Engagement'),
+    ('behind_the_scenes', 'Behind the Scenes'),
+    ('testimonial', 'Testimonial'),
+    ('festive', 'Festive / Event'),
+    ('other', 'Other'),
+]
+
+PRODUCTION_METHOD_CHOICES = [
+    ('in_house', 'In-house Design'),
+    ('ai_generated', 'AI Generated'),
+    ('shoot', 'Shoot'),
+    ('outsourced', 'Outsourced Team'),
+]
+
+
+class ContentPackage(models.Model):
+    """Reusable monthly deliverables template (e.g. 'Growth: 4 reels + 10 images')."""
+
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True)
+    # [{"post_type": "reel", "quantity": 4, "unit_price": "1500.00", "platforms": ["instagram"]}]
+    quotas = models.JSONField(default=list, blank=True)
+    pillar_mix = models.JSONField(default=dict, blank=True)  # {"educational": 40, ...}
+    monthly_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class ContentPlan(models.Model):
+    """One client's content plan for one month: quotas, brief, slots and client sign-off."""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent to Client'),
+        ('changes_requested', 'Client Requested Changes'),
+        ('approved', 'Approved'),
+        ('closed', 'Month Closed'),
+    ]
+    POLICY_CHOICES = [
+        ('inherit', 'Client Default'),
+        ('carry_over', 'Carry over to next month'),
+        ('adjust_billing', 'Reduce the bill (no carry-over)'),
+    ]
+
+    client_profile = models.ForeignKey(SocialClientProfile, on_delete=models.CASCADE, related_name='content_plans')
+    month = models.DateField(help_text='First day of the planned month')
+    status = models.CharField(max_length=20, default='draft', choices=STATUS_CHOICES)
+    package = models.ForeignKey(ContentPackage, null=True, blank=True, on_delete=models.SET_NULL, related_name='plans')
+    carry_over_policy = models.CharField(max_length=20, default='inherit', choices=POLICY_CHOICES)
+    monthly_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Monthly brief
+    brief_goals = models.TextField(blank=True)
+    brief_offers = models.TextField(blank=True)
+    brief_focus = models.TextField(blank=True)
+    brief_avoid = models.TextField(blank=True)
+    brief_references = models.JSONField(default=list, blank=True)  # list of URLs
+    brief_notes = models.TextField(blank=True)
+
+    # Scheduling rules
+    pillar_mix = models.JSONField(default=dict, blank=True)
+    posting_days = models.JSONField(default=dict, blank=True)  # {"reel": [1, 4]} (0 = Monday)
+    posting_time = models.TimeField(default='19:00')
+    lead_days = models.JSONField(default=dict, blank=True)  # days before publish each stage must be done
+
+    # Client sign-off
+    client_approval_token = models.CharField(max_length=64, blank=True, db_index=True)
+    client_feedback = models.TextField(blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by_name = models.CharField(max_length=150, blank=True)
+
+    # Month close result (delivery, carry-over and billing adjustment)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    close_summary = models.JSONField(default=dict, blank=True)
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-month', 'client_profile__name']
+        unique_together = ('client_profile', 'month')
+
+    def save(self, *args, **kwargs):
+        if not self.client_approval_token:
+            self.client_approval_token = uuid.uuid4().hex
+        super().save(*args, **kwargs)
+
+    @property
+    def effective_policy(self):
+        if self.carry_over_policy != 'inherit':
+            return self.carry_over_policy
+        return self.client_profile.carry_over_policy or 'adjust_billing'
+
+    def __str__(self):
+        return f'{self.client_profile.name} {self.month:%b %Y} [{self.status}]'
+
+
+class ContentPlanQuota(models.Model):
+    """How many of one content type the client gets this month."""
+
+    plan = models.ForeignKey(ContentPlan, on_delete=models.CASCADE, related_name='quotas')
+    post_type = models.CharField(max_length=30, choices=CONTENT_TYPE_CHOICES)
+    quantity = models.PositiveIntegerField(default=0)
+    carried_in = models.PositiveIntegerField(default=0)  # added from last month's shortfall
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    platforms = models.JSONField(default=list, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['id']
+        unique_together = ('plan', 'post_type')
+
+    @property
+    def target(self):
+        return self.quantity + self.carried_in
+
+
+class KeyDate(models.Model):
+    """Festivals, national days and client events shown on the planning calendar."""
+
+    CATEGORY_CHOICES = [
+        ('festival', 'Festival'),
+        ('national', 'National Day'),
+        ('awareness', 'Awareness Day'),
+        ('client_event', 'Client Event'),
+        ('offer', 'Offer / Sale'),
+        ('launch', 'Launch'),
+        ('other', 'Other'),
+    ]
+
+    client_profile = models.ForeignKey(
+        SocialClientProfile, null=True, blank=True, on_delete=models.CASCADE, related_name='key_dates'
+    )  # null = applies to every client
+    date = models.DateField()
+    title = models.CharField(max_length=150)
+    category = models.CharField(max_length=20, default='festival', choices=CATEGORY_CHOICES)
+    recurring_yearly = models.BooleanField(default=False)
+    office_closed = models.BooleanField(default=False)  # holiday: deadlines skip this day
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date', 'title']
+
+    def __str__(self):
+        return f'{self.title} ({self.date})'
+
+
+class ProductionVendor(models.Model):
+    """External teams we outsource to (anchoring, shoots, voice-over...)."""
+
+    VENDOR_TYPE_CHOICES = [
+        ('anchoring', 'Anchoring'),
+        ('video_production', 'Video Production'),
+        ('photography', 'Photography'),
+        ('voice_over', 'Voice Over'),
+        ('editing', 'Editing'),
+        ('other', 'Other'),
+    ]
+
+    name = models.CharField(max_length=150)
+    vendor_type = models.CharField(max_length=30, default='anchoring', choices=VENDOR_TYPE_CHOICES)
+    contact_person = models.CharField(max_length=150, blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True)
+    rate_note = models.CharField(max_length=255, blank=True)
+    turnaround_days = models.PositiveIntegerField(default=0)  # working days they need; 0 = use defaults
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class ShootSchedule(models.Model):
+    """A shoot day that batches several video slots together."""
+
+    STATUS_CHOICES = [
+        ('planned', 'Planned'),
+        ('confirmed', 'Confirmed'),
+        ('done', 'Done'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    client_profile = models.ForeignKey(SocialClientProfile, on_delete=models.CASCADE, related_name='shoots')
+    plan = models.ForeignKey(ContentPlan, null=True, blank=True, on_delete=models.SET_NULL, related_name='shoots')
+    title = models.CharField(max_length=150, blank=True)
+    date = models.DateField()
+    start_time = models.TimeField(null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    crew = models.TextField(blank=True)  # people / talent
+    props = models.TextField(blank=True)
+    vendor = models.ForeignKey(ProductionVendor, null=True, blank=True, on_delete=models.SET_NULL, related_name='shoots')
+    status = models.CharField(max_length=20, default='planned', choices=STATUS_CHOICES)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date', 'start_time']
+
+    def __str__(self):
+        return f'{self.client_profile.name} shoot on {self.date}'
+
+
+class ContentPlanItem(models.Model):
+    """A planned slot. 'Start script' turns it into a SocialPost in the Script stage."""
+
+    STATUS_CHOICES = [
+        ('planned', 'Planned'),
+        ('started', 'In Production'),
+        ('dropped', 'Dropped'),
+    ]
+
+    plan = models.ForeignKey(ContentPlan, on_delete=models.CASCADE, related_name='items')
+    post_type = models.CharField(max_length=30, choices=CONTENT_TYPE_CHOICES, default='image')
+    title = models.CharField(max_length=255, blank=True)
+    idea = models.TextField(blank=True)
+    pillar = models.CharField(max_length=30, choices=CONTENT_PILLAR_CHOICES, blank=True)
+    platforms = models.JSONField(default=list, blank=True)
+    planned_date = models.DateField(null=True, blank=True)
+    planned_time = models.TimeField(null=True, blank=True)
+    production_method = models.CharField(max_length=20, choices=PRODUCTION_METHOD_CHOICES, default='in_house')
+    vendor = models.ForeignKey(ProductionVendor, null=True, blank=True, on_delete=models.SET_NULL, related_name='plan_items')
+    shoot = models.ForeignKey(ShootSchedule, null=True, blank=True, on_delete=models.SET_NULL, related_name='items')
+    key_date = models.ForeignKey(KeyDate, null=True, blank=True, on_delete=models.SET_NULL, related_name='plan_items')
+    writer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='planned_writing')
+    designer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='planned_design')
+    post = models.OneToOneField(SocialPost, null=True, blank=True, on_delete=models.SET_NULL, related_name='plan_item')
+    status = models.CharField(max_length=20, default='planned', choices=STATUS_CHOICES)
+    is_carry_over = models.BooleanField(default=False)
+    carried_from = models.ForeignKey(ContentPlan, null=True, blank=True, on_delete=models.SET_NULL, related_name='carried_out_items')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['planned_date', 'planned_time', 'id']
+
+    def __str__(self):
+        return f'{self.title or self.get_post_type_display()} on {self.planned_date}'
+
+
+class ContentIdea(models.Model):
+    """Idea bank: anyone can drop an idea; it gets pulled into a plan slot later."""
+
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('used', 'Used'),
+        ('archived', 'Archived'),
+    ]
+
+    client_profile = models.ForeignKey(
+        SocialClientProfile, null=True, blank=True, on_delete=models.CASCADE, related_name='content_ideas'
+    )  # null = general idea usable for any client
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    post_type = models.CharField(max_length=30, choices=CONTENT_TYPE_CHOICES, blank=True)
+    pillar = models.CharField(max_length=30, choices=CONTENT_PILLAR_CHOICES, blank=True)
+    reference_url = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=20, default='open', choices=STATUS_CHOICES)
+    used_in = models.ForeignKey(ContentPlanItem, null=True, blank=True, on_delete=models.SET_NULL, related_name='ideas')
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    submitted_by_name = models.CharField(max_length=150, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title

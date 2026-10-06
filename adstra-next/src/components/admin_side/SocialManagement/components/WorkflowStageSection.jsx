@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import {
@@ -39,14 +39,174 @@ import {
   Share2,
   Link,
   BarChart2,
-  Archive
+  Archive,
+  Ban,
+  Undo2,
+  MessageSquare,
+  Flag,
+  UserPlus,
+  ArrowRightLeft,
+  CheckSquare,
 } from "lucide-react";
 import ContentCalendarTab from "./ContentCalendarTab";
 import ScriptCreationModal from "./ScriptCreationModal";
 import ScriptViewModal from "./ScriptViewModal";
 import PostTimelineModal from "./PostTimelineModal";
+import MistakeInsightsPanel from "./MistakeInsightsPanel";
 import WorkDetailsModal from "./WorkDetailsModal";
 import MediaPreviewModal from "./MediaPreviewModal";
+import { toast, confirmDialog, apiErrorMessage } from "./SocialFeedback";
+import { renderPlatformIcon } from "./PlatformIcons";
+import PostPreviewDrawer from "./PostPreviewDrawer";
+import { BulkAssignModal, BulkRescheduleModal } from "./BulkActionModals";
+import {
+  STATUS_TO_STAGE,
+  ownStageOf,
+  STAGE_COLORS,
+  FORMAT_META,
+  PLATFORM_NAMES,
+  plural,
+  relativeTime,
+  shortDate,
+  KPI_BY_ID,
+  PIPELINE_STAGES,
+  pipelineProgress,
+  PRIORITY_META,
+  ASSIGNEE_ROLES,
+  initials,
+} from "./workflowUtils";
+import {
+  RevisionRequestModal,
+  RejectContentModal,
+  ApproveScheduleModal,
+  STAGE_LABELS,
+} from "./WorkflowDecisionModals";
+
+/* ─── New vs Redo work highlighting (production & review stages) ─── */
+const WORK_KIND_STAGES = ["designing", "team_review", "client_review"];
+
+const WORK_KIND_STYLE = {
+  redo: { color: "#c2410c", bg: "#fff7ed", border: "#fdba74", rowBg: "#fffaf5", bar: "#f97316" },
+  revised: { color: "#6d28d9", bg: "#f5f3ff", border: "#c4b5fd", rowBg: "#fdfcff", bar: "#8b5cf6" },
+  new: { color: "#047857", bg: "#ecfdf5", border: "#a7f3d0", rowBg: null, bar: null },
+};
+
+const WORK_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "new", label: "New" },
+  { id: "redo", label: "Redo" },
+  { id: "revised", label: "Revised" },
+];
+
+const mediaNoun = (post) =>
+  post.post_type === "reel" || post.post_type === "video"
+    ? "Video"
+    : post.post_type === "carousel"
+    ? "Carousel"
+    : post.post_type === "text"
+    ? "Post"
+    : "Design";
+
+/* ─── Scripts library: every post's script, bucketed by where it is now ─── */
+// "stage" filters are the work that belongs to the Scripts stage (shown as chips);
+// "library" filters browse scripts that already moved on (shown in the library dropdown)
+const SCRIPT_FILTERS = [
+  { id: "active", label: "Active", color: "#4f46e5", group: "stage" },
+  { id: "draft", label: "Drafts", color: "#4f46e5", group: "stage" },
+  { id: "under_review", label: "Submitted", color: "#7c3aed", group: "stage" },
+  { id: "revision", label: "Needs Revision", color: "#dc2626", group: "stage" },
+  { id: "production", label: "Approved / In Production", color: "#0284c7", group: "library" },
+  { id: "published", label: "Published", color: "#059669", group: "library" },
+  { id: "rejected", label: "Rejected", color: "#991b1b", group: "library" },
+  { id: "all", label: "All Scripts", color: "#0f172a", group: "library" },
+];
+
+const SCRIPT_BUCKET_BADGE = {
+  draft: { label: "Draft", color: "#475569", bg: "#f1f5f9", border: "#cbd5e1" },
+  under_review: { label: "Under Approval", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  revision: { label: "Needs Revision", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+  production: { label: "Approved · In Production", color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" },
+  published: { label: "Published", color: "#047857", bg: "#ecfdf5", border: "#a7f3d0" },
+  rejected: { label: "Rejected", color: "#991b1b", bg: "#fef2f2", border: "#fca5a5" },
+};
+
+// Where a post's script currently sits
+export function getScriptBucket(post) {
+  switch (post.status) {
+    case "script":
+    case "draft":
+      return post.client_feedback ? "revision" : "draft";
+    case "script_approval":
+      return "under_review";
+    case "rejected":
+      return post.client_feedback?.toLowerCase().includes("script") ? "revision" : "production";
+    case "published":
+    case "archived":
+      return "published";
+    case "content_rejected":
+      return "rejected";
+    default:
+      return "production";
+  }
+}
+
+const scriptMatchesFilter = (bucket, filter) =>
+  filter === "all" || (filter === "active" ? bucket === "draft" || bucket === "revision" : bucket === filter);
+
+const SCRIPT_EDITABLE_BUCKETS = ["draft", "revision", "under_review"];
+
+// Bulk "advance" from each stage: same transitions as the per-row primary buttons
+const BULK_ADVANCE = {
+  scripts: { target: "script_approval", label: "Submit all", verb: "submitted for approval", note: "Submitted script for internal review" },
+  script_approval: { target: "designing", label: "Approve all → Design", verb: "approved and moved to Designing", note: "Script approved, ready for design" },
+  designing: { target: "team_review", label: "Send all to QA", verb: "sent to Team Review", note: "Creative design attached, ready for QA", needsMedia: true },
+  team_review: { target: "client_review", label: "QA pass all → Client", verb: "sent to Client Review", note: "Team QA passed, sent to client review" },
+  client_review: { target: "approved", label: "Mark all approved", verb: "marked approved", note: "Client approved design & copy" },
+};
+
+// redo    = sent back with feedback and not yet resubmitted
+// revised = reworked and resubmitted at least once
+// new     = first version, never sent back
+export function getWorkKind(post) {
+  const rounds = post.revision_count || 0;
+  if (post.client_feedback || post.status === "rejected") return { kind: "redo", rounds };
+  if (rounds > 0) return { kind: "revised", rounds };
+  return { kind: "new", rounds: 0 };
+}
+
+function WorkKindBadge({ post }) {
+  const wk = getWorkKind(post);
+  const s = WORK_KIND_STYLE[wk.kind];
+  const noun = mediaNoun(post);
+  const label =
+    wk.kind === "redo"
+      ? `Redo ${noun}${wk.rounds ? ` · Round ${wk.rounds}` : ""}`
+      : wk.kind === "revised"
+      ? `Revised ${noun} · Round ${wk.rounds}`
+      : `New ${noun}`;
+  const Icon = wk.kind === "new" ? Sparkles : RotateCcw;
+  return (
+    <span
+      title={wk.rounds ? `${wk.rounds} revision round(s), ${post.client_revision_count || 0} requested by client` : "First version — never sent back"}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+        fontSize: "0.68rem",
+        padding: "2px 8px",
+        borderRadius: 8,
+        fontWeight: 800,
+        textTransform: wk.kind === "redo" ? "uppercase" : "none",
+        letterSpacing: wk.kind === "redo" ? "0.03em" : 0,
+      }}
+    >
+      <Icon size={11} /> {label}
+    </span>
+  );
+}
 
 export default function WorkflowStageSection({
   stageId,
@@ -57,13 +217,25 @@ export default function WorkflowStageSection({
   onRefresh,
   onOpenCreatePost,
   onNavigateStage,
+  kpiFilter = null,
+  onClearKpi,
+  focusRequest = null,
 }) {
+  // KPI quick filters show a cross-stage list; each row then acts in its own stage
+  const listStage = kpiFilter && KPI_BY_ID[kpiFilter] ? "kpi" : stageId;
   const [searchQuery, setSearchQuery] = useState("");
   const [formatFilter, setFormatFilter] = useState("all");
-  const [scriptSubFilter, setScriptSubFilter] = useState("all");
+  const [scriptSubFilter, setScriptSubFilter] = useState("active");
   const [viewMode, setViewMode] = useState("listing");
   const [copiedToken, setCopiedToken] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [mistakeHints, setMistakeHints] = useState({});
+  const [workFilter, setWorkFilter] = useState("all");
+  const showWorkKind = WORK_KIND_STAGES.includes(listStage);
+
+  useEffect(() => {
+    setWorkFilter("all");
+  }, [stageId]);
 
   // Script Creation Modal State (Stage 1: Scripts)
   const [scriptModalOpen, setScriptModalOpen] = useState(false);
@@ -81,6 +253,51 @@ export default function WorkflowStageSection({
   // Timeline Stepper Modal State
   const [timelinePost, setTimelinePost] = useState(null);
 
+  // Row preview drawer (kept by id so it always shows the freshest post data)
+  const [previewPostId, setPreviewPostId] = useState(null);
+  const previewPost = useMemo(() => posts.find((p) => p.id === previewPostId) || null, [posts, previewPostId]);
+
+  const [previewTabRequest, setPreviewTabRequest] = useState(null);
+
+  // Row selection for bulk actions
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkModal, setBulkModal] = useState(null); // 'assign' | 'reschedule'
+  const [bulkBusy, setBulkBusy] = useState(null); // { label, done, total }
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
+  const handledFocusRef = useRef(null);
+
+  useEffect(() => {
+    setPreviewPostId(null);
+  }, [stageId, kpiFilter]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setMoveMenuOpen(false);
+  }, [stageId, kpiFilter, scriptSubFilter, viewMode]);
+
+  useEffect(() => {
+    if (!moveMenuOpen) return;
+    const close = (e) => !e.target.closest(".sm-bulk-menu-wrap") && setMoveMenuOpen(false);
+    const onKey = (e) => e.key === "Escape" && setMoveMenuOpen(false);
+    document.addEventListener("mousedown", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [moveMenuOpen]);
+
+  // Open a specific post (e.g. from an @mention) once the parent has switched to its stage
+  useEffect(() => {
+    if (!focusRequest || handledFocusRef.current === focusRequest.nonce || listStage === "kpi") return;
+    const target = posts.find((p) => p.id === focusRequest.postId);
+    if (!target || ownStageOf(target) !== stageId) return;
+    handledFocusRef.current = focusRequest.nonce;
+    setViewMode("listing");
+    setPreviewPostId(target.id);
+    setPreviewTabRequest({ tab: focusRequest.tab || "overview", nonce: focusRequest.nonce });
+  }, [focusRequest, posts, stageId, listStage]);
+
   // Modal State for Action / Feedback / Loopback
   const [modalAction, setModalAction] = useState(null);
   const [actionNotes, setActionNotes] = useState("");
@@ -93,8 +310,26 @@ export default function WorkflowStageSection({
   const [activeModalTab, setActiveModalTab] = useState('copy');
   const [submittingAction, setSubmittingAction] = useState(false);
 
+  // Row-level upload progress: { postId, pct }
+  const [uploadState, setUploadState] = useState(null);
+
+  // Decision modals: { kind: 'revision' | 'reject' | 'approve' | 'reschedule', post, mode }
+  const [decision, setDecision] = useState(null);
+
   // Stage configuration details
   const stageMeta = useMemo(() => {
+    if (listStage === "kpi") {
+      const kpi = KPI_BY_ID[kpiFilter];
+      return {
+        title: kpi.title,
+        shortTitle: "Posts",
+        desc: `${kpi.desc} Showing posts from every stage.`,
+        color: kpi.color,
+        bgLight: kpi.bg,
+        icon: kpi.icon,
+        statuses: [],
+      };
+    }
     switch (stageId) {
       case "scripts":
         return {
@@ -170,6 +405,16 @@ export default function WorkflowStageSection({
           icon: Send,
           statuses: ["published"],
         };
+      case "rejected":
+        return {
+          title: "Rejected / Dropped Content",
+          shortTitle: "Rejected",
+          desc: "Scripts, designs or videos turned down entirely by the client or internal team, with the reason for each.",
+          color: "#dc2626",
+          bgLight: "#fef2f2",
+          icon: Ban,
+          statuses: ["content_rejected"],
+        };
       default:
         return {
           title: "Workflow Section",
@@ -181,63 +426,15 @@ export default function WorkflowStageSection({
           statuses: ["script"],
         };
     }
-  }, [stageId]);
+  }, [stageId, listStage, kpiFilter]);
 
-  // Sub-counts for Stage 1 Scripts filter pills
-  const scriptSubCounts = useMemo(() => {
-    if (stageId !== "scripts") return { all: 0, drafts: 0, underReview: 0, revision: 0 };
-    const clientFiltered = posts.filter(
-      (p) => selectedClientId === "all" || String(p.client_profile) === String(selectedClientId)
-    );
-    return {
-      all: clientFiltered.filter(
-        (p) =>
-          ["script", "draft", "script_approval"].includes(p.status) ||
-          p.status === "rejected" ||
-          Boolean(p.client_feedback)
-      ).length,
-      drafts: clientFiltered.filter(
-        (p) => ["script", "draft"].includes(p.status) && !p.client_feedback
-      ).length,
-      underReview: clientFiltered.filter((p) => p.status === "script_approval").length,
-      revision: clientFiltered.filter(
-        (p) => p.status === "rejected" || Boolean(p.client_feedback)
-      ).length,
-    };
-  }, [posts, selectedClientId, stageId]);
-
-  // Filter posts belonging to this stage
-  const stagePosts = useMemo(() => {
+  // Client / format / search filters shared by the list and the script pill counts
+  const commonFilteredPosts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return posts.filter((p) => {
-      // Client filter
-      if (selectedClientId !== "all" && String(p.client_profile) !== String(selectedClientId)) {
-        return false;
-      }
-      // Stage status filter
-      const isStatusMatch = stageId === "published" && showArchived ? p.status === "archived" : stageMeta.statuses.includes(p.status);
-      const isFallbackRejected =
-        p.status === "rejected" &&
-        ((stageId === "scripts" && p.client_feedback?.toLowerCase().includes("script")) ||
-          (stageId === "designing" && !p.client_feedback?.toLowerCase().includes("script")));
-
-      if (!isStatusMatch && !isFallbackRejected) {
-        return false;
-      }
-
-      // Script Sub-Filter in Stage 1
-      if (stageId === "scripts" && scriptSubFilter !== "all") {
-        if (scriptSubFilter === "draft" && (!["script", "draft"].includes(p.status) || Boolean(p.client_feedback))) return false;
-        if (scriptSubFilter === "under_review" && p.status !== "script_approval") return false;
-        if (scriptSubFilter === "revision" && !(p.status === "rejected" || Boolean(p.client_feedback))) return false;
-      }
-
-      // Format filter
-      if (formatFilter !== "all" && p.post_type !== formatFilter) {
-        return false;
-      }
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      if (selectedClientId !== "all" && String(p.client_profile) !== String(selectedClientId)) return false;
+      if (formatFilter !== "all" && p.post_type !== formatFilter) return false;
+      if (q) {
         const titleMatch = (p.title || "").toLowerCase().includes(q);
         const captionMatch = (p.primary_caption || "").toLowerCase().includes(q);
         const hookMatch = (p.script_notes || "").toLowerCase().includes(q);
@@ -246,24 +443,85 @@ export default function WorkflowStageSection({
       }
       return true;
     });
-  }, [posts, stageMeta, stageId, selectedClientId, scriptSubFilter, formatFilter, searchQuery, showArchived]);
+  }, [posts, selectedClientId, formatFilter, searchQuery]);
 
-  // Transition Handler
-  const handleTransition = async (post, targetStage, actionType, notes = "", extraData = {}) => {
+  // Sub-counts for Stage 1 Scripts filter pills
+  const scriptSubCounts = useMemo(() => {
+    const counts = Object.fromEntries(SCRIPT_FILTERS.map((f) => [f.id, 0]));
+    if (stageId !== "scripts") return counts;
+    commonFilteredPosts.forEach((p) => {
+      const bucket = getScriptBucket(p);
+      SCRIPT_FILTERS.forEach((f) => {
+        if (scriptMatchesFilter(bucket, f.id)) counts[f.id]++;
+      });
+    });
+    return counts;
+  }, [commonFilteredPosts, stageId]);
+
+  // Filter posts belonging to this stage (before the New/Redo/Revised filter)
+  const stageBasePosts = useMemo(() => {
+    if (listStage === "kpi") {
+      const now = new Date();
+      return commonFilteredPosts.filter((p) => KPI_BY_ID[kpiFilter].match(p, now));
+    }
+    if (stageId === "scripts") {
+      return commonFilteredPosts.filter((p) => scriptMatchesFilter(getScriptBucket(p), scriptSubFilter));
+    }
+    return commonFilteredPosts.filter((p) => {
+      const isStatusMatch = stageId === "published" && showArchived ? p.status === "archived" : stageMeta.statuses.includes(p.status);
+      const isFallbackRejected =
+        p.status === "rejected" && stageId === "designing" && !p.client_feedback?.toLowerCase().includes("script");
+      return isStatusMatch || isFallbackRejected;
+    });
+  }, [commonFilteredPosts, stageMeta, stageId, listStage, kpiFilter, scriptSubFilter, showArchived]);
+
+  const workKindCounts = useMemo(() => {
+    const counts = { all: stageBasePosts.length, new: 0, redo: 0, revised: 0 };
+    if (showWorkKind) stageBasePosts.forEach((p) => counts[getWorkKind(p).kind]++);
+    return counts;
+  }, [stageBasePosts, showWorkKind]);
+
+  const stagePosts = useMemo(() => {
+    if (!showWorkKind || workFilter === "all") return stageBasePosts;
+    return stageBasePosts.filter((p) => getWorkKind(p).kind === workFilter);
+  }, [stageBasePosts, showWorkKind, workFilter]);
+
+  // Only rows still visible count as selected (filters may hide some)
+  const selectedPosts = useMemo(() => stagePosts.filter((p) => selectedIds.has(p.id)), [stagePosts, selectedIds]);
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setSelectedIds((prev) =>
+      stagePosts.length && stagePosts.every((p) => prev.has(p.id)) ? new Set() : new Set(stagePosts.map((p) => p.id))
+    );
+
+  const getActor = () => {
+    let actorName = "Creative Team";
+    let actorRole = "Team Member";
+    const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+    if (userStr) {
+      try {
+        const parsed = JSON.parse(userStr);
+        actorName = parsed.fullname || parsed.name || parsed.username || actorName;
+        actorRole = parsed.role || actorRole;
+      } catch (err) {}
+    }
+    return { actorName, actorRole };
+  };
+
+  // Transition Handler — returns true on success
+  const handleTransition = async (post, targetStage, actionType, notes = "", extraData = {}, successMsg) => {
     setSubmittingAction(true);
     try {
-      const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
-      let actorName = "Creative Team";
-      let actorRole = "Team Member";
-      if (userStr) {
-        try {
-          const parsed = JSON.parse(userStr);
-          actorName = parsed.fullname || parsed.name || parsed.username || actorName;
-          actorRole = parsed.role || actorRole;
-        } catch (err) {}
-      }
-
-            await axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
+      const { actorName, actorRole } = getActor();
+      await axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
         target_stage: targetStage,
         action_type: actionType,
         notes: notes || actionNotes,
@@ -272,28 +530,21 @@ export default function WorkflowStageSection({
         ...extraData,
       });
       setModalAction(null);
+      setDecision(null);
       setActionNotes("");
+      const title = post.title || "Post";
+      toast.success(
+        successMsg ||
+          (actionType === "update" || targetStage === post.status
+            ? `"${title}" updated.`
+            : `"${title}" moved to ${STAGE_LABELS[targetStage] || targetStage}.`)
+      );
       onRefresh();
+      return true;
     } catch (err) {
       console.error("Workflow transition error:", err);
-      let errorMsg = "Error updating post workflow stage.";
-      if (err.response?.data) {
-        if (typeof err.response.data === "string") {
-          const match = err.response.data.match(/<pre class="exception_value">([^<]+)<\/pre>/);
-          errorMsg = match ? match[1] : `Server error (${err.response.status})`;
-        } else if (err.response.data.error) {
-          errorMsg = err.response.data.error;
-        } else if (err.response.data.detail) {
-          errorMsg = err.response.data.detail;
-        } else if (typeof err.response.data === "object") {
-          errorMsg = Object.entries(err.response.data)
-            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
-            .join(" | ");
-        }
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      alert(errorMsg);
+      toast.error(apiErrorMessage(err, "Error updating post workflow stage."), { title: "Could not update post" });
+      return false;
     } finally {
       setSubmittingAction(false);
     }
@@ -304,35 +555,132 @@ export default function WorkflowStageSection({
     const formData = new FormData();
     formData.append("file", file);
     formData.append("replace", isReplace ? "true" : "false");
+    setUploadState({ postId: post.id, pct: 0 });
     try {
       const res = await axios.post(`${API_BASE_URL}/social/posts/${post.id}/upload_media/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (e) => e.total && setUploadState({ postId: post.id, pct: Math.round((e.loaded / e.total) * 100) }),
       });
+      toast.success(`"${file.name}" (${(file.size / 1048576).toFixed(1)} MB) uploaded in original quality.`, { title: "Deliverable uploaded" });
       onRefresh();
       return res.data;
     } catch (err) {
       console.error("Upload error:", err);
-      alert(err.response?.data?.error || "Failed to upload media deliverable.");
+      toast.error(apiErrorMessage(err, "Failed to upload media deliverable."), { title: "Upload failed" });
       return null;
+    } finally {
+      setUploadState(null);
     }
   };
 
   const handlePublishNow = async (post) => {
-    if (!confirm(`Are you sure you want to publish "${post.title || 'this post'}" immediately across platforms?`)) {
-      return;
-    }
+    const ok = await confirmDialog({
+      title: "Publish now?",
+      message: `"${post.title || "This post"}" will be marked as published immediately on ${(post.platforms || []).join(", ") || "its platforms"}.`,
+      confirmLabel: "Publish Now",
+      tone: "sky",
+    });
+    if (!ok) return;
     try {
       await axios.post(`${API_BASE_URL}/social/posts/${post.id}/publish_now/`);
+      toast.success(`"${post.title || "Post"}" is now live.`, { title: "Published" });
       onRefresh();
     } catch (err) {
-      alert("Error publishing post.");
+      toast.error(apiErrorMessage(err, "Error publishing post."), { title: "Publish failed" });
     }
   };
+
+  const handleRestore = async (post) => {
+    const fix = mistakeHints[String(post.id)]?.fix;
+    const ok = await confirmDialog({
+      title: "Restore to Scripts?",
+      message: `"${post.title || "This post"}" goes back to Stage 1 with the rejection reason attached, so the team can write a new version.${fix ? ` A fix checklist ("${fix.title}") will be added to the post.` : ""}`,
+      confirmLabel: "Restore",
+    });
+    if (!ok) return;
+    if (fix) {
+      try {
+        const existing = new Set((post.checklist || []).map((c) => c.task));
+        const added = fix.checklist.filter((t) => !existing.has(t)).map((task) => ({ task, done: false, source: "mistake_fix" }));
+        if (added.length) {
+          await axios.patch(`${API_BASE_URL}/social/posts/${post.id}/`, { checklist: [...(post.checklist || []), ...added] });
+        }
+      } catch (err) {
+        console.error("Could not attach fix checklist", err);
+      }
+    }
+    handleTransition(post, "script", "restore", "Restored from Rejected list for a fresh script", {}, `"${post.title || "Post"}" restored to Scripts.`);
+  };
+
+  // Decision modal submit handlers
+  const submitRevision = ({ notes, categories, severity, requestedBy, scope }) => {
+    const { post, mode } = decision;
+    const extra = { reason_categories: categories, severity, revision_scope: scope };
+    if (mode === "client" && requestedBy) {
+      extra.actor_name = requestedBy;
+      extra.actor_role = "Client";
+    }
+    const target = mode === "script" || scope === "script" ? "script" : "designing";
+    handleTransition(
+      post,
+      target,
+      "reject",
+      notes,
+      extra,
+      `Sent "${post.title || "post"}" back to ${STAGE_LABELS[target]} (revision round #${(post.revision_count || 0) + 1}).`
+    );
+  };
+
+  const submitRejection = ({ notes, categories, rejectedBy, outcome }) => {
+    const { post } = decision;
+    const target = outcome === "drop" ? "content_rejected" : "script";
+    handleTransition(
+      post,
+      target,
+      "reject_final",
+      notes,
+      { reason_categories: categories, rejected_by: rejectedBy },
+      outcome === "drop"
+        ? `"${post.title || "Post"}" rejected and moved to the Rejected list.`
+        : `"${post.title || "Post"}" rejected — restarting from Scripts.`
+    );
+  };
+
+  const submitApproval = async ({ scheduledAt, notes, approvedBy }) => {
+    const { post, kind } = decision;
+    if (kind === "reschedule") {
+      setSubmittingAction(true);
+      try {
+        await axios.post(`${API_BASE_URL}/social/posts/${post.id}/reschedule/`, { scheduled_at: scheduledAt });
+        toast.success(`"${post.title || "Post"}" rescheduled.`);
+        setDecision(null);
+        onRefresh();
+      } catch (err) {
+        toast.error(apiErrorMessage(err, "Could not reschedule post."));
+      } finally {
+        setSubmittingAction(false);
+      }
+      return;
+    }
+    handleTransition(
+      post,
+      "approved",
+      "advance",
+      notes || "Client approved design & copy",
+      { scheduled_at: scheduledAt, ...(approvedBy ? { actor_name: approvedBy, actor_role: "Client" } : {}) },
+      scheduledAt
+        ? `"${post.title || "Post"}" approved and scheduled.`
+        : `"${post.title || "Post"}" approved — set a schedule in Post Schedule.`
+    );
+  };
+
+  const openDecision = (kind, post, mode) => setDecision({ kind, post, mode });
 
   const copyPublicLink = (token) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const publicUrl = `${origin}/social/review?token=${token}`;
     navigator.clipboard.writeText(publicUrl);
+    toast.success("Client review link copied to clipboard.");
     setCopiedToken(token);
     setTimeout(() => setCopiedToken(null), 2500);
   };
@@ -347,6 +695,189 @@ export default function WorkflowStageSection({
     setEditLiveUrls(post.live_urls || {});
     setEditAnalytics(post.analytics || {});
   };
+
+  // Runs `task` for each post (4 at a time), then one refresh and one summary toast.
+  // Failed posts stay selected so they can be retried.
+  const runBulk = async (label, items, task, verb) => {
+    if (!items.length) return;
+    setMoveMenuOpen(false);
+    setBulkBusy({ label, done: 0, total: items.length });
+    const failures = [];
+    const queue = [...items];
+    let done = 0;
+    const worker = async () => {
+      while (queue.length) {
+        const post = queue.shift();
+        try {
+          await task(post);
+        } catch (err) {
+          failures.push({ post, message: apiErrorMessage(err, "request failed") });
+        }
+        done += 1;
+        setBulkBusy((b) => (b ? { ...b, done } : b));
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(4, items.length) }, worker));
+    setBulkBusy(null);
+    const ok = items.length - failures.length;
+    if (ok) toast.success(`${plural(ok, "post")} ${verb}.`, { title: label });
+    if (failures.length) {
+      const sample = failures
+        .slice(0, 3)
+        .map((f) => `"${f.post.title || "Untitled"}" (${f.message})`)
+        .join(", ");
+      toast.error(`${sample}${failures.length > 3 ? ` and ${failures.length - 3} more` : ""}`, {
+        title: `${plural(failures.length, "post")} could not be updated`,
+      });
+    }
+    setSelectedIds(new Set(failures.map((f) => f.post.id)));
+    onRefresh();
+  };
+
+  const transitionRequest = (post, target, actionType, notes) => {
+    const { actorName, actorRole } = getActor();
+    return axios.post(`${API_BASE_URL}/social/posts/${post.id}/transition_stage/`, {
+      target_stage: target,
+      action_type: actionType,
+      notes,
+      actor_name: actorName,
+      actor_role: actorRole,
+    });
+  };
+
+  // Which selected posts the "advance" button applies to (each post moves on from its own stage)
+  const bulkAdvance = useMemo(() => {
+    const eligible = [];
+    const skipped = { stage: 0, media: 0 };
+    selectedPosts.forEach((p) => {
+      const own = ownStageOf(p);
+      const rule = BULK_ADVANCE[own];
+      if (!rule || (listStage !== "kpi" && own !== stageId)) skipped.stage += 1;
+      else if (rule.needsMedia && !(p.media_urls || []).length) skipped.media += 1;
+      else eligible.push(p);
+    });
+    const rule = listStage === "kpi" ? null : BULK_ADVANCE[stageId];
+    return {
+      eligible,
+      skipped,
+      label: rule ? rule.label : "Advance all →",
+      visible: listStage === "kpi" ? eligible.length > 0 : Boolean(rule),
+    };
+  }, [selectedPosts, listStage, stageId]);
+
+  const handleBulkAdvance = async () => {
+    const { eligible, skipped, label } = bulkAdvance;
+    if (!eligible.length) {
+      toast.warning(
+        skipped.media
+          ? "None of the selected designs have a deliverable uploaded yet."
+          : "None of the selected posts are in a stage that can be advanced from here.",
+        { title: "Nothing to submit" }
+      );
+      return;
+    }
+    const notes = [];
+    if (skipped.stage) notes.push(`${plural(skipped.stage, "post")} not in this stage will be skipped.`);
+    if (skipped.media) notes.push(`${plural(skipped.media, "design")} without an uploaded deliverable will be skipped.`);
+    const ok = await confirmDialog({
+      title: `${label.replace(/ →.*$/, "")}?`,
+      message: `${plural(eligible.length, "post")} will move to the next stage.${notes.length ? ` ${notes.join(" ")}` : ""}`,
+      confirmLabel: `${label.replace(/ →.*$/, "")} (${eligible.length})`,
+    });
+    if (!ok) return;
+    runBulk(
+      label,
+      eligible,
+      (post) => {
+        const rule = BULK_ADVANCE[ownStageOf(post)];
+        return transitionRequest(post, rule.target, "advance", `${rule.note} (bulk action)`);
+      },
+      listStage === "kpi" ? "moved to their next stage" : BULK_ADVANCE[stageId].verb
+    );
+  };
+
+  const handleBulkMove = async (stage) => {
+    const items = selectedPosts.filter((p) => ownStageOf(p) !== stage.id);
+    const already = selectedPosts.length - items.length;
+    if (!items.length) {
+      toast.info(`All selected posts are already in ${stage.label}.`);
+      return;
+    }
+    const ok = await confirmDialog({
+      title: `Move to ${stage.label}?`,
+      message: `${plural(items.length, "post")} will be moved straight to ${stage.label}, skipping the normal review buttons. Each move is recorded on the post's timeline.${
+        already ? ` ${plural(already, "post")} already there will be left alone.` : ""
+      }`,
+      confirmLabel: `Move ${plural(items.length, "post")}`,
+    });
+    if (!ok) return;
+    runBulk(
+      "Move to stage",
+      items,
+      (post) => transitionRequest(post, stage.status, "move", `Moved to ${stage.label} (bulk action)`),
+      `moved to ${stage.label}`
+    );
+  };
+
+  const handleBulkAssign = (role, userId) => {
+    setBulkModal(null);
+    const roleLabel = ASSIGNEE_ROLES.find((r) => r.id === role)?.label || role;
+    runBulk(
+      "Assign",
+      selectedPosts,
+      (post) => axios.post(`${API_BASE_URL}/social/posts/${post.id}/assign/`, { role, user_id: userId }),
+      userId === null ? `had their ${roleLabel.toLowerCase()} cleared` : `assigned a ${roleLabel.toLowerCase()}`
+    );
+  };
+
+  const handleBulkReschedule = ({ mode, at, days }) => {
+    setBulkModal(null);
+    const items = mode === "shift" ? selectedPosts.filter((p) => p.scheduled_at) : selectedPosts;
+    runBulk(
+      "Reschedule",
+      items,
+      (post) => {
+        const next = mode === "shift" ? new Date(new Date(post.scheduled_at).getTime() + days * 86400000) : at;
+        return axios.post(`${API_BASE_URL}/social/posts/${post.id}/reschedule/`, { scheduled_at: next.toISOString() });
+      },
+      mode === "shift" ? `shifted ${days > 0 ? "later" : "earlier"} by ${plural(Math.abs(days), "day")}` : `rescheduled to ${shortDate(at, true)}`
+    );
+  };
+
+  const actionHandlers = {
+    onTransition: handleTransition,
+    onPublishNow: handlePublishNow,
+    onCopyLink: copyPublicLink,
+    copiedToken,
+    onOpenModal: openActionModal,
+    onNavigateStage,
+    onOpenTimeline: (post) => setTimelinePost(post),
+    onViewScript: (post) => setViewingScriptPost(post),
+    onViewWorkDetails: (post) => setViewingWorkDetailsPost(post),
+    onPreviewMedia: (post) => setPreviewingMediaPost(post),
+    onUploadMedia: handleUploadMedia,
+    onOpenDecision: openDecision,
+    onRestore: handleRestore,
+    uploadState,
+    onOpenScriptModal: (post) => {
+      setActiveScriptPost(post);
+      setScriptModalOpen(true);
+    },
+    onReuseScript: (post) => {
+      // Prefill a brand-new script from an old one (no id → creates a new post)
+      const { id, client_feedback, last_revision_categories, ...rest } = post;
+      setActiveScriptPost({ ...rest, title: `${post.title || "Untitled"} (Copy)`, status: "script" });
+      setScriptModalOpen(true);
+    },
+  };
+
+  const renderStageActions = (post, actionStage, opts = {}) => (
+    <PostStageActions post={post} stageId={actionStage} showTimeline={opts.showTimeline !== false} {...actionHandlers} />
+  );
+
+  const anyModalOpen = Boolean(
+    modalAction || decision || scriptModalOpen || timelinePost || viewingScriptPost || viewingWorkDetailsPost || previewingMediaPost || bulkModal
+  );
 
   const StageIcon = stageMeta.icon;
 
@@ -393,7 +924,7 @@ export default function WorkflowStageSection({
                 fontWeight: 800,
               }}
             >
-              {stagePosts.length} items
+              {plural(stagePosts.length, "item")}
             </span>
           </div>
           <p style={{ margin: 0, fontSize: "0.84rem", color: "#64748b" }}>
@@ -403,6 +934,28 @@ export default function WorkflowStageSection({
 
         {/* Section Right Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {listStage === "kpi" && onClearKpi && (
+            <button
+              type="button"
+              onClick={onClearKpi}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "7px 12px",
+                borderRadius: 10,
+                border: `1px solid ${stageMeta.color}55`,
+                background: stageMeta.bgLight,
+                color: stageMeta.color,
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              <X size={14} /> Clear filter
+            </button>
+          )}
+
           {/* View Toggle: Listing & Calendar Only */}
           <div style={{ display: "flex", background: "#f1f5f9", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0" }}>
             <button
@@ -445,7 +998,7 @@ export default function WorkflowStageSection({
             </button>
           </div>
 
-          {stageId === "scripts" && (
+          {listStage === "scripts" && (
             <button
               onClick={() => {
                 setActiveScriptPost(null);
@@ -480,7 +1033,7 @@ export default function WorkflowStageSection({
           selectedClientId={selectedClientId}
           onRefresh={onRefresh}
           onOpenCreatePost={
-            stageId === "scripts"
+            listStage === "scripts"
               ? () => {
                   setActiveScriptPost(null);
                   setScriptModalOpen(true);
@@ -533,87 +1086,114 @@ export default function WorkflowStageSection({
                 <option value="text">Text</option>
               </select>
 
-              {/* Stage 1: Quick Sub-Filters for Drafts vs Under Approval */}
-              {stageId === "scripts" && (
+              {/* Stage 1: Script library sub-filters (active work + every past script) */}
+              {listStage === "scripts" && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: "#f8fafc", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+                    {SCRIPT_FILTERS.filter((f) => f.group === "stage").map((f) => {
+                      const active = scriptSubFilter === f.id;
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setScriptSubFilter(f.id)}
+                          style={{
+                            padding: "5px 11px",
+                            borderRadius: 7,
+                            border: "none",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            background: active ? f.color : "transparent",
+                            color: active ? "#ffffff" : "#64748b",
+                            transition: "all 0.15s ease",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {f.label} ({scriptSubCounts[f.id]})
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Script library: scripts that already moved past this stage */}
+                  {(() => {
+                    const libraryFilter = SCRIPT_FILTERS.find((f) => f.group === "library" && f.id === scriptSubFilter);
+                    return (
+                      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <Archive size={14} color={libraryFilter ? "#ffffff" : "#64748b"} style={{ position: "absolute", left: 10, pointerEvents: "none" }} />
+                        <select
+                          value={libraryFilter ? libraryFilter.id : ""}
+                          onChange={(e) => setScriptSubFilter(e.target.value || "active")}
+                          title="Browse scripts that already moved past this stage"
+                          style={{
+                            padding: "7px 12px 7px 30px",
+                            borderRadius: 10,
+                            border: `1px solid ${libraryFilter ? libraryFilter.color : "#cbd5e1"}`,
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            background: libraryFilter ? libraryFilter.color : "#ffffff",
+                            color: libraryFilter ? "#ffffff" : "#475569",
+                          }}
+                        >
+                          <option value="" style={{ background: "#ffffff", color: "#0f172a" }}>Script library…</option>
+                          {SCRIPT_FILTERS.filter((f) => f.group === "library").map((f) => (
+                            <option key={f.id} value={f.id} style={{ background: "#ffffff", color: "#0f172a" }}>
+                              {f.label} ({scriptSubCounts[f.id]})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+
+              {/* Production & review stages: New vs Redo vs Revised */}
+              {showWorkKind && (
                 <div style={{ display: "flex", alignItems: "center", gap: 3, background: "#f8fafc", padding: 3, borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                  <button
-                    type="button"
-                    onClick={() => setScriptSubFilter("all")}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 7,
-                      border: "none",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      background: scriptSubFilter === "all" ? "#4f46e5" : "transparent",
-                      color: scriptSubFilter === "all" ? "#ffffff" : "#64748b",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    All Scripts ({scriptSubCounts.all})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScriptSubFilter("draft")}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 7,
-                      border: "none",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      background: scriptSubFilter === "draft" ? "#4f46e5" : "transparent",
-                      color: scriptSubFilter === "draft" ? "#ffffff" : "#64748b",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    Drafts ({scriptSubCounts.drafts})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScriptSubFilter("under_review")}
-                    style={{
-                      padding: "5px 11px",
-                      borderRadius: 7,
-                      border: "none",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      background: scriptSubFilter === "under_review" ? "#7c3aed" : "transparent",
-                      color: scriptSubFilter === "under_review" ? "#ffffff" : "#64748b",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    Under Approval ({scriptSubCounts.underReview})
-                  </button>
-                  {scriptSubCounts.revision > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setScriptSubFilter("revision")}
-                      style={{
-                        padding: "5px 11px",
-                        borderRadius: 7,
-                        border: "none",
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        background: scriptSubFilter === "revision" ? "#dc2626" : "transparent",
-                        color: scriptSubFilter === "revision" ? "#ffffff" : "#64748b",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      Needs Revision ({scriptSubCounts.revision})
-                    </button>
-                  )}
+                  {WORK_FILTERS.map((f) => {
+                    const active = workFilter === f.id;
+                    const tone = f.id === "all" ? { color: "#4f46e5" } : WORK_KIND_STYLE[f.id];
+                    const activeBg = f.id === "all" ? "#4f46e5" : f.id === "new" ? "#059669" : tone.bar;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setWorkFilter(f.id)}
+                        style={{
+                          padding: "5px 11px",
+                          borderRadius: 7,
+                          border: "none",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: active ? activeBg : "transparent",
+                          color: active ? "#ffffff" : f.id === "all" ? "#64748b" : tone.color,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {f.label} ({workKindCounts[f.id]})
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             <div style={{ fontSize: "0.82rem", color: "#64748b", fontWeight: 600 }}>
-              Showing {stagePosts.length} {stageMeta.shortTitle.toLowerCase()} items
+              Showing {plural(stagePosts.length, listStage === "scripts" ? "script" : "post")}
             </div>
           </div>
+
+          {listStage === "rejected" && (
+            <MistakeInsightsPanel
+              selectedClientId={selectedClientId}
+              onHints={setMistakeHints}
+              onApplied={onRefresh}
+            />
+          )}
 
           {/* 3. SECTION CARDS GRID */}
           {stagePosts.length === 0 ? (
@@ -645,34 +1225,40 @@ export default function WorkflowStageSection({
                 <StageIcon size={28} />
               </div>
               <h3 style={{ margin: 0, color: "#0f172a", fontSize: "1.15rem" }}>
-                No items currently in {stageMeta.shortTitle}
+                {showWorkKind && workFilter !== "all" && stageBasePosts.length > 0
+                  ? `No ${workFilter} work in ${stageMeta.shortTitle}`
+                  : listStage === "scripts" && scriptSubFilter !== "active"
+                  ? `No scripts under "${SCRIPT_FILTERS.find((f) => f.id === scriptSubFilter)?.label}"`
+                  : listStage === "kpi"
+                  ? `Nothing in "${stageMeta.title}" right now`
+                  : `No items currently in ${stageMeta.shortTitle}`}
               </h3>
               <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem", maxWidth: 460 }}>
-                {stageId === "scripts"
+                {listStage === "scripts" && scriptSubFilter !== "active"
+                  ? "Try another filter, or clear the search / format filter."
+                  : listStage === "scripts"
                   ? "Click '+ New Script' to draft your next viral hook and content angle."
+                  : listStage === "kpi"
+                  ? "All clear. Clear the filter to go back to the pipeline."
+                  : listStage === "rejected"
+                  ? "Nothing has been rejected outright. Content turned down by the client or team will be listed here with its reason."
                   : `Posts will appear here as they advance from previous stages.`}
               </p>
             </div>
           ) : (
             <StageListingTable
               stagePosts={stagePosts}
-              stageId={stageId}
+              stageId={listStage}
               stageMeta={stageMeta}
-              onTransition={handleTransition}
-              onPublishNow={handlePublishNow}
-              onCopyLink={copyPublicLink}
-              copiedToken={copiedToken}
-              onOpenModal={openActionModal}
-              onNavigateStage={onNavigateStage}
-              onOpenTimeline={(post) => setTimelinePost(post)}
-              onViewScript={(post) => setViewingScriptPost(post)}
-              onViewWorkDetails={(post) => setViewingWorkDetailsPost(post)}
-              onPreviewMedia={(post) => setPreviewingMediaPost(post)}
-              onUploadMedia={handleUploadMedia}
-              onOpenScriptModal={(post) => {
-                setActiveScriptPost(post);
-                setScriptModalOpen(true);
-              }}
+              mistakeHints={mistakeHints}
+              showWorkKind={showWorkKind}
+              selectedPostId={previewPost ? previewPost.id : null}
+              onOpenPreview={(post) => setPreviewPostId(post.id)}
+              renderActions={renderStageActions}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleSelectAll={toggleSelectAll}
+              {...actionHandlers}
             />
           )}
         </>
@@ -981,7 +1567,7 @@ export default function WorkflowStageSection({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => { navigator.clipboard.writeText(editMediaUrl); alert("Asset link copied!"); }}
+                                  onClick={() => { navigator.clipboard.writeText(editMediaUrl); toast.success("Asset link copied."); }}
                                   style={{ padding: "4px 8px", borderRadius: 6, background: "#334155", border: "none", color: "#cbd5e1", fontSize: "0.7rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
                                 >
                                   <Copy size={10} /> Link
@@ -1161,7 +1747,7 @@ export default function WorkflowStageSection({
                         await axios.patch(`${API_BASE_URL}/social/posts/${modalAction.post.id}/`, { live_urls: editLiveUrls });
                         onRefresh();
                         setModalAction(null);
-                      } catch(e) { alert("Failed to update URLs"); } finally { setSubmittingAction(false); }
+                      toast.success("Live URLs saved."); } catch(e) { toast.error(apiErrorMessage(e, "Failed to update URLs")); } finally { setSubmittingAction(false); }
                     }}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
                   >
@@ -1178,7 +1764,7 @@ export default function WorkflowStageSection({
                         await axios.patch(`${API_BASE_URL}/social/posts/${modalAction.post.id}/`, { analytics: editAnalytics });
                         onRefresh();
                         setModalAction(null);
-                      } catch(e) { alert("Failed to update analytics"); } finally { setSubmittingAction(false); }
+                      toast.success("Post analytics saved."); } catch(e) { toast.error(apiErrorMessage(e, "Failed to update analytics")); } finally { setSubmittingAction(false); }
                     }}
                     style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
                   >
@@ -1367,6 +1953,44 @@ export default function WorkflowStageSection({
           </div>
       )}
 
+      {/* 4b. DECISION MODALS: revisions, full rejection, approval & schedule */}
+      {decision?.kind === "revision" && (
+        <RevisionRequestModal
+          key={`rev-${decision.post.id}`}
+          post={decision.post}
+          mode={decision.mode}
+          submitting={submittingAction}
+          onClose={() => setDecision(null)}
+          onSubmit={submitRevision}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+          onSwitchToReject={() =>
+            setDecision({ kind: "reject", post: decision.post, mode: decision.mode === "client" ? "client" : "internal" })
+          }
+        />
+      )}
+      {decision?.kind === "reject" && (
+        <RejectContentModal
+          key={`rej-${decision.post.id}`}
+          post={decision.post}
+          defaultRejectedBy={decision.mode === "client" ? "client" : "internal"}
+          submitting={submittingAction}
+          onClose={() => setDecision(null)}
+          onSubmit={submitRejection}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+        />
+      )}
+      {(decision?.kind === "approve" || decision?.kind === "reschedule") && (
+        <ApproveScheduleModal
+          key={`appr-${decision.post.id}`}
+          post={decision.post}
+          mode={decision.kind}
+          submitting={submittingAction}
+          onClose={() => setDecision(null)}
+          onSubmit={submitApproval}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+        />
+      )}
+
       {/* 5. SCRIPT CREATION / EDIT MODAL */}
       {scriptModalOpen && (
         <ScriptCreationModal
@@ -1404,14 +2028,18 @@ export default function WorkflowStageSection({
           isOpen={Boolean(viewingScriptPost)}
           onClose={() => setViewingScriptPost(null)}
           post={viewingScriptPost}
-          onApprove={(p) =>
-            handleTransition(p, "designing", "advance", "Script approved, ready for visual design")
+          onApprove={
+            viewingScriptPost.status === "script_approval"
+              ? (p) => handleTransition(p, "designing", "advance", "Script approved, ready for visual design")
+              : null
           }
-          onReject={(p, reason) =>
-            handleTransition(p, "script", "reject", reason, { script_notes: p.script_notes })
+          onReject={
+            viewingScriptPost.status === "script_approval"
+              ? (p, reason) => handleTransition(p, "script", "reject", reason, { script_notes: p.script_notes })
+              : null
           }
           onEdit={
-            stageId === "scripts"
+            stageId === "scripts" && SCRIPT_EDITABLE_BUCKETS.includes(getScriptBucket(viewingScriptPost))
               ? (p) => {
                   setActiveScriptPost(p);
                   setScriptModalOpen(true);
@@ -1492,7 +2120,127 @@ export default function WorkflowStageSection({
         />
       )}
 
+      {/* Bulk action bar */}
+      {viewMode === "listing" && selectedPosts.length > 0 && (
+        <div className={`sm-bulk-bar no-print ${previewPost ? "with-drawer" : ""}`} role="toolbar" aria-label="Bulk actions">
+          <span className="sm-bulk-count">
+            <CheckSquare size={16} /> {selectedPosts.length} selected
+          </span>
+          {bulkBusy ? (
+            <span className="sm-bulk-progress">
+              {bulkBusy.label}… {bulkBusy.done}/{bulkBusy.total}
+              <span className="sm-bulk-progress-track">
+                <span style={{ width: `${(bulkBusy.done / bulkBusy.total) * 100}%` }} />
+              </span>
+            </span>
+          ) : (
+            <>
+              {bulkAdvance.visible && (
+                <button type="button" className="sm-bulk-btn primary" onClick={handleBulkAdvance} style={{ background: stageMeta.color }}>
+                  <Send size={14} /> {bulkAdvance.label}
+                  {bulkAdvance.eligible.length !== selectedPosts.length && ` (${bulkAdvance.eligible.length})`}
+                </button>
+              )}
+              <button type="button" className="sm-bulk-btn" onClick={() => setBulkModal("assign")}>
+                <UserPlus size={14} /> Assign to…
+              </button>
+              <button type="button" className="sm-bulk-btn" onClick={() => setBulkModal("reschedule")}>
+                <CalendarIcon size={14} /> Reschedule
+              </button>
+              <div className="sm-bulk-menu-wrap">
+                <button type="button" className={`sm-bulk-btn ${moveMenuOpen ? "open" : ""}`} onClick={() => setMoveMenuOpen((o) => !o)} aria-expanded={moveMenuOpen}>
+                  <ArrowRightLeft size={14} /> Move to <ChevronDown size={13} />
+                </button>
+                {moveMenuOpen && (
+                  <ul className="sm-bulk-menu" role="menu">
+                    {PIPELINE_STAGES.filter((st) => st.id !== "published").map((st) => (
+                      <li key={st.id}>
+                        <button type="button" role="menuitem" onClick={() => handleBulkMove(st)}>
+                          <span className="sm-bulk-menu-dot" style={{ background: (STAGE_COLORS[st.id] || STAGE_COLORS.scripts).color }} />
+                          {st.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <button type="button" className="sm-bulk-btn ghost" onClick={() => setSelectedIds(new Set())} title="Clear selection">
+                <X size={15} />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {bulkModal === "assign" && (
+        <BulkAssignModal count={selectedPosts.length} onClose={() => setBulkModal(null)} onConfirm={handleBulkAssign} />
+      )}
+      {bulkModal === "reschedule" && (
+        <BulkRescheduleModal posts={selectedPosts} onClose={() => setBulkModal(null)} onConfirm={handleBulkReschedule} />
+      )}
+
+      {/* Row preview drawer */}
+      {previewPost && viewMode === "listing" && (
+        <PostPreviewDrawer
+          post={previewPost}
+          stageId={ownStageOf(previewPost)}
+          list={stagePosts}
+          onSelect={setPreviewPostId}
+          onClose={() => setPreviewPostId(null)}
+          onRefresh={onRefresh}
+          onOpenTimeline={(p) => setTimelinePost(p)}
+          onPreviewMedia={(p) => setPreviewingMediaPost(p)}
+          renderActions={(p, actionStage) => renderStageActions(p, actionStage, { showTimeline: false })}
+          keyboardEnabled={!anyModalOpen}
+          tabRequest={previewTabRequest}
+        />
+      )}
+
     </div>
+  );
+}
+
+// Seven-segment bar showing how far a post is through the pipeline
+function PipelineProgressBar({ post }) {
+  const { index, total, rejected } = pipelineProgress(post);
+  const done = post.status === "published" || post.status === "archived";
+  const color = rejected ? "#dc2626" : done ? "#10b981" : (STAGE_COLORS[PIPELINE_STAGES[index].id] || STAGE_COLORS.scripts).color;
+  return (
+    <span
+      className="sm-progress"
+      title={rejected ? `Rejected at ${PIPELINE_STAGES[index].label}` : `Step ${index + 1} of ${total}: ${PIPELINE_STAGES[index].label}`}
+    >
+      <span className="sm-progress-track">
+        {PIPELINE_STAGES.map((st, i) => (
+          <span key={st.id} style={{ background: i <= index ? color : undefined }} />
+        ))}
+      </span>
+      <span className="sm-progress-label" style={{ color }}>
+        {rejected ? "Dropped" : `${index + 1}/${total}`}
+      </span>
+    </span>
+  );
+}
+
+// Overlapping writer / designer / reviewer avatars; empty roles show a dashed placeholder
+function AssigneeAvatars({ post }) {
+  return (
+    <span className="sm-avatars">
+      {ASSIGNEE_ROLES.map((role) => {
+        const fallback = role.id === "writer" && !post.writer_details ? post.created_by_details : null;
+        const person = post[`${role.id}_details`] || fallback;
+        const name = person?.name || person?.fullname || person?.username;
+        return name ? (
+          <span key={role.id} className={`sm-avatar sm-avatar-${role.id}`} title={`${role.label}: ${name}${fallback ? " (creator)" : ""}`}>
+            {initials(name)}
+          </span>
+        ) : (
+          <span key={role.id} className="sm-avatar sm-avatar-empty" title={`No ${role.label.toLowerCase()} assigned — open the post to assign`}>
+            {role.short}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
@@ -1508,47 +2256,26 @@ function StageListingTable({
   onOpenModal,
   onNavigateStage,
   onOpenScriptModal,
+  onReuseScript,
   onOpenTimeline,
   onViewScript,
   onViewWorkDetails,
   onPreviewMedia,
   onUploadMedia,
+  onOpenDecision,
+  onRestore,
+  mistakeHints = {},
+  showWorkKind = false,
+  selectedPostId = null,
+  onOpenPreview,
+  renderActions,
+  selectedIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll,
 }) {
-  const [openOptionsPostId, setOpenOptionsPostId] = useState(null);
-  const [dropdownPos, setDropdownPos] = useState(null);
-
-  useEffect(() => {
-    if (!openOptionsPostId) return;
-    const handleClose = () => {
-      setOpenOptionsPostId(null);
-      setDropdownPos(null);
-    };
-    window.addEventListener("scroll", handleClose, true);
-    window.addEventListener("resize", handleClose);
-    return () => {
-      window.removeEventListener("scroll", handleClose, true);
-      window.removeEventListener("resize", handleClose);
-    };
-  }, [openOptionsPostId]);
-
-  const toggleOptions = (e, postId) => {
-    e.stopPropagation();
-    if (openOptionsPostId === postId) {
-      setOpenOptionsPostId(null);
-      setDropdownPos(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 280;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
-      setDropdownPos({
-        top: openUp ? undefined : rect.bottom + 5,
-        bottom: openUp ? window.innerHeight - rect.top + 5 : undefined,
-        right: Math.max(16, window.innerWidth - rect.right),
-      });
-      setOpenOptionsPostId(postId);
-    }
-  };
+  const allChecked = stagePosts.length > 0 && stagePosts.every((p) => selectedIds.has(p.id));
+  const someChecked = !allChecked && stagePosts.some((p) => selectedIds.has(p.id));
+  const thStyle = { padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" };
 
   return (
     <div
@@ -1560,15 +2287,27 @@ function StageListingTable({
       }}
     >
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", minWidth: 880, borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
+        <table style={{ width: "100%", minWidth: 1020, borderCollapse: "collapse", textAlign: "left", fontSize: "0.84rem" }}>
           <thead>
             <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+              <th style={{ ...thStyle, width: 40, padding: "14px 0 14px 16px" }}>
+                <input
+                  type="checkbox"
+                  className="sm-row-check"
+                  style={{ accentColor: stageMeta.color }}
+                  checked={allChecked}
+                  ref={(el) => el && (el.indeterminate = someChecked)}
+                  onChange={() => onToggleSelectAll && onToggleSelectAll()}
+                  aria-label="Select all rows"
+                />
+              </th>
               <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 230 }}>
                 Post & Content
               </th>
               <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 140, whiteSpace: "nowrap" }}>
                 Client
               </th>
+              <th style={{ ...thStyle, width: 100 }}>Team</th>
               <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 80, whiteSpace: "nowrap" }}>
                 Format
               </th>
@@ -1576,7 +2315,7 @@ function StageListingTable({
                 Platforms
               </th>
               <th style={{ padding: "14px 12px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 120, whiteSpace: "nowrap" }}>
-                {stageId === "published" ? "Published At" : stageId === "post_schedule" ? "Scheduled At" : "Timing"}
+                {stageId === "published" ? "Published" : stageId === "rejected" ? "Rejected On" : "Post Date"}
               </th>
               <th style={{ padding: "14px 16px", fontWeight: 800, color: "#475569", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", width: 360, textAlign: "right", whiteSpace: "nowrap" }}>
                 Actions
@@ -1585,21 +2324,46 @@ function StageListingTable({
           </thead>
           <tbody>
             {stagePosts.map((post) => {
+              const rowStage = stageId === "kpi" ? ownStageOf(post) : stageId;
               const isRejected = Boolean(post.client_feedback);
+              const scriptBucket = rowStage === "scripts" ? getScriptBucket(post) : null;
+              const scriptEditable = scriptBucket ? SCRIPT_EDITABLE_BUCKETS.includes(scriptBucket) : false;
               const StageIcon = stageMeta.icon;
+              const kindStyle = showWorkKind ? WORK_KIND_STYLE[getWorkKind(post).kind] : null;
+              const isSelected = selectedPostId === post.id;
+              const isChecked = selectedIds.has(post.id);
+              const rowBg = isSelected ? "#eef2ff" : isChecked ? "#f5f7ff" : kindStyle?.rowBg || "transparent";
+              const priority = PRIORITY_META[post.priority];
 
               return (
                 <tr
                   key={post.id}
+                  onClick={(e) => {
+                    if (!onOpenPreview || e.target.closest("button, a, input, select, textarea, [data-no-preview]")) return;
+                    onOpenPreview(post);
+                  }}
                   style={{
                     borderBottom: "1px solid #f1f5f9",
                     transition: "background 0.12s ease",
+                    background: rowBg,
+                    cursor: onOpenPreview ? "pointer" : "default",
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = rowBg)}
                 >
+                  <td style={{ padding: "14px 0 14px 16px", verticalAlign: "middle", width: 40 }}>
+                    <input
+                      type="checkbox"
+                      className="sm-row-check"
+                      style={{ accentColor: stageMeta.color }}
+                      checked={isChecked}
+                      onChange={() => onToggleSelect && onToggleSelect(post.id)}
+                      aria-label={`Select ${post.title || "post"}`}
+                    />
+                  </td>
+
                   {/* 1. Post & Content */}
-                  <td style={{ padding: "14px 20px", verticalAlign: "middle" }}>
+                  <td style={{ padding: "14px 20px", verticalAlign: "middle", boxShadow: isSelected ? `inset 4px 0 0 ${stageMeta.color}` : kindStyle?.bar ? `inset 4px 0 0 ${kindStyle.bar}` : "none" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       {/* Thumbnail or Stage Icon */}
                       {post.media_urls?.[0] ? (
@@ -1617,6 +2381,7 @@ function StageListingTable({
                             background: "#0f172a",
                           }}
                           title="Click to play / view deliverable"
+                          data-no-preview
                         >
                           {post.post_type === "reel" ||
                           post.post_type === "video" ||
@@ -1670,18 +2435,9 @@ function StageListingTable({
 
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div
-                          onClick={() => {
-                            if (stageId === "script_approval" && onViewScript) {
-                              onViewScript(post);
-                            } else if (stageId === "scripts" && onOpenScriptModal) {
-                              onOpenScriptModal(post);
-                            } else if (onViewWorkDetails) {
-                              onViewWorkDetails(post);
-                            } else if (!["script_approval", "team_review", "internal_review", "client_review"].includes(stageId)) {
-                              onOpenModal(post, "edit_notes");
-                            } else if (onOpenTimeline) {
-                              onOpenTimeline(post);
-                            }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenPreview) onOpenPreview(post);
                           }}
                           style={{
                             fontWeight: 800,
@@ -1695,51 +2451,45 @@ function StageListingTable({
                             flexWrap: "wrap",
                           }}
                         >
+                          {priority && ["urgent", "high"].includes(post.priority) && (
+                            <span title={`${priority.label} priority`} style={{ display: "inline-flex", color: priority.color, marginRight: -3 }}>
+                              <Flag size={13} fill={priority.color} />
+                            </span>
+                          )}
                           <span>{post.title || "Untitled Post"}</span>
-                          {stageId === "scripts" ? (
-                            post.status === "script_approval" ? (
-                              <span
-                                style={{
-                                  background: "#f5f3ff",
-                                  color: "#7c3aed",
-                                  border: "1px solid #ddd6fe",
-                                  fontSize: "0.68rem",
-                                  padding: "2px 7px",
-                                  borderRadius: 8,
-                                  fontWeight: 800,
-                                }}
-                              >
-                                ● Under Approval
-                              </span>
-                            ) : isRejected ? (
-                              <span
-                                style={{
-                                  background: "#fef2f2",
-                                  color: "#dc2626",
-                                  border: "1px solid #fecaca",
-                                  fontSize: "0.68rem",
-                                  padding: "2px 7px",
-                                  borderRadius: 8,
-                                  fontWeight: 800,
-                                }}
-                              >
-                                ● Needs Revision
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  background: "#f1f5f9",
-                                  color: "#475569",
-                                  border: "1px solid #cbd5e1",
-                                  fontSize: "0.68rem",
-                                  padding: "2px 7px",
-                                  borderRadius: 8,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                ● Draft
-                              </span>
-                            )
+                          {stageId === "kpi" && (
+                            <span
+                              style={{
+                                background: (STAGE_COLORS[rowStage] || STAGE_COLORS.scripts).bg,
+                                color: (STAGE_COLORS[rowStage] || STAGE_COLORS.scripts).color,
+                                fontSize: "0.68rem",
+                                padding: "2px 8px",
+                                borderRadius: 999,
+                                fontWeight: 800,
+                              }}
+                            >
+                              {STAGE_LABELS[post.status] || post.status}
+                            </span>
+                          )}
+                          {rowStage === "scripts" ? (
+                            <span
+                              title={scriptBucket === "rejected" && post.rejected_from_stage ? `Rejected at ${STAGE_LABELS[post.rejected_from_stage] || post.rejected_from_stage}` : `Currently in ${STAGE_LABELS[post.status] || post.status}`}
+                              style={{
+                                background: SCRIPT_BUCKET_BADGE[scriptBucket].bg,
+                                color: SCRIPT_BUCKET_BADGE[scriptBucket].color,
+                                border: `1px solid ${SCRIPT_BUCKET_BADGE[scriptBucket].border}`,
+                                fontSize: "0.68rem",
+                                padding: "2px 7px",
+                                borderRadius: 8,
+                                fontWeight: scriptBucket === "draft" ? 700 : 800,
+                              }}
+                            >
+                              ● {SCRIPT_BUCKET_BADGE[scriptBucket].label}
+                              {scriptBucket === "production" && STAGE_LABELS[post.status] ? ` · ${STAGE_LABELS[post.status]}` : ""}
+                              {post.status === "archived" ? " · Archived" : ""}
+                            </span>
+                          ) : showWorkKind ? (
+                            <WorkKindBadge post={post} />
                           ) : isRejected ? (
                             <span
                               style={{
@@ -1769,8 +2519,55 @@ function StageListingTable({
                           {post.primary_caption || post.script_notes || "No draft caption"}
                         </div>
 
+                        {/* Pipeline progress · comments · revision rounds */}
+                        <div className="sm-row-meta">
+                          <PipelineProgressBar post={post} />
+                          {post.comment_count > 0 && (
+                            <span className="sm-row-chip" title={plural(post.comment_count, "comment")}>
+                              <MessageSquare size={11} /> {post.comment_count}
+                            </span>
+                          )}
+                          {(post.revision_count || 0) > 0 && rowStage !== "rejected" && !showWorkKind && (
+                            <span
+                              className={`sm-row-chip ${post.revision_count >= 3 ? "danger" : "warn"}`}
+                              title={`${post.revision_count} revision round(s), ${post.client_revision_count || 0} requested by client`}
+                            >
+                              <RotateCcw size={11} /> Round {post.revision_count}
+                              {(post.client_revision_count || 0) > 0 && ` · ${post.client_revision_count} client`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Rejected tab: full rejection summary */}
+                        {rowStage === "rejected" && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onOpenTimeline) onOpenTimeline(post);
+                            }}
+                            style={{ marginTop: 6, padding: "8px 10px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", maxWidth: 560, cursor: "pointer" }}
+                          >
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontSize: "0.7rem", fontWeight: 800, color: "#991b1b" }}>
+                              <Ban size={12} />
+                              Rejected by {post.rejected_by === "internal" ? "internal team" : "client"}
+                              {post.rejected_from_stage && <span style={{ fontWeight: 600, color: "#b91c1c" }}>at {STAGE_LABELS[post.rejected_from_stage] || post.rejected_from_stage}</span>}
+                              {(post.rejection_categories || []).map((c) => (
+                                <span key={c} style={{ padding: "1px 7px", borderRadius: 999, background: "#fee2e2", color: "#b91c1c", fontWeight: 700 }}>{c}</span>
+                              ))}
+                            </div>
+                            <div style={{ fontSize: "0.76rem", color: "#334155", marginTop: 4, whiteSpace: "normal", lineHeight: 1.4 }}>
+                              {post.rejection_reason || "No reason recorded."}
+                            </div>
+                            {mistakeHints[String(post.id)]?.similar_count > 0 && (
+                              <div style={{ marginTop: 6, fontSize: "0.7rem", fontWeight: 800, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", padding: "3px 8px", borderRadius: 6, display: "inline-block" }}>
+                                Seen {mistakeHints[String(post.id)].similar_count}× before · Fix: {mistakeHints[String(post.id)].fix?.title}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Revision feedback tag if looped back */}
-                        {isRejected && (
+                        {isRejected && rowStage !== "rejected" && (rowStage !== "scripts" || scriptEditable) && (
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1795,7 +2592,8 @@ function StageListingTable({
                           >
                             <AlertTriangle size={13} style={{ flexShrink: 0, color: "#dc2626" }} />
                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              <strong>Rejection Reason:</strong> {post.client_feedback}
+                              <strong>{(post.last_revision_categories || []).length ? post.last_revision_categories.join(", ") + ": " : "Feedback: "}</strong>
+                              {post.client_feedback}
                             </span>
                             <span style={{ fontSize: "0.68rem", color: "#dc2626", marginLeft: 4, textDecoration: "underline" }}>
                               (View Timeline)
@@ -1824,23 +2622,36 @@ function StageListingTable({
                     </span>
                   </td>
 
+                  {/* Team: writer / designer / reviewer */}
+                  <td style={{ padding: "14px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                    <AssigneeAvatars post={post} />
+                  </td>
+
                   {/* 3. Format */}
                   <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        fontWeight: 700,
-                        color: "#475569",
-                        background: "#f8fafc",
-                        padding: "3px 8px",
-                        borderRadius: 6,
-                        border: "1px solid #e2e8f0",
-                        textTransform: "uppercase",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {post.post_type}
-                    </span>
+                    {(() => {
+                      const fmt = FORMAT_META[post.post_type] || { label: post.post_type || "Post", icon: FileText, color: "#475569", bg: "#f1f5f9" };
+                      const FmtIcon = fmt.icon;
+                      return (
+                        <span
+                          title={fmt.label}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            color: fmt.color,
+                            background: fmt.bg,
+                            padding: "4px 9px",
+                            borderRadius: 999,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <FmtIcon size={13} /> {fmt.label}
+                        </span>
+                      );
+                    })()}
                   </td>
 
                   {/* 4. Platforms */}
@@ -1849,18 +2660,20 @@ function StageListingTable({
                       {(post.platforms || ["instagram"]).map((plat) => (
                         <span
                           key={plat}
+                          title={PLATFORM_NAMES[plat] || plat}
+                          aria-label={PLATFORM_NAMES[plat] || plat}
                           style={{
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                            color: "#334155",
-                            background: "#f1f5f9",
-                            padding: "2px 7px",
-                            borderRadius: 4,
-                            textTransform: "capitalize",
-                            whiteSpace: "nowrap",
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            background: "#f8fafc",
+                            border: "1px solid #e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
                         >
-                          {plat}
+                          {renderPlatformIcon(plat, { size: 15 })}
                         </span>
                       ))}
                     </div>
@@ -1868,901 +2681,56 @@ function StageListingTable({
 
                   {/* 5. Timing / Schedule */}
                   <td style={{ padding: "14px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                    {post.scheduled_at ? (() => {
-                      const isOverdue = new Date(post.scheduled_at) < new Date() && stageId !== "published";
+                    {rowStage === "rejected" ? (
+                      <span style={{ fontSize: "0.76rem", color: "#b91c1c", fontWeight: 700, whiteSpace: "nowrap" }}>
+                        {post.rejected_at ? new Date(post.rejected_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                      </span>
+                    ) : rowStage !== "published" && post.scheduled_at ? (() => {
+                      const when = new Date(post.scheduled_at);
+                      const hoursLeft = (when.getTime() - Date.now()) / 3600000;
+                      const isOverdue = hoursLeft < 0;
+                      const isSoon = !isOverdue && hoursLeft <= 24;
+                      const tone = isOverdue ? "#dc2626" : isSoon ? "#d97706" : "#0284c7";
                       return (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: isOverdue ? "#dc2626" : "#0284c7", whiteSpace: "nowrap" }}>
-                            <Clock size={13} />
-                            {new Date(post.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }} title={when.toLocaleString()}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap" }}>
+                            <Clock size={13} color={tone} />
+                            Posts {shortDate(when, true)}
                           </div>
-                          {isOverdue && (
-                            <div style={{ fontSize: "0.7rem", color: "#ef4444", fontWeight: 800, display: "flex", alignItems: "center", gap: 3 }} title="Scheduled time has passed">
-                              <AlertTriangle size={12} /> Is this posted or not?
-                            </div>
-                          )}
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.7rem", fontWeight: 800, color: tone, whiteSpace: "nowrap" }}>
+                            {isOverdue && <AlertTriangle size={12} />}
+                            {isOverdue
+                              ? rowStage === "post_schedule"
+                                ? `Overdue ${relativeTime(when).replace(" ago", "")} · posted?`
+                                : `Overdue by ${relativeTime(when).replace(" ago", "")}`
+                              : `Due ${relativeTime(when)}`}
+                          </div>
                         </div>
                       );
                     })() : post.published_at ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#10b981", whiteSpace: "nowrap" }}>
-                        <CheckCircle2 size={13} />
-                        {new Date(post.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }} title={new Date(post.published_at).toLocaleString()}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 700, color: "#047857", whiteSpace: "nowrap" }}>
+                          <CheckCircle2 size={13} />
+                          {shortDate(new Date(post.published_at))}
+                        </div>
+                        <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#64748b", whiteSpace: "nowrap" }}>
+                          {relativeTime(new Date(post.published_at))}
+                        </div>
                       </div>
                     ) : (
-                      <span style={{ fontSize: "0.76rem", color: "#94a3b8", whiteSpace: "nowrap" }}>
-                        {new Date(post.created_at || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#94a3b8", whiteSpace: "nowrap" }}>No post date</span>
+                        <span style={{ fontSize: "0.7rem", color: "#94a3b8", whiteSpace: "nowrap" }}>
+                          Created {shortDate(new Date(post.created_at || Date.now()))}
+                        </span>
+                      </div>
                     )}
                   </td>
 
                   {/* 6. Actions */}
                   <td style={{ padding: "12px 16px", verticalAlign: "middle", textAlign: "right", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5, flexWrap: "nowrap" }}>
-                      {/* Timeline Graph Button for Every Post */}
-                      <button
-                        onClick={() => onOpenTimeline && onOpenTimeline(post)}
-                        title="View post lifecycle timeline & audit history"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          padding: "5px 9px",
-                          borderRadius: 8,
-                          border: "1px solid #cbd5e1",
-                          background: "#f8fafc",
-                          color: "#334155",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <History size={12} style={{ color: "#16a34a" }} />
-                        Timeline
-                      </button>
-
-                      {/* Stage 1: Scripts */}
-                      {stageId === "scripts" && (
-                        <>
-                          <button
-                            onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
-                            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            Edit Script
-                          </button>
-                          {post.status === "script_approval" ? (
-                            <button
-                              onClick={() => (onNavigateStage ? onNavigateStage("script_approval") : null)}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 8,
-                                border: "1px solid #c4b5fd",
-                                background: "#f5f3ff",
-                                color: "#7c3aed",
-                                fontSize: "0.76rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              View in Approval →
-                            </button>
-                          ) : isRejected ? (
-                            <button
-                              onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 8,
-                                border: "none",
-                                background: "#ea580c",
-                                color: "#fff",
-                                fontSize: "0.76rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                              }}
-                            >
-                              <RotateCcw size={12} /> Rework Script →
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
-                              style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#4f46e5", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
-                            >
-                              Submit →
-                            </button>
-                          )}
-                        </>
-                      )}
-
-                      {/* Stage 2: Script Approval */}
-                      {stageId === "script_approval" && (
-                        <>
-                          <button
-                            onClick={() => (onViewScript ? onViewScript(post) : onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
-                            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            View Script
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "reject_script")}
-                            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ef4444", background: "#fff", color: "#dc2626", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            Reject (↺)
-                          </button>
-                          <button
-                            onClick={() => onTransition(post, "designing", "advance", "Script approved, ready for design")}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            Approve → Design
-                          </button>
-                        </>
-                      )}
-
-                      {/* Stage 3: Designing */}
-                      {stageId === "designing" && (
-                        <>
-                          {/* Play / View Deliverable Option */}
-                          {post.media_urls?.[0] ? (
-                            <>
-                              <button
-                                onClick={() => onPreviewMedia && onPreviewMedia(post)}
-                                title="Play video reel or view full creative deliverable"
-                                style={{
-                                  padding: "5px 10px",
-                                  borderRadius: 8,
-                                  border: "none",
-                                  background: "#ec4899",
-                                  color: "#fff",
-                                  fontSize: "0.74rem",
-                                  fontWeight: 800,
-                                  cursor: "pointer",
-                                  whiteSpace: "nowrap",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  boxShadow: "0 2px 6px rgba(236, 72, 153, 0.25)",
-                                }}
-                              >
-                                <Play size={11} fill="#ffffff" />
-                                {post.post_type === "reel" || post.post_type === "video" ? "Play Reel" : "View Media"}
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  const input = document.createElement("input");
-                                  input.type = "file";
-                                  input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
-                                  input.onchange = (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file && onUploadMedia) onUploadMedia(post, file, true);
-                                  };
-                                  input.click();
-                                }}
-                                title="Replace current deliverable with a revised version"
-                                style={{
-                                  padding: "5px 9px",
-                                  borderRadius: 8,
-                                  border: "1px solid #cbd5e1",
-                                  background: "#ffffff",
-                                  color: "#475569",
-                                  fontSize: "0.74rem",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  whiteSpace: "nowrap",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                }}
-                              >
-                                <RotateCcw size={11} /> Replace
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                const input = document.createElement("input");
-                                input.type = "file";
-                                input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
-                                input.onchange = (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file && onUploadMedia) onUploadMedia(post, file, true);
-                                };
-                                input.click();
-                              }}
-                              title="Upload completed creative deliverable (Video/Reel or Graphic)"
-                              style={{
-                                padding: "5px 11px",
-                                borderRadius: 8,
-                                border: "1px dashed #16a34a",
-                                background: "#f0fdf4",
-                                color: "#15803d",
-                                fontSize: "0.74rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 4,
-                              }}
-                            >
-                              <Upload size={12} /> Upload Work
-                            </button>
-                          )}
-
-                          {/* Options Dropdown for Stage 3 */}
-                          <div style={{ display: "inline-block" }}>
-                            <button
-                              type="button"
-                              onClick={(e) => toggleOptions(e, post.id)}
-                              title="Show options"
-                              style={{
-                                padding: "5px 8px",
-                                borderRadius: 8,
-                                border: "1px solid #cbd5e1",
-                                background: openOptionsPostId === post.id ? "#f1f5f9" : "#ffffff",
-                                color: "#475569",
-                                fontSize: "0.74rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 3,
-                              }}
-                            >
-                              <span>Options</span>
-                              <ChevronDown size={11} />
-                            </button>
-
-                            {openOptionsPostId === post.id && dropdownPos && (
-                              <>
-                                <div
-                                  style={{ position: "fixed", inset: 0, zIndex: 99998 }}
-                                  onClick={() => {
-                                    setOpenOptionsPostId(null);
-                                    setDropdownPos(null);
-                                  }}
-                                />
-                                <div
-                                  style={{
-                                    position: "fixed",
-                                    top: dropdownPos.top,
-                                    bottom: dropdownPos.bottom,
-                                    right: dropdownPos.right,
-                                    zIndex: 99999,
-                                    background: "#ffffff",
-                                    borderRadius: 10,
-                                    border: "1px solid #cbd5e1",
-                                    boxShadow: "0 12px 30px -4px rgba(15, 23, 42, 0.22), 0 6px 14px -4px rgba(15, 23, 42, 0.12)",
-                                    padding: "6px",
-                                    minWidth: 195,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 2,
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  {post.media_urls?.[0] && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenOptionsPostId(null);
-                                        setDropdownPos(null);
-                                        onPreviewMedia && onPreviewMedia(post);
-                                      }}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        padding: "7px 10px",
-                                        borderRadius: 6,
-                                        border: "none",
-                                        background: "transparent",
-                                        color: "#0f172a",
-                                        fontSize: "0.78rem",
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                        width: "100%",
-                                        textAlign: "left",
-                                      }}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Play size={13} style={{ color: "#ec4899" }} fill="#ec4899" />
-                                      <span>Play in Full Player</span>
-                                    </button>
-                                  )}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenOptionsPostId(null);
-                                      setDropdownPos(null);
-                                      const input = document.createElement("input");
-                                      input.type = "file";
-                                      input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
-                                      input.onchange = (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file && onUploadMedia) onUploadMedia(post, file, true);
-                                      };
-                                      input.click();
-                                    }}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      padding: "7px 10px",
-                                      borderRadius: 6,
-                                      border: "none",
-                                      background: "transparent",
-                                      color: "#0f172a",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 600,
-                                      cursor: "pointer",
-                                      width: "100%",
-                                      textAlign: "left",
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <RotateCcw size={13} style={{ color: "#2563eb" }} />
-                                    <span>{post.media_urls?.[0] ? "Replace Deliverable" : "Upload Deliverable"}</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenOptionsPostId(null);
-                                      setDropdownPos(null);
-                                      if (onViewWorkDetails) onViewWorkDetails(post);
-                                    }}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      padding: "7px 10px",
-                                      borderRadius: 6,
-                                      border: "none",
-                                      background: "transparent",
-                                      color: "#0f172a",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 600,
-                                      cursor: "pointer",
-                                      width: "100%",
-                                      textAlign: "left",
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <Palette size={13} style={{ color: "#9333ea" }} />
-                                    <span>Work Details & Brief</span>
-                                  </button>
-
-                                  {post.media_urls?.[0] && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenOptionsPostId(null);
-                                          setDropdownPos(null);
-                                          navigator.clipboard.writeText(post.media_urls[0]);
-                                          alert("Media link copied to clipboard!");
-                                        }}
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 8,
-                                          padding: "7px 10px",
-                                          borderRadius: 6,
-                                          border: "none",
-                                          background: "transparent",
-                                          color: "#0f172a",
-                                          fontSize: "0.78rem",
-                                          fontWeight: 600,
-                                          cursor: "pointer",
-                                          width: "100%",
-                                          textAlign: "left",
-                                        }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                      >
-                                        <Copy size={13} style={{ color: "#059669" }} />
-                                        <span>Copy Asset Link</span>
-                                      </button>
-
-                                      <a
-                                        href={post.media_urls[0]}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        download
-                                        onClick={() => {
-                                          setOpenOptionsPostId(null);
-                                          setDropdownPos(null);
-                                        }}
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 8,
-                                          padding: "7px 10px",
-                                          borderRadius: 6,
-                                          color: "#0f172a",
-                                          fontSize: "0.78rem",
-                                          fontWeight: 600,
-                                          textDecoration: "none",
-                                          cursor: "pointer",
-                                        }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                      >
-                                        <Download size={13} style={{ color: "#475569" }} />
-                                        <span>Download Deliverable</span>
-                                      </a>
-
-                                      <div style={{ height: 1, background: "#f1f5f9", margin: "3px 0" }} />
-
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenOptionsPostId(null);
-                                          setDropdownPos(null);
-                                          if (confirm("Remove deliverable media from this post?")) {
-                                            onTransition(post, post.status, "advance", "Removed media deliverable", { media_urls: [] });
-                                          }
-                                        }}
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 8,
-                                          padding: "7px 10px",
-                                          borderRadius: 6,
-                                          border: "none",
-                                          background: "transparent",
-                                          color: "#dc2626",
-                                          fontSize: "0.78rem",
-                                          fontWeight: 600,
-                                          cursor: "pointer",
-                                          width: "100%",
-                                          textAlign: "left",
-                                        }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
-                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                      >
-                                        <Trash2 size={13} style={{ color: "#dc2626" }} />
-                                        <span>Remove Deliverable</span>
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          <button
-                            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
-                            title="View creative brief, storyboard, brand assets & work instructions in popup"
-                            style={{
-                              padding: "5px 10px",
-                              borderRadius: 8,
-                              border: "1px solid #c084fc",
-                              background: "#faf5ff",
-                              color: "#7e22ce",
-                              fontSize: "0.74rem",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            <Palette size={12} style={{ color: "#9333ea" }} />
-                            Work Details
-                          </button>
-
-                          <button
-                            onClick={() => onOpenModal(post, "design_ready")}
-                            style={{
-                              padding: "5px 12px",
-                              borderRadius: 8,
-                              border: "none",
-                              background: "#ec4899",
-                              color: "#fff",
-                              fontSize: "0.74rem",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            Ready for QA →
-                          </button>
-                        </>
-                      )}
-
-                      {/* Stage 4: Team Review */}
-                      {stageId === "team_review" && (
-                        <>
-                          {post.media_urls?.[0] && (
-                            <button
-                              onClick={() => onPreviewMedia && onPreviewMedia(post)}
-                              title="Play video reel or view creative deliverable"
-                              style={{
-                                padding: "5px 10px",
-                                borderRadius: 8,
-                                border: "none",
-                                background: "#ec4899",
-                                color: "#fff",
-                                fontSize: "0.74rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 4,
-                              }}
-                            >
-                              <Play size={11} fill="#ffffff" />
-                              {post.post_type === "reel" || post.post_type === "video" ? "Play" : "View"}
-                            </button>
-                          )}
-
-                          {/* Options Dropdown for Stage 4 */}
-                          <div style={{ display: "inline-block" }}>
-                            <button
-                              type="button"
-                              onClick={(e) => toggleOptions(e, post.id)}
-                              title="Show options"
-                              style={{
-                                padding: "5px 8px",
-                                borderRadius: 8,
-                                border: "1px solid #cbd5e1",
-                                background: openOptionsPostId === post.id ? "#f1f5f9" : "#ffffff",
-                                color: "#475569",
-                                fontSize: "0.74rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 3,
-                              }}
-                            >
-                              <span>Options</span>
-                              <ChevronDown size={11} />
-                            </button>
-
-                            {openOptionsPostId === post.id && dropdownPos && (
-                              <>
-                                <div
-                                  style={{ position: "fixed", inset: 0, zIndex: 99998 }}
-                                  onClick={() => {
-                                    setOpenOptionsPostId(null);
-                                    setDropdownPos(null);
-                                  }}
-                                />
-                                <div
-                                  style={{
-                                    position: "fixed",
-                                    top: dropdownPos.top,
-                                    bottom: dropdownPos.bottom,
-                                    right: dropdownPos.right,
-                                    zIndex: 99999,
-                                    background: "#ffffff",
-                                    borderRadius: 10,
-                                    border: "1px solid #cbd5e1",
-                                    boxShadow: "0 12px 30px -4px rgba(15, 23, 42, 0.22), 0 6px 14px -4px rgba(15, 23, 42, 0.12)",
-                                    padding: "6px",
-                                    minWidth: 195,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 2,
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  {post.media_urls?.[0] && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenOptionsPostId(null);
-                                        setDropdownPos(null);
-                                        onPreviewMedia && onPreviewMedia(post);
-                                      }}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        padding: "7px 10px",
-                                        borderRadius: 6,
-                                        border: "none",
-                                        background: "transparent",
-                                        color: "#0f172a",
-                                        fontSize: "0.78rem",
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                        width: "100%",
-                                        textAlign: "left",
-                                      }}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Play size={13} style={{ color: "#ec4899" }} fill="#ec4899" />
-                                      <span>Play / Full Preview</span>
-                                    </button>
-                                  )}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenOptionsPostId(null);
-                                      setDropdownPos(null);
-                                      if (onViewWorkDetails) onViewWorkDetails(post);
-                                    }}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      padding: "7px 10px",
-                                      borderRadius: 6,
-                                      border: "none",
-                                      background: "transparent",
-                                      color: "#0f172a",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 600,
-                                      cursor: "pointer",
-                                      width: "100%",
-                                      textAlign: "left",
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <Palette size={13} style={{ color: "#9333ea" }} />
-                                    <span>Work Details & Brief</span>
-                                  </button>
-
-                                  {post.media_urls?.[0] && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenOptionsPostId(null);
-                                          setDropdownPos(null);
-                                          navigator.clipboard.writeText(post.media_urls[0]);
-                                          alert("Media link copied to clipboard!");
-                                        }}
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 8,
-                                          padding: "7px 10px",
-                                          borderRadius: 6,
-                                          border: "none",
-                                          background: "transparent",
-                                          color: "#0f172a",
-                                          fontSize: "0.78rem",
-                                          fontWeight: 600,
-                                          cursor: "pointer",
-                                          width: "100%",
-                                          textAlign: "left",
-                                        }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                      >
-                                        <Copy size={13} style={{ color: "#059669" }} />
-                                        <span>Copy Asset Link</span>
-                                      </button>
-
-                                      <a
-                                        href={post.media_urls[0]}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        download
-                                        onClick={() => {
-                                          setOpenOptionsPostId(null);
-                                          setDropdownPos(null);
-                                        }}
-                                        style={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 8,
-                                          padding: "7px 10px",
-                                          borderRadius: 6,
-                                          color: "#0f172a",
-                                          fontSize: "0.78rem",
-                                          fontWeight: 600,
-                                          textDecoration: "none",
-                                          cursor: "pointer",
-                                        }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                      >
-                                        <Download size={13} style={{ color: "#475569" }} />
-                                        <span>Download Deliverable</span>
-                                      </a>
-                                    </>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          <button
-                            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenTimeline ? onOpenTimeline(post) : null)}
-                            title="View designer work details & brief"
-                            style={{
-                              padding: "5px 10px",
-                              borderRadius: 8,
-                              border: "1px solid #cbd5e1",
-                              background: "#fff",
-                              color: "#475569",
-                              fontSize: "0.74rem",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            <Palette size={12} style={{ color: "#7c3aed" }} />
-                            Work Details
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "reject_design")}
-                            title="Reject deliverable and send back to Designing with revision notes"
-                            style={{
-                              padding: "5px 10px",
-                              borderRadius: 8,
-                              border: "1px solid #ef4444",
-                              background: "#fff",
-                              color: "#dc2626",
-                              fontSize: "0.74rem",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            <RotateCcw size={11} /> Reject
-                          </button>
-                          <button
-                            onClick={() => onTransition(post, "client_review", "advance", "Team QA passed, sent to client review")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            QA Pass → Client
-                          </button>
-                        </>
-                      )}
-
-                      {/* Stage 5: Client Review */}
-                      {stageId === "client_review" && (
-                        <>
-                          <button
-                            onClick={() => onCopyLink(post.client_approval_token)}
-                            title="Copy Client Review Link"
-                            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
-                          >
-                            {copiedToken === post.client_approval_token ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
-                            Link
-                          </button>
-                          <button
-                            onClick={async () => {
-                              const mediaUrl = post.media_urls?.[0];
-                              if (!mediaUrl) {
-                                alert("No media available for this post.");
-                                return;
-                              }
-                              try {
-                                const res = await fetch(mediaUrl);
-                                const blob = await res.blob();
-                                const fileName = mediaUrl.split("/").pop() || "media.mp4";
-                                const file = new File([blob], fileName, { type: blob.type });
-
-                                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                                  try {
-                                    await navigator.share({
-                                      files: [file],
-                                      title: post.title || 'Review Media',
-                                    });
-                                    return;
-                                  } catch (err) {
-                                    console.log("Share cancelled or failed", err);
-                                  }
-                                }
-                                
-                                const blobUrl = window.URL.createObjectURL(blob);
-                                const a = document.createElement("a");
-                                a.style.display = "none";
-                                a.href = blobUrl;
-                                a.download = fileName;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(blobUrl);
-                                a.remove();
-                                
-                                setTimeout(() => {
-                                  const text = `Please review this for ${post.client_name || 'our brand'}:\n${window.location.origin}/social/review/?token=${post.client_approval_token}`;
-                                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-                                }, 600);
-                              } catch (e) {
-                                console.error("Download failed, opening in new tab", e);
-                                window.open(mediaUrl, "_blank");
-                              }
-                            }}
-                            title="Download Media and Share via WhatsApp"
-                            style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: "#25D366", color: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
-                          >
-                            <Share2 size={13} /> WhatsApp
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "client_changes")}
-                            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ea580c", background: "#fff", color: "#ea580c", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            ↺ Revisions
-                          </button>
-                          <button
-                            onClick={() => onTransition(post, "approved", "advance", "Client approved design & copy")}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            Approved →
-                          </button>
-                        </>
-                      )}
-
-                      {/* Stage 6: Post Schedule */}
-                      {stageId === "post_schedule" && (
-                        <>
-                          <button
-                            onClick={() => onOpenModal(post, "edit_notes")}
-                            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            Reschedule
-                          </button>
-                          <button
-                            onClick={() => onPublishNow(post)}
-                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
-                          >
-                            <Send size={12} /> Publish Now
-                          </button>
-                        </>
-                      )}
-
-                      {/* Stage 7: Published */}
-                      {stageId === "published" && (
-                        <>
-                          <span style={{ color: "#10b981", fontWeight: 800, fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 4, marginRight: 4 }}>
-                            <CheckCircle2 size={14} /> Live
-                          </span>
-                          <button
-                            onClick={() => onOpenModal(post, "live_urls")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#1d4ed8" }}
-                          >
-                            Live URLs
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "analytics")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #a7f3d0", background: "#ecfdf5", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#047857" }}
-                          >
-                            Analytics
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "archive_post")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#b91c1c" }}
-                          >
-                            Archive
-                          </button>
-                          <button
-                            onClick={() => onOpenModal(post, "edit_notes")}
-                            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-                          >
-                            Details
-                          </button>
-                        </>
-                      )}
+                      {renderActions && renderActions(post, rowStage)}
                     </div>
                   </td>
                 </tr>
@@ -2772,5 +2740,543 @@ function StageListingTable({
         </table>
       </div>
     </div>
+  );
+}
+
+// Sub-Component: stage-specific action buttons (table rows + preview drawer)
+function PostStageActions({
+  post,
+  stageId,
+  showTimeline = true,
+  onTransition,
+  onPublishNow,
+  onCopyLink,
+  copiedToken,
+  onOpenModal,
+  onNavigateStage,
+  onOpenScriptModal,
+  onReuseScript,
+  onOpenTimeline,
+  onViewScript,
+  onViewWorkDetails,
+  onPreviewMedia,
+  onUploadMedia,
+  onOpenDecision,
+  onRestore,
+  uploadState,
+}) {
+  const isRejected = Boolean(post.client_feedback);
+  const scriptBucket = stageId === "scripts" ? getScriptBucket(post) : null;
+  const scriptEditable = scriptBucket ? SCRIPT_EDITABLE_BUCKETS.includes(scriptBucket) : false;
+
+  return (
+    <>
+      {/* Timeline Graph Button for Every Post */}
+      {showTimeline && (
+      <button
+        onClick={() => onOpenTimeline && onOpenTimeline(post)}
+        title="View post lifecycle timeline & audit history"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "5px 9px",
+          borderRadius: 8,
+          border: "1px solid #cbd5e1",
+          background: "#f8fafc",
+          color: "#334155",
+          fontSize: "0.74rem",
+          fontWeight: 700,
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <History size={12} style={{ color: "#16a34a" }} />
+        Timeline
+      </button>
+      )}
+
+      {/* Stage 1: Scripts — past scripts (approved / published / rejected) */}
+      {stageId === "scripts" && !scriptEditable && (
+        <>
+          <button
+            onClick={() => onViewScript && onViewScript(post)}
+            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+          >
+            <Eye size={12} /> View Script
+          </button>
+          <button
+            onClick={() => onReuseScript && onReuseScript(post)}
+            title="Start a new script pre-filled from this one"
+            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+          >
+            <Copy size={12} /> Reuse
+          </button>
+          {onNavigateStage && STATUS_TO_STAGE[post.status] && (
+            <button
+              onClick={() => onNavigateStage(STATUS_TO_STAGE[post.status])}
+              style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: SCRIPT_BUCKET_BADGE[scriptBucket].color, color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Open in {STAGE_LABELS[post.status] || "Stage"} →
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Stage 1: Scripts */}
+      {stageId === "scripts" && scriptEditable && (
+        <>
+          <button
+            onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
+            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Edit Script
+          </button>
+          {post.status === "script_approval" ? (
+            <button
+              onClick={() => (onNavigateStage ? onNavigateStage("script_approval") : null)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid #c4b5fd",
+                background: "#f5f3ff",
+                color: "#7c3aed",
+                fontSize: "0.76rem",
+                fontWeight: 800,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              View in Approval →
+            </button>
+          ) : isRejected ? (
+            <button
+              onClick={() => (onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "none",
+                background: "#ea580c",
+                color: "#fff",
+                fontSize: "0.76rem",
+                fontWeight: 800,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <RotateCcw size={12} /> Rework Script →
+            </button>
+          ) : (
+            <button
+              onClick={() => onTransition(post, "script_approval", "advance", "Submitted script for internal review")}
+              style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#4f46e5", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Submit →
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Stage 2: Script Approval */}
+      {stageId === "script_approval" && (
+        <>
+          <button
+            onClick={() => (onViewScript ? onViewScript(post) : onOpenScriptModal ? onOpenScriptModal(post) : onOpenModal(post, "edit_notes"))}
+            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            View Script
+          </button>
+          <button
+            onClick={() => onOpenDecision("revision", post, "script")}
+            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ef4444", background: "#fff", color: "#dc2626", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Reject (↺)
+          </button>
+          <button
+            onClick={() => onTransition(post, "designing", "advance", "Script approved, ready for design")}
+            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#8b5cf6", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Approve → Design
+          </button>
+        </>
+      )}
+
+      {/* Stage 3: Designing */}
+      {stageId === "designing" && (
+        <>
+          {/* Play / View Deliverable Option */}
+          {post.media_urls?.[0] ? (
+            <>
+              <button
+                onClick={() => onPreviewMedia && onPreviewMedia(post)}
+                title="Play video reel or view full creative deliverable"
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#ec4899",
+                  color: "#fff",
+                  fontSize: "0.74rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  boxShadow: "0 2px 6px rgba(236, 72, 153, 0.25)",
+                }}
+              >
+                <Play size={11} fill="#ffffff" />
+                {post.post_type === "reel" || post.post_type === "video" ? "Play Reel" : "View Media"}
+              </button>
+
+              <button
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                  input.onchange = (e) => {
+                    const file = e.target.files?.[0];
+                    if (file && onUploadMedia) onUploadMedia(post, file, true);
+                  };
+                  input.click();
+                }}
+                title="Replace current deliverable with a revised version"
+                style={{
+                  padding: "5px 9px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#475569",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <RotateCcw size={11} /> {uploadState?.postId === post.id ? `${uploadState.pct}%` : "Replace"}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/gif";
+                input.onchange = (e) => {
+                  const file = e.target.files?.[0];
+                  if (file && onUploadMedia) onUploadMedia(post, file, true);
+                };
+                input.click();
+              }}
+              title="Upload completed creative deliverable (Video/Reel or Graphic)"
+              style={{
+                padding: "5px 11px",
+                borderRadius: 8,
+                border: "1px dashed #16a34a",
+                background: "#f0fdf4",
+                color: "#15803d",
+                fontSize: "0.74rem",
+                fontWeight: 800,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Upload size={12} /> {uploadState?.postId === post.id ? `Uploading ${uploadState.pct}%` : "Upload Work"}
+            </button>
+          )}
+
+          <button
+            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenModal(post, "edit_notes"))}
+            title="View creative brief, storyboard, brand assets & work instructions in popup"
+            style={{
+              padding: "5px 10px",
+              borderRadius: 8,
+              border: "1px solid #c084fc",
+              background: "#faf5ff",
+              color: "#7e22ce",
+              fontSize: "0.74rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <Palette size={12} style={{ color: "#9333ea" }} />
+            Work Details
+          </button>
+
+          <button
+            onClick={() => onOpenModal(post, "design_ready")}
+            style={{
+              padding: "5px 12px",
+              borderRadius: 8,
+              border: "none",
+              background: "#ec4899",
+              color: "#fff",
+              fontSize: "0.74rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Ready for QA →
+          </button>
+        </>
+      )}
+
+      {/* Stage 4: Team Review */}
+      {stageId === "team_review" && (
+        <>
+          {post.media_urls?.[0] && (
+            <button
+              onClick={() => onPreviewMedia && onPreviewMedia(post)}
+              title="Play video reel or view creative deliverable"
+              style={{
+                padding: "5px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "#ec4899",
+                color: "#fff",
+                fontSize: "0.74rem",
+                fontWeight: 800,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Play size={11} fill="#ffffff" />
+              {post.post_type === "reel" || post.post_type === "video" ? "Play" : "View"}
+            </button>
+          )}
+
+          <button
+            onClick={() => (onViewWorkDetails ? onViewWorkDetails(post) : onOpenTimeline ? onOpenTimeline(post) : null)}
+            title="View designer work details & brief"
+            style={{
+              padding: "5px 10px",
+              borderRadius: 8,
+              border: "1px solid #cbd5e1",
+              background: "#fff",
+              color: "#475569",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <Palette size={12} style={{ color: "#7c3aed" }} />
+            Work Details
+          </button>
+          <button
+            onClick={() => onOpenDecision("revision", post, "qa")}
+            title="QA failed — send back to Designing with revision notes"
+            style={{
+              padding: "5px 10px",
+              borderRadius: 8,
+              border: "1px solid #f59e0b",
+              background: "#fff",
+              color: "#b45309",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <RotateCcw size={11} /> Revisions
+          </button>
+          <button
+            onClick={() => onOpenDecision("reject", post, "internal")}
+            title="Reject the entire content (drop it or restart from a new script)"
+            style={{
+              padding: "5px 10px",
+              borderRadius: 8,
+              border: "1px solid #fecaca",
+              background: "#fef2f2",
+              color: "#b91c1c",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <Ban size={11} /> Reject
+          </button>
+          <button
+            onClick={() => onTransition(post, "client_review", "advance", "Team QA passed, sent to client review")}
+            style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            QA Pass → Client
+          </button>
+        </>
+      )}
+
+      {/* Stage 5: Client Review */}
+      {stageId === "client_review" && (
+        <>
+          <button
+            onClick={() => onCopyLink(post.client_approval_token)}
+            title="Copy Client Review Link"
+            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
+          >
+            {copiedToken === post.client_approval_token ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
+            Link
+          </button>
+          <button
+            onClick={async () => {
+              const mediaUrl = post.media_urls?.[0];
+              if (!mediaUrl) {
+                toast.warning("Upload a deliverable before sharing on WhatsApp.", { title: "No media yet" });
+                return;
+              }
+              try {
+                const res = await fetch(mediaUrl);
+                const blob = await res.blob();
+                const fileName = mediaUrl.split("/").pop() || "media.mp4";
+                const file = new File([blob], fileName, { type: blob.type });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                  try {
+                    await navigator.share({
+                      files: [file],
+                      title: post.title || 'Review Media',
+                    });
+                    return;
+                  } catch (err) {
+                    console.log("Share cancelled or failed", err);
+                  }
+                }
+                
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = blobUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(blobUrl);
+                a.remove();
+                
+                setTimeout(() => {
+                  const text = `Please review this for ${post.client_name || 'our brand'}:\n${window.location.origin}/social/review/?token=${post.client_approval_token}`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                }, 600);
+              } catch (e) {
+                console.error("Download failed, opening in new tab", e);
+                window.open(mediaUrl, "_blank");
+              }
+            }}
+            title="Download Media and Share via WhatsApp"
+            style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: "#25D366", color: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
+          >
+            <Share2 size={13} /> WhatsApp
+          </button>
+          <button
+            onClick={() => onOpenDecision("revision", post, "client")}
+            title="Client asked for changes — loop back to Designing"
+            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #ea580c", background: "#fff", color: "#ea580c", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+          >
+            <RotateCcw size={12} /> Revisions
+          </button>
+          <button
+            onClick={() => onOpenDecision("reject", post, "client")}
+            title="Client rejected the content entirely"
+            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#b91c1c", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+          >
+            <Ban size={12} /> Reject
+          </button>
+          <button
+            onClick={() => onOpenDecision("approve", post)}
+            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#ea580c", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Approved →
+          </button>
+        </>
+      )}
+
+      {/* Stage 6: Post Schedule */}
+      {stageId === "post_schedule" && (
+        <>
+          <button
+            onClick={() => onOpenDecision("reschedule", post)}
+            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Reschedule
+          </button>
+          <button
+            onClick={() => onPublishNow(post)}
+            style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+          >
+            <Send size={12} /> Publish Now
+          </button>
+        </>
+      )}
+
+      {/* Stage 7: Published */}
+      {stageId === "published" && (
+        <>
+          <span style={{ color: "#10b981", fontWeight: 800, fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 4, marginRight: 4 }}>
+            <CheckCircle2 size={14} /> Live
+          </span>
+          <button
+            onClick={() => onOpenModal(post, "live_urls")}
+            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #bfdbfe", background: "#eff6ff", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#1d4ed8" }}
+          >
+            Live URLs
+          </button>
+          <button
+            onClick={() => onOpenModal(post, "analytics")}
+            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #a7f3d0", background: "#ecfdf5", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#047857" }}
+          >
+            Analytics
+          </button>
+          <button
+            onClick={() => onOpenModal(post, "archive_post")}
+            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", color: "#b91c1c" }}
+          >
+            Archive
+          </button>
+          <button
+            onClick={() => onOpenModal(post, "edit_notes")}
+            style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Details
+          </button>
+        </>
+      )}
+
+      {/* Rejected / Dropped */}
+      {stageId === "rejected" && (
+        <button
+          onClick={() => onRestore && onRestore(post)}
+          title="Bring this content back to Scripts for a fresh attempt"
+          style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+        >
+          <Undo2 size={12} /> Restore to Scripts
+        </button>
+      )}
+    </>
   );
 }

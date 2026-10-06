@@ -16,6 +16,7 @@ import {
   Save,
   X,
 } from "lucide-react";
+import { notify } from "./SocialFeedback";
 
 export default function ClientAccountsTab({
   clients = [],
@@ -46,7 +47,7 @@ export default function ClientAccountsTab({
       setEditingClient(null);
       onRefresh();
     } catch (err) {
-      alert("Error saving client profile.");
+      notify("Error saving client profile.");
     } finally {
       setSaving(false);
     }

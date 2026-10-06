@@ -20,6 +20,8 @@ from apis.social.models import (
     PostApprovalHistory,
     SocialInboxMessage,
     SocialDailyAnalytics,
+    PostComment,
+    PostCommentMention,
 )
 from apis.social.serializers import (
     SocialClientProfileSerializer,
@@ -30,7 +32,10 @@ from apis.social.serializers import (
     PostApprovalHistorySerializer,
     SocialInboxMessageSerializer,
     SocialDailyAnalyticsSerializer,
+    PostCommentSerializer,
+    PostCommentMentionSerializer,
 )
+from apis.user.models import CustomUser
 from apis.social.services import (
     convert_inbox_to_crm_lead,
     record_approval_action,
@@ -222,13 +227,118 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-        return qs
+        qs = qs.select_related('client_profile', 'campaign', 'created_by', 'assigned_to', 'writer', 'designer', 'reviewer')
+        if self.action == 'list':
+            # Only for the read-only list: detail actions append history and must not serialize a stale cache
+            qs = qs.prefetch_related('approval_history')
+        return qs.annotate(comment_count=Count('comments', distinct=True))
+
+    ASSIGNABLE_ROLES = {'writer': 'Writer', 'designer': 'Designer', 'reviewer': 'Reviewer'}
+    SCRIPT_STAGES = ('script', 'draft', 'script_approval')
+
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        """Set (or clear with user_id=null) the writer / designer / reviewer of a post."""
+        post = self.get_object()
+        role = request.data.get('role')
+        if role not in self.ASSIGNABLE_ROLES:
+            return Response({'error': 'role must be writer, designer or reviewer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_id = request.data.get('user_id')
+        assignee = None
+        if user_id not in (None, ''):
+            assignee = CustomUser.objects.filter(id=user_id, is_active=True).first()
+            if not assignee:
+                return Response({'error': 'That team member was not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if getattr(post, f'{role}_id') != (assignee.id if assignee else None):
+            setattr(post, role, assignee)
+            post.save(update_fields=[role, 'updated_at'])
+            label = self.ASSIGNABLE_ROLES[role]
+            user = request.user if request.user.is_authenticated else None
+            actor = getattr(user, 'fullname', '') or getattr(user, 'username', '') or 'Team Member'
+            note = f'{label}: {assignee.fullname or assignee.username}' if assignee else f'{label} unassigned'
+            record_approval_action(post, f'{label} Assigned' if assignee else f'{label} Unassigned', actor, 'Team Member', note, event_type='note')
+        post = self.get_queryset().get(pk=post.pk)
+        return Response(SocialPostSerializer(post, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def set_priority(self, request, pk=None):
+        post = self.get_object()
+        priority = request.data.get('priority')
+        valid = dict(SocialPost.PRIORITY_CHOICES)
+        if priority not in valid:
+            return Response({'error': f'priority must be one of: {", ".join(valid)}.'}, status=status.HTTP_400_BAD_REQUEST)
+        if post.priority != priority:
+            post.priority = priority
+            post.save(update_fields=['priority', 'updated_at'])
+            user = request.user if request.user.is_authenticated else None
+            actor = getattr(user, 'fullname', '') or getattr(user, 'username', '') or 'Team Member'
+            record_approval_action(post, 'Priority Changed', actor, 'Team Member', f'Priority set to {valid[priority]}', event_type='note')
+        post = self.get_queryset().get(pk=post.pk)
+        return Response(SocialPostSerializer(post, context={'request': request}).data)
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticated])
+    def comments(self, request, pk=None):
+        """GET: the post's comment thread (also marks your mentions on it read). POST: add a comment."""
+        post = self.get_object()
+        if request.method == 'GET':
+            PostCommentMention.objects.filter(user=request.user, comment__post=post, is_read=False).update(is_read=True)
+            qs = post.comments.select_related('author').prefetch_related('mentions')
+            return Response(PostCommentSerializer(qs, many=True, context={'request': request}).data)
+
+        body = (request.data.get('body') or '').strip()
+        if not body:
+            return Response({'error': 'Comment text is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(body) > 5000:
+            return Response({'error': 'Comments are limited to 5000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_ids = request.data.get('mention_ids') or []
+        if not isinstance(raw_ids, list):
+            return Response({'error': 'mention_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        mention_ids = {int(i) for i in raw_ids if str(i).isdigit()}
+
+        user = request.user
+        comment = PostComment.objects.create(
+            post=post,
+            author=user,
+            author_name=getattr(user, 'fullname', '') or user.username,
+            author_role=getattr(user, 'designation', '') or getattr(user, 'role', '') or '',
+            body=body,
+        )
+
+        # Only keep mentions whose @name is still in the text (the user may have deleted it after picking)
+        lowered = body.lower()
+        mentioned = [
+            u for u in CustomUser.objects.filter(id__in=mention_ids, is_active=True).exclude(id=user.id)
+            if f'@{(u.fullname or u.username).lower()}' in lowered or f'@{u.username.lower()}' in lowered
+        ]
+        PostCommentMention.objects.bulk_create([PostCommentMention(comment=comment, user=u) for u in mentioned])
+
+        return Response(PostCommentSerializer(comment, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=['delete'],
+        url_path=r'comments/(?P<comment_id>[0-9]+)',
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def delete_comment(self, request, pk=None, comment_id=None):
+        post = self.get_object()
+        comment = post.comments.filter(id=comment_id).first()
+        if not comment:
+            return Response({'error': 'Comment not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not PostCommentSerializer(comment, context={'request': request}).data['can_delete']:
+            return Response({'error': 'You can only delete your own comments.'}, status=status.HTTP_403_FORBIDDEN)
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
         actor_role = self.request.data.get('actor_role') or 'Content Creator'
-        post = serializer.save(created_by=user)
+        # Whoever writes the script owns the post; no separate assignment step
+        post = serializer.save(created_by=user, writer=serializer.validated_data.get('writer') or user)
         initial_action = 'submitted_review' if post.status == 'script_approval' else 'created'
         notes = self.request.data.get('script_notes') or self.request.data.get('notes') or ('Submitted directly for script review' if post.status == 'script_approval' else 'Initial post draft created')
         record_approval_action(post, initial_action, actor_name, actor_role, notes)
@@ -244,6 +354,12 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
         actor_role = self.request.data.get('actor_role') or 'Content Creator'
         notes = self.request.data.get('notes') or self.request.data.get('update_reason')
+
+        # Posts started from a content plan have no owner yet: the first person to fill in the script takes it
+        if user and not post.writer_id and post.status in self.SCRIPT_STAGES:
+            post.writer = user
+            post.save(update_fields=['writer'])
+            record_approval_action(post, 'Writer Assigned', actor_name, actor_role, f'Writer: {actor_name} (filled in the script)', event_type='note')
 
         # If post was rejected and is now resubmitted for approval
         if prev_feedback and post.status == 'script_approval':
@@ -313,6 +429,25 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         record_approval_action(post, 'changes_requested', actor, 'Reviewer', notes)
         return Response(SocialPostSerializer(post).data)
 
+    @staticmethod
+    def _pending_script_rework(post):
+        """Latest Team Review / Client Review → Scripts revision whose redesign hasn't happened yet.
+
+        Extra script-approval bounces in between are fine; a full rejection or a
+        later move into Designing means there is nothing pending.
+        """
+        source = (post.approval_history
+                  .filter(event_type='revision', to_stage='script',
+                          from_stage__in=['team_review', 'internal_review', 'client_review'])
+                  .order_by('-timestamp', '-id')
+                  .first())
+        if not source:
+            return None
+        later = post.approval_history.filter(timestamp__gt=source.timestamp)
+        if later.filter(to_stage='designing').exists() or later.filter(event_type='rejection').exists():
+            return None
+        return source
+
     @action(detail=True, methods=['post'])
     def transition_stage(self, request, pk=None):
         post = self.get_object()
@@ -374,6 +509,13 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             else:
                 post.scheduled_at = None
 
+        reason_categories = request.data.get('reason_categories') or []
+        if not isinstance(reason_categories, list):
+            reason_categories = [reason_categories]
+        reason_categories = [str(c)[:60] for c in reason_categories if c][:12]
+        severity = (request.data.get('severity') or '')[:20]
+        rejected_by = (request.data.get('rejected_by') or '')[:20]
+
         prev_status = post.status
         prev_feedback = post.client_feedback
         post.status = target_stage
@@ -381,11 +523,42 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         if target_stage == 'published':
             post.published_at = timezone.now()
 
-        if action_type == 'reject' or 'reject' in notes.lower():
+        event_type = 'transition'
+        if action_type == 'reject':
+            # Revision loopback: content goes back for rework
+            event_type = 'revision'
             post.client_feedback = notes
+            post.revision_count = (post.revision_count or 0) + 1
+            if prev_status == 'client_review':
+                post.client_revision_count = (post.client_revision_count or 0) + 1
+            post.last_revision_categories = reason_categories
+        elif action_type == 'reject_final':
+            # Entire content rejected: dropped, or restarted from a fresh script
+            event_type = 'rejection'
+            post.rejection_reason = notes
+            post.rejection_categories = reason_categories
+            post.rejected_by = rejected_by or ('client' if prev_status == 'client_review' else 'internal')
+            post.rejected_from_stage = prev_status
+            post.rejected_at = timezone.now()
+            post.client_feedback = notes if target_stage != 'content_rejected' else ''
+        elif action_type == 'restore':
+            post.client_feedback = post.rejection_reason
         elif target_stage in ['script_approval', 'team_review', 'client_review', 'approved', 'published']:
             # Resubmitted or approved: clear previous loopback critique
             post.client_feedback = ''
+
+        # A script revision requested at Team Review / Client Review: once the
+        # rewritten script is re-approved, the existing creative is outdated, so
+        # Designing gets it back as redo work with the original feedback attached.
+        script_rework_source = None
+        if action_type == 'advance' and prev_status == 'script_approval' and target_stage == 'designing':
+            script_rework_source = self._pending_script_rework(post)
+            if script_rework_source:
+                who = 'client' if script_rework_source.from_stage == 'client_review' else 'team QA'
+                post.client_feedback = (
+                    f"Script was revised after {who} feedback — update the design to match the new script.\n"
+                    f"Original feedback: {script_rework_source.notes}"
+                )
 
         try:
             post.save()
@@ -399,10 +572,10 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                 action_label = "Script Rejected (Rework Requested)"
                 actor_role = actor_role or "Content Reviewer"
             elif prev_status in ['team_review', 'internal_review']:
-                action_label = "Team QA Rejected (Rework Requested)"
+                action_label = "Team QA: Script Rework Requested" if target_stage == 'script' else "Team QA Rejected (Rework Requested)"
                 actor_role = actor_role or "QA Lead"
             elif prev_status == 'client_review':
-                action_label = "Client Requested Changes"
+                action_label = "Client Requested Script Changes" if target_stage == 'script' else "Client Requested Changes"
                 actor_role = actor_role or "Client"
             else:
                 action_label = f"Rejected: Returned to {target_stage.replace('_', ' ').title()}"
@@ -416,7 +589,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                     action_label = "Submitted for Script Approval"
                     actor_role = actor_role or "Content Creator"
             elif target_stage == 'designing':
-                action_label = "Script Approved → Moved to Designing"
+                action_label = "Revised Script Approved → Redesign Needed" if script_rework_source else "Script Approved → Moved to Designing"
                 actor_role = actor_role or "Content Reviewer"
             elif target_stage == 'team_review':
                 if prev_feedback:
@@ -444,6 +617,19 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         elif action_type == 'update':
             action_label = "Post Reworked / Updated"
             actor_role = actor_role or "Creative Team"
+        elif action_type == 'reject_final':
+            who = 'Client' if post.rejected_by == 'client' else 'Internal'
+            if target_stage == 'content_rejected':
+                action_label = f"Content Rejected by {who} (Dropped)"
+            else:
+                action_label = f"Content Rejected by {who} (Restart Script)"
+            actor_role = actor_role or ("Client" if post.rejected_by == 'client' else "Reviewer")
+        elif action_type == 'restore':
+            action_label = "Rejected Content Restored to Scripts"
+            actor_role = actor_role or "Workflow Lead"
+
+        if event_type == 'transition' and action_type == 'advance' and target_stage in ['designing', 'client_review', 'approved', 'scheduled']:
+            event_type = 'approval'
 
         try:
             record_approval_action(
@@ -451,7 +637,13 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                 (action_label or "Stage Updated")[:50],
                 (actor or "Team Member")[:150],
                 (actor_role or "Workflow Team")[:50],
-                notes or f"Moved from {prev_status} to {target_stage}"
+                notes or f"Moved from {prev_status} to {target_stage}",
+                event_type=event_type,
+                from_stage=prev_status,
+                to_stage=target_stage,
+                reason_categories=reason_categories if event_type in ['revision', 'rejection'] else [],
+                severity=severity,
+                revision_round=post.revision_count if event_type == 'revision' else 0,
             )
         except Exception:
             pass
@@ -491,7 +683,6 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         import os, re, time
         from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
         from django.conf import settings
 
         media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
@@ -502,7 +693,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
         filename = f"{post.id}_{clean_base}_{int(time.time())}{ext}"
         file_path = os.path.join('social_media', filename)
-        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+        # Stream the original upload to storage in chunks — bytes are kept exactly as uploaded (no re-encoding)
+        saved_path = default_storage.save(file_path, file)
 
         file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
 
@@ -534,6 +726,40 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             'post': SocialPostSerializer(post).data
         })
 
+    @action(detail=True, methods=['get'], url_path='download_media')
+    def download_media(self, request, pk=None):
+        """Serve a post's deliverable as an attachment, byte-for-byte identical to the uploaded file."""
+        import re
+        from urllib.parse import urlparse, unquote
+        from django.conf import settings
+        from django.http import FileResponse, HttpResponseRedirect
+
+        post = self.get_object()
+        urls = post.media_urls if isinstance(post.media_urls, list) else []
+        try:
+            idx = int(request.query_params.get('index', 0) or 0)
+        except (TypeError, ValueError):
+            idx = 0
+        if idx < 0 or idx >= len(urls) or not urls[idx]:
+            return Response({'error': 'No deliverable attached to this post.'}, status=status.HTTP_404_NOT_FOUND)
+
+        url = str(urls[idx])
+        path = unquote(urlparse(url).path)
+        if path.startswith(settings.MEDIA_URL):
+            media_root = os.path.normpath(settings.MEDIA_ROOT)
+            full_path = os.path.normpath(os.path.join(media_root, path[len(settings.MEDIA_URL):]))
+            if full_path.startswith(media_root + os.sep) and os.path.isfile(full_path):
+                base, ext = os.path.splitext(os.path.basename(full_path))
+                # Stored as "<post_id>_<name>_<timestamp>"; hand back "<name>"
+                clean = re.sub(rf'^{post.id}_', '', base)
+                clean = re.sub(r'_\d{9,}$', '', clean) or f'post_{post.id}'
+                return FileResponse(open(full_path, 'rb'), as_attachment=True, filename=f'{clean}{ext}')
+
+        # Externally hosted asset (cloud link): send the browser to the original
+        if url.startswith(('http://', 'https://')):
+            return HttpResponseRedirect(url)
+        return Response({'error': 'Deliverable file could not be found.'}, status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_generic(self, request):
         file = request.FILES.get('file') or request.FILES.get('media')
@@ -542,7 +768,6 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         import os, re, time
         from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
         from django.conf import settings
 
         media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
@@ -553,7 +778,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
         filename = f"media_{clean_base}_{int(time.time())}{ext}"
         file_path = os.path.join('social_media', filename)
-        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+        # Stream the original upload to storage in chunks — bytes are kept exactly as uploaded (no re-encoding)
+        saved_path = default_storage.save(file_path, file)
 
         file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
         return Response({'url': file_url, 'file_url': file_url})
@@ -575,24 +801,51 @@ class PublicClientReviewView(APIView):
         except SocialPost.DoesNotExist:
             return Response({'error': 'Invalid or expired review link.'}, status=status.HTTP_404_NOT_FOUND)
 
-        action_type = request.data.get('action') # 'approve' or 'request_changes'
+        action_type = request.data.get('action') # 'approve' | 'request_changes' | 'reject'
         notes = request.data.get('notes', '')
         reviewer_name = request.data.get('reviewer_name', f'{post.client_profile.name} Client')
+        reason_categories = request.data.get('reason_categories') or []
+        if not isinstance(reason_categories, list):
+            reason_categories = [reason_categories]
+        reason_categories = [str(c)[:60] for c in reason_categories if c][:12]
+
+        if post.status != 'client_review' and action_type in ['approve', 'request_changes', 'reject']:
+            return Response({'error': 'This post is no longer awaiting your review.'}, status=status.HTTP_409_CONFLICT)
 
         if action_type == 'approve':
-            post.status = 'scheduled' if post.scheduled_at else 'approved'
+            post.status = 'approved'
             post.client_feedback = ''
             post.save(update_fields=['status', 'client_feedback'])
-            record_approval_action(post, 'client_approved', reviewer_name, 'Client', notes or 'Approved by client')
+            record_approval_action(post, 'Client Approved via Review Link', reviewer_name, 'Client', notes or 'Approved by client',
+                                   event_type='approval', from_stage='client_review', to_stage='approved')
             return Response({'status': 'approved', 'message': 'Post approved successfully! Thank you.'})
         elif action_type == 'request_changes':
             # Per workflow diagram: Client Review rejection loops back to Scheduled / Designing
             post.status = 'designing'
             post.client_feedback = notes
-            post.save(update_fields=['status', 'client_feedback'])
-            record_approval_action(post, 'client_changes_requested', reviewer_name, 'Client', notes or 'Changes requested by client (Returned to Designing)')
+            post.revision_count = (post.revision_count or 0) + 1
+            post.client_revision_count = (post.client_revision_count or 0) + 1
+            post.last_revision_categories = reason_categories
+            post.save(update_fields=['status', 'client_feedback', 'revision_count', 'client_revision_count', 'last_revision_categories'])
+            record_approval_action(post, 'Client Requested Changes', reviewer_name, 'Client', notes or 'Changes requested by client (Returned to Designing)',
+                                   event_type='revision', from_stage='client_review', to_stage='designing',
+                                   reason_categories=reason_categories, revision_round=post.revision_count)
             return Response({'status': 'changes_requested', 'message': 'Feedback received. Creative team will revise in Scheduled / Designing.'})
-        
+        elif action_type == 'reject':
+            if not notes.strip():
+                return Response({'error': 'Please share the reason for rejecting this content.'}, status=status.HTTP_400_BAD_REQUEST)
+            post.status = 'content_rejected'
+            post.rejection_reason = notes
+            post.rejection_categories = reason_categories
+            post.rejected_by = 'client'
+            post.rejected_from_stage = 'client_review'
+            post.rejected_at = timezone.now()
+            post.save()
+            record_approval_action(post, 'Content Rejected by Client (Dropped)', reviewer_name, 'Client', notes,
+                                   event_type='rejection', from_stage='client_review', to_stage='content_rejected',
+                                   reason_categories=reason_categories)
+            return Response({'status': 'rejected', 'message': 'Your decision has been recorded. The team will follow up with a new concept.'})
+
         return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1219,6 +1472,89 @@ class SocialInboxViewSet(viewsets.ModelViewSet):
             'lead': LeadSerializer(lead).data,
             'inbox_message': SocialInboxMessageSerializer(msg).data,
         })
+
+
+class SocialMentionsView(APIView):
+    """The signed-in user's @mentions in post comments (newest first)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        qs = PostCommentMention.objects.filter(user=request.user).select_related('comment__post__client_profile')
+        unread_count = qs.filter(is_read=False).count()
+        if request.query_params.get('unread') in ('1', 'true'):
+            qs = qs.filter(is_read=False)
+        return Response({
+            'unread_count': unread_count,
+            'results': PostCommentMentionSerializer(qs[:50], many=True).data,
+        })
+
+    def post(self, request):
+        """Mark mentions read: {"ids": [...]} or {} for all."""
+        qs = PostCommentMention.objects.filter(user=request.user, is_read=False)
+        ids = request.data.get('ids')
+        if isinstance(ids, list):
+            qs = qs.filter(id__in=[i for i in ids if str(i).isdigit()])
+        return Response({'updated': qs.update(is_read=True)})
+
+
+class SocialTeamMembersView(APIView):
+    """Active team members who can be @mentioned."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        users = CustomUser.objects.filter(is_active=True).order_by('fullname', 'username')
+        return Response([
+            {
+                'id': u.id,
+                'name': u.fullname or u.username,
+                'username': u.username,
+                'role': u.role,
+                'designation': u.designation or '',
+            }
+            for u in users
+        ])
+
+
+class MistakeInsightsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from apis.social.insights import build_mistake_insights
+        try:
+            days = max(7, min(int(request.query_params.get('days', 90)), 365))
+        except (TypeError, ValueError):
+            days = 90
+        return Response(build_mistake_insights(request.query_params.get('client_id'), days))
+
+
+class MistakeFixApplyView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from apis.social.insights import apply_fix
+        category = (request.data.get('category') or '').strip()
+        if not category:
+            return Response({'error': 'category is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            days = max(7, min(int(request.data.get('days', 90)), 365))
+        except (TypeError, ValueError):
+            days = 90
+        checklist = request.data.get('checklist')
+        if checklist is not None and not isinstance(checklist, list):
+            return Response({'error': 'checklist must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+        fix, created, updated = apply_fix(
+            category=category,
+            client_id=request.data.get('client_id'),
+            applied_by=request.data.get('applied_by') or '',
+            title=request.data.get('title'),
+            checklist=[str(i)[:200] for i in checklist] if checklist else None,
+            lesson=request.data.get('lesson') or '',
+            days=days,
+        )
+        return Response(
+            {'id': fix.id, 'created': created, 'posts_updated': updated},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
 class SocialAnalyticsView(APIView):

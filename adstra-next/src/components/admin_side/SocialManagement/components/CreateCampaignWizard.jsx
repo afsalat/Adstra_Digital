@@ -42,6 +42,7 @@ import {
   Send,
   Globe,
 } from "lucide-react";
+import { notify } from "./SocialFeedback";
 
 export const normalizeGender = (val) => {
   if (!val) return "All";
@@ -586,7 +587,7 @@ export default function CreateCampaignWizard({
 
   const handleRemoveCarouselCard = (cardIndex) => {
     if (formData.carouselCards.length <= 2) {
-      alert("A carousel ad requires at least 2 cards.");
+      notify("A carousel ad requires at least 2 cards.");
       return;
     }
     const updatedCards = formData.carouselCards.filter((_, idx) => idx !== cardIndex);
@@ -852,15 +853,15 @@ export default function CreateCampaignWizard({
   // Step 1 validation
   const validateStep1 = () => {
     if (!formData.name.trim()) {
-      alert("Please enter a campaign name.");
+      notify("Please enter a campaign name.");
       return false;
     }
     if (!formData.platforms || formData.platforms.length === 0) {
-      alert("Please select at least one advertising platform.");
+      notify("Please select at least one advertising platform.");
       return false;
     }
     if (!formData.budget || Number(formData.budget) <= 0) {
-      alert("Please enter a valid budget amount.");
+      notify("Please enter a valid budget amount.");
       return false;
     }
     return true;
@@ -876,7 +877,7 @@ export default function CreateCampaignWizard({
       return;
     }
     if (currentStep === 3 && !validateStep3()) {
-      alert("Please enter an ad name and headline.");
+      notify("Please enter an ad name and headline.");
       return;
     }
     if (currentStep < 4) {
