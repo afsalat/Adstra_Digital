@@ -20,6 +20,90 @@
 }
 
 /* --------------------------------------------------------------------------
+   0. Top Brand Platform Selector Bar (Image 2: Meta Ads, Google Ads, LinkedIn Ads)
+   -------------------------------------------------------------------------- */
+.audience-platform-selector-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e4e6eb;
+  user-select: none;
+}
+
+.audience-platform-radiogroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.audience-platform-radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #334155;
+  padding: 6px 14px;
+  border-radius: 8px;
+  transition: all 0.16s ease;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.audience-platform-radio-item:hover:not(.active) {
+  background: #f8fafc;
+}
+
+.audience-platform-radio-item.active {
+  background: #eff6ff;
+  color: #0f172a;
+  font-weight: 650;
+}
+
+.audience-platform-radio-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.16s ease;
+}
+
+.audience-platform-radio-item.active .audience-platform-radio-circle {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.audience-platform-radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2563eb;
+  transition: transform 0.16s ease;
+}
+
+.audience-platform-radio-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.audience-platform-radio-label {
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
    Top Header Bar (Meta Logo, "Audience", Account Switcher, Standard View Btn)
    -------------------------------------------------------------------------- */
 .meta-aud-top-header {

@@ -177,6 +177,22 @@ class SocialCampaign(models.Model):
     headline = models.CharField(max_length=255, blank=True)
     description = models.CharField(max_length=500, blank=True)
 
+    # Google Ads specific fields
+    google_campaign_type = models.CharField(max_length=30, blank=True, default='')
+    google_objective = models.CharField(max_length=50, blank=True, default='')
+    google_bidding_strategy = models.CharField(max_length=50, blank=True, default='MAXIMIZE_CONVERSIONS')
+    google_bidding_config = models.JSONField(default=dict, blank=True)
+    google_campaign_settings = models.JSONField(default=dict, blank=True)
+    google_keywords = models.JSONField(default=list, blank=True)
+    google_ad_groups = models.JSONField(default=list, blank=True)
+    google_ads_data = models.JSONField(default=list, blank=True)
+    google_asset_groups = models.JSONField(default=list, blank=True)
+    google_assets = models.JSONField(default=dict, blank=True)
+    google_daily_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    google_phone_number = models.CharField(max_length=30, blank=True, default='')
+    google_final_url = models.CharField(max_length=1000, blank=True, default='')
+    google_draft_step = models.CharField(max_length=50, blank=True, default='objective')
+
     def __str__(self):
         return f'{self.name} - {self.client_profile.name}'
 

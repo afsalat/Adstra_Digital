@@ -1078,6 +1078,93 @@ class SocialCampaignViewSet(viewsets.ModelViewSet):
             'top_campaign': top_campaign,
         })
 
+    @action(detail=False, methods=['post'], url_path='google/draft')
+    def google_draft(self, request):
+        """
+        Save or update a Google Ads campaign draft.
+        Creates a new SocialCampaign or updates existing draft with google_ fields.
+        """
+        data = request.data
+        campaign_id = data.get('campaign_id')
+
+        # Required: client_profile
+        client_profile_id = data.get('client_profile_id') or data.get('client_profile')
+
+        try:
+            if campaign_id:
+                campaign = SocialCampaign.objects.get(id=campaign_id)
+            else:
+                # Find or create a client profile
+                client_profile = None
+                if client_profile_id:
+                    try:
+                        client_profile = SocialClientProfile.objects.get(id=client_profile_id)
+                    except SocialClientProfile.DoesNotExist:
+                        pass
+                if not client_profile:
+                    client_profile = SocialClientProfile.objects.first()
+                if not client_profile:
+                    return Response({'error': 'No client profile found. Please create a client profile first.'}, status=400)
+
+                campaign = SocialCampaign(
+                    client_profile=client_profile,
+                    name=data.get('name', 'Google Ads Campaign Draft'),
+                    objective='traffic',
+                    ad_platforms=['google'],
+                    platforms=['google'],
+                    status='draft',
+                )
+
+            # Update google-specific fields
+            google_fields = [
+                'google_campaign_type', 'google_objective', 'google_bidding_strategy',
+                'google_bidding_config', 'google_campaign_settings', 'google_keywords',
+                'google_ad_groups', 'google_ads_data', 'google_asset_groups', 'google_assets',
+                'google_daily_budget', 'google_phone_number', 'google_final_url', 'google_draft_step',
+            ]
+            for field in google_fields:
+                if field in data:
+                    setattr(campaign, field, data[field])
+
+            # Update general fields
+            if 'name' in data:
+                campaign.name = data['name']
+            if 'budget' in data:
+                campaign.budget = data['budget']
+            if 'start_date' in data:
+                campaign.start_date = data['start_date']
+            if 'end_date' in data:
+                campaign.end_date = data['end_date']
+            if 'landing_page_url' in data:
+                campaign.landing_page_url = data['landing_page_url']
+
+            campaign.ad_platforms = ['google']
+            campaign.platforms = ['google']
+            campaign.campaign_type = data.get('google_campaign_type', campaign.campaign_type or 'SEARCH')
+
+            campaign.save()
+
+            return Response({
+                'campaign_id': campaign.id,
+                'message': 'Draft saved successfully',
+                'google_draft_step': campaign.google_draft_step,
+            })
+        except SocialCampaign.DoesNotExist:
+            return Response({'error': f'Campaign {campaign_id} not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=True, methods=['post'], url_path='google-publish')
+    def google_publish(self, request, pk=None):
+        """
+        Publish a Google Ads campaign through the Google Ads API.
+        """
+        from apis.social.campaign_publishing_service import publish_campaign as run_publish
+        result = run_publish(int(pk), user=request.user)
+        if result.get('success'):
+            return Response(result, status=200)
+        else:
+            return Response(result, status=422)
 
 
 class SocialInboxViewSet(viewsets.ModelViewSet):

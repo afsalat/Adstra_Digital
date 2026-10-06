@@ -2,7 +2,11 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import "./MetaAudienceSection.css";
-import { MetaLogoIcon } from "./CreateCampaignWizard";
+import {
+  MetaLogoIcon,
+  GoogleAdsLogoIcon,
+  LinkedInLogoIcon,
+} from "./PlatformIcons";
 import {
   Search,
   Plus,
@@ -34,6 +38,7 @@ import {
   MoreHorizontal,
   Layers,
   HelpCircle,
+  Building2,
 } from "lucide-react";
 
 // Exact Meta Ads Manager Customer Sub-Labels / Fields (Images 1, 2, 3)
@@ -629,11 +634,247 @@ const AUDIENCE_GROUPS = [
   },
 ];
 
+// Official Ad Platform Radios (Image 2)
+export const AD_PLATFORMS = [
+  {
+    id: "meta",
+    label: "Meta Ads",
+    Icon: MetaLogoIcon,
+  },
+  {
+    id: "google",
+    label: "Google Ads",
+    Icon: GoogleAdsLogoIcon,
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn Ads",
+    Icon: LinkedInLogoIcon,
+  },
+];
+
+// Initial Google Ads Audience Segments
+export const INITIAL_GOOGLE_AUDIENCES = [
+  {
+    id: "g-aud-1",
+    name: "High-Value Purchasers (LTV > $500)",
+    type: "Customer Match",
+    status: "Eligible",
+    searchSize: "24,000",
+    youtubeSize: "21,000",
+    displaySize: "18,500",
+    gmailSize: "22,000",
+    dateCreated: "Oct 01, 2026",
+    audienceId: "8491029381",
+    category: "customer_match",
+  },
+  {
+    id: "g-aud-2",
+    name: "Website Converters - Past 90 Days",
+    type: "Website visitors",
+    status: "Eligible",
+    searchSize: "42,000",
+    youtubeSize: "36,000",
+    displaySize: "31,000",
+    gmailSize: "38,000",
+    dateCreated: "Sep 15, 2026",
+    audienceId: "8491029382",
+    category: "website",
+  },
+  {
+    id: "g-aud-3",
+    name: "All Website Visitors (Past 30 Days)",
+    type: "Website visitors",
+    status: "Eligible",
+    searchSize: "142,000",
+    youtubeSize: "98,000",
+    displaySize: "125,000",
+    gmailSize: "115,000",
+    dateCreated: "Sep 01, 2026",
+    audienceId: "8491029383",
+    category: "website",
+  },
+  {
+    id: "g-aud-4",
+    name: "Cart Abandoners (14 Days)",
+    type: "Website visitors",
+    status: "Eligible",
+    searchSize: "12,400",
+    youtubeSize: "9,200",
+    displaySize: "10,800",
+    gmailSize: "11,100",
+    dateCreated: "Sep 20, 2026",
+    audienceId: "8491029384",
+    category: "website",
+  },
+  {
+    id: "g-aud-5",
+    name: "Similar to High-Value Purchasers",
+    type: "Similar segment",
+    status: "Eligible",
+    searchSize: "450,000",
+    youtubeSize: "310,000",
+    displaySize: "380,000",
+    gmailSize: "390,000",
+    dateCreated: "Sep 28, 2026",
+    audienceId: "8491029385",
+    category: "similar",
+  },
+  {
+    id: "g-aud-6",
+    name: "Newsletter Subscribers & Leads",
+    type: "Customer Match",
+    status: "Populating",
+    searchSize: "8,900",
+    youtubeSize: "6,800",
+    displaySize: "7,200",
+    gmailSize: "8,100",
+    dateCreated: "Oct 04, 2026",
+    audienceId: "8491029386",
+    category: "customer_match",
+  },
+];
+
+// Initial LinkedIn Matched Audiences
+export const INITIAL_LINKEDIN_AUDIENCES = [
+  {
+    id: "li-aud-1",
+    name: "Fortune 500 Enterprise Target Accounts",
+    type: "Company list",
+    source: "CSV Upload",
+    status: "Ready",
+    size: "14,200",
+    matchRate: "84%",
+    dateCreated: "Oct 02, 2026",
+    audienceId: "918273645",
+    category: "company",
+  },
+  {
+    id: "li-aud-2",
+    name: "VP & C-Suite Tech Executives",
+    type: "Contact list",
+    source: "HubSpot CRM Sync",
+    status: "Ready",
+    size: "8,700",
+    matchRate: "78%",
+    dateCreated: "Sep 28, 2026",
+    audienceId: "918273646",
+    category: "contact",
+  },
+  {
+    id: "li-aud-3",
+    name: "All Website Visitors - 90 Days",
+    type: "Website retargeting",
+    source: "LinkedIn Insight Tag",
+    status: "Ready",
+    size: "56,000",
+    matchRate: "96%",
+    dateCreated: "Sep 10, 2026",
+    audienceId: "918273647",
+    category: "website",
+  },
+  {
+    id: "li-aud-4",
+    name: "Product Pricing Page Drop-offs",
+    type: "Website retargeting",
+    source: "LinkedIn Insight Tag",
+    status: "Ready",
+    size: "4,300",
+    matchRate: "92%",
+    dateCreated: "Oct 03, 2026",
+    audienceId: "918273648",
+    category: "website",
+  },
+  {
+    id: "li-aud-5",
+    name: "Lookalike - High Intent Decision Makers",
+    type: "Lookalike audience",
+    source: "Algorithm",
+    status: "Building",
+    size: "~35,000",
+    matchRate: "—",
+    dateCreated: "Oct 05, 2026",
+    audienceId: "918273649",
+    category: "lookalike",
+  },
+];
+
 export default function MetaAudienceSection({
   clients = [],
   selectedClientId = "all",
   campaigns = [],
 }) {
+  // Platform selection state: 'meta' | 'google' | 'linkedin' (defaults to 'meta')
+  const [selectedPlatform, setSelectedPlatform] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("audience_selected_platform");
+        if (saved && ["meta", "google", "linkedin"].includes(saved)) return saved;
+      } catch (e) {
+        // ignore
+      }
+    }
+    return "meta";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("audience_selected_platform", selectedPlatform);
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [selectedPlatform]);
+
+  // Google Ads Audiences state
+  const [googleAudiences, setGoogleAudiences] = useState(INITIAL_GOOGLE_AUDIENCES);
+  const [googleTab, setGoogleTab] = useState("all");
+  const [googleSearch, setGoogleSearch] = useState("");
+  const [selectedGoogleIds, setSelectedGoogleIds] = useState([]);
+  const [googleAcctOpen, setGoogleAcctOpen] = useState(false);
+
+  // LinkedIn Matched Audiences state
+  const [linkedinAudiences, setLinkedinAudiences] = useState(INITIAL_LINKEDIN_AUDIENCES);
+  const [linkedinTab, setLinkedinTab] = useState("all");
+  const [linkedinSearch, setLinkedinSearch] = useState("");
+  const [selectedLinkedinIds, setSelectedLinkedinIds] = useState([]);
+  const [linkedinAcctOpen, setLinkedinAcctOpen] = useState(false);
+
+  const filteredGoogleAudiences = useMemo(() => {
+    return googleAudiences.filter((item) => {
+      if (googleTab !== "all" && item.category !== googleTab) return false;
+      if (googleSearch.trim()) {
+        const q = googleSearch.toLowerCase();
+        if (
+          !item.name.toLowerCase().includes(q) &&
+          !item.type.toLowerCase().includes(q) &&
+          !item.audienceId.includes(q)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [googleAudiences, googleTab, googleSearch]);
+
+  const filteredLinkedinAudiences = useMemo(() => {
+    return linkedinAudiences.filter((item) => {
+      if (linkedinTab !== "all" && item.category !== linkedinTab) return false;
+      if (linkedinSearch.trim()) {
+        const q = linkedinSearch.toLowerCase();
+        if (
+          !item.name.toLowerCase().includes(q) &&
+          !item.type.toLowerCase().includes(q) &&
+          !item.audienceId.includes(q)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [linkedinAudiences, linkedinTab, linkedinSearch]);
+
   // Audiences state (with local storage persistence)
   const storageKey = `meta_audiences_list_v3_${selectedClientId}`;
   const [audiences, setAudiences] = useState(() => {
@@ -1045,9 +1286,62 @@ export default function MetaAudienceSection({
   return (
     <div className="meta-aud-root">
       {/* --------------------------------------------------------------------
-          1. Top Header Bar (Meta Logo, Title, Account Selector, View Switcher)
+          0. Brand Platform Selector Bar (Image 2: Meta Ads, Google Ads, LinkedIn Ads)
           -------------------------------------------------------------------- */}
-      <div className="meta-aud-top-header">
+      <div className="audience-platform-selector-bar">
+        <div
+          role="radiogroup"
+          aria-label="Ad Platform Selection"
+          className="audience-platform-radiogroup"
+        >
+          {AD_PLATFORMS.map((platform) => {
+            const isChecked = selectedPlatform === platform.id;
+            return (
+              <label
+                key={platform.id}
+                className={`audience-platform-radio-item ${isChecked ? "active" : ""}`}
+                onClick={() => setSelectedPlatform(platform.id)}
+              >
+                <input
+                  type="radio"
+                  name="audience_ad_platform"
+                  value={platform.id}
+                  checked={isChecked}
+                  onChange={() => setSelectedPlatform(platform.id)}
+                  style={{
+                    position: "absolute",
+                    opacity: 0,
+                    width: 0,
+                    height: 0,
+                    pointerEvents: "none",
+                  }}
+                />
+                <span className="audience-platform-radio-circle">
+                  {isChecked && <span className="audience-platform-radio-dot" />}
+                </span>
+                <span className="audience-platform-radio-icon">
+                  {platform.Icon && (
+                    <platform.Icon size={platform.id === "meta" ? 18 : 17} />
+                  )}
+                </span>
+                <span className="audience-platform-radio-label">
+                  {platform.label}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* --------------------------------------------------------------------
+          META ADS AUDIENCE VIEW (Image 1 Content)
+          -------------------------------------------------------------------- */}
+      {selectedPlatform === "meta" && (
+        <>
+          {/* --------------------------------------------------------------------
+              1. Top Header Bar (Meta Logo, Title, Account Selector, View Switcher)
+              -------------------------------------------------------------------- */}
+          <div className="meta-aud-top-header">
         <div className="meta-aud-header-left">
           <div className="meta-aud-logo-wrap" title="Meta Ads Manager">
             <MetaLogoIcon size={26} />
@@ -2389,6 +2683,580 @@ export default function MetaAudienceSection({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* --------------------------------------------------------------------
+          GOOGLE ADS AUDIENCE VIEW
+          -------------------------------------------------------------------- */}
+      {selectedPlatform === "google" && (
+        <div className="google-aud-wrapper" style={{ width: "100%", background: "#ffffff" }}>
+          {/* 1. Header Bar */}
+          <div className="meta-aud-top-header">
+            <div className="meta-aud-header-left">
+              <div className="meta-aud-logo-wrap" title="Google Ads Manager">
+                <GoogleAdsLogoIcon size={24} />
+              </div>
+              <h2 className="meta-aud-title">Audience Segments</h2>
+
+              {/* Account Selector Dropdown */}
+              <div className="meta-aud-acct-pill-wrapper">
+                <button
+                  type="button"
+                  className="meta-aud-acct-pill"
+                  onClick={() => setGoogleAcctOpen((prev) => !prev)}
+                >
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#65676b" strokeWidth={2}>
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                  <span className="meta-aud-acct-pill-id">
+                    849-231-9012 (849-231-90... - {currentClientName})
+                  </span>
+                  <ChevronDown size={14} color="#65676b" />
+                </button>
+
+                {googleAcctOpen && (
+                  <div className="meta-aud-acct-dropdown">
+                    <div className="meta-aud-acct-dropdown-header">Select Google Ads Account</div>
+                    <div
+                      className="meta-aud-acct-item active"
+                      onClick={() => setGoogleAcctOpen(false)}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{currentClientName}</div>
+                        <div style={{ fontSize: "0.74rem", color: "#65676b" }}>ID: 849-231-9012</div>
+                      </div>
+                      <Check size={16} color="#0064e1" />
+                    </div>
+                    {clients.slice(0, 4).map((cl) => (
+                      <div
+                        key={cl.id}
+                        className="meta-aud-acct-item"
+                        onClick={() => {
+                          setGoogleAcctOpen(false);
+                          showToast(`Switched Google Ads account to ${cl.name}`);
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{cl.name}</div>
+                          <div style={{ fontSize: "0.74rem", color: "#65676b" }}>
+                            ID: 849-231-{String(cl.id).padStart(4, "0")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="meta-aud-header-right">
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                onClick={() => showToast("Google Ads standard view active")}
+              >
+                Switch to standard audience view
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Category Filter Tabs */}
+          <div className="meta-aud-tabs-bar">
+            {[
+              { id: "all", label: "All audience segments", count: googleAudiences.length, icon: Folder },
+              { id: "customer_match", label: "Customer Match", count: googleAudiences.filter((a) => a.category === "customer_match").length, icon: Users },
+              { id: "website", label: "Website Visitors", count: googleAudiences.filter((a) => a.category === "website").length, icon: Globe },
+              { id: "similar", label: "Similar Segments", count: googleAudiences.filter((a) => a.category === "similar").length, icon: Sparkles },
+            ].map((tab) => {
+              const TabIcon = tab.icon;
+              const isActive = googleTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`meta-aud-tab ${isActive ? "active" : ""}`}
+                  onClick={() => setGoogleTab(tab.id)}
+                >
+                  <TabIcon size={14} className="meta-aud-tab-icon" />
+                  <span>{tab.label}</span>
+                  <span className={`meta-aud-tab-count ${isActive ? "active" : ""}`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 3. Search Box */}
+          <div className="meta-aud-search-bar">
+            <div className="meta-aud-search-input-wrap">
+              <Search size={15} className="meta-aud-search-icon" />
+              <input
+                type="text"
+                placeholder="Search for name or metrics"
+                value={googleSearch}
+                onChange={(e) => setGoogleSearch(e.target.value)}
+                className="meta-aud-search-input"
+              />
+              {googleSearch && (
+                <button
+                  type="button"
+                  className="meta-aud-search-clear"
+                  onClick={() => setGoogleSearch("")}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Action Row */}
+          <div className="meta-aud-action-row">
+            <div className="meta-aud-action-left">
+              <button
+                type="button"
+                className="meta-aud-btn-primary"
+                onClick={() => showToast("Google Ads Segment builder")}
+              >
+                <Plus size={15} />
+                <span>New Audience Segment</span>
+                <ChevronDown size={14} />
+              </button>
+
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                disabled={selectedGoogleIds.length !== 1}
+                onClick={() => showToast("Edit segment")}
+              >
+                <Edit2 size={13} />
+                <span>Edit</span>
+              </button>
+
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                disabled={selectedGoogleIds.length === 0}
+                onClick={() => {
+                  setGoogleAudiences((prev) => prev.filter((a) => !selectedGoogleIds.includes(a.id)));
+                  setSelectedGoogleIds([]);
+                  showToast("Selected segment(s) deleted");
+                }}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+
+            <div className="meta-aud-action-right">
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                onClick={() => showToast("Filter segments")}
+              >
+                <Filter size={13} />
+                <span>Filter</span>
+              </button>
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                onClick={() => showToast("Column customization")}
+              >
+                <Sliders size={13} />
+                <span>Columns</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 5. Google Ads Table */}
+          <div className="meta-aud-table-container">
+            <table className="meta-aud-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 44, textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={filteredGoogleAudiences.length > 0 && selectedGoogleIds.length === filteredGoogleAudiences.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedGoogleIds(filteredGoogleAudiences.map((a) => a.id));
+                        } else {
+                          setSelectedGoogleIds([]);
+                        }
+                      }}
+                      className="meta-aud-checkbox"
+                    />
+                  </th>
+                  <th>Segment Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Search Network Size</th>
+                  <th>YouTube Size</th>
+                  <th>Display Size</th>
+                  <th>Date Created</th>
+                  <th>Segment ID</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGoogleAudiences.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b" }}>
+                      No Google Ads audience segments match your filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredGoogleAudiences.map((item) => {
+                    const isSelected = selectedGoogleIds.includes(item.id);
+                    return (
+                      <tr key={item.id} className={isSelected ? "meta-aud-row-selected" : ""}>
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedGoogleIds((prev) =>
+                                prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+                              );
+                            }}
+                            className="meta-aud-checkbox"
+                          />
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: "#0f172a" }}>{item.name}</div>
+                        </td>
+                        <td>
+                          <span className="meta-aud-badge-type">{item.type}</span>
+                        </td>
+                        <td>
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            fontSize: "0.8rem",
+                            fontWeight: 600,
+                            color: item.status === "Eligible" ? "#16a34a" : "#d97706",
+                          }}>
+                            <span style={{
+                              width: 7,
+                              height: 7,
+                              borderRadius: "50%",
+                              background: item.status === "Eligible" ? "#16a34a" : "#f59e0b",
+                            }} />
+                            {item.status}
+                          </span>
+                        </td>
+                        <td>{item.searchSize}</td>
+                        <td>{item.youtubeSize}</td>
+                        <td>{item.displaySize}</td>
+                        <td style={{ color: "#64748b", fontSize: "0.82rem" }}>{item.dateCreated}</td>
+                        <td style={{ color: "#64748b", fontSize: "0.82rem", fontFamily: "monospace" }}>{item.audienceId}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            className="meta-aud-row-action-btn"
+                            onClick={() => showToast(`Options for ${item.name}`)}
+                          >
+                            <MoreHorizontal size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* --------------------------------------------------------------------
+          LINKEDIN ADS AUDIENCE VIEW
+          -------------------------------------------------------------------- */}
+      {selectedPlatform === "linkedin" && (
+        <div className="linkedin-aud-wrapper" style={{ width: "100%", background: "#ffffff" }}>
+          {/* 1. Header Bar */}
+          <div className="meta-aud-top-header">
+            <div className="meta-aud-header-left">
+              <div className="meta-aud-logo-wrap" title="LinkedIn Campaign Manager">
+                <LinkedInLogoIcon size={24} />
+              </div>
+              <h2 className="meta-aud-title">Matched Audiences</h2>
+
+              {/* Account Selector Dropdown */}
+              <div className="meta-aud-acct-pill-wrapper">
+                <button
+                  type="button"
+                  className="meta-aud-acct-pill"
+                  onClick={() => setLinkedinAcctOpen((prev) => !prev)}
+                >
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#65676b" strokeWidth={2}>
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                  <span className="meta-aud-acct-pill-id">
+                    50918231 (509182... - {currentClientName})
+                  </span>
+                  <ChevronDown size={14} color="#65676b" />
+                </button>
+
+                {linkedinAcctOpen && (
+                  <div className="meta-aud-acct-dropdown">
+                    <div className="meta-aud-acct-dropdown-header">Select LinkedIn Ad Account</div>
+                    <div
+                      className="meta-aud-acct-item active"
+                      onClick={() => setLinkedinAcctOpen(false)}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{currentClientName}</div>
+                        <div style={{ fontSize: "0.74rem", color: "#65676b" }}>ID: 50918231</div>
+                      </div>
+                      <Check size={16} color="#0064e1" />
+                    </div>
+                    {clients.slice(0, 4).map((cl) => (
+                      <div
+                        key={cl.id}
+                        className="meta-aud-acct-item"
+                        onClick={() => {
+                          setLinkedinAcctOpen(false);
+                          showToast(`Switched LinkedIn account to ${cl.name}`);
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{cl.name}</div>
+                          <div style={{ fontSize: "0.74rem", color: "#65676b" }}>
+                            ID: 50918{String(cl.id).padStart(3, "0")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="meta-aud-header-right">
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                onClick={() => showToast("LinkedIn Campaign Manager view active")}
+              >
+                Switch to standard audience view
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Category Filter Tabs */}
+          <div className="meta-aud-tabs-bar">
+            {[
+              { id: "all", label: "All audiences", count: linkedinAudiences.length, icon: Folder },
+              { id: "company", label: "Company Lists", count: linkedinAudiences.filter((a) => a.category === "company").length, icon: Building2 },
+              { id: "contact", label: "Contact Lists", count: linkedinAudiences.filter((a) => a.category === "contact").length, icon: Users },
+              { id: "website", label: "Website Retargeting", count: linkedinAudiences.filter((a) => a.category === "website").length, icon: Globe },
+              { id: "lookalike", label: "Lookalike", count: linkedinAudiences.filter((a) => a.category === "lookalike").length, icon: Sparkles },
+            ].map((tab) => {
+              const TabIcon = tab.icon;
+              const isActive = linkedinTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`meta-aud-tab ${isActive ? "active" : ""}`}
+                  onClick={() => setLinkedinTab(tab.id)}
+                >
+                  <TabIcon size={14} className="meta-aud-tab-icon" />
+                  <span>{tab.label}</span>
+                  <span className={`meta-aud-tab-count ${isActive ? "active" : ""}`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 3. Search Box */}
+          <div className="meta-aud-search-bar">
+            <div className="meta-aud-search-input-wrap">
+              <Search size={15} className="meta-aud-search-icon" />
+              <input
+                type="text"
+                placeholder="Search for name or metrics"
+                value={linkedinSearch}
+                onChange={(e) => setLinkedinSearch(e.target.value)}
+                className="meta-aud-search-input"
+              />
+              {linkedinSearch && (
+                <button
+                  type="button"
+                  className="meta-aud-search-clear"
+                  onClick={() => setLinkedinSearch("")}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Action Row */}
+          <div className="meta-aud-action-row">
+            <div className="meta-aud-action-left">
+              <button
+                type="button"
+                className="meta-aud-btn-primary"
+                style={{ background: "#0a66c2", borderColor: "#0a66c2" }}
+                onClick={() => showToast("Create Matched Audience")}
+              >
+                <Plus size={15} />
+                <span>Create Audience</span>
+                <ChevronDown size={14} />
+              </button>
+
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                disabled={selectedLinkedinIds.length !== 1}
+                onClick={() => showToast("Edit audience")}
+              >
+                <Edit2 size={13} />
+                <span>Edit</span>
+              </button>
+
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                disabled={selectedLinkedinIds.length === 0}
+                onClick={() => {
+                  setLinkedinAudiences((prev) => prev.filter((a) => !selectedLinkedinIds.includes(a.id)));
+                  setSelectedLinkedinIds([]);
+                  showToast("Selected audience(s) deleted");
+                }}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+
+            <div className="meta-aud-action-right">
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                onClick={() => showToast("Filter audiences")}
+              >
+                <Filter size={13} />
+                <span>Filter</span>
+              </button>
+              <button
+                type="button"
+                className="meta-aud-btn-secondary"
+                onClick={() => showToast("Column customization")}
+              >
+                <Sliders size={13} />
+                <span>Columns</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 5. LinkedIn Table */}
+          <div className="meta-aud-table-container">
+            <table className="meta-aud-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 44, textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={filteredLinkedinAudiences.length > 0 && selectedLinkedinIds.length === filteredLinkedinAudiences.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedLinkedinIds(filteredLinkedinAudiences.map((a) => a.id));
+                        } else {
+                          setSelectedLinkedinIds([]);
+                        }
+                      }}
+                      className="meta-aud-checkbox"
+                    />
+                  </th>
+                  <th>Audience Name</th>
+                  <th>Type</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                  <th>30-Day Matched Size</th>
+                  <th>Match Rate</th>
+                  <th>Date Created</th>
+                  <th>Audience ID</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLinkedinAudiences.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b" }}>
+                      No LinkedIn matched audiences match your filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLinkedinAudiences.map((item) => {
+                    const isSelected = selectedLinkedinIds.includes(item.id);
+                    return (
+                      <tr key={item.id} className={isSelected ? "meta-aud-row-selected" : ""}>
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedLinkedinIds((prev) =>
+                                prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+                              );
+                            }}
+                            className="meta-aud-checkbox"
+                          />
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: "#0f172a" }}>{item.name}</div>
+                        </td>
+                        <td>
+                          <span className="meta-aud-badge-type">{item.type}</span>
+                        </td>
+                        <td style={{ fontSize: "0.84rem", color: "#475569" }}>{item.source}</td>
+                        <td>
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            fontSize: "0.8rem",
+                            fontWeight: 600,
+                            color: item.status === "Ready" ? "#16a34a" : "#d97706",
+                          }}>
+                            <span style={{
+                              width: 7,
+                              height: 7,
+                              borderRadius: "50%",
+                              background: item.status === "Ready" ? "#16a34a" : "#f59e0b",
+                            }} />
+                            {item.status}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{item.size}</td>
+                        <td style={{ color: "#2563eb", fontWeight: 600 }}>{item.matchRate}</td>
+                        <td style={{ color: "#64748b", fontSize: "0.82rem" }}>{item.dateCreated}</td>
+                        <td style={{ color: "#64748b", fontSize: "0.82rem", fontFamily: "monospace" }}>{item.audienceId}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            className="meta-aud-row-action-btn"
+                            onClick={() => showToast(`Options for ${item.name}`)}
+                          >
+                            <MoreHorizontal size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

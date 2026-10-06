@@ -7,6 +7,7 @@ import {
   LinkedInLogoIcon,
 } from "./CreateCampaignWizard";
 import MetaAdsManagerCampaignEditor from "./MetaAdsManagerCampaignEditor";
+import GoogleAdsCampaignCreator from "./GoogleAdsCampaignCreator";
 import {
   LayoutGrid,
   Search,
@@ -4818,25 +4819,13 @@ export default function CampaignsTab({
 
       {/* ── GOOGLE ADS SECTION ── */}
       {selectedPlatform === "google" && (
-        <div
-          style={{
-            padding: "48px 32px",
-            textAlign: "center",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: "55vh",
-            color: "#64748b",
-          }}
-        >
-          <GoogleAdsLogoIcon size={48} style={{ marginBottom: 16 }} />
-          <h3 style={{ margin: "0 0 8px 0", color: "#0f172a", fontSize: "1.2rem", fontWeight: 700 }}>
-            Google Ads Management
-          </h3>
-          <p style={{ margin: 0, fontSize: "0.88rem", maxWidth: 460 }}>
-            Connect and manage Google Search, Display, and Performance Max campaigns directly from this workspace.
-          </p>
+        <div style={{ width: "100%", background: "#ffffff", padding: "16px 20px" }}>
+          <GoogleAdsCampaignCreator
+            clients={clients}
+            campaigns={campaigns}
+            selectedClientId={selectedClientId}
+            onRefresh={onRefresh}
+          />
         </div>
       )}
 
