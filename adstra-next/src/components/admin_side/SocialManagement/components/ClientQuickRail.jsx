@@ -1,11 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Building2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search, X } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Building2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search, X, Check } from "lucide-react";
 
 const RECENT_KEY = "sm_rail_recent_clients";
 const COLLAPSED_KEY = "sm_rail_collapsed";
 const RECENT_MAX = 5;
+
+// Same order + colours as the workflow pipeline stepper
+const STAGES = [
+  { id: "script", label: "Script", color: "#4f46e5" },
+  { id: "approval", label: "Approval", color: "#8b5cf6" },
+  { id: "design", label: "Design", color: "#ec4899" },
+  { id: "team_review", label: "Team review", color: "#f59e0b" },
+  { id: "client_review", label: "Client review", color: "#ea580c" },
+  { id: "scheduled", label: "Scheduled", color: "#0ea5e9" },
+  { id: "rejected", label: "Rejected", color: "#dc2626" },
+];
 
 const readLS = (key, fallback) => {
   try {
@@ -21,6 +32,10 @@ const writeLS = (key, value) => {
   } catch {}
 };
 
+const workOf = (c) => c?.active_work?.total || 0;
+const stagesOf = (c) => STAGES.filter((s) => c?.active_work?.stages?.[s.id]).map((s) => ({ ...s, n: c.active_work.stages[s.id] }));
+const workSummary = (c) => stagesOf(c).map((s) => `${s.label} ${s.n}`).join(" · ");
+
 // Circular brand mark: logo image, falling back to the first letter in brand colour
 function ClientMark({ client, size = 16 }) {
   const [broken, setBroken] = useState(false);
@@ -31,170 +46,230 @@ function ClientMark({ client, size = 16 }) {
   return <span>{client.name?.charAt(0).toUpperCase() || "C"}</span>;
 }
 
-// Floating vertical rail shown once the header scrolls away: one circle per client,
-// name + workload on hover, search for long lists, and extra controls (mentions bell) as children
+// Thin segmented bar showing how a client's in-progress posts are spread across stages
+function StageBar({ client }) {
+  const total = workOf(client);
+  if (!total) return null;
+  return (
+    <span className="cqr-stagebar" aria-hidden="true">
+      {stagesOf(client).map((s) => (
+        <span key={s.id} style={{ flexGrow: s.n, background: s.color }} />
+      ))}
+    </span>
+  );
+}
+
+const ALL_ITEM = { id: "all", name: "All Client Companies", isAll: true, primary_color: "#4f46e5" };
+
+const isTyping = (el) =>
+  el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+
+// Compact floating rail shown once the header scrolls away: the selected client with
+// ▲/▼ to hop between clients that have work in progress, extra controls (mentions bell)
+// below, and a searchable picker when the logo is clicked.
 export default function ClientQuickRail({ clients = [], value, onChange, children }) {
   const [collapsed, setCollapsed] = useState(() => readLS(COLLAPSED_KEY, false));
   const [recent, setRecent] = useState(() => readLS(RECENT_KEY, []));
   const [tip, setTip] = useState(null);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
-  const [scrollState, setScrollState] = useState({ overflow: false, up: false, down: false });
-  // Order snapshot: only re-sorts when the pointer leaves the rail, so circles don't jump under the cursor
-  const [orderBasis, setOrderBasis] = useState(recent);
+  const [slideDir, setSlideDir] = useState(0);
 
-  const listRef = useRef(null);
-  const searchRef = useRef(null);
+  const pickerRef = useRef(null);
   const inputRef = useRef(null);
+  const listRef = useRef(null);
 
   useEffect(() => writeLS(COLLAPSED_KEY, collapsed), [collapsed]);
 
-  // Recently used first, then most pending approvals, then A–Z
-  const ordered = useMemo(() => {
-    const rank = (c) => {
-      const r = orderBasis.indexOf(String(c.id));
-      return r === -1 ? RECENT_MAX : r;
-    };
-    return [...clients].sort(
-      (a, b) =>
-        rank(a) - rank(b) ||
-        (b.pending_approvals_count || 0) - (a.pending_approvals_count || 0) ||
-        (a.name || "").localeCompare(b.name || "")
-    );
-  }, [clients, orderBasis]);
-
-  const allItem = { id: "all", name: "All Client Companies", isAll: true, primary_color: "#4f46e5" };
+  const selected = clients.find((c) => String(c.id) === String(value)) || ALL_ITEM;
   const totalPending = clients.reduce((n, c) => n + (c.pending_approvals_count || 0), 0);
+  const pendingOf = (c) => (c.isAll ? totalPending : c.pending_approvals_count || 0);
 
-  const searchResults = useMemo(() => {
+  // Clients with work in progress, most recently touched first: the quick-switch cycle
+  const activeCycle = useMemo(
+    () =>
+      clients
+        .filter((c) => workOf(c) > 0)
+        .sort(
+          (a, b) =>
+            (b.active_work?.last_activity || "").localeCompare(a.active_work?.last_activity || "") ||
+            (a.name || "").localeCompare(b.name || "")
+        ),
+    [clients]
+  );
+  const cycleIdx = activeCycle.findIndex((c) => String(c.id) === String(value));
+  const neighbour = (dir) => {
+    if (!activeCycle.length) return null;
+    if (cycleIdx === -1) return dir > 0 ? activeCycle[0] : activeCycle[activeCycle.length - 1];
+    if (activeCycle.length === 1) return null;
+    return activeCycle[(cycleIdx + dir + activeCycle.length) % activeCycle.length];
+  };
+  const prevClient = neighbour(-1);
+  const nextClient = neighbour(1);
+
+  // Picker groups. No query: All, Active work, Recent, Other clients. With a query: A–Z matches.
+  const { results, groups } = useMemo(() => {
     const term = query.trim().toLowerCase();
-    const base = [allItem, ...[...clients].sort((a, b) => (a.name || "").localeCompare(b.name || ""))];
-    if (!term) return base;
-    return base.filter(
-      (c) => c.name?.toLowerCase().includes(term) || c.industry?.toLowerCase().includes(term)
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clients, query]);
+    const az = (list) => [...list].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    if (term) {
+      const hits = [ALL_ITEM, ...az(clients)].filter(
+        (c) => c.name?.toLowerCase().includes(term) || c.industry?.toLowerCase().includes(term)
+      );
+      return { results: hits, groups: {} };
+    }
+    const activeIds = new Set(activeCycle.map((c) => String(c.id)));
+    const recentIdle = recent
+      .map((id) => clients.find((c) => String(c.id) === id))
+      .filter((c) => c && !activeIds.has(String(c.id)));
+    const used = new Set([...activeIds, ...recentIdle.map((c) => String(c.id))]);
+    const rest = az(clients.filter((c) => !used.has(String(c.id))));
+    const list = [ALL_ITEM, ...activeCycle, ...recentIdle, ...rest];
+    const g = {};
+    let i = 1;
+    if (activeCycle.length) g[i] = `Active work · ${activeCycle.length}`;
+    i += activeCycle.length;
+    if (recentIdle.length) g[i] = "Recent";
+    i += recentIdle.length;
+    if (rest.length) g[i] = activeCycle.length || recentIdle.length ? "Other clients" : "All clients";
+    return { results: list, groups: g };
+  }, [clients, query, recent, activeCycle]);
 
-  const select = (id) => {
+  const select = (id, dir = 0) => {
+    if (String(id) === String(value)) {
+      setPickerOpen(false);
+      return;
+    }
+    setSlideDir(dir);
     onChange(id);
     if (id !== "all") {
       const next = [String(id), ...recent.filter((r) => r !== String(id))].slice(0, RECENT_MAX);
       setRecent(next);
       writeLS(RECENT_KEY, next);
     }
+    setPickerOpen(false);
+    setQuery("");
   };
 
-  // Fade + arrow hints when the client list overflows
-  const updateScroll = useCallback(() => {
-    const el = listRef.current;
-    if (!el) return;
-    setScrollState({
-      overflow: el.scrollHeight > el.clientHeight + 2,
-      up: el.scrollTop > 2,
-      down: el.scrollTop + el.clientHeight < el.scrollHeight - 2,
-    });
+  const step = (dir) => {
+    const target = dir > 0 ? nextClient : prevClient;
+    if (target) select(target.id, dir);
+  };
+
+  // Alt+↑ / Alt+↓ anywhere (outside text fields) hops between active clients
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!e.altKey || isTyping(document.activeElement)) return;
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        stepRef.current(e.key === "ArrowDown" ? 1 : -1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Picker: focus search on open, start the cursor on the current client, close on outside click
   useEffect(() => {
-    updateScroll();
-    window.addEventListener("resize", updateScroll);
-    return () => window.removeEventListener("resize", updateScroll);
-  }, [updateScroll, ordered.length, collapsed]);
-
-  // Keep the selected client visible inside the scrolling list
-  useEffect(() => {
-    const el = listRef.current?.querySelector(".cqr-dot.active");
-    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [value, collapsed]);
-
-  const scrollBy = (dir) => listRef.current?.scrollBy({ top: dir * 132, behavior: "smooth" });
-
-  // Search popover: focus on open, close on outside click / Esc
-  useEffect(() => {
-    if (!searchOpen) return;
-    setCursor(0);
+    if (!pickerOpen) return;
     setTip(null);
+    const idx = results.findIndex((c) => String(c.id) === String(value));
+    setCursor(idx < 0 ? 0 : idx);
     const t = setTimeout(() => inputRef.current?.focus(), 30);
-    const onDown = (e) => searchRef.current && !searchRef.current.contains(e.target) && setSearchOpen(false);
+    const onDown = (e) => pickerRef.current && !pickerRef.current.contains(e.target) && setPickerOpen(false);
     document.addEventListener("mousedown", onDown);
     return () => {
       clearTimeout(t);
       document.removeEventListener("mousedown", onDown);
     };
-  }, [searchOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickerOpen]);
+
+  // Keep the keyboard cursor in view
+  useEffect(() => {
+    listRef.current?.querySelector(".cqr-pop-item.cursor")?.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
 
   const onSearchKey = (e) => {
     if (e.key === "Escape") {
-      setSearchOpen(false);
+      setPickerOpen(false);
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setCursor((c) => Math.min(c + 1, searchResults.length - 1));
+      setCursor((c) => Math.min(c + 1, results.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setCursor((c) => Math.max(c - 1, 0));
-    } else if (e.key === "Enter" && searchResults[cursor]) {
-      select(searchResults[cursor].id);
-      setSearchOpen(false);
-      setQuery("");
+    } else if (e.key === "Enter" && results[cursor]) {
+      select(results[cursor].id);
     }
   };
 
-  const showTip = (e, client) => {
-    if (searchOpen) return;
+  // The tip stores which control is hovered, not a client snapshot, so it stays in sync
+  // when the selection changes under the cursor (click or Alt+↑/↓)
+  const showTip = (e, kind) => {
+    if (pickerOpen) return;
     const r = e.currentTarget.getBoundingClientRect();
-    setTip({ client, top: r.top + r.height / 2, left: r.right + 14 });
+    setTip({ kind, top: r.top + r.height / 2, left: r.right + 40 });
   };
+  const tipClient = tip ? { prev: prevClient, next: nextClient, selected }[tip.kind] : null;
+  const tipHint = tip
+    ? { prev: "Previous active client · Alt+↑", next: "Next active client · Alt+↓", selected: "Click to change client" }[tip.kind]
+    : null;
   const hideTip = () => setTip(null);
 
-  const renderDot = (c, i) => {
-    const active = String(value) === String(c.id);
-    const pending = c.isAll ? totalPending : c.pending_approvals_count || 0;
-    return (
-      <button
-        key={c.id}
-        type="button"
-        className={`cqr-dot ${active ? "active" : ""} ${c.logo_url ? "has-logo" : ""}`}
-        style={{ "--c": c.primary_color || "#4f46e5", "--i": Math.min(i, 12) }}
-        onClick={() => select(c.id)}
-        onMouseEnter={(e) => showTip(e, c)}
-        onMouseLeave={hideTip}
-        onFocus={(e) => showTip(e, c)}
-        onBlur={hideTip}
-        aria-label={c.name}
-        aria-pressed={active}
-      >
-        <span className="cqr-mark">
-          <ClientMark client={c} />
-        </span>
-        {pending > 0 && <span className="cqr-badge">{pending > 9 ? "9+" : pending}</span>}
-      </button>
-    );
+  const tipLines = (c) => {
+    if (c.isAll) return `${clients.length} clients · ${activeCycle.length} with active work`;
+    const work = workOf(c);
+    return work ? `${work} in progress · ${workSummary(c)}` : [c.industry, "No work in progress"].filter(Boolean).join(" · ");
   };
+
+  const selectedPending = pendingOf(selected);
+  const counter = cycleIdx >= 0 ? `${cycleIdx + 1}/${activeCycle.length}` : activeCycle.length ? `${activeCycle.length} active` : null;
 
   return (
     <>
-      <aside
-        className={`cqr ${collapsed ? "is-collapsed" : ""}`}
-        aria-label="Quick client switcher"
-        onMouseLeave={() => setOrderBasis(recent)}
-      >
+      <aside className={`cqr ${collapsed ? "is-collapsed" : ""}`} aria-label="Quick client switcher">
         <div className="cqr-body">
-          <div className="cqr-search-wrap" ref={searchRef}>
+          <button
+            type="button"
+            className="cqr-step"
+            onClick={() => step(-1)}
+            disabled={!prevClient}
+            onMouseEnter={(e) => showTip(e, "prev")}
+            onMouseLeave={hideTip}
+            aria-label={prevClient ? `Previous active client: ${prevClient.name}` : "No other active client"}
+          >
+            <ChevronUp size={16} strokeWidth={2.5} />
+          </button>
+
+          <div className="cqr-picker-wrap" ref={pickerRef}>
             <button
               type="button"
-              className={`cqr-icon-btn ${searchOpen ? "active" : ""}`}
-              onClick={() => setSearchOpen((o) => !o)}
-              title="Search clients"
-              aria-label="Search clients"
-              aria-expanded={searchOpen}
+              className={`cqr-dot active ${pickerOpen ? "open" : ""}`}
+              style={{ "--c": selected.primary_color || "#4f46e5" }}
+              onClick={() => setPickerOpen((o) => !o)}
+              onMouseEnter={(e) => showTip(e, "selected")}
+              onMouseLeave={hideTip}
+              aria-label={`Client: ${selected.name}. Change client`}
+              aria-expanded={pickerOpen}
+              aria-haspopup="dialog"
             >
-              <Search size={16} />
+              <span
+                key={selected.id}
+                className={`cqr-mark ${slideDir > 0 ? "slide-down" : slideDir < 0 ? "slide-up" : ""}`}
+              >
+                <ClientMark client={selected} />
+              </span>
+              {selectedPending > 0 && <span className="cqr-badge">{selectedPending > 9 ? "9+" : selectedPending}</span>}
+              <span className="cqr-swap" aria-hidden="true">
+                <ChevronRight size={10} strokeWidth={3} />
+              </span>
             </button>
 
-            {searchOpen && (
-              <div className="cqr-pop" role="dialog" aria-label="Find a client">
+            {pickerOpen && (
+              <div className="cqr-pop" role="dialog" aria-label="Choose a client">
                 <div className="cqr-pop-input">
                   <Search size={15} />
                   <input
@@ -213,73 +288,70 @@ export default function ClientQuickRail({ clients = [], value, onChange, childre
                     </button>
                   )}
                 </div>
-                <ul className="cqr-pop-list">
-                  {searchResults.length === 0 && <li className="cqr-pop-empty">No client matches “{query}”</li>}
-                  {searchResults.map((c, i) => {
+                <ul className="cqr-pop-list" ref={listRef}>
+                  {results.length === 0 && <li className="cqr-pop-empty">No client matches “{query}”</li>}
+                  {results.map((c, i) => {
                     const active = String(value) === String(c.id);
-                    const pending = c.isAll ? totalPending : c.pending_approvals_count || 0;
+                    const pending = pendingOf(c);
+                    const work = c.isAll ? 0 : workOf(c);
                     return (
-                      <li key={c.id}>
-                        <button
-                          type="button"
-                          className={`cqr-pop-item ${i === cursor ? "cursor" : ""} ${active ? "active" : ""}`}
-                          style={{ "--c": c.primary_color || "#4f46e5" }}
-                          onMouseEnter={() => setCursor(i)}
-                          onClick={() => {
-                            select(c.id);
-                            setSearchOpen(false);
-                            setQuery("");
-                          }}
-                        >
-                          <span className="cqr-dot cqr-dot-sm">
-                            <span className="cqr-mark">
-                              <ClientMark client={c} size={14} />
+                      <React.Fragment key={c.id}>
+                        {groups[i] && <li className="cqr-pop-group">{groups[i]}</li>}
+                        <li>
+                          <button
+                            type="button"
+                            className={`cqr-pop-item ${i === cursor ? "cursor" : ""} ${active ? "active" : ""}`}
+                            style={{ "--c": c.primary_color || "#4f46e5" }}
+                            onMouseEnter={() => setCursor(i)}
+                            onClick={() => select(c.id)}
+                          >
+                            <span className="cqr-dot cqr-dot-sm">
+                              <span className="cqr-mark">
+                                <ClientMark client={c} size={14} />
+                              </span>
+                              {work > 0 && <span className="cqr-live" aria-hidden="true" />}
                             </span>
-                          </span>
-                          <span className="cqr-pop-text">
-                            <strong>{c.name}</strong>
-                            <small>{c.isAll ? `${clients.length} active clients` : c.industry || `${c.posts_count || 0} posts`}</small>
-                          </span>
-                          {pending > 0 && <span className="cqr-pop-pending">{pending} pending</span>}
-                        </button>
-                      </li>
+                            <span className="cqr-pop-text">
+                              <strong>{c.name}</strong>
+                              {work > 0 ? (
+                                <>
+                                  <small>{workSummary(c)}</small>
+                                  <StageBar client={c} />
+                                </>
+                              ) : (
+                                <small>
+                                  {c.isAll
+                                    ? `${clients.length} clients · ${activeCycle.length} with active work`
+                                    : c.industry || `${c.posts_count || 0} posts`}
+                                </small>
+                              )}
+                            </span>
+                            {pending > 0 && <span className="cqr-pop-pending">{pending} pending</span>}
+                            {active && <Check size={15} className="cqr-pop-check" />}
+                          </button>
+                        </li>
+                      </React.Fragment>
                     );
                   })}
                 </ul>
-                <div className="cqr-pop-hint">↑ ↓ to move · Enter to select · Esc to close</div>
+                <div className="cqr-pop-hint">↑ ↓ move · Enter select · Alt+↑/↓ switch active client anywhere</div>
               </div>
             )}
           </div>
 
-          {renderDot(allItem, 0)}
+          <button
+            type="button"
+            className="cqr-step"
+            onClick={() => step(1)}
+            disabled={!nextClient}
+            onMouseEnter={(e) => showTip(e, "next")}
+            onMouseLeave={hideTip}
+            aria-label={nextClient ? `Next active client: ${nextClient.name}` : "No other active client"}
+          >
+            <ChevronDown size={16} strokeWidth={2.5} />
+          </button>
 
-          <div className={`cqr-list-wrap ${scrollState.up ? "can-up" : ""} ${scrollState.down ? "can-down" : ""}`}>
-            {scrollState.overflow && (
-              <button
-                type="button"
-                className="cqr-scroll"
-                onClick={() => scrollBy(-1)}
-                disabled={!scrollState.up}
-                aria-label="Scroll up"
-              >
-                <ChevronUp size={14} />
-              </button>
-            )}
-            <div className="cqr-list" ref={listRef} onScroll={updateScroll}>
-              {ordered.map((c, i) => renderDot(c, i + 1))}
-            </div>
-            {scrollState.overflow && (
-              <button
-                type="button"
-                className="cqr-scroll"
-                onClick={() => scrollBy(1)}
-                disabled={!scrollState.down}
-                aria-label="Scroll down"
-              >
-                <ChevronDown size={14} />
-              </button>
-            )}
-          </div>
+          {counter && <span className="cqr-counter">{counter}</span>}
 
           {children && <div className="cqr-extra">{children}</div>}
         </div>
@@ -289,30 +361,26 @@ export default function ClientQuickRail({ clients = [], value, onChange, childre
           className="cqr-toggle"
           onClick={() => {
             setCollapsed((v) => !v);
-            setSearchOpen(false);
+            setPickerOpen(false);
             hideTip();
           }}
-          title={collapsed ? "Show clients & mentions" : "Hide"}
+          title={collapsed ? "Show client & mentions" : "Hide"}
           aria-expanded={!collapsed}
         >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </aside>
 
-      {tip && !collapsed && (
-        <div className="cqr-tip" style={{ top: tip.top, left: tip.left, "--c": tip.client.primary_color || "#4f46e5" }}>
-          <strong>{tip.client.name}</strong>
-          <span>
-            {tip.client.isAll
-              ? `${clients.length} clients · ${totalPending} awaiting approval`
-              : [
-                  tip.client.industry,
-                  `${tip.client.posts_count || 0} posts`,
-                  tip.client.pending_approvals_count ? `${tip.client.pending_approvals_count} awaiting approval` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-          </span>
+      {tip && tipClient && !collapsed && (
+        <div
+          key={`${tip.kind}-${tipClient.id}`}
+          className="cqr-tip"
+          style={{ top: tip.top, left: tip.left, "--c": tipClient.primary_color || "#4f46e5" }}
+        >
+          <strong>{tipClient.name}</strong>
+          <span>{tipLines(tipClient)}</span>
+          <StageBar client={tipClient} />
+          <em>{tipHint}</em>
         </div>
       )}
     </>

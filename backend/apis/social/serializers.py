@@ -29,13 +29,44 @@ class SocialClientProfileSerializer(serializers.ModelSerializer):
     accounts_count = serializers.IntegerField(source='accounts.count', read_only=True)
     posts_count = serializers.IntegerField(source='posts.count', read_only=True)
     pending_approvals_count = serializers.SerializerMethodField()
+    active_work = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialClientProfile
         fields = '__all__'
 
+    # Pipeline stage -> post statuses (legacy aliases included)
+    ACTIVE_STAGES = {
+        'script': ['script', 'draft'],
+        'approval': ['script_approval'],
+        'design': ['designing'],
+        'team_review': ['team_review', 'internal_review'],
+        'client_review': ['client_review'],
+        'scheduled': ['approved', 'scheduled', 'publishing'],
+        'rejected': ['content_rejected', 'rejected', 'failed'],
+    }
+
     def get_pending_approvals_count(self, obj):
         return obj.posts.filter(status__in=['internal_review', 'client_review']).count()
+
+    def get_active_work(self, obj):
+        """In-progress posts per pipeline stage, for the quick client switcher."""
+        from django.db.models import Count, Max
+
+        status_to_stage = {s: stage for stage, statuses in self.ACTIVE_STAGES.items() for s in statuses}
+        rows = (
+            obj.posts.filter(status__in=status_to_stage.keys())
+            .values('status')
+            .annotate(n=Count('id'), last=Max('updated_at'))
+        )
+        stages, total, last = {}, 0, None
+        for row in rows:
+            stage = status_to_stage[row['status']]
+            stages[stage] = stages.get(stage, 0) + row['n']
+            total += row['n']
+            if row['last'] and (last is None or row['last'] > last):
+                last = row['last']
+        return {'total': total, 'stages': stages, 'last_activity': last.isoformat() if last else None}
 
 
 class SocialAccountSerializer(serializers.ModelSerializer):
