@@ -309,10 +309,10 @@ function PlanningWorkspace({ clients = [], posts = [], selectedClientId = "all",
           initialClientId={modal.clientId || ""}
           initialMonth={monthKey}
           onClose={() => setModal(null)}
-          onCreated={(clientId, month, planId) => {
-            // open the saved plan in the same popup so scripts can be started right away
+          onCreated={(clientId, month) => {
+            // Close once created; the plan is reopened from its row to start scripts
             setMonthKey(month);
-            setModal({ type: "plan", planId, clientId });
+            setModal(null);
           }}
           onChanged={(postsChanged) => {
             loadOverview();

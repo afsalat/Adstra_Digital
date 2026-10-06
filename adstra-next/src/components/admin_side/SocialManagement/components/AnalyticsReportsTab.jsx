@@ -31,6 +31,7 @@ import {
   ResponsiveContainer,
   Cell
 } from "recharts";
+import { downloadElementAsPdf } from "@/utils/pdfExport";
 
 // Status groups shared by the KPI cards, health check and exports
 const IN_PRODUCTION_STATUSES = ["script", "draft", "script_approval", "rejected", "designing", "team_review", "internal_review", "client_review"];
@@ -856,11 +857,10 @@ export default function AnalyticsReportsTab({
     }, 1200);
   };
 
-  // Direct PDF Download via html2pdf on the fully visible report container
+  // Direct PDF Download — paginated A4 clone of the visible report container
   const handleDirectDownloadPDF = async () => {
     setIsGeneratingPdf(true);
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
       const element = document.getElementById("executive-report-document");
       if (!element) {
         handleExportPDF();
@@ -869,26 +869,9 @@ export default function AnalyticsReportsTab({
 
       const clientSanitized = clientDisplayName.replace(/[^a-z0-9]/gi, "_");
       const dateStr = new Date().toISOString().split("T")[0];
-      const filename = `Adstra_Workflow_Report_${clientSanitized}_${dateStr}.pdf`;
-
-      const opt = {
-        margin: [8, 8, 8, 8],
-        filename: filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          scrollY: 0,
-          ignoreElements: (el) => el.classList && el.classList.contains("no-print"),
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      };
-
-      await html2pdf().set(opt).from(element).save();
+      await downloadElementAsPdf(element, { filename: `Adstra_Workflow_Report_${clientSanitized}_${dateStr}.pdf`, marginMm: 10 });
     } catch (err) {
-      console.warn("Direct html2pdf generation failed, falling back to window.print():", err);
+      console.warn("Direct PDF generation failed, falling back to window.print():", err);
       handleExportPDF();
     } finally {
       setIsGeneratingPdf(false);
@@ -1231,7 +1214,7 @@ export default function AnalyticsReportsTab({
             </div>
 
             {/* Right: Official Metadata */}
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", flexShrink: 0, whiteSpace: "nowrap" }}>
               <div
                 style={{
                   display: "inline-block",
@@ -1440,9 +1423,8 @@ export default function AnalyticsReportsTab({
                       color: "#ffffff",
                       fontSize: "0.66rem",
                       fontWeight: 800,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      lineHeight: "18px",
+                      textAlign: "center",
                       marginTop: 1,
                     }}
                   >
@@ -1519,6 +1501,7 @@ export default function AnalyticsReportsTab({
                     color: "#ffffff",
                     fontSize: "0.68rem",
                     fontWeight: 800,
+                    lineHeight: "18px",
                   }}
                   title={`${stage.name}: ${stage.count} (${stage.percent}%)`}
                 >

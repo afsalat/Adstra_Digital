@@ -692,7 +692,7 @@ def start_script(item, user=None, tz_offset_minutes=0):
         status='script',
         priority=priority,
         script_notes=build_script_notes(item),
-        writer=item.writer,
+        # No writer yet: whoever fills in the script becomes its owner (see SocialPostViewSet.perform_update)
         designer=item.designer,
         created_by=user if user and user.is_authenticated else None,
     )

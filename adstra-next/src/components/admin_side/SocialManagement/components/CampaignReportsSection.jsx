@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
+import { downloadElementAsPdf } from "@/utils/pdfExport";
 import "./CampaignReportsSection.css";
 import {
   ResponsiveContainer,
@@ -747,21 +748,9 @@ export default function CampaignReportsSection({
 
     setIsGeneratingPdf(true);
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
       const dateStr = new Date().toISOString().slice(0, 10);
       const prefix = activeTab === "campaign" ? "Campaign_Performance_Report" : "Client_Monthly_Report";
-      const filename = `${prefix}_${dateStr}.pdf`;
-
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      };
-
-      await html2pdf().set(opt).from(reportElem).save();
+      await downloadElementAsPdf(reportElem, { filename: `${prefix}_${dateStr}.pdf`, marginMm: 10 });
       showToast("PDF report successfully downloaded!");
     } catch (err) {
       window.print();

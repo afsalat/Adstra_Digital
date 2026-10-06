@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./PlanWizard.css";
 import { CalendarDays, Check, ChevronDown, ExternalLink, Lock, Minus, Play, Plus, Send, Sparkles, Trash2, X } from "lucide-react";
 import ClientCompanySearchSelect from "../ClientCompanySearchSelect";
+import ScriptCreationModal from "../ScriptCreationModal";
 import { confirmDialog, toast } from "../SocialFeedback";
 import { CloseMonthModal, SharePlanModal } from "./PlanModals";
 import { ITEM_STAGE, KEY_DATE_BY_ID, PLAN_STATUS, fmtDay, monthKeyOf, monthLabel, parseISODate, planApi, planError, toISODate, todayISO, tzOffset, typeMeta } from "./planningUtils";
@@ -110,6 +111,7 @@ export default function PlanWizard({ clients = [], packages = [], planId = null,
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(!!planId);
   const [sub, setSub] = useState(null); // share | close
+  const [scriptPost, setScriptPost] = useState(null); // post whose script editor is open
   const editing = !!planId;
   const readOnly = plan?.status === "closed";
   const monthRef = useRef(monthKey);
@@ -269,6 +271,26 @@ export default function PlanWizard({ clients = [], packages = [], planId = null,
     if (await planAction("close_month", "Month closed.")) setSub(null);
   };
 
+  // Start (if needed) and open one slot's script; whoever saves it becomes the post's owner
+  const openScript = async (row) => {
+    setBusy(true);
+    try {
+      let postId = row.postInfo?.id;
+      if (!postId) {
+        if (!(await save())) return;
+        const res = await planApi.post(`plan-items/${row.id}/start_script/`, { tz_offset: tzOffset() });
+        postId = res.created_post_id;
+        applyPlan(await planApi.get(`plans/${planId}/`));
+        onChanged?.(true);
+      }
+      setScriptPost(await planApi.get(`posts/${postId}/`));
+    } catch (err) {
+      planError(err, "Could not open the script.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const startScripts = async (ids) => {
     setBusy(true);
     try {
@@ -278,7 +300,7 @@ export default function PlanWizard({ clients = [], packages = [], planId = null,
       if (!wanted.length) return toast.info("Every post already has a script started.");
       await planApi.post("plan-items/bulk/", { ids: wanted, action: "start_script", tz_offset: tzOffset() });
       applyPlan(await planApi.get(`plans/${planId}/`));
-      toast.success(`${wanted.length} script${wanted.length > 1 ? "s" : ""} started. Find them in the Script tab.`);
+      toast.success(`${wanted.length} script${wanted.length > 1 ? "s" : ""} started. Whoever fills one in becomes its owner.`);
       onChanged?.(true);
     } catch (err) {
       planError(err, "Could not start the scripts.");
@@ -337,6 +359,11 @@ export default function PlanWizard({ clients = [], packages = [], planId = null,
             <span className="pw-post-state">
               {r.locked ? (
                 <>
+                  {r.stage === "script" && r.postInfo && !readOnly && (
+                    <button type="button" className="pw-mini primary" disabled={busy} onClick={() => openScript(r)} title="Fill in the script">
+                      <Play size={12} /> Write
+                    </button>
+                  )}
                   <span className="pw-stage" style={{ color: (ITEM_STAGE[r.stage] || ITEM_STAGE.script).color, background: (ITEM_STAGE[r.stage] || ITEM_STAGE.script).bg }}>
                     {(ITEM_STAGE[r.stage] || ITEM_STAGE.script).label}
                   </span>
@@ -347,7 +374,7 @@ export default function PlanWizard({ clients = [], packages = [], planId = null,
                   )}
                 </>
               ) : r.id && !readOnly ? (
-                <button type="button" className="pw-mini primary" disabled={busy} onClick={() => startScripts([r.id])}>
+                <button type="button" className="pw-mini primary" disabled={busy} onClick={() => openScript(r)} title="Start and fill in the script">
                   <Play size={12} /> Script
                 </button>
               ) : null}
@@ -643,6 +670,27 @@ export default function PlanWizard({ clients = [], packages = [], planId = null,
     </div>
     {sub === "share" && plan && <SharePlanModal plan={plan} onClose={() => setSub(null)} />}
     {sub === "close" && plan && <CloseMonthModal plan={plan} onClose={() => setSub(null)} onConfirm={closeMonth} />}
+    {scriptPost && (
+      // Own stacking layer: the script editor's overlay sits below this popup's z-index otherwise
+      <div style={{ position: "relative", zIndex: 1400 }}>
+        <ScriptCreationModal
+          isOpen
+          onClose={() => setScriptPost(null)}
+          clients={clients}
+          selectedClientId={String(scriptPost.client_profile)}
+          initialData={scriptPost}
+          onSuccess={async () => {
+            toast.success(scriptPost.writer ? "Script saved." : "Script saved. You're now in charge of this post.");
+            onChanged?.(true);
+            try {
+              applyPlan(await planApi.get(`plans/${planId}/`));
+            } catch {
+              /* the plan list refreshes on the next open */
+            }
+          }}
+        />
+      </div>
+    )}
     </>
   );
 }

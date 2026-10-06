@@ -65,3 +65,42 @@ class PostAssignmentTests(TestCase):
         )
         self.assertEqual(res.status_code, 200, res.data)
         self.assertEqual(res.data['approval_history'][0]['notes'], 'Storyboard locked')
+
+
+class ScriptAuthorOwnershipTests(TestCase):
+    """No manual assignment: whoever creates or first fills in a script becomes the post's writer."""
+
+    def setUp(self):
+        self.amy = CustomUser.objects.create_user('amy', 'amy@example.com', 'pw', fullname='Amy Writer')
+        self.ben = CustomUser.objects.create_user('ben', 'ben@example.com', 'pw', fullname='Ben Writer')
+        self.profile = SocialClientProfile.objects.create(name='Coastal Cafe', slug='coastal-cafe')
+        self.client = APIClient()
+
+    def test_creating_a_script_makes_you_the_writer(self):
+        self.client.force_authenticate(self.amy)
+        res = self.client.post('/api/social/posts/', {'client_profile': self.profile.id, 'title': 'Brunch', 'status': 'script'}, format='json')
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(SocialPost.objects.get(id=res.data['id']).writer, self.amy)
+
+    def test_first_person_to_fill_an_unowned_script_takes_it(self):
+        post = SocialPost.objects.create(client_profile=self.profile, title='From plan', status='script')
+        url = f'/api/social/posts/{post.id}/'
+        self.client.force_authenticate(self.amy)
+        res = self.client.patch(url, {'primary_caption': 'Draft copy'}, format='json')
+        self.assertEqual(res.status_code, 200, res.data)
+        post.refresh_from_db()
+        self.assertEqual(post.writer, self.amy)
+        self.assertTrue(post.approval_history.filter(action='Writer Assigned').exists())
+
+        # A later edit by someone else keeps the original owner
+        self.client.force_authenticate(self.ben)
+        self.client.patch(url, {'primary_caption': 'Edited copy'}, format='json')
+        post.refresh_from_db()
+        self.assertEqual(post.writer, self.amy)
+
+    def test_later_stages_do_not_pick_up_an_owner(self):
+        post = SocialPost.objects.create(client_profile=self.profile, title='In design', status='designing')
+        self.client.force_authenticate(self.amy)
+        self.client.patch(f'/api/social/posts/{post.id}/', {'designer_notes': 'Use the blue logo'}, format='json')
+        post.refresh_from_db()
+        self.assertIsNone(post.writer)

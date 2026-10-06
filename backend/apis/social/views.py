@@ -234,6 +234,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         return qs.annotate(comment_count=Count('comments', distinct=True))
 
     ASSIGNABLE_ROLES = {'writer': 'Writer', 'designer': 'Designer', 'reviewer': 'Reviewer'}
+    SCRIPT_STAGES = ('script', 'draft', 'script_approval')
 
     @action(detail=True, methods=['post'])
     def assign(self, request, pk=None):
@@ -336,7 +337,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         user = self.request.user if self.request.user.is_authenticated else None
         actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
         actor_role = self.request.data.get('actor_role') or 'Content Creator'
-        post = serializer.save(created_by=user)
+        # Whoever writes the script owns the post; no separate assignment step
+        post = serializer.save(created_by=user, writer=serializer.validated_data.get('writer') or user)
         initial_action = 'submitted_review' if post.status == 'script_approval' else 'created'
         notes = self.request.data.get('script_notes') or self.request.data.get('notes') or ('Submitted directly for script review' if post.status == 'script_approval' else 'Initial post draft created')
         record_approval_action(post, initial_action, actor_name, actor_role, notes)
@@ -352,6 +354,12 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
         actor_role = self.request.data.get('actor_role') or 'Content Creator'
         notes = self.request.data.get('notes') or self.request.data.get('update_reason')
+
+        # Posts started from a content plan have no owner yet: the first person to fill in the script takes it
+        if user and not post.writer_id and post.status in self.SCRIPT_STAGES:
+            post.writer = user
+            post.save(update_fields=['writer'])
+            record_approval_action(post, 'Writer Assigned', actor_name, actor_role, f'Writer: {actor_name} (filled in the script)', event_type='note')
 
         # If post was rejected and is now resubmitted for approval
         if prev_feedback and post.status == 'script_approval':

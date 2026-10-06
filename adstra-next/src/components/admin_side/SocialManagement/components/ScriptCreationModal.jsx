@@ -583,6 +583,8 @@ export default function ScriptCreationModal({
           ? "image"
           : format === "carousel"
           ? "carousel"
+          : initialData?.post_type === "video"
+          ? "video"
           : "reel",
       primary_caption: description,
       hashtags,
@@ -594,7 +596,8 @@ export default function ScriptCreationModal({
       script_data: scriptData,
       status: targetStatus, // 'script' (Draft) or 'script_approval' (Review)
       priority,
-      platforms: ["instagram", "facebook", "linkedin"],
+      // Keep the channels a post already has (e.g. set by the content plan)
+      platforms: initialData?.platforms?.length ? initialData.platforms : ["instagram", "facebook", "linkedin"],
       actor_name: actorName,
       actor_role: actorRole,
       update_reason: reworkNotes.trim() || undefined,
