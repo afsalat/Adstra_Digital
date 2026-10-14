@@ -12,21 +12,83 @@ from django.utils import timezone
 
 import requests
 
+from django.conf import settings
 from apis.social.encryption import encrypt_token, decrypt_token
 
 logger = logging.getLogger(__name__)
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
 
+def _read_env_key(key: str) -> str:
+    # 1. Read directly from backend/.env file to reflect live file edits instantly without server restarts
+    try:
+        from dotenv import dotenv_values
+        env_path = getattr(settings, 'BASE_DIR', None)
+        if env_path:
+            backend_env = env_path / '.env'
+            if backend_env.exists():
+                vals = dotenv_values(backend_env)
+                if key in vals:
+                    file_val = (vals.get(key) or '').strip()
+                    if file_val and file_val != f'YOUR_{key}':
+                        return file_val
+                    if file_val == '':
+                        # Explicitly blank in backend/.env: consider unconfigured
+                        return ''
+    except Exception as e:
+        logger.debug("Could not read %s from backend/.env: %s", key, e)
+
+    # 2. Django settings
+    val = (getattr(settings, key, '') or '').strip()
+    if val and val != f'YOUR_{key}':
+        return val
+
+    # 3. Operating system / process environment
+    val = (os.environ.get(key, '')).strip()
+    if val and val != f'YOUR_{key}':
+        return val
+
+    # 4. Check parent root .env if exists
+    try:
+        from dotenv import dotenv_values
+        env_path = getattr(settings, 'BASE_DIR', None)
+        if env_path:
+            root_env = env_path.parent / '.env'
+            if root_env.exists():
+                vals = dotenv_values(root_env)
+                file_val = (vals.get(key) or '').strip()
+                if file_val and file_val != f'YOUR_{key}':
+                    return file_val
+    except Exception:
+        pass
+
+    return ''
+
+def get_meta_app_id() -> str:
+    return _read_env_key('META_APP_ID')
+
+def get_meta_app_secret() -> str:
+    return _read_env_key('META_APP_SECRET')
+
+def get_meta_redirect_uri() -> str:
+    uri = _read_env_key('META_REDIRECT_URI')
+    return uri or 'http://localhost:8000/api/social/platform-connections/meta/callback/'
+
+def get_meta_ad_account_id() -> str:
+    return _read_env_key('META_AD_ACCOUNT_ID')
+
+def get_meta_access_token() -> str:
+    return _read_env_key('META_ACCESS_TOKEN')
+
 META_APP_ID = os.environ.get('META_APP_ID', '')
 META_APP_SECRET = os.environ.get('META_APP_SECRET', '')
-META_REDIRECT_URI = os.environ.get('META_REDIRECT_URI', 'http://localhost:8000/social/platform-connections/meta/callback/')
+META_REDIRECT_URI = os.environ.get('META_REDIRECT_URI', 'http://localhost:8000/api/social/platform-connections/meta/callback/')
 META_GRAPH_VERSION = 'v21.0'
 META_GRAPH_BASE = f'https://graph.facebook.com/{META_GRAPH_VERSION}'
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:8000/social/platform-connections/google/callback/')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:8000/api/social/platform-connections/google/callback/')
 GOOGLE_SCOPES = ['https://www.googleapis.com/auth/adwords']
 GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -34,56 +96,80 @@ GOOGLE_TOKEN_INFO_URL = 'https://oauth2.googleapis.com/tokeninfo'
 
 LINKEDIN_CLIENT_ID = os.environ.get('LINKEDIN_CLIENT_ID', '')
 LINKEDIN_CLIENT_SECRET = os.environ.get('LINKEDIN_CLIENT_SECRET', '')
-LINKEDIN_REDIRECT_URI = os.environ.get('LINKEDIN_REDIRECT_URI', 'http://localhost:8000/social/platform-connections/linkedin/callback/')
+LINKEDIN_REDIRECT_URI = os.environ.get('LINKEDIN_REDIRECT_URI', 'http://localhost:8000/api/social/platform-connections/linkedin/callback/')
 LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization'
 LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
 LINKEDIN_SCOPES = ['rw_ads', 'r_ads_reporting', 'r_liteprofile']
 
 # ─── Meta OAuth ────────────────────────────────────────────────────────────────
 
-def get_meta_oauth_url(state: str = '') -> str:
+def get_meta_oauth_url(state: str = '', redirect_uri: str = '') -> str:
     """
-    Returns the Meta OAuth dialog URL.
-    Redirect the user's browser to this URL to begin the authorization flow.
+    Returns the official Meta OAuth dialog URL.
+    Redirects user browser to begin the authorization flow with ads_read, ads_management permissions.
     """
+    app_id = get_meta_app_id()
+    if not app_id:
+        raise ValueError("META_APP_ID is not configured in Django environment (backend/.env)")
+    effective_redirect = redirect_uri or get_meta_redirect_uri()
     params = {
-        'client_id': META_APP_ID,
-        'redirect_uri': META_REDIRECT_URI,
-        'scope': 'ads_management,ads_read,business_management,pages_read_engagement',
+        'client_id': app_id,
+        'redirect_uri': effective_redirect,
+        'scope': 'ads_read,ads_management,pages_read_engagement,business_management',
         'response_type': 'code',
         'state': state or 'meta_ads_connect',
     }
-    return f'https://www.facebook.com/dialog/oauth?{urllib.parse.urlencode(params)}'
+    return f'https://www.facebook.com/{META_GRAPH_VERSION}/dialog/oauth?{urllib.parse.urlencode(params)}'
 
 
-def exchange_meta_code_for_token(code: str) -> dict:
+def exchange_meta_code_for_token(code: str, redirect_uri: str = '') -> dict:
     """
     Exchange an authorization code for a short-lived access token,
-    then immediately upgrade to a long-lived token (~60 days).
+    then immediately upgrade to a long-lived token (~60 days) via Meta Graph API.
     Returns dict with access_token, token_type, expires_in (seconds).
+    Raises exception on failure (no mock data).
     """
+    app_id = get_meta_app_id()
+    app_secret = get_meta_app_secret()
+    effective_redirect = redirect_uri or get_meta_redirect_uri()
+
+    if not app_id or not app_secret or app_id == 'YOUR_META_APP_ID':
+        raise ValueError("META_APP_ID and META_APP_SECRET must be configured in backend/.env to connect with Meta.")
+
     # Step 1: Short-lived token
     resp = requests.get(f'{META_GRAPH_BASE}/oauth/access_token', params={
-        'client_id': META_APP_ID,
-        'client_secret': META_APP_SECRET,
-        'redirect_uri': META_REDIRECT_URI,
+        'client_id': app_id,
+        'client_secret': app_secret,
+        'redirect_uri': effective_redirect,
         'code': code,
     }, timeout=15)
-    resp.raise_for_status()
+    if not resp.ok:
+        try:
+            err_json = resp.json()
+            err_msg = err_json.get('error', {}).get('message') or resp.text
+        except Exception:
+            err_msg = resp.text
+        raise ValueError(f"Meta token exchange error: {err_msg}")
     short = resp.json()
     short_token = short.get('access_token', '')
 
     # Step 2: Long-lived token (~60 days)
     resp2 = requests.get(f'{META_GRAPH_BASE}/oauth/access_token', params={
         'grant_type': 'fb_exchange_token',
-        'client_id': META_APP_ID,
-        'client_secret': META_APP_SECRET,
+        'client_id': app_id,
+        'client_secret': app_secret,
         'fb_exchange_token': short_token,
     }, timeout=15)
-    resp2.raise_for_status()
+    if not resp2.ok:
+        # Fallback to short-lived token if extension fails
+        return {
+            'access_token': short_token,
+            'expires_in': short.get('expires_in', 7200),
+            'token_type': short.get('token_type', 'bearer'),
+        }
     long = resp2.json()
     return {
-        'access_token': long.get('access_token', ''),
+        'access_token': long.get('access_token', '') or short_token,
         'expires_in': long.get('expires_in', 5183944),  # ~60 days default
         'token_type': long.get('token_type', 'bearer'),
     }
@@ -98,10 +184,12 @@ def refresh_meta_token(connection) -> bool:
         old_token = decrypt_token(connection.access_token_encrypted)
         if not old_token:
             return False
+        app_id = get_meta_app_id()
+        app_secret = get_meta_app_secret()
         resp = requests.get(f'{META_GRAPH_BASE}/oauth/access_token', params={
             'grant_type': 'fb_exchange_token',
-            'client_id': META_APP_ID,
-            'client_secret': META_APP_SECRET,
+            'client_id': app_id,
+            'client_secret': app_secret,
             'fb_exchange_token': old_token,
         }, timeout=15)
         resp.raise_for_status()

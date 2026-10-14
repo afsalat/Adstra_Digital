@@ -59,5 +59,10 @@ urlpatterns = [
     path('review/<str:token>/', PublicClientReviewView.as_view(), name='social-public-review'),
     path('plan-review/<str:token>/', PublicPlanReviewView.as_view(), name='social-public-plan-review'),
     path('plan-workload/', PlanWorkloadView.as_view(), name='social-plan-workload'),
+    # Explicit Meta OAuth callback endpoints supporting both with and without trailing slash
+    path('platform-connections/meta/callback/', PlatformConnectionViewSet.as_view({'get': 'meta_callback', 'post': 'meta_callback'}), name='meta-callback-slash'),
+    path('platform-connections/meta/callback', PlatformConnectionViewSet.as_view({'get': 'meta_callback', 'post': 'meta_callback'}), name='meta-callback-noslash'),
+    path('ad/platform-connections/meta/callback/', PlatformConnectionViewSet.as_view({'get': 'meta_callback', 'post': 'meta_callback'}), name='ad-meta-callback-slash'),
+    path('ad/platform-connections/meta/callback', PlatformConnectionViewSet.as_view({'get': 'meta_callback', 'post': 'meta_callback'}), name='ad-meta-callback-noslash'),
     path('', include(router.urls)),
 ]

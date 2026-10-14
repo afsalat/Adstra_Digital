@@ -1063,3 +1063,34 @@ class ContentIdea(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class SocialAutomatedRule(models.Model):
+    """
+    Automated Rule matching Meta Ads Manager custom rules.
+    Can be evaluated continuously or on schedule to adjust campaigns/adsets/ads.
+    """
+    account_id = models.CharField(max_length=100, default='1405144991733037', db_index=True)
+    rule_name = models.CharField(max_length=255)
+    apply_to = models.CharField(max_length=100, default='all_active_campaigns')
+    action = models.CharField(max_length=100, default='turn_off')
+    action_details = models.JSONField(default=dict, blank=True)
+    conditions = models.JSONField(default=list, blank=True)
+    time_range = models.CharField(max_length=100, default='maximum')
+    schedule = models.CharField(max_length=50, default='continuously')
+    schedule_details = models.JSONField(default=dict, blank=True)
+    notification_fb = models.BooleanField(default=True)
+    notification_email = models.BooleanField(default=False)
+    subscribers = models.JSONField(default=list, blank=True)
+    status = models.CharField(max_length=50, default='ACTIVE')
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    execution_history = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.rule_name} ({self.action})"
+

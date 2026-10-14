@@ -351,17 +351,17 @@ export default function MetaAdsManagerCampaignEditor({
   onPublish,
   onSaveDraft,
 }) {
-  if (!isOpen) return null;
-
   // Active level: "campaign" | "adset" | "ad"
-  const [activeLevel, setActiveLevel] = useState("campaign");
+  const [activeLevel, setActiveLevel] = useState(
+    initialData?.activeLevel || initialData?.level || "campaign"
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // â”€â”€ Campaign Level State (Screenshot 1 & 3) â”€â”€
-  const defaultObj = initialData?.objective || "Awareness";
+  // ── Campaign Level State (Screenshot 1 & 3) ──
+  const defaultObj = initialData?.objective || "Leads";
   const [objective, setObjective] = useState(defaultObj);
   const [campaignName, setCampaignName] = useState(
-    initialData?.campaignName || `New ${defaultObj} campaign`
+    initialData?.campaignName || `New ${defaultObj} Campaign`
   );
   const [buyingType, setBuyingType] = useState(initialData?.buyingType || "Auction");
   const [templateToggleOn, setTemplateToggleOn] = useState(true);
@@ -370,11 +370,11 @@ export default function MetaAdsManagerCampaignEditor({
 
   // Budget & A/B testing & Frequency (Image 1 & 2)
   const [budgetStrategyOpen, setBudgetStrategyOpen] = useState(true);
-  const [budgetStrategy, setBudgetStrategy] = useState("adset"); // "campaign" | "adset" (Defaulting to "adset" as in Image 1)
+  const [budgetStrategy, setBudgetStrategy] = useState("adset");
   const [shareBudgetEnabled, setShareBudgetEnabled] = useState(false);
   const [campaignFrequencyControlEnabled, setCampaignFrequencyControlEnabled] = useState(false);
-  const [budgetType, setBudgetType] = useState("daily"); // "daily" | "lifetime"
-  const [budgetAmount, setBudgetAmount] = useState(1000);
+  const [budgetType, setBudgetType] = useState(initialData?.budgetType || "daily");
+  const [budgetAmount, setBudgetAmount] = useState(initialData?.budgetAmount || 1000);
   const [bidStrategy, setBidStrategy] = useState("Highest volume");
   const [showMoreBudgetSettings, setShowMoreBudgetSettings] = useState(false);
   const [budgetScheduling, setBudgetScheduling] = useState("None selected");
@@ -390,6 +390,75 @@ export default function MetaAdsManagerCampaignEditor({
   );
   const [specialDropdownOpen, setSpecialDropdownOpen] = useState(false);
   const specialDropdownRef = useRef(null);
+
+  // ── Ad Set Level State (Screenshot 2) ──
+  const [adsetName, setAdsetName] = useState(
+    initialData?.adsetName || `New ${defaultObj} Ad set`
+  );
+  const [mobileAppStore, setMobileAppStore] = useState("Google Play Store");
+  const [appNameQuery, setAppNameQuery] = useState("");
+  const [countryAvailabilityChecked, setCountryAvailabilityChecked] = useState(false);
+  const [performanceGoal, setPerformanceGoal] = useState("Maximise number of app installs");
+  const [showEstimatedAudienceSize, setShowEstimatedAudienceSize] = useState(false);
+  const [startDate, setStartDate] = useState("2026-09-30");
+  const [startTime, setStartTime] = useState("10:45");
+  const [endDateEnabled, setEndDateEnabled] = useState(false);
+  const [endDate, setEndDate] = useState("2026-10-30");
+  const [targetLocation, setTargetLocation] = useState("India");
+  const [ageMin, setAgeMin] = useState(18);
+  const [ageMax, setAgeMax] = useState("65+");
+  const [targetGender, setTargetGender] = useState("All");
+  const [placementsType, setPlacementsType] = useState("advantage");
+
+  // ── Ad Level State (Screenshot 3) ──
+  const [adName, setAdName] = useState(
+    initialData?.adName || `New ${defaultObj} Ad`
+  );
+  const [partnershipAdEnabled, setPartnershipAdEnabled] = useState(false);
+  const [facebookPageConnected, setFacebookPageConnected] = useState(false);
+  const [facebookPage, setFacebookPage] = useState("Adstra Digital");
+  const [instagramAccount, setInstagramAccount] = useState("@adstradigital");
+  const [facebookPageModalOpen, setFacebookPageModalOpen] = useState(false);
+  const [newPageName, setNewPageName] = useState("Adstra Digital");
+  const [newPageCategory, setNewPageCategory] = useState("Marketing Agency");
+
+  const [adFormat, setAdFormat] = useState("single");
+  const [primaryText, setPrimaryText] = useState(
+    initialData?.primaryText || "Grow your mobile presence with high-performing Meta app install campaigns managed by industry specialists. Reach engaged users and boost daily retention."
+  );
+  const [headline, setHeadline] = useState(initialData?.headline || "Download & Experience the Future");
+  const [descriptionText, setDescriptionText] = useState("Free install available on Google Play.");
+  const [callToAction, setCallToAction] = useState(initialData?.callToAction || "See details");
+  const [websiteUrl, setWebsiteUrl] = useState("https://play.google.com/store/apps");
+  const [selectedCreativeUrl, setSelectedCreativeUrl] = useState(
+    initialData?.selectedCreativeUrl || PRESET_CREATIVES[0].url
+  );
+  const [adPreviewEnabled, setAdPreviewEnabled] = useState(true);
+  const [adPreviewMode, setAdPreviewMode] = useState("empty");
+
+  // Sync state whenever initialData changes
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.activeLevel) {
+        setActiveLevel(initialData.activeLevel);
+      } else {
+        setActiveLevel("campaign");
+      }
+      if (initialData.objective) setObjective(initialData.objective);
+      if (initialData.campaignName) setCampaignName(initialData.campaignName);
+      if (initialData.buyingType) setBuyingType(initialData.buyingType);
+      if (initialData.budgetAmount) setBudgetAmount(initialData.budgetAmount);
+      if (initialData.budgetType) setBudgetType(initialData.budgetType);
+      if (initialData.adsetName) setAdsetName(initialData.adsetName);
+      if (initialData.adName) setAdName(initialData.adName);
+      if (initialData.headline) setHeadline(initialData.headline);
+      if (initialData.primaryText) setPrimaryText(initialData.primaryText);
+      if (initialData.callToAction) setCallToAction(initialData.callToAction);
+      if (initialData.selectedCreativeUrl) setSelectedCreativeUrl(initialData.selectedCreativeUrl);
+      if (initialData.specialCategory) setSpecialCategory(initialData.specialCategory);
+      if (initialData.specialCategories) setSelectedSpecialCategories(initialData.specialCategories);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -407,6 +476,8 @@ export default function MetaAdsManagerCampaignEditor({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [specialDropdownOpen]);
+
+
 
   const toggleSpecialCategory = (catId) => {
     setSelectedSpecialCategories((prev) => {
@@ -428,48 +499,8 @@ export default function MetaAdsManagerCampaignEditor({
     return titles.join(", ");
   };
 
-  // â”€â”€ Ad Set Level State (Screenshot 2) â”€â”€
-  const [adsetName, setAdsetName] = useState(
-    initialData?.adsetName || `New ${defaultObj} Ad set`
-  );
-  const [mobileAppStore, setMobileAppStore] = useState("Google Play Store");
-  const [appNameQuery, setAppNameQuery] = useState("");
-  const [countryAvailabilityChecked, setCountryAvailabilityChecked] = useState(false);
-  const [performanceGoal, setPerformanceGoal] = useState("Maximise number of app installs");
-  const [showEstimatedAudienceSize, setShowEstimatedAudienceSize] = useState(false);
-  const [startDate, setStartDate] = useState("2026-09-30");
-  const [startTime, setStartTime] = useState("10:45");
-  const [endDateEnabled, setEndDateEnabled] = useState(false);
-  const [endDate, setEndDate] = useState("2026-10-30");
-  const [targetLocation, setTargetLocation] = useState("India");
-  const [ageMin, setAgeMin] = useState(18);
-  const [ageMax, setAgeMax] = useState("65+");
-  const [targetGender, setTargetGender] = useState("All");
-  const [placementsType, setPlacementsType] = useState("advantage"); // "advantage" | "manual"
 
-  // â”€â”€ Ad Level State (Screenshot 3) â”€â”€
-  const [adName, setAdName] = useState(
-    initialData?.adName || `New ${defaultObj} Ad`
-  );
-  const [partnershipAdEnabled, setPartnershipAdEnabled] = useState(false);
-  const [facebookPageConnected, setFacebookPageConnected] = useState(false);
-  const [facebookPage, setFacebookPage] = useState("Adstra Digital");
-  const [instagramAccount, setInstagramAccount] = useState("@adstradigital");
-  const [facebookPageModalOpen, setFacebookPageModalOpen] = useState(false);
-  const [newPageName, setNewPageName] = useState("Adstra Digital");
-  const [newPageCategory, setNewPageCategory] = useState("Marketing Agency");
 
-  const [adFormat, setAdFormat] = useState("single");
-  const [primaryText, setPrimaryText] = useState(
-    "Grow your mobile presence with high-performing Meta app install campaigns managed by industry specialists. Reach engaged users and boost daily retention."
-  );
-  const [headline, setHeadline] = useState("Download & Experience the Future");
-  const [descriptionText, setDescriptionText] = useState("Free install available on Google Play.");
-  const [callToAction, setCallToAction] = useState("See details");
-  const [websiteUrl, setWebsiteUrl] = useState("https://play.google.com/store/apps");
-  const [selectedCreativeUrl, setSelectedCreativeUrl] = useState(PRESET_CREATIVES[0].url);
-  const [adPreviewEnabled, setAdPreviewEnabled] = useState(true);
-  const [adPreviewMode, setAdPreviewMode] = useState("empty"); // "empty" (screenshot 3) | "feed"
 
   // Template modal & name templates page states
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -721,10 +752,10 @@ export default function MetaAdsManagerCampaignEditor({
   useEffect(() => {
     if (initialData?.objective) {
       setObjective(initialData.objective);
-      if (!initialData.campaignName) {
-        setCampaignName(`New ${initialData.objective} Campaign`);
-        setAdsetName(`New ${initialData.objective} Ad set`);
-        setAdName(`New ${initialData.objective} Ad`);
+      if (!initialData.campaignName && !initialData.adsetName && !initialData.adName) {
+        setCampaignName(`New ${initialData.objective} campaign`);
+        setAdsetName(`New ${initialData.objective} ad set`);
+        setAdName(`New ${initialData.objective} ad`);
       }
     }
   }, [initialData]);
@@ -746,6 +777,7 @@ export default function MetaAdsManagerCampaignEditor({
   const handleClose = () => {
     if (onSaveDraft) {
       onSaveDraft({
+        ...(initialData || {}),
         campaignName,
         buyingType,
         objective,
@@ -773,6 +805,7 @@ export default function MetaAdsManagerCampaignEditor({
   const handlePublishClick = () => {
     if (onPublish) {
       onPublish({
+        ...(initialData || {}),
         campaignName,
         buyingType,
         objective,
@@ -795,6 +828,8 @@ export default function MetaAdsManagerCampaignEditor({
       });
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

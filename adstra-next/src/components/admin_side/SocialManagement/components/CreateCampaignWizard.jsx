@@ -981,23 +981,52 @@ export default function CreateCampaignWizard({
 
     // Try posting to backend API
     try {
-      const clientId = clients[0]?.id;
+      const isMeta = !platLabel.toLowerCase().includes("google") && !platLabel.toLowerCase().includes("linkedin");
+      const clientId = typeof clients[0]?.id === "number" ? clients[0]?.id : undefined;
       const apiPayload = {
         client_profile: clientId,
         name: formData.name.trim(),
         objective: formData.objective.toLowerCase().replace(/[\s/]/g, "_").slice(0, 50),
-        status: targetStatus.toLowerCase(),
-        budget: formData.budget,
+        status: targetStatus === "Active" ? "ready_to_publish" : targetStatus.toLowerCase(),
+        budget: Number(formData.budget || 50000),
         platforms: [platLabel.toLowerCase()],
-        target_audience: `${formData.location}, ${formData.ageRange}, ${genderStr}`,
+        ad_platforms: [isMeta ? "meta" : "google"],
+        headline: formData.headline || "",
+        primary_text: formData.primaryText || "",
+        description: formData.description || "",
+        cta: formData.cta ? formData.cta.toLowerCase().replace(/\s+/g, "_") : "learn_more",
+        landing_page_url: formData.destinationUrl || "https://adstradigital.com",
+        creative_image_url: activeThumb || "",
+        creative_video_url: formData.adFormat === "video" ? (formData.videoUrl || formData.mediaUrl || "") : "",
+        ad_format: formData.adFormat || "single_media",
+        target_audience: `${formData.location || ""}, ${formData.ageRange || ""}, ${genderStr || ""}`,
       };
 
+      let campaignId = initialData?.backendId;
       if (initialData?.backendId) {
         await axios.patch(`${API_BASE_URL}/social/campaigns/${initialData.backendId}/`, apiPayload);
-      } else if (clientId) {
+      } else {
         const res = await axios.post(`${API_BASE_URL}/social/campaigns/`, apiPayload);
         if (res.data?.id) {
+          campaignId = res.data.id;
           campaignPayload.backendId = res.data.id;
+        }
+      }
+
+      // If user selected "Publish Campaign", deploy through Meta Marketing API using connected account
+      if (targetStatus === "Active" && campaignId) {
+        try {
+          const pubRes = await axios.post(`${API_BASE_URL}/social/ad/campaigns/${campaignId}/publish/`);
+          if (pubRes.data?.success) {
+            notify("Campaign published successfully to Meta Ads!", "success");
+          } else if (pubRes.data?.errors?.length) {
+            notify(`Meta publish: ${pubRes.data.errors.join(", ")}`, "warning");
+          }
+        } catch (pubErr) {
+          const errDetail = pubErr?.response?.data?.errors?.[0] || pubErr?.response?.data?.error;
+          if (errDetail) {
+            notify(`Meta publish: ${errDetail}`, "warning");
+          }
         }
       }
     } catch {

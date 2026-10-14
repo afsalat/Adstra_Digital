@@ -101,6 +101,8 @@ export default function AnalyticsReportsTab({
   selectedClientId = "all",
   clients = [],
   posts = [],
+  campaigns = [],
+  dashboardData = null,
 }) {
   const [selectedPlatform, setSelectedPlatform] = useState("all");
   const [selectedPostType, setSelectedPostType] = useState("all");
@@ -1376,6 +1378,69 @@ export default function AnalyticsReportsTab({
         ) : (
           <div className="no-print" style={{ marginTop: -8, marginBottom: 16, fontSize: "0.72rem", color: "#94a3b8" }}>
             Select a 7, 30 or 90-day timeframe to compare against the previous period.
+          </div>
+        )}
+
+        {/* META ADVERTISING ACCOUNT & CAMPAIGN PERFORMANCE AUDIT */}
+        {dashboardData?.ad_performance?.connected && (
+          <div
+            className="print-break-inside-avoid"
+            style={{
+              marginBottom: 20,
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: "16px 20px",
+              boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#1877f2", display: "inline-block" }} />
+                <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#0f172a" }}>
+                  Meta Ads Marketing Performance — {dashboardData.ad_performance.account_name || "Connected Ad Account"}
+                </span>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "#ecfdf5", color: "#059669" }}>
+                  Authorized ({dashboardData.ad_performance.account_id})
+                </span>
+              </div>
+              <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                Source: Meta Marketing API
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Total Ad Spend</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#0284c7", marginTop: 2 }}>
+                  ₹{Number(dashboardData.ad_performance.total_spend || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Paid Impressions</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#0f172a", marginTop: 2 }}>
+                  {Number(dashboardData.ad_performance.total_impressions || 0).toLocaleString("en-IN")}
+                </div>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Paid Reach</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#059669", marginTop: 2 }}>
+                  {Number(dashboardData.ad_performance.total_reach || 0).toLocaleString("en-IN")}
+                </div>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Link Clicks</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#d97706", marginTop: 2 }}>
+                  {Number(dashboardData.ad_performance.total_clicks || 0).toLocaleString("en-IN")}
+                </div>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Leads Generated</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#7c3aed", marginTop: 2 }}>
+                  {Number(dashboardData.ad_performance.total_leads || 0).toLocaleString("en-IN")}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

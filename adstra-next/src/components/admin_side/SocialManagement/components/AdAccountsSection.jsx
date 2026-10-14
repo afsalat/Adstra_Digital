@@ -9,7 +9,6 @@ import {
   Link2,
   LayoutGrid,
   Search,
-  Plus,
   SlidersHorizontal,
   ChevronDown,
   MoreVertical,
@@ -558,8 +557,7 @@ export default function AdAccountsSection({
     <div className="ad-accounts-main-wrap">
 
       {/* --------------------------------------------------------------------
-          TOP HEADER: Title + Subtitle + "+ Connect Ad Account" Button
-          (Matching Image 3 & Image 2 Step 1)
+          TOP HEADER: Title + Subtitle (Ad Account Listing)
           -------------------------------------------------------------------- */}
       <div className="ad-accounts-top-header">
         <div className="ad-accounts-title-area">
@@ -567,18 +565,6 @@ export default function AdAccountsSection({
           <p className="ad-accounts-p">
             Connect and manage your advertising accounts across Meta, Google and LinkedIn.
           </p>
-        </div>
-
-        <div className="ad-accounts-header-actions">
-          <button
-            type="button"
-            className="ad-btn-connect-primary"
-            onClick={handleOpenConnectModal}
-            id="btn-connect-ad-account"
-          >
-            <Plus size={18} strokeWidth={2.4} />
-            <span>Connect Ad Account</span>
-          </button>
         </div>
       </div>
 

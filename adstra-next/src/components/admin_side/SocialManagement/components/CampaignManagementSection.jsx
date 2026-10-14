@@ -5,7 +5,6 @@ import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import "./CampaignManagementSection.css";
 import CreateCampaignWizard from "./CreateCampaignWizard";
-import MetaAudienceSection from "./MetaAudienceSection";
 
 import {
   Search,
@@ -34,6 +33,7 @@ import {
   CheckCircle2,
   Archive,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 
 // Curated thumbnail presets matching Image 3 design
@@ -103,11 +103,7 @@ export default function CampaignManagementSection({
   onSelectSubsection,
   onRefresh,
 }) {
-  const [currentSub, setCurrentSub] = useState(activeSubsection || "management");
 
-  useEffect(() => {
-    if (activeSubsection) setCurrentSub(activeSubsection);
-  }, [activeSubsection]);
 
   // Campaign state: start with Image 3 campaigns or merge with backend campaigns
   const [campaignList, setCampaignList] = useState(() => {
@@ -274,8 +270,12 @@ export default function CampaignManagementSection({
       prev.map((item) => (item.id === camp.id ? { ...item, status: newStatus } : item))
     );
 
-    // If campaign has backend ID, try updating backend
+    // If campaign has backend ID, update backend and invoke ad platform endpoint
     if (camp.backendId) {
+      const endpoint = newStatus === "Paused"
+        ? `${API_BASE_URL}/social/ad/campaigns/${camp.backendId}/pause/`
+        : `${API_BASE_URL}/social/ad/campaigns/${camp.backendId}/resume/`;
+      axios.post(endpoint).catch(() => {});
       axios
         .patch(`${API_BASE_URL}/social/campaigns/${camp.backendId}/`, {
           status: newStatus.toLowerCase(),
@@ -284,6 +284,53 @@ export default function CampaignManagementSection({
     }
 
     showToast(`Campaign "${camp.name}" is now ${newStatus}`);
+  };
+
+  // Quick Action: Publish to Meta Ads
+  const handlePublishToMeta = async (camp) => {
+    setActiveMenuId(null);
+    if (!camp.backendId) {
+      showToast("Cannot publish a local campaign without a backend ID.", "warning");
+      return;
+    }
+    showToast(`Publishing "${camp.name}" to Meta Ads...`);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/social/ad/campaigns/${camp.backendId}/publish/`);
+      if (res.data?.success) {
+        setCampaignList((prev) =>
+          prev.map((item) => (item.id === camp.id ? { ...item, status: "Active" } : item))
+        );
+        showToast(`Campaign "${camp.name}" published to Meta Ads!`);
+        if (onRefresh) onRefresh();
+      } else {
+        const err = res.data?.errors?.[0] || res.data?.error || "Publishing failed";
+        showToast(err, "warning");
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.errors?.[0] || err?.response?.data?.error || err.message;
+      showToast(`Publish error: ${msg}`, "error");
+    }
+  };
+
+  // Quick Action: Sync Performance Metrics from Meta
+  const handleSyncMeta = async (camp) => {
+    setActiveMenuId(null);
+    if (!camp.backendId) {
+      showToast("Sync requires a backend campaign ID.", "warning");
+      return;
+    }
+    showToast(`Syncing "${camp.name}" performance from Meta...`);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/social/ad/campaigns/${camp.backendId}/sync/`);
+      if (res.data?.success) {
+        showToast(`Metrics synchronized for "${camp.name}"!`);
+        if (onRefresh) onRefresh();
+      } else {
+        showToast("Sync completed with warnings", "warning");
+      }
+    } catch {
+      showToast("Failed to sync metrics from Meta", "error");
+    }
   };
 
   // Quick Action: Duplicate Campaign
@@ -536,46 +583,9 @@ export default function CampaignManagementSection({
   return (
     <div className="cm-container">
       {/* --------------------------------------------------------------------
-          Subsections Bar (Campaign Management vs Audience)
+          Header Row (Title + Subtitle + Create Campaign Button)
           -------------------------------------------------------------------- */}
-      <div className="cm-subsections-bar">
-        <button
-          type="button"
-          className={`cm-subsection-btn ${currentSub === "management" ? "active" : ""}`}
-          onClick={() => {
-            setCurrentSub("management");
-            if (onSelectSubsection) onSelectSubsection("management");
-          }}
-        >
-          <Layers size={15} />
-          <span>Campaign Management</span>
-          <span className="cm-subsection-count">{campaignList.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`cm-subsection-btn ${currentSub === "audience" ? "active" : ""}`}
-          onClick={() => {
-            setCurrentSub("audience");
-            if (onSelectSubsection) onSelectSubsection("audience");
-          }}
-        >
-          <Users size={15} />
-          <span>Audience</span>
-        </button>
-      </div>
-
-      {currentSub === "audience" ? (
-        <MetaAudienceSection
-          clients={clients}
-          selectedClientId={selectedClientId}
-          campaigns={campaigns}
-        />
-      ) : (
-        <>
-          {/* --------------------------------------------------------------------
-              Header Row (Title + Subtitle + Create Campaign Button)
-              -------------------------------------------------------------------- */}
-          <div className="cm-header-row">
+      <div className="cm-header-row">
             <div className="cm-header-text">
               <p className="cm-subtitle">
                 Create, manage and control your advertising campaigns in one place.
@@ -886,6 +896,17 @@ export default function CampaignManagementSection({
                             <span>Edit Campaign</span>
                           </button>
 
+                          {camp.status !== "Active" && camp.backendId && (
+                            <button
+                              type="button"
+                              className="cm-menu-item"
+                              onClick={() => handlePublishToMeta(camp)}
+                            >
+                              <CheckCircle2 size={15} className="cm-menu-icon" style={{ color: "#10b981" }} />
+                              <span>Publish to Meta Ads</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             className="cm-menu-item"
@@ -903,6 +924,17 @@ export default function CampaignManagementSection({
                               </>
                             )}
                           </button>
+
+                          {camp.backendId && (
+                            <button
+                              type="button"
+                              className="cm-menu-item"
+                              onClick={() => handleSyncMeta(camp)}
+                            >
+                              <RefreshCw size={15} className="cm-menu-icon" />
+                              <span>Sync from Meta</span>
+                            </button>
+                          )}
 
                           <button
                             type="button"
@@ -1011,8 +1043,6 @@ export default function CampaignManagementSection({
             </div>
           </div>
         </div>
-      )}
-        </>
       )}
 
       {/* --------------------------------------------------------------------

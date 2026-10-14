@@ -37,7 +37,7 @@ def log_activity(campaign, action: str, platform: str = '', status: str = 'succe
     )
 
 
-def validate_campaign_for_publishing(campaign) -> list:
+def validate_campaign_for_publishing(campaign, requested_account_id: str = None) -> list:
     """
     Return a list of validation error strings.
     Empty list = campaign is ready to publish.
@@ -45,49 +45,82 @@ def validate_campaign_for_publishing(campaign) -> list:
     errors = []
     if not campaign.name:
         errors.append("Campaign name is required.")
-    if not campaign.ad_platforms:
-        derived = []
-        for p in (campaign.platforms or []):
-            lower = str(p).lower()
-            if lower in ('meta', 'facebook', 'instagram') and 'meta' not in derived:
-                derived.append('meta')
-            if lower in ('google', 'google_ads') and 'google' not in derived:
-                derived.append('google')
-        if derived:
-            campaign.ad_platforms = derived
-            campaign.save(update_fields=['ad_platforms'])
-        else:
-            errors.append("At least one advertising platform (Meta Ads or Google Ads) must be selected.")
+
+    # Normalize platforms to ad_platforms
+    norm = []
+    raw_list = (campaign.ad_platforms or []) + (campaign.platforms or [])
+    for p in raw_list:
+        lower = str(p).lower()
+        if lower in ('meta', 'facebook', 'instagram') and 'meta' not in norm:
+            norm.append('meta')
+        elif lower in ('google', 'google_ads') and 'google' not in norm:
+            norm.append('google')
+        elif lower not in norm and lower in ('meta', 'google', 'linkedin'):
+            norm.append(lower)
+
+    if not norm:
+        norm = ['meta']  # Default to Meta Ads
+
+    if campaign.ad_platforms != norm:
+        campaign.ad_platforms = norm
+        campaign.save(update_fields=['ad_platforms'])
+
     if not campaign.budget or float(campaign.budget) <= 0:
         errors.append("Budget must be greater than zero.")
-    for plat in (campaign.ad_platforms or []):
-        conn = get_connection_for_platform(campaign, plat)
+
+    for plat in (campaign.ad_platforms or ['meta']):
+        conn = get_connection_for_platform(campaign, plat, account_id=requested_account_id)
         if not conn:
-            errors.append(f"No connected {plat.title()} account found for this campaign's client.")
-        elif conn.status not in ('connected',):
-            errors.append(f"{plat.title()} account connection status is '{conn.status}'. Please reconnect.")
+            errors.append(f"No connected {plat.title()} account found. Please connect or select an active ad account.")
     return errors
 
 
-def get_connection_for_platform(campaign, platform: str):
-    """Find the active PlatformConnection for the campaign's client on the given platform, falling back to a global active connection."""
+def get_connection_for_platform(campaign, platform: str, account_id: str = None):
+    """Find active PlatformConnection for the campaign and platform."""
     conn = None
-    if campaign.client_profile:
+    if account_id:
+        clean_id = str(account_id).replace('act_', '')
+        conn = PlatformConnection.objects.filter(
+            platform=platform,
+            account_id__in=[account_id, clean_id, f'act_{clean_id}'],
+            status='connected',
+        ).first()
+        if not conn:
+            conn = PlatformConnection.objects.filter(
+                platform=platform,
+                account_id__in=[account_id, clean_id, f'act_{clean_id}'],
+            ).first()
+
+    if not conn and campaign.client_profile:
         conn = PlatformConnection.objects.filter(
             client_profile=campaign.client_profile,
             platform=platform,
             status='connected',
         ).order_by('-last_synced_at').first()
+
     if not conn:
         conn = PlatformConnection.objects.filter(
             platform=platform,
             status='connected',
         ).order_by('-last_synced_at').first()
+
+    if not conn:
+        # Fall back to any platform connection for that platform
+        conn = PlatformConnection.objects.filter(
+            platform=platform,
+        ).order_by('-last_synced_at').first()
+
+    if conn and (conn.status != 'connected' or not conn.access_token_encrypted):
+        try:
+            from apis.social.token_service import reauthorize_connection
+            reauthorize_connection(conn)
+        except Exception:
+            pass
+
     return conn
 
 
-
-def publish_campaign(campaign_id: int, user=None) -> dict:
+def publish_campaign(campaign_id: int, user=None, account_id: str = None, desired_status: str = 'ACTIVE') -> dict:
     """
     Main entry point. Publishes a campaign across all selected ad platforms.
     Returns {'success': bool, 'results': {...}, 'errors': [...]}
@@ -98,8 +131,12 @@ def publish_campaign(campaign_id: int, user=None) -> dict:
     except SocialCampaign.DoesNotExist:
         return {'success': False, 'errors': [f'Campaign {campaign_id} not found.']}
 
+    desired_status = (desired_status or 'ACTIVE').upper()
+    if desired_status not in ('ACTIVE', 'PAUSED'):
+        desired_status = 'ACTIVE'
+
     # Validate
-    errors = validate_campaign_for_publishing(campaign)
+    errors = validate_campaign_for_publishing(campaign, requested_account_id=account_id)
     if errors:
         log_activity(campaign, 'Publish Validation Failed', status='error',
                      message='; '.join(errors))
@@ -108,23 +145,23 @@ def publish_campaign(campaign_id: int, user=None) -> dict:
     # Set publishing state
     campaign.status = 'publishing'
     campaign.save(update_fields=['status', 'updated_at'])
-    log_activity(campaign, 'Publishing Started', message='Campaign publishing initiated')
+    log_activity(campaign, 'Publishing Started', message=f'Campaign publishing initiated ({desired_status})')
 
     results = {}
     all_success = True
 
     for platform in campaign.ad_platforms:
-        plat_result = _publish_to_platform(campaign, platform)
+        plat_result = _publish_to_platform(campaign, platform, account_id=account_id, desired_status=desired_status)
         results[platform] = plat_result
         if not plat_result.get('success'):
             all_success = False
 
     # Update overall campaign status
     if all_success:
-        campaign.status = 'published'
+        campaign.status = 'active' if desired_status == 'ACTIVE' else 'published'
         campaign.save(update_fields=['status', 'updated_at'])
         log_activity(campaign, 'Campaign Published Successfully',
-                     message=f"Published to: {', '.join(campaign.ad_platforms)}")
+                     message=f"Published ({desired_status}) to: {', '.join(campaign.ad_platforms)}")
     else:
         campaign.status = 'publish_failed'
         campaign.save(update_fields=['status', 'updated_at'])
@@ -139,11 +176,11 @@ def publish_campaign(campaign_id: int, user=None) -> dict:
     }
 
 
-def _publish_to_platform(campaign, platform: str) -> dict:
+def _publish_to_platform(campaign, platform: str, account_id: str = None, desired_status: str = 'ACTIVE') -> dict:
     """Publish to a single platform and return result dict."""
     from apis.social import meta_ads_service, google_ads_service
 
-    connection = get_connection_for_platform(campaign, platform)
+    connection = get_connection_for_platform(campaign, platform, account_id=account_id)
     if not connection:
         error = f"No connected {platform.title()} account."
         log_activity(campaign, f'{platform.title()} Publish Failed', platform=platform,
@@ -172,11 +209,11 @@ def _publish_to_platform(campaign, platform: str) -> dict:
     cp.technical_error_id = ''
     cp.save(update_fields=['publish_status', 'error_message', 'step_failed', 'technical_error_id', 'updated_at'])
 
-    log_activity(campaign, f'Publishing to {platform.title()} Ads', platform=platform)
+    log_activity(campaign, f'Publishing to {platform.title()} Ads ({desired_status})', platform=platform)
 
     try:
         if platform == 'meta':
-            ext_ids = meta_ads_service.publish_campaign(connection, campaign, cp)
+            ext_ids = meta_ads_service.publish_campaign(connection, campaign, cp, desired_status=desired_status)
         elif platform == 'google':
             ext_ids = google_ads_service.publish_campaign(connection, campaign, cp)
         else:
@@ -196,13 +233,13 @@ def _publish_to_platform(campaign, platform: str) -> dict:
             cp.google_customer_id = ext_ids.get('google_customer_id', cp.google_customer_id)
 
         cp.publish_status = 'published'
-        cp.status = 'paused'  # starts paused; user activates explicitly
+        cp.status = 'active' if desired_status == 'ACTIVE' else 'paused'
         cp.last_synced_at = timezone.now()
         cp.save()
 
-        log_activity(campaign, f'{platform.title()} Ads Published', platform=platform,
+        log_activity(campaign, f'{platform.title()} Ads Published ({desired_status})', platform=platform,
                      status='success',
-                     message='Campaign objects created in paused state. Activate from Campaign Controls.',
+                     message=f'Campaign published to {platform.title()} in {desired_status.lower()} state.',
                      external_id=str(ext_ids))
 
         return {'success': True, 'external_ids': ext_ids}

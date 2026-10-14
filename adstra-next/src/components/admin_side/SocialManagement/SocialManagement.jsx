@@ -25,10 +25,8 @@ import {
 import FullOverviewDashboardTab from "./components/FullOverviewDashboardTab";
 import DedicatedSocialSection from "./components/DedicatedSocialSection";
 import MediaLibraryTab from "./components/MediaLibraryTab";
+import CampaignDashboardTab from "./components/CampaignDashboardTab";
 import CampaignsTab from "./components/CampaignsTab";
-import CampaignManagementSection from "./components/CampaignManagementSection";
-import AdAccountsSection from "./components/AdAccountsSection";
-import MetaAudienceSection from "./components/MetaAudienceSection";
 import AnalyticsReportsTab from "./components/AnalyticsReportsTab";
 import TeamDesignationTreeTab from "./components/TeamDesignationTreeTab";
 import SocialSettingsTab from "./components/SocialSettingsTab";
@@ -47,7 +45,7 @@ function SocialManagementInner() {
 
   const [activeMainModule, setActiveMainModule] = useState(initialTab);
   const [campaignSubTab, setCampaignSubTab] = useState(
-    ["dashboard", "campaign_management", "ad_accounts", "ad_account", "audience"].includes(initialSubTab)
+    ["dashboard", "campaign_management"].includes(initialSubTab)
       ? initialSubTab
       : "dashboard"
   );
@@ -79,7 +77,7 @@ function SocialManagementInner() {
       setActiveMainModule(tabParam);
     }
     const subTabParam = searchParams.get("subtab");
-    if (subTabParam && ["dashboard", "campaign_management", "ad_accounts", "ad_account", "audience"].includes(subTabParam)) {
+    if (subTabParam && ["dashboard", "campaign_management"].includes(subTabParam)) {
       setCampaignSubTab(subTabParam);
     }
   }, [searchParams]);
@@ -368,12 +366,8 @@ function SocialManagementInner() {
               {[
                 { id: "dashboard", label: "Dashboard" },
                 { id: "campaign_management", label: "Campaign Management" },
-                { id: "ad_accounts", label: "Ad Accounts" },
-                { id: "audience", label: "Audience" },
               ].map((subTab) => {
-                const isActive =
-                  campaignSubTab === subTab.id ||
-                  (subTab.id === "ad_accounts" && campaignSubTab === "ad_account");
+                const isActive = campaignSubTab === subTab.id;
                 return (
                   <button
                     key={subTab.id}
@@ -400,30 +394,13 @@ function SocialManagementInner() {
 
             {/* Dashboard Sub-Tab */}
             {campaignSubTab === "dashboard" && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: 320,
-                  color: "#94a3b8",
-                  fontSize: "0.95rem",
-                  fontWeight: 500,
-                  gap: 10,
-                  background: "#ffffff",
-                  borderRadius: 14,
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
-                <span>Dashboard coming soon</span>
-              </div>
+              <CampaignDashboardTab
+                campaigns={campaigns}
+                clients={activeClients}
+                selectedClientId={selectedClientId}
+                onNavigateToCampaigns={() => setCampaignSubTab("campaign_management")}
+                onRefresh={fetchData}
+              />
             )}
 
             {/* Campaign Management Sub-Tab */}
@@ -432,36 +409,7 @@ function SocialManagementInner() {
                 campaigns={campaigns}
                 clients={activeClients}
                 selectedClientId={selectedClientId}
-                activeSubsection="management"
-                onSelectSubsection={(sub) =>
-                  setCampaignSubTab(
-                    sub === "audience"
-                      ? "audience"
-                      : sub === "ad_accounts" || sub === "ad_account"
-                      ? "ad_accounts"
-                      : "campaign_management"
-                  )
-                }
                 onRefresh={fetchData}
-              />
-            )}
-
-            {/* Ad Accounts Sub-Tab (Image 3 & Image 2 Workflow) */}
-            {(campaignSubTab === "ad_accounts" || campaignSubTab === "ad_account") && (
-              <AdAccountsSection
-                clients={activeClients}
-                selectedClientId={selectedClientId}
-                campaigns={campaigns}
-                onRefresh={fetchData}
-              />
-            )}
-
-            {/* Audience Sub-Tab (Meta Ads Manager Audience Section) */}
-            {campaignSubTab === "audience" && (
-              <MetaAudienceSection
-                clients={activeClients}
-                selectedClientId={selectedClientId}
-                campaigns={campaigns}
               />
             )}
           </div>
@@ -472,6 +420,8 @@ function SocialManagementInner() {
             selectedClientId={selectedClientId}
             clients={activeClients}
             posts={posts}
+            campaigns={campaigns}
+            dashboardData={dashboardData}
           />
         )}
 
