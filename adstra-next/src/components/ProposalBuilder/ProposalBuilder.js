@@ -128,8 +128,8 @@ export default function ProposalBuilder() {
     setSections((prev) => prev.filter((sec) => sec.id !== id));
   };
 
-  const addExtraSectionFromService = (serviceName) => {
-    const detail = serviceExtraDetails[serviceName];
+  const addExtraSectionFromService = (serviceName, pkgObj = null) => {
+    const detail = pkgObj?.scope_details || serviceExtraDetails[serviceName];
     if (!detail) return;
 
     setSections((prev) => {
@@ -172,9 +172,9 @@ export default function ProposalBuilder() {
     try {
       const headers = getAuthHeaders();
       const total = service.reduce((acc, item) => {
-        const qty = item.quantity || 1;
-        const rate = item.rate || 0;
-        const gstRate = parseFloat(item.gst || "18");
+        const qty = Number(item.quantity) || 1;
+        const rate = Number(item.rate) || 0;
+        const gstRate = Number(item.gst) || 18;
         const base = qty * rate;
         const gst = (base * gstRate) / 100;
         return acc + base + gst;
@@ -190,13 +190,17 @@ export default function ProposalBuilder() {
         total_amount: total,
         total_in_words: numberToWords(total),
         client_id: headerData.billTo?.id || null,
-        company_name: headerData.billTo?.company_name || headerData.billTo?.name || "",
+        company_name: headerData.billTo?.company_name || "",
+        client_name: headerData.billTo?.name || headerData.billTo?.company_name || "",
+        address: headerData.billTo?.address || "",
+        email: headerData.billTo?.email || "",
+        contact: headerData.billTo?.contact || "",
         gstin: headerData.billTo?.gstin && headerData.billTo.gstin !== "N/A" ? headerData.billTo.gstin : "",
         lut: headerData.billTo?.lut || "",
         lead_id: currentProposalId ? undefined : selectedLead?.id,
         services: service.map((item) => ({
           ...item,
-          gst: parseFloat(item.gst) || 0,
+          gst: Number(item.gst) || 18,
         })),
         sections,
       };
@@ -235,6 +239,15 @@ export default function ProposalBuilder() {
       if (response.ok) {
         showModal("success", "Proposal Saved", "Proposal saved successfully!");
         setIsSaved(true);
+        if (data.client) {
+          setHeaderData((prev) => ({
+            ...prev,
+            billTo: {
+              ...prev.billTo,
+              ...data.client,
+            },
+          }));
+        }
         if (!currentProposalId && data.id) {
           setCurrentProposalId(data.id);
           setSelectedLead(data.source_lead || selectedLead);
@@ -339,7 +352,7 @@ export default function ProposalBuilder() {
     });
 
     if (proposal.services && proposal.services.length > 0) {
-      setService(proposal.services.map(s => ({ ...s, gst: s.gst || 18 })));
+      setService(proposal.services.map(s => ({ ...s, gst: Number(s.gst) || 18 })));
     } else {
       setService([]);
     }
@@ -375,23 +388,7 @@ export default function ProposalBuilder() {
       return;
     }
 
-    let clientRecord;
-    try {
-      const response = await fetch(`${API_BASE_URL}/proposal/clients/from-lead/${lead.id}/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({}),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not create the client from this lead.");
-      clientRecord = data.client;
-    } catch (error) {
-      showModal("error", "Client Creation Failed", error.message || "Could not create the client from this lead.");
-      return;
-    }
-
-    const resolvedLead = { ...lead, customer_record: clientRecord };
-    setSelectedLead(resolvedLead);
+    setSelectedLead(lead);
     setIsViewMode(false);
     setCurrentProposalId(null);
     setSections(DEFAULT_SECTIONS());
@@ -399,23 +396,17 @@ export default function ProposalBuilder() {
     url.searchParams.delete("proposal");
     url.searchParams.set("lead", String(lead.id));
     window.history.replaceState({}, "", url);
-    const leadClientDefaults = {
-      name: lead.customer_name || lead.contact_person || lead.company_name || "Lead customer",
+
+    // Auto-fill client and company inputs directly from the lead's own details
+    const client = {
+      id: lead.customer_record?.id || null,
       company_name: lead.company_name || "",
+      name: lead.customer_name || lead.contact_person || lead.company_name || "",
       address: lead.address || "",
       email: lead.email || "",
-      contact: lead.phone || "",
-      gstin: "N/A",
-    };
-    const client = {
-      ...leadClientDefaults,
-      ...(clientRecord || {}),
-      company_name: clientRecord?.company_name || leadClientDefaults.company_name,
-      name: clientRecord?.name || leadClientDefaults.name,
-      address: clientRecord?.address || leadClientDefaults.address,
-      email: clientRecord?.email || leadClientDefaults.email,
-      contact: clientRecord?.contact || leadClientDefaults.contact,
-      gstin: clientRecord?.gstin || "N/A",
+      contact: lead.phone || lead.whatsapp_number || "",
+      gstin: lead.gstin || "N/A",
+      lut: lead.lut || "",
     };
     setHeaderData((current) => ({
       ...current,
@@ -453,18 +444,28 @@ export default function ProposalBuilder() {
     setShowLeadSelector(false);
   }, [DEFAULT_SECTIONS, headerData.quotationNo]);
 
+  const handleClearLead = useCallback(() => {
+    setSelectedLead(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("lead");
+    window.history.replaceState({}, "", url);
+  }, []);
+
   useEffect(() => {
     if (initializedFromUrl.current) return;
     initializedFromUrl.current = true;
     const params = new URLSearchParams(window.location.search);
     const proposalId = params.get("proposal");
     const leadId = params.get("lead");
+    const viewParam = params.get("view");
+    const modeParam = params.get("mode");
+    const isView = modeParam === "view" || viewParam === "true" || viewParam === "1";
     if (proposalId) {
       fetch(`${API_BASE_URL}/proposal/detail/${proposalId}/`, { headers: getAuthHeaders() })
         .then(async (response) => {
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || "Could not open the proposal.");
-          handleLoadProposal(data, "edit");
+          handleLoadProposal(data, isView ? "view" : "edit");
         })
         .catch((error) => showModal("error", "Open Failed", error.message));
     } else if (leadId) {
@@ -514,10 +515,14 @@ export default function ProposalBuilder() {
         currentProposalId={currentProposalId}
         isSaved={isSaved}
         isViewMode={isViewMode}
+        onEditMode={() => setIsViewMode(false)}
         onBack={() => window.history.back()}
         onNew={handleNewProposal}
         onSelectLead={() => setShowLeadSelector(true)}
+        onClearLead={handleClearLead}
         onOpenProposals={() => setShowRecentModal(true)}
+        onLoadProposal={handleLoadProposal}
+        onOpenProposalsModal={() => setShowRecentModal(true)}
         onSave={handleSaveProposal}
         onUndo={handleUndo}
         onRedo={handleRedo}

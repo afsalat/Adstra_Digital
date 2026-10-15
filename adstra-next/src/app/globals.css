@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Prevent Next.js dev indicator badge from obstructing sidebar rail buttons */
+nextjs-portal,
+#__next-build-watcher,
+[data-nextjs-dev-overlay-badge] {
+  display: none !important;
+}
+
 :root {
     --foreground-rgb: 28, 36, 48;
     --background-start-rgb: 255, 255, 255;

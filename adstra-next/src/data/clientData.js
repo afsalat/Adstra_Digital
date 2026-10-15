@@ -19,165 +19,250 @@ export default clientsList;
 
 export const predefinedServices = {
   "Digital Marketing": [
-    { description: "SEO Optimization", quantity: 1, rate: 0, gst: "18%" },
-    {
-      description: "Social Media Management",
-      quantity: 1,
-      gst: "18%",
-      rate: 0,
-    },
-    {
-      description: "Google Ads Setup & Management",
-      quantity: 1,
-      gst: "18%",
-      rate: 0,
-    },
+    { description: "Search Engine Optimization (On-page & Off-page)", quantity: 1, rate: 12000, gst: "18%" },
+    { description: "Social Media Strategy & Content Creation (12 Posts/mo)", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Google & Meta Ads Setup & Performance Optimization", quantity: 1, rate: 10000, gst: "18%" },
   ],
-  "CRM / ERP Solutions": [
-    { description: "Lead Management Module", quantity: 1, gst: "18%", rate: 0 },
-    {
-      description: "Pipeline & Automation Setup",
-      quantity: 1,
-      gst: "18%",
-      rate: 0,
-    },
+
+  "Social Media Marketing": [
+    { description: "Monthly Social Media Content Calendar (Reels, Carousels & Posts)", quantity: 1, rate: 18000, gst: "18%" },
+    { description: "Meta Ads (Instagram & Facebook) Campaign Management", quantity: 1, rate: 12000, gst: "18%" },
+    { description: "Profile Optimization (Bio, Highlights, Links, SEO)", quantity: 1, rate: 5000, gst: "18%" },
   ],
-  "Custom App Development": [
-    { description: "Backend Development", quantity: 1, gst: "18%", rate: 0 },
-    { description: "User Training", quantity: 1, gst: "18%", rate: 0 },
-    { description: "Module Integration", quantity: 1, gst: "18%", rate: 0 },
+
+  "Lead Generation & Performance Ads": [
+    { description: "High-Converting Custom Landing Page Design & Funnel Setup", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Multi-Channel Paid Ads Funnel (Meta, Google & YouTube)", quantity: 1, rate: 20000, gst: "18%" },
+    { description: "CRM Lead Automation & WhatsApp Auto-Responder Flow", quantity: 1, rate: 10000, gst: "18%" },
   ],
-  "E-Commerce Website": [
-    { description: "Product Catalog Setup", quantity: 1, gst: "18%", rate: 0 },
-    {
-      description: "Payment Gateway Integration",
-      quantity: 1,
-      gst: "18%",
-      rate: 0,
-    },
-    {
-      description: "Admin Panel & Order Management",
-      quantity: 1,
-      gst: "18%",
-      rate: 0,
-    },
-  ],
-  "Mobile App Development": [
-    { description: "Android App", quantity: 1, gst: "18%", rate: 0 },
-    { description: "iOS App", quantity: 1, gst: "18%", rate: 0 },
-    { description: "API Integration", quantity: 1, gst: "18%", rate: 0 },
-  ],
+
   "Website Design & Development": [
-    { description: "Responsive Web Design", quantity: 1, gst: "18%", rate: 0 },
-    { description: "Frontend Development", quantity: 1, gst: "18%", rate: 0 },
-    { description: "Backend Integration", quantity: 1, gst: "18%", rate: 0 },
+    { description: "UI/UX Wireframing & Responsive Custom Design", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Modern Web Frontend Development (Next.js / React)", quantity: 1, rate: 25000, gst: "18%" },
+    { description: "Backend Integration, Dynamic CMS & Speed Optimization", quantity: 1, rate: 15000, gst: "18%" },
   ],
+
+  "E-Commerce Website": [
+    { description: "E-Commerce Store Setup & Product Catalog Configuration", quantity: 1, rate: 25000, gst: "18%" },
+    { description: "Payment Gateway, Shipping API & Invoice Automation", quantity: 1, rate: 10000, gst: "18%" },
+    { description: "Admin Dashboard, Inventory Tracking & Coupon Engine", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Mobile-First Conversion Rate Optimization (CRO)", quantity: 1, rate: 10000, gst: "18%" },
+  ],
+
+  "Mobile App Development": [
+    { description: "Mobile App UI/UX Design System & Interactive Prototypes", quantity: 1, rate: 25000, gst: "18%" },
+    { description: "Cross-Platform Mobile App (Flutter / React Native - iOS & Android)", quantity: 1, rate: 65000, gst: "18%" },
+    { description: "Scalable Backend REST API & Cloud Database Architecture", quantity: 1, rate: 25000, gst: "18%" },
+    { description: "Apple App Store & Google Play Store Publishing & CI/CD", quantity: 1, rate: 10000, gst: "18%" },
+  ],
+
+  "CRM / ERP Solutions": [
+    { description: "Business Process Mapping & Architecture Consultation", quantity: 1, rate: 25000, gst: "18%" },
+    { description: "Sales Pipeline & Lead Management CRM Module", quantity: 1, rate: 35000, gst: "18%" },
+    { description: "Billing, Tax Invoicing & Inventory Management System", quantity: 1, rate: 35000, gst: "18%" },
+    { description: "User Roles, Permissions & Team Training Sessions", quantity: 1, rate: 15000, gst: "18%" },
+  ],
+
+  "Branding & Identity Design": [
+    { description: "Primary Logo Design (3 Concepts, Scalable Vectors & Color Codes)", quantity: 1, rate: 12000, gst: "18%" },
+    { description: "Brand Identity Manual (Typography, Palette & Usage Guidelines)", quantity: 1, rate: 10000, gst: "18%" },
+    { description: "Brand Stationery (Business Cards, Letterhead & Social Media Kit)", quantity: 1, rate: 8000, gst: "18%" },
+  ],
+
   "Graphic Design": [
-    { description: "Logo Design", quantity: 1, gst: "18%", rate: 0 },
-    { description: "Marketing Collaterals", quantity: 1, gst: "18%", rate: 0 },
-    { description: "Digital Design", quantity: 1, gst: "18%", rate: 0 },
+    { description: "Marketing Collateral Design (Flyers, Brochures & Pitch Decks)", quantity: 1, rate: 8000, gst: "18%" },
+    { description: "Monthly Social Media Graphics Package (15 Creatives)", quantity: 1, rate: 12000, gst: "18%" },
+    { description: "Packaging & Print Production Ready Assets", quantity: 1, rate: 10000, gst: "18%" },
   ],
-  "Project Management": [
-    { description: "planning and design", quantity: 1, gst: "18%", rate: 0 },
-    { description: "monitering and control", quantity: 1, gst: "18%", rate: 0 },
-    { description: "execution and closure", quantity: 1, gst: "18%", rate: 0 },
-  ],
-  Campaigns: [
-    { description: "PPC and SEM", quantity: 1, gst: "18%", rate: 0 },
-    { description: "Promotional Campaign", quantity: 1, gst: "18%", rate: 0 },
-    {
-      description: "Lead Generation Campaign",
-      quantity: 1,
-      gst: "18%",
-      rate: 0,
-    },
-  ],
+
   "Photoshoot & Video Production": [
-    { description: "Photoshoot", quantity: 1, rate: 0, gst: "18%" },
-    { description: "Video Production", quantity: 1, rate: 0, gst: "18%" },
+    { description: "Commercial Brand & Product Photography (Full Day Studio/Location)", quantity: 1, rate: 25000, gst: "18%" },
+    { description: "Cinematic Corporate / Promo Video Production & Direction", quantity: 1, rate: 35000, gst: "18%" },
+    { description: "Drone & 4K Aerial Videography with Licensed Pilot", quantity: 1, rate: 15000, gst: "18%" },
   ],
 
   "Video Editing & Creative Enhancements": [
-    { description: "Editing", quantity: 1, rate: 0, gst: "18%" },
-    { description: "Creative Enhancements", quantity: 1, rate: 0, gst: "18%" },
+    { description: "Social Media Reels / TikToks / Shorts Editing (Pack of 10)", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Commercial Video Post-Production, Color Grading & Sound Mix", quantity: 1, rate: 20000, gst: "18%" },
+    { description: "Custom Motion Graphics, Lower Thirds & Animated Titles", quantity: 1, rate: 10000, gst: "18%" },
+  ],
+
+  "SEO & Search Optimization": [
+    { description: "Comprehensive Technical SEO & Core Web Vitals Audit", quantity: 1, rate: 10000, gst: "18%" },
+    { description: "On-Page SEO, Content Optimization & Schema Markup", quantity: 1, rate: 12000, gst: "18%" },
+    { description: "High-Authority Backlink Acquisition & Monthly Keyword Tracking", quantity: 1, rate: 15000, gst: "18%" },
+  ],
+
+  "Content Marketing & Copywriting": [
+    { description: "SEO Blog Articles & Industry Thought Leadership (4 Articles/mo)", quantity: 1, rate: 10000, gst: "18%" },
+    { description: "High-Converting Website Copywriting (5 Core Pages)", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Email Marketing Sequences & Newsletter Campaign Setup", quantity: 1, rate: 8000, gst: "18%" },
+  ],
+
+  "Website Maintenance & AMC": [
+    { description: "High-Speed Managed Cloud Server Hosting, SSL & CDN Setup", quantity: 1, rate: 8000, gst: "18%" },
+    { description: "Monthly Security Audits, Daily Backups & Core Plugin Updates", quantity: 1, rate: 12000, gst: "18%" },
+    { description: "Dedicated Technical Support & Performance Monitoring (24/7)", quantity: 1, rate: 5000, gst: "18%" },
+  ],
+
+  "Influencer Marketing & PR": [
+    { description: "Influencer Identification, Outreach & Contract Negotiations", quantity: 1, rate: 20000, gst: "18%" },
+    { description: "Campaign Strategy, Creative Briefs & Deliverables Quality Check", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Digital PR Distribution Across Regional & National Media", quantity: 1, rate: 15000, gst: "18%" },
+  ],
+
+  "Custom App Development": [
+    { description: "Technical Architecture & System Requirements Specification", quantity: 1, rate: 20000, gst: "18%" },
+    { description: "Enterprise Core Backend Development & RESTful APIs", quantity: 1, rate: 45000, gst: "18%" },
+    { description: "Cloud Infrastructure Setup, Dockerization & CI/CD Pipeline", quantity: 1, rate: 15000, gst: "18%" },
+  ],
+
+  "Project Management": [
+    { description: "Agile Project Planning, Sprint Milestones & Scope Roadmap", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Dedicated Scrum Master, QA Testing & Weekly Progress Reports", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Production Deployment, User Handover & Training Documentation", quantity: 1, rate: 10000, gst: "18%" },
+  ],
+
+  Campaigns: [
+    { description: "High-ROI PPC Campaign Setup (Google Search & Shopping Ads)", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Seasonal Festival / Product Launch Promotional Campaign", quantity: 1, rate: 15000, gst: "18%" },
+    { description: "Full-Funnel Retargeting & Lead Generation Campaign", quantity: 1, rate: 12000, gst: "18%" },
   ],
 };
 
 export const serviceExtraDetails = {
   "Digital Marketing": `
-    Our Digital Marketing package is designed to improve your brand's online visibility and drive targeted traffic.
-    - **SEO Optimization**: On-page and off-page SEO to improve search rankings, keyword targeting, meta tags, and backlinking strategies.
-    - **Social Media Management**: Consistent posting, audience engagement, and brand voice development across major platforms (Instagram, Facebook, LinkedIn).
-    - **Google Ads Setup & Management**: Complete setup of ad campaigns, audience segmentation, A/B testing, and weekly performance reporting.
-    You’ll receive analytics dashboards, strategy consultations, and monthly performance reviews.
+    Our Digital Marketing package is engineered to accelerate brand visibility, drive qualified organic search traffic, and capture high-intent leads.
+    - **Search Engine Optimization (SEO)**: In-depth technical site audit, on-page optimization, meta tags, structured data schema, and authoritative backlink acquisition.
+    - **Social Media Marketing**: Engaging brand communication across Instagram, LinkedIn, and Facebook with monthly content calendars.
+    - **Paid Search & Display**: Targeted Google Ads and Meta ad campaigns with pixel tracking, audience segmentation, and weekly ROI reporting.
+    Deliverables include monthly performance analytics, strategic review calls, and search ranking progress tracking.
   `,
 
-  "Photoshoot & Video Production": `
-    Our Photoshoot & Video Production package is designed to professionally showcase your brand, products, or events.
-    - **Photoshoot**: High-quality photos tailored to your brand and marketing needs.
-    - **Video Production**: Cinematic video shoots from concept to capture, ensuring every frame reflects quality and creativity.
-    You’ll receive content ready for marketing, social media, and presentations.
+  "Social Media Marketing": `
+    Comprehensive social media management and creative storytelling to grow your community, improve brand loyalty, and drive conversions.
+    - **Content Production**: High-impact reels, carousel graphics, motion shorts, and promotional posts tailored to your brand identity.
+    - **Targeted Paid Advertising**: Paid ad setup on Meta (Instagram/Facebook) and YouTube to maximize reach, engagement, and click-throughs.
+    - **Social Media Optimization (SMO)**: Complete profile redesign, bio optimization, highlighted story covers, and hashtag strategy.
+    Includes weekly content scheduling, audience comment management, and actionable monthly insights.
   `,
 
-  "Video Editing & Creative Enhancements": `
-    Our Video Editing & Creative Enhancements package transforms raw footage into compelling visual stories.
-    - **Editing**: Includes transitions, subtitles, voice-overs, and branding elements.
-    - **Creative Enhancements**: Special edits for reels, promos, and social media content that stand out.
-    You’ll get polished, shareable videos that engage your audience effectively.
-  `,
-
-  "Custom App Development": `
-    Our ERP development services streamline your operations through customized, modular enterprise solutions.
-    - **Backend Development**: Scalable server-side logic using modern stacks (Node.js/Django), integrated with database architecture.
-    - **User Training**: Hands-on training sessions for your team to ensure smooth adoption and usage of ERP modules.
-    - **Module Integration**: Seamless connection of finance, HR, inventory, and custom modules with real-time syncing and reporting.
-    This includes cloud deployment, role-based access control, and long-term support.
-  `,
-
-  "Project Management": `
-    Our Project Management package is designed to ensure successful planning, execution, and closure of projects.
-    - **Planning and Design**: Define project scope, objectives, and roadmap for efficient execution.
-    - **Monitoring and Control**: Track progress, manage risks, and ensure quality standards are met.
-    - **Execution and Closure**: Implement the plan, complete deliverables, and formally close the project with reviews.
-    You’ll benefit from structured workflows, timely delivery, and optimized resource utilization.
-  `,
-
-  "CRM / ERP Solutions": `
-    Our CRM / ERP Solutions package provides custom-built systems to manage customer relationships, sales, inventory, and operations—all in one platform.
-    - **CRM Management**: Organize and manage customer relationships effectively.
-    - **ERP Implementation**: Streamline business processes including sales, inventory, and operations.
-    - **Workflow Automation**: Automate repetitive tasks for efficiency and accuracy.
-    You’ll benefit from real-time analytics, improved operational efficiency, and better decision-making.
-  `,
-  "Graphic Design": `
-    Our Graphic Design package delivers creative visual designs tailored for branding, marketing, and digital platforms.
-    - **Logo Design**: Unique and professional logos representing your brand identity.
-    - **Marketing Collaterals**: Posters, brochures, social media creatives, and more.
-    - **Digital Design**: Custom graphics for websites, social media, and online campaigns.
-    You’ll receive visually captivating designs that communicate your brand effectively.
-  `,
-
-  "E-Commerce Website": `
-    We deliver a robust and user-friendly online store optimized for performance and conversion.
-    - **Product Catalog Setup**: Organized product pages with categories, filters, descriptions, and SEO-optimized URLs.
-    - **Payment Gateway Integration**: Secure integration with Razorpay, Stripe, or PayPal, including COD options.
-    - **Admin Panel & Order Management**: Custom dashboard for managing orders, customers, inventory, discounts, and reports.
-    Includes responsive UI/UX, mobile optimization, and optional PWA support for app-like experience.
-  `,
-
-  "Mobile App Development": `
-    End-to-end development of mobile apps with pixel-perfect design and performance across Android and iOS.
-    - **Android App**: Native/Hybrid Android app with Firebase backend or REST APIs, push notifications, and material design UI.
-    - **iOS App**: Swift/React Native-based app development with Apple guidelines compliance, App Store submission support.
-    - **API Integration**: Secure connection with external services (payment, geolocation, CRMs) using RESTful APIs or GraphQL.
-    Also includes testing, performance monitoring, and deployment to Google Play & App Store.
+  "Lead Generation & Performance Ads": `
+    Data-driven, ROI-focused performance marketing designed to generate qualified business inquiries, bookings, and revenue.
+    - **Conversion-Centric Landing Pages**: High-speed, mobile-responsive landing pages crafted specifically for maximum conversion rates.
+    - **Multi-Channel Ad Campaigns**: Advanced ad targeting across Google Search, Meta, and YouTube with custom audience personas and A/B ad copy testing.
+    - **Automated Lead Management**: Direct integration with your CRM, automated email notifications, and instant WhatsApp response flows.
+    Guaranteed low Cost Per Lead (CPL) and transparent live analytics dashboard.
   `,
 
   "Website Design & Development": `
-    Clean, modern, and responsive websites tailored to your brand and goals.
-    - **Responsive Web Design**: Cross-device compatibility, pixel-perfect layout, and accessibility standards.
-    - **Frontend Development**: Built using React.js, Vue, or standard HTML/CSS with animation and interactive components.
-    - **Backend Integration**: Dynamic content handling using Node.js, PHP, or Django, with CMS or custom dashboard support.
-    Optimized for fast load times, SEO readiness, and secured hosting integration.
+    Modern, lightning-fast, and responsive web solutions tailored to elevate your business presence and drive conversions.
+    - **Custom UI/UX Architecture**: Crafted in Figma with clean wireframes, mobile-first layouts, and accessible design principles.
+    - **Cutting-Edge Development**: Developed using Next.js/React or WordPress with semantic HTML5, animations, and high security.
+    - **Search & Speed Optimization**: 95+ Google PageSpeed score, integrated schema markup, SSL encryption, and contact forms.
+    Includes domain setup, hosting configuration, cross-browser compatibility testing, and CMS training.
+  `,
+
+  "E-Commerce Website": `
+    Full-featured, conversion-optimized online store designed for seamless shopping experiences and scalable commercial operations.
+    - **Product Catalog & Categorization**: Unlimited product listings, SKU variants, inventory stock alerts, and customer review modules.
+    - **Secure Payment & Shipping**: Razorpay, Stripe, and COD integrations with automated courier logistics and tracking updates.
+    - **Comprehensive Merchant Dashboard**: Order tracking, coupon discounts, abandoned cart recovery, and tax invoice generation.
+    Mobile-optimized checkout and PWA-ready capabilities for app-like speed.
+  `,
+
+  "Mobile App Development": `
+    Enterprise-grade native and cross-platform mobile application development for iOS and Android.
+    - **Intuitive Mobile UX/UI**: Clean gesture navigation, dark/light themes, and platform-specific design guidelines.
+    - **Cross-Platform Engineering**: Single codebase Flutter/React Native development ensuring native performance, 60fps animations, and lower maintenance costs.
+    - **Backend & Cloud Architecture**: Real-time Firebase or Django REST APIs, secure user authentication, push notifications, and payment gateways.
+    Complete support for App Store and Google Play Store review, compliance, and deployment.
+  `,
+
+  "CRM / ERP Solutions": `
+    Tailor-made Enterprise Resource Planning and Customer Relationship Management platforms to unify your business operations.
+    - **Sales & Pipeline Management**: Track leads from first inquiry to closed deal with automated follow-up reminders and stage tracking.
+    - **Operational Modules**: Integrated inventory, vendor management, HR/payroll tracking, and GST billing.
+    - **Role-Based Permissions**: Granular data access, multi-branch support, and executive visual analytics dashboards.
+    Includes hands-on staff onboarding, user documentation, and long-term technical support.
+  `,
+
+  "Branding & Identity Design": `
+    Strategic brand design that transforms business concepts into memorable, recognizable, and emotionally resonant market leaders.
+    - **Core Logo Suite**: Primary, secondary, and icon mark logos with vector source files (AI, SVG, PDF, PNG) for print and digital.
+    - **Comprehensive Style Guide**: Defined color palette codes (CMYK, RGB, HEX), typography hierarchy, and brand voice rules.
+    - **Marketing Collateral Kit**: Business cards, letterhead, corporate presentation decks, and social media template kits.
+    Complete ownership transfer with high-resolution production assets.
+  `,
+
+  "Graphic Design": `
+    High-end graphic design services for print, digital advertising, and enterprise communication.
+    - **Marketing Collaterals**: Flyers, tri-fold brochures, product catalogs, roll-up banners, and corporate profiles.
+    - **Digital Campaign Assets**: Social media graphics, website hero banners, display network ad banners, and infographics.
+    - **Packaging & Print Production**: Print-ready CMYK deliverables with die-cut guidelines and material finish recommendations.
+  `,
+
+  "Photoshoot & Video Production": `
+    In-house commercial media production to capture your products, facilities, and brand stories in cinematic clarity.
+    - **Commercial Brand Photography**: High-end studio lighting, product macro photography, and on-location executive team portraits.
+    - **Cinematic Commercials & Promos**: Full HD/4K corporate films, brand manifestos, facility tours, and product demonstration videos.
+    - **Aerial & Drone Shoots**: Certified drone videography providing breathtaking perspectives of real estate, events, and venues.
+    End-to-end production including scriptwriting, storyboarding, directing, and post-production.
+  `,
+
+  "Video Editing & Creative Enhancements": `
+    Professional post-production services turning raw footage into viral, attention-grabbing visual assets.
+    - **Short-Form Content**: Fast-paced, trending edits for Instagram Reels, YouTube Shorts, and TikTok with dynamic subtitles and sound effects.
+    - **Corporate Video Finishing**: Master color grading, audio leveling, background score licensing, and motion graphics.
+    - **Visual Effects & Animation**: 3D logo reveals, title lower thirds, transitions, and product callout animations.
+  `,
+
+  "SEO & Search Optimization": `
+    Data-backed search engine optimization to establish long-term organic authority and dominate keyword rankings on Google.
+    - **Technical Architecture Fixes**: Crawl budget optimization, XML sitemaps, robots.txt, Canonical tags, and Core Web Vitals remediation.
+    - **Strategic Keyword Targeting**: High-intent commercial keywords, competitor gap analysis, and content cluster architecture.
+    - **Safe White-Hat Link Building**: Quality editorial backlinks, guest placements, local citations, and Google Business Profile optimization.
+  `,
+
+  "Content Marketing & Copywriting": `
+    Persuasive, SEO-optimized copywriting that educates prospects, establishes authority, and inspires action.
+    - **SEO Articles & Thought Leadership**: Long-form, research-backed blog posts optimized for primary and semantic keywords.
+    - **Conversion Website Copy**: Compelling headlines, value propositions, feature-benefit breakdowns, and persuasive calls-to-action.
+    - **Email Sequences**: Welcome onboarding series, lead nurture drip campaigns, and promotional broadcast templates.
+  `,
+
+  "Website Maintenance & AMC": `
+    Dedicated annual maintenance and cloud hosting support to guarantee 99.9% uptime, airtight security, and fast loading speeds.
+    - **Managed Cloud Hosting**: High-speed SSD servers, global Cloudflare CDN, auto-renewing SSL certificates, and firewall protection.
+    - **Proactive Maintenance**: Weekly CMS and plugin updates, database defragmentation, and off-site cloud backups.
+    - **Priority Bug Fixes**: Fast-response technical support for troubleshooting, layout tweaks, and content additions.
+  `,
+
+  "Influencer Marketing & PR": `
+    End-to-end influencer marketing campaigns and digital PR to build massive trust and reach targeted demographics.
+    - **Creator Matchmaking**: Selecting verified micro and macro influencers aligned with your brand niche and audience geography.
+    - **Campaign Orchestration**: Contract management, deliverable timelines, product gifting, and UTM tracking links.
+    - **Digital PR Releases**: Featured publications and news syndications across leading online media outlets.
+  `,
+
+  "Custom App Development": `
+    Full-stack custom software development addressing complex business workflows and enterprise data needs.
+    - **System Architecture**: Scalable microservices or modular monoliths utilizing Node.js, Python/Django, and PostgreSQL.
+    - **Modern Frontend Interfaces**: Responsive web applications engineered with Next.js, TypeScript, and state management.
+    - **Cloud Deployment & DevOps**: Automated CI/CD pipelines, Docker containerization, and AWS/GCP cloud setup.
+  `,
+
+  "Project Management": `
+    Professional agile project management ensuring your technology and marketing initiatives are delivered on time and within budget.
+    - **Sprint Roadmap & Milestones**: Detailed Gantt charts, user story backlogs, and risk management matrices.
+    - **Quality Assurance & Testing**: Strict functional testing, cross-device QA, and security validation before every release.
+    - **Executive Reporting**: Weekly stakeholder reviews, transparent burn-down charts, and change-request tracking.
+  `,
+
+  Campaigns: `
+    High-impact seasonal and promotional ad campaigns built to generate massive momentum for new launches and milestone sales.
+    - **Search & Display Blitz**: Multi-channel ad bursts across Google Search, Google Shopping, Meta, and YouTube.
+    - **Promo Landing Pages**: Limited-time offer pages with countdown timers, dynamic coupon codes, and high-urgency checkout flows.
+    - **Full Retargeting Funnels**: Re-engaging past visitors and cart abandoners with dynamic product ads and custom offers.
   `,
 };

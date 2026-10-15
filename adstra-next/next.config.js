@@ -10,6 +10,7 @@ const nextConfig = {
   images: { unoptimized: true },
   basePath: '',              // Optional: subfolder
   assetPrefix: '',           // Optional: CDN/subfolder
+  devIndicators: false,
   webpack: (config) => {
     config.resolve.alias['@'] = require('path').resolve(__dirname, 'src');
     return config;

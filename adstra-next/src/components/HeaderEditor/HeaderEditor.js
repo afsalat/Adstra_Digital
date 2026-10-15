@@ -1,11 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Users } from "lucide-react";
 import API_BASE_URL from "@/utils/apiBase";
 import ClientFormModal from "../ClientFormModal/ClientFormModal";
 import { useModal } from "@/Context/ModalContext";
 
-export default function HeaderEditor({ data, onChange }) {
+export default function HeaderEditor({ 
+  data, 
+  onChange, 
+  variant = "standard", 
+  selectedLead = null, 
+  onSelectLead, 
+  onClearLead 
+}) {
   const { showAlert } = useModal();
   const [clients, setClients] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -191,6 +199,78 @@ export default function HeaderEditor({ data, onChange }) {
         value={data.purpose}
         onChange={(e) => handleChange("purpose", e.target.value)}
       />
+
+      {/* Optional CRM Lead Link */}
+      <div className="mb-3 p-2.5 border rounded bg-white" style={{ borderColor: "#e2e8f0" }}>
+        <div className="d-flex justify-content-between align-items-center mb-1">
+          <label className="form-label mb-0 fw-semibold text-secondary d-flex align-items-center gap-1" style={{ fontSize: "11.5px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+            <Users size={13} style={{ color: "#4f46e5" }} />
+            <span>Source Lead</span>
+            <span className="badge rounded-pill bg-light text-muted fw-normal" style={{ fontSize: "10px" }}>Optional</span>
+          </label>
+          {selectedLead && onClearLead && (
+            <button
+              type="button"
+              className="btn btn-link text-danger p-0 text-decoration-none"
+              style={{ fontSize: "11px" }}
+              onClick={onClearLead}
+              title="Disconnect lead"
+            >
+              ✕ Disconnect
+            </button>
+          )}
+        </div>
+
+        {selectedLead ? (
+          <div className="p-2 rounded d-flex align-items-center justify-content-between" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            <div style={{ minWidth: 0, flex: 1, paddingRight: "8px" }}>
+              <div className="d-flex align-items-center gap-1.5 mb-0.5">
+                <span className="badge bg-primary" style={{ fontSize: "10.5px" }}>{selectedLead.lead_number}</span>
+                <strong style={{ fontSize: "12px", color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {selectedLead.company_name 
+                    ? (selectedLead.customer_name && selectedLead.customer_name !== selectedLead.company_name ? `${selectedLead.company_name} • ${selectedLead.customer_name}` : selectedLead.company_name)
+                    : (selectedLead.customer_name || selectedLead.contact_person || "Lead Connected")}
+                </strong>
+              </div>
+              <small className="text-muted d-block text-truncate" style={{ fontSize: "10.5px" }}>
+                {selectedLead.service || selectedLead.requirement_summary || "Client data linked from CRM"}
+              </small>
+            </div>
+            {onSelectLead && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary"
+                style={{ fontSize: "11px", height: "28px", padding: "0 8px", whiteSpace: "nowrap" }}
+                onClick={onSelectLead}
+              >
+                Change
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-between"
+            style={{ 
+              fontSize: "12px", 
+              borderStyle: "dashed", 
+              borderColor: "#cbd5e1", 
+              color: "#475569", 
+              background: "#f8fafc", 
+              height: "36px", 
+              padding: "0 10px",
+              borderRadius: "6px"
+            }}
+            onClick={onSelectLead}
+          >
+            <span className="d-flex align-items-center gap-1.5">
+              <Users size={14} />
+              <span>Link CRM Lead (Optional)</span>
+            </span>
+            <span className="badge bg-white text-primary border" style={{ fontSize: "10px" }}>+ Choose</span>
+          </button>
+        )}
+      </div>
 
       <div className="d-flex gap-2 mb-3">
         <div className="flex-grow-1 position-relative">

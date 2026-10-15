@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Proposal, ProposalRequest, ProposalService, ProposalSection, Client
+from .models import Proposal, ProposalRequest, ProposalService, ProposalSection, Client, ServicePackage, ServicePackageItem
 
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
@@ -103,5 +103,71 @@ class ProposalSerializer(serializers.ModelSerializer):
             instance.sections.all().delete() # Simple replacement strategy
             for section_data in sections_data:
                 ProposalSection.objects.create(proposal=instance, **section_data)
+
+        return instance
+
+
+class ServicePackageItemSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = ServicePackageItem
+        fields = ['id', 'description', 'quantity', 'rate', 'gst', 'order']
+
+
+class ServicePackageSerializer(serializers.ModelSerializer):
+    items = ServicePackageItemSerializer(many=True, required=False)
+    total_amount = serializers.SerializerMethodField()
+    items_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServicePackage
+        fields = [
+            'id',
+            'name',
+            'category',
+            'description',
+            'scope_details',
+            'is_active',
+            'created_at',
+            'updated_at',
+            'items',
+            'total_amount',
+            'items_count',
+        ]
+
+    def get_total_amount(self, obj):
+        return sum((item.quantity or 1) * float(item.rate or 0) for item in obj.items.all())
+
+    def get_items_count(self, obj):
+        return obj.items.count()
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items', [])
+        package = ServicePackage.objects.create(**validated_data)
+        for idx, item_data in enumerate(items_data):
+            item_data.pop('id', None)
+            ServicePackageItem.objects.create(
+                package=package,
+                order=item_data.get('order', idx),
+                **item_data
+            )
+        return package
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if items_data is not None:
+            instance.items.all().delete()
+            for idx, item_data in enumerate(items_data):
+                item_data.pop('id', None)
+                ServicePackageItem.objects.create(
+                    package=instance,
+                    order=item_data.get('order', idx),
+                    **item_data
+                )
 
         return instance

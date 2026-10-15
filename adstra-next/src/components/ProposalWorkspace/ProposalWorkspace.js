@@ -12,6 +12,7 @@ import {
   FileStack,
   Focus,
   Maximize2,
+  Minimize2,
   Minus,
   Palette,
   PanelLeftClose,
@@ -28,6 +29,10 @@ import {
   Undo2,
   Redo2,
   X,
+  Loader2,
+  Pencil,
+  Clock,
+  Layers,
 } from "lucide-react";
 import ExportButton from "../ExportButton/ExportButton";
 import HeaderEditor from "../HeaderEditor/HeaderEditor";
@@ -35,22 +40,33 @@ import ProposalPreview from "../ProposalPreview/ProposalPreview";
 import SectionEditor from "../SectionEditor/SectionEditor";
 import ServiceTable from "../ServiceTable/ServiceTable";
 import SettingsPanel from "../common/SettingsPanel";
+import RecentProposalsPanel from "./RecentProposalsPanel";
+import PackagesManagementPanel from "./PackagesManagementPanel";
 import styles from "./ProposalWorkspace.module.css";
 import API_BASE_URL from "@/utils/apiBase";
 
-const tools = [
+// Proposal crafting flow tools (Top of rail)
+const commonTools = [
   { id: "details", label: "Details", icon: BriefcaseBusiness },
-  { id: "client", label: "Client", icon: Users },
   { id: "services", label: "Services", icon: ScrollText },
   { id: "content", label: "Content", icon: Type },
+];
+
+// Master management, proposals archive, templates & brand (Bottom of rail)
+const oneTimeTools = [
+  { id: "proposals", label: "Proposals", icon: Clock },
+  { id: "packages", label: "Packages", icon: Layers },
   { id: "templates", label: "Templates", icon: FileStack },
   { id: "brand", label: "Brand", icon: Palette },
 ];
 
+const tools = [...commonTools, ...oneTimeTools];
+
 const panelMeta = {
-  details: ["Proposal details", "Reference, purpose and billing information"],
-  client: ["Lead & client", "Choose a lead and review the linked client"],
+  proposals: ["Recent proposals", "Browse, search, and manage previous proposals"],
+  details: ["Proposal details", "Reference, purpose, lead, and billing information"],
   services: ["Services & pricing", "Build the scope and commercial estimate"],
+  packages: ["Packages management", "Configure service packages, line items, and market rates"],
   content: ["Proposal content", "Write the introduction, scope and supporting sections"],
   templates: ["Document template", "Choose how the structured proposal is presented"],
   brand: ["Brand identity", "Preview the identity used on every exported proposal"],
@@ -73,25 +89,193 @@ export default function ProposalWorkspace({
   currentProposalId,
   isSaved,
   isViewMode,
+  onEditMode,
   onBack,
   onNew,
   onSelectLead,
+  onClearLead,
   onOpenProposals,
+  onLoadProposal,
+  onOpenProposalsModal,
   onSave,
   onUndo,
   onRedo,
   canUndo,
   canRedo,
 }) {
-  const [activeTool, setActiveTool] = useState("details");
+  const [activeTool, setActiveTool] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("proposal") || params.get("lead")) {
+        return "details";
+      }
+      return "proposals";
+    }
+    return "details";
+  });
   const [activeSectionId, setActiveSectionId] = useState(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [zoom, setZoom] = useState(78);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsUpdatedAt, setSettingsUpdatedAt] = useState(Date.now());
   const [clientLeads, setClientLeads] = useState([]);
   const canvasViewportRef = useRef(null);
+  const exportMenuRef = useRef(null);
+
+  // Resizable sidebar panel width
+  const [panelWidth, setPanelWidth] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("adstra_proposal_panel_width");
+        if (saved) {
+          const num = parseInt(saved, 10);
+          if (!isNaN(num) && num >= 320 && num <= 1100) return num;
+        }
+      } catch {}
+    }
+    return 480;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = useCallback((e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((e) => {
+    if (isResizing) {
+      const railWidth = 78;
+      const newWidth = e.clientX - railWidth;
+      const maxWidth = typeof window !== "undefined" ? Math.min(window.innerWidth - 300, 1100) : 1100;
+      if (newWidth >= 340 && newWidth <= maxWidth) {
+        setPanelWidth(newWidth);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("adstra_proposal_panel_width", String(newWidth));
+          } catch {}
+        }
+      }
+    }
+  }, [isResizing]);
+
+  const togglePanelWidth = useCallback(() => {
+    setPanelWidth((prev) => {
+      const next = prev >= 650 ? 480 : 750;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("adstra_proposal_panel_width", String(next));
+        } catch {}
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, resize, stopResizing]);
+
+  const [dynamicPackages, setDynamicPackages] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("adstra_cached_packages");
+        return cached ? JSON.parse(cached) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    const loadPkgs = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+        const res = await fetch(`${API_BASE_URL}/proposal/packages/?t=${Date.now()}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDynamicPackages(data);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("adstra_cached_packages", JSON.stringify(data));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load packages in ProposalWorkspace:", e);
+      }
+    };
+    loadPkgs();
+  }, []);
+
+  const handleTogglePackageFromManager = useCallback((pkg) => {
+    const serviceName = pkg.name;
+    const isCurrentlySelected = services.some((s) => s.category === serviceName);
+
+    if (!isCurrentlySelected) {
+      const servicesWithoutCategory = services.filter((s) => s.category !== serviceName);
+      const subItems = (pkg.items && pkg.items.length > 0)
+        ? pkg.items.map((it) => ({
+            description: it.description,
+            category: serviceName,
+            quantity: Number(it.quantity) || 1,
+            rate: Number(it.rate) || 0,
+            gst: parseFloat(it.gst) || 18,
+            amount: (Number(it.quantity) || 1) * (Number(it.rate) || 0),
+          }))
+        : [{
+            description: serviceName,
+            category: serviceName,
+            quantity: 1,
+            rate: Number(pkg.total_amount) || 0,
+            gst: 18,
+            amount: Number(pkg.total_amount) || 0,
+          }];
+
+      const uniqMap = new Map();
+      [...servicesWithoutCategory, ...subItems].forEach((item) => {
+        uniqMap.set(item.description, item);
+      });
+      onServicesChange(Array.from(uniqMap.values()));
+      if (onServiceSelect) onServiceSelect(serviceName, pkg);
+    } else {
+      const updatedServices = services.filter((s) => s.category !== serviceName);
+      onServicesChange(updatedServices);
+      if (onServiceUnselect) onServiceUnselect(serviceName);
+    }
+  }, [services, onServicesChange, onServiceSelect, onServiceUnselect]);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handleClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showExportMenu]);
 
   useEffect(() => {
     const viewport = canvasViewportRef.current;
@@ -295,7 +479,7 @@ export default function ProposalWorkspace({
     if (blockType === 'details' || blockType === 'purpose' || blockType === 'topbar') {
       toolToOpen = 'details';
     } else if (blockType === 'fromto') {
-      toolToOpen = 'client';
+      toolToOpen = 'details';
     } else if (blockType === 'services' || blockType === 'amount-words') {
       toolToOpen = 'services';
     } else if (blockType?.startsWith('intro-') || blockType?.startsWith('section-')) {
@@ -320,64 +504,30 @@ export default function ProposalWorkspace({
   };
 
   const panelContent = useMemo(() => {
-    if (isViewMode) return null;
-    if (activeTool === "details") {
-      return <div className={styles.detailsEditor}><HeaderEditor data={headerData} onChange={onHeaderChange} variant="workspace" /></div>;
-    }
-    if (activeTool === "client") {
+    if (activeTool === "proposals") {
       return (
-        <div className={styles.clientPanel}>
-          <div className={styles.contextCard}>
-            <div className={styles.contextIcon}><Building2 size={20} /></div>
-            <div>
-              <span className={styles.eyebrow}>Linked client</span>
-              <strong>{clientName}</strong>
-              <p>{headerData?.billTo?.address || "No billing address available"}</p>
-            </div>
-          </div>
-          {selectedLead && (
-            <div className={styles.leadCard}>
-              <span className={styles.eyebrow}>Source lead</span>
-              <strong>{selectedLead.lead_number}</strong>
-              <p>{selectedLead.company_name || selectedLead.customer_name || "Lead client"}</p>
-              <span className={styles.successLine}><Check size={14} /> Client record connected</span>
-            </div>
-          )}
-          
-          {!selectedLead && clientLeads.length === 0 && (
-            <div className={styles.emptyPanel}>
-              <Users size={28} />
-              <strong>No lead connected</strong>
-              <p>Select a lead to create or reuse its client record and autofill this proposal.</p>
-            </div>
-          )}
-
-          {clientLeads.filter(l => l.id !== selectedLead?.id).length > 0 && (
-            <div className="mt-3 mb-3">
-              <span className={styles.eyebrow} style={{display: 'block', marginBottom: '8px'}}>Client Leads ({clientLeads.filter(l => l.id !== selectedLead?.id).length})</span>
-              <div style={{maxHeight: '220px', overflowY: 'auto', paddingRight: '4px'}}>
-                {clientLeads.filter(l => l.id !== selectedLead?.id).map(lead => (
-                  <div key={lead.id} className="p-2 border rounded mb-2 bg-white shadow-sm" style={{fontSize: '0.85rem'}}>
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <strong style={{color: '#0f172a'}}>{lead.lead_number}</strong>
-                      <span className="badge rounded-pill" style={{backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.7rem', fontWeight: '500'}}>
-                        {lead.current_stage?.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <div style={{color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
-                      {lead.service || lead.product || lead.source || "General Inquiry"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <button type="button" className={styles.primaryPanelButton} onClick={onSelectLead}>
-            <Users size={17} /> {selectedLead ? "Change lead" : "Select a lead"}
-          </button>
-          <button type="button" className={styles.secondaryPanelButton} onClick={() => handleTool("details")}>
-            Edit client fields
-          </button>
+        <RecentProposalsPanel
+          currentProposalId={currentProposalId}
+          onLoadProposal={onLoadProposal}
+          onNewProposal={onNew}
+          onOpenModal={onOpenProposalsModal}
+          isViewMode={isViewMode}
+          isSaved={isSaved}
+        />
+      );
+    }
+    if (isViewMode) return null;
+    if (activeTool === "details" || activeTool === "client") {
+      return (
+        <div className={styles.detailsEditor}>
+          <HeaderEditor
+            data={headerData}
+            onChange={onHeaderChange}
+            variant="workspace"
+            selectedLead={selectedLead}
+            onSelectLead={onSelectLead}
+            onClearLead={onClearLead}
+          />
         </div>
       );
     }
@@ -388,6 +538,17 @@ export default function ProposalWorkspace({
           onChange={onServicesChange}
           onServiceSelect={onServiceSelect}
           onServiceUnselect={onServiceUnselect}
+          packages={dynamicPackages}
+          onOpenPackageManagement={() => handleTool("packages")}
+        />
+      );
+    }
+    if (activeTool === "packages") {
+      return (
+        <PackagesManagementPanel
+          selectedPackageNames={Array.from(new Set(services.map((s) => s.category).filter(Boolean)))}
+          onTogglePackage={handleTogglePackageFromManager}
+          onPackagesUpdated={(pkgs) => setDynamicPackages(pkgs)}
         />
       );
     }
@@ -450,10 +611,125 @@ export default function ProposalWorkspace({
         </button>
       </div>
     );
-  }, [activeTool, clientName, headerData, isViewMode, onAddSection, onHeaderChange, onSectionChange, onSectionRemove, onSelectLead, onServiceSelect, onServiceUnselect, onServicesChange, sections, selectedLead, services]);
+  }, [activeTool, clientName, currentProposalId, headerData, isSaved, isViewMode, onLoadProposal, onNew, onOpenProposalsModal, onAddSection, onHeaderChange, onSectionChange, onSectionRemove, onSelectLead, onClearLead, onServiceSelect, onServiceUnselect, onServicesChange, sections, selectedLead, services, clientLeads]);
+
+  const handleDownloadPdf = async () => {
+    setShowExportMenu(false);
+    const element = document.getElementById("proposal-preview-pdf");
+    if (!element) return;
+
+    const wrapper = element.parentElement;
+    const originalVisibility = wrapper ? wrapper.style.visibility : "";
+    if (wrapper) wrapper.style.visibility = "visible";
+
+    try {
+      setIsDownloading(true);
+      const html2pdf = (await import("html2pdf.js")).default;
+      const pdfFileName = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+      await html2pdf().set({
+        margin: 0,
+        filename: pdfFileName,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      }).from(element).save();
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+    } finally {
+      if (wrapper) wrapper.style.visibility = originalVisibility;
+      setIsDownloading(false);
+    }
+  };
+
+  const handlePrint = () => {
+    setShowExportMenu(false);
+    window.print();
+  };
+
+  const handleShare = async () => {
+    setShowExportMenu(false);
+    if (navigator.share) {
+      try {
+        let fileToShare = null;
+        const pdfFileName = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+
+        const element = document.getElementById("proposal-preview-pdf");
+        if (element) {
+          const wrapper = element.parentElement;
+          const originalVisibility = wrapper ? wrapper.style.visibility : "";
+          if (wrapper) wrapper.style.visibility = "visible";
+          try {
+            const html2pdf = (await import("html2pdf.js")).default;
+            const pdfBlob = await html2pdf().set({
+              margin: 0,
+              filename: pdfFileName,
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true },
+              jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            }).from(element).output("blob");
+
+            if (pdfBlob) {
+              fileToShare = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
+            }
+          } catch (e) {
+            console.error("Failed to generate PDF for sharing:", e);
+          } finally {
+            if (wrapper) wrapper.style.visibility = originalVisibility;
+          }
+        }
+
+        const shareData = {
+          title: `Proposal: ${identity}`,
+          text: `Check out this proposal for ${clientName}`,
+        };
+
+        if (fileToShare && navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
+          shareData.files = [fileToShare];
+        } else {
+          shareData.url = window.location.href;
+        }
+
+        await navigator.share(shareData);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Error sharing:", err);
+        }
+      }
+    } else {
+      alert("Native sharing is not supported on your browser. Please use 'Copy Link' instead.");
+    }
+  };
+
+  const handleCopyLink = () => {
+    setShowExportMenu(false);
+    navigator.clipboard.writeText(window.location.href);
+    alert("Link copied to clipboard!");
+  };
+
+  const renderExportMenu = () => (
+    <div className={styles.exportDropdownMenu}>
+      <button type="button" onClick={handleDownloadPdf} disabled={isDownloading}>
+        {isDownloading ? <Loader2 size={14} className={styles.spin} /> : <Download size={14} />}
+        <span>{isDownloading ? "Generating PDF..." : "Download PDF"}</span>
+      </button>
+      <button type="button" onClick={handlePrint}>
+        <Printer size={14} /> <span>Print</span>
+      </button>
+      <button type="button" onClick={handleShare}>
+        <Share2 size={14} /> <span>Share Socials</span>
+      </button>
+      <button type="button" onClick={handleCopyLink}>
+        <Copy size={14} /> <span>Copy Link</span>
+      </button>
+    </div>
+  );
 
   return (
-    <main ref={workspaceRef} className={`${styles.workspace} proposal-workspace`}>
+    <main
+      ref={workspaceRef}
+      className={`${styles.workspace} proposal-workspace`}
+      style={{ "--panel-width": `${panelWidth}px` }}
+    >
       <header className={`${styles.commandBar} d-print-none`}>
         <div className={styles.commandStart}>
           <button type="button" className={styles.iconCommand} onClick={onBack} title="Back" aria-label="Back">
@@ -472,15 +748,39 @@ export default function ProposalWorkspace({
         </div>
 
         <div className={styles.commandActions}>
-          {!isViewMode && (
-            <button type="button" className={styles.commandButton} onClick={onSelectLead}>
-              <Users size={17} /><span>{selectedLead ? "Change lead" : "Select lead"}</span>
-            </button>
-          )}
-          <button type="button" className={styles.commandButton} onClick={onOpenProposals}>
-            <FileStack size={17} /><span>Proposals</span>
-          </button>
-          {!isViewMode && (
+          {isViewMode ? (
+            <>
+              {onEditMode && (
+                <button type="button" className={styles.commandButton} onClick={onEditMode} title="Edit Proposal">
+                  <Pencil size={17} /><span>Edit</span>
+                </button>
+              )}
+              <span className={styles.commandDivider} />
+              <div ref={exportMenuRef} className={styles.saveButtonGroup} style={{ position: "relative" }}>
+                <button 
+                  type="button" 
+                  className={styles.saveButton} 
+                  onClick={handleDownloadPdf} 
+                  disabled={isDownloading}
+                  aria-label="Download PDF"
+                  title="Download PDF"
+                >
+                  {isDownloading ? <Loader2 size={16} className={styles.spin} /> : <Download size={16} />}
+                  <span>{isDownloading ? "Downloading..." : "Download PDF"}</span>
+                </button>
+                <button 
+                  type="button" 
+                  className={styles.saveButtonDropdownBtn} 
+                  onClick={() => setShowExportMenu((prev) => !prev)}
+                  aria-label="Export options"
+                  title="More export options"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                {showExportMenu && renderExportMenu()}
+              </div>
+            </>
+          ) : (
             <>
               <span className={styles.commandDivider} />
               
@@ -511,118 +811,20 @@ export default function ProposalWorkspace({
                 {isSaved ? <><Check size={14} /> Saved</> : "Unsaved changes"}
               </span>
               
-              <div className={styles.saveButtonGroup}>
+              <div ref={exportMenuRef} className={styles.saveButtonGroup} style={{ position: "relative" }}>
                 <button type="button" className={styles.saveButton} onClick={onSave} aria-label={currentProposalId ? "Update proposal" : "Save proposal"}>
                   <Save size={17} /> <span>{currentProposalId ? "Update" : "Save proposal"}</span>
                 </button>
-                {isSaved && (
-                  <button 
-                    type="button" 
-                    className={styles.saveButtonDropdownBtn} 
-                    onClick={() => setShowExportMenu(!showExportMenu)}
-                    aria-label="Export options"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                  </button>
-                )}
-                {isSaved && showExportMenu && (
-                  <div className={styles.exportDropdownMenu}>
-                    <button onClick={async () => {
-                      setShowExportMenu(false);
-                      const element = document.getElementById("proposal-preview-pdf");
-                      if (!element) return;
-                      
-                      // html2canvas ignores visibility: hidden elements, so we temporarily make it visible.
-                      // Since it's positioned at left: -9999px, it won't flash on the screen.
-                      const wrapper = element.parentElement;
-                      const originalVisibility = wrapper.style.visibility;
-                      wrapper.style.visibility = 'visible';
-                      
-                      try {
-                        const html2pdf = (await import("html2pdf.js")).default;
-                        const pdfFileName = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
-                        await html2pdf().set({
-                          margin: 0,
-                          filename: pdfFileName,
-                          image: { type: "jpeg", quality: 0.98 },
-                          html2canvas: { scale: 2, useCORS: true },
-                          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                        }).from(element).save();
-                      } finally {
-                        // Always restore the original visibility
-                        wrapper.style.visibility = originalVisibility;
-                      }
-                    }}>
-                      <Download size={14}/> Download PDF
-                    </button>
-                    <button onClick={() => { setShowExportMenu(false); window.print(); }}>
-                      <Printer size={14}/> Print
-                    </button>
-                    <button onClick={async () => { 
-                      setShowExportMenu(false); 
-                      if (navigator.share) {
-                        try {
-                          let fileToShare = null;
-                          const pdfFileName = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
-                          
-                          // Try to generate the PDF file for sharing
-                          const element = document.getElementById("proposal-preview-pdf");
-                          if (element) {
-                            const wrapper = element.parentElement;
-                            const originalVisibility = wrapper.style.visibility;
-                            wrapper.style.visibility = 'visible';
-                            try {
-                              const html2pdf = (await import("html2pdf.js")).default;
-                              const pdfBlob = await html2pdf().set({
-                                margin: 0,
-                                filename: pdfFileName,
-                                image: { type: "jpeg", quality: 0.98 },
-                                html2canvas: { scale: 2, useCORS: true },
-                                jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                              }).from(element).output('blob');
-                              
-                              if (pdfBlob) {
-                                fileToShare = new File([pdfBlob], pdfFileName, { type: "application/pdf" });
-                              }
-                            } catch (e) {
-                              console.error("Failed to generate PDF for sharing:", e);
-                            } finally {
-                              wrapper.style.visibility = originalVisibility;
-                            }
-                          }
-
-                          const shareData = {
-                            title: `Proposal: ${identity}`,
-                            text: `Check out this proposal for ${clientName}`,
-                          };
-
-                          // If we successfully created the file, and the browser supports sharing files
-                          if (fileToShare && navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
-                            shareData.files = [fileToShare];
-                          } else {
-                            // Fallback to sharing the link if file sharing isn't supported
-                            shareData.url = window.location.href;
-                          }
-
-                          await navigator.share(shareData);
-                        } catch (err) {
-                          console.error("Error sharing:", err);
-                        }
-                      } else {
-                        alert("Native sharing is not supported on your browser. Please use 'Copy Link' instead.");
-                      }
-                    }}>
-                      <Share2 size={14}/> Share Socials
-                    </button>
-                    <button onClick={() => {
-                      setShowExportMenu(false);
-                      navigator.clipboard.writeText(window.location.href);
-                      alert("Link copied to clipboard!");
-                    }}>
-                      <Copy size={14}/> Copy Link
-                    </button>
-                  </div>
-                )}
+                <button 
+                  type="button" 
+                  className={styles.saveButtonDropdownBtn} 
+                  onClick={() => setShowExportMenu((prev) => !prev)}
+                  aria-label="Export options"
+                  title="Export options"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                {showExportMenu && renderExportMenu()}
               </div>
             </>
           )}
@@ -630,41 +832,93 @@ export default function ProposalWorkspace({
       </header>
 
       <div className={styles.workspaceBody}>
-        {!isViewMode && (
+        {(!isViewMode || panelOpen) && (
           <nav className={`${styles.toolRail} d-print-none`} aria-label="Proposal tools">
-            <div className={styles.toolStack}>
-              {tools.map(({ id, label, icon: Icon }) => (
+            {/* Top section: Common daily proposal crafting tools */}
+            <div className={styles.toolStack} aria-label="Common editing tools">
+              {commonTools.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
                   className={`${styles.toolButton} ${activeTool === id && panelOpen ? styles.toolButtonActive : ""}`}
                   onClick={() => handleTool(id)}
                   aria-pressed={activeTool === id && panelOpen}
+                  title={label}
                 >
-                  <Icon size={20} strokeWidth={1.9} /><span>{label}</span>
+                  <Icon size={18} strokeWidth={1.8} /><span>{label}</span>
                 </button>
               ))}
             </div>
-            <button type="button" className={styles.toolButton} onClick={onOpenProposals}>
-              <FileStack size={20} /><span>Proposals</span>
-            </button>
+
+            {/* Bottom section: One-time setup / master management tools */}
+            <div className={styles.toolStackBottom} aria-label="Setup and configuration tools">
+              <div className={styles.toolRailDivider} />
+              {oneTimeTools.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`${styles.toolButton} ${activeTool === id && panelOpen ? styles.toolButtonActive : ""}`}
+                  onClick={() => handleTool(id)}
+                  aria-pressed={activeTool === id && panelOpen}
+                  title={label}
+                >
+                  <Icon size={18} strokeWidth={1.8} /><span>{label}</span>
+                </button>
+              ))}
+            </div>
           </nav>
         )}
 
-        {!isViewMode && panelOpen && (
-          <aside className={`${styles.editorPanel} d-print-none`}>
+        {panelOpen && (!isViewMode || activeTool === "proposals") && (
+          <aside
+            className={`${styles.editorPanel} d-print-none`}
+            style={{ width: `${panelWidth}px` }}
+          >
             <div className={styles.panelHeader}>
-              <div><h1>{panelMeta[activeTool][0]}</h1><p>{panelMeta[activeTool][1]}</p></div>
-              <button type="button" onClick={() => setPanelOpen(false)} aria-label="Close editing panel"><PanelLeftClose size={19} /></button>
+              <div>
+                <h1>{panelMeta[activeTool]?.[0] || "Recent proposals"}</h1>
+                <p>{panelMeta[activeTool]?.[1] || ""}</p>
+              </div>
+              <div className={styles.panelHeaderActions}>
+                <button
+                  type="button"
+                  onClick={togglePanelWidth}
+                  title={panelWidth >= 650 ? "Standard width (480px)" : "Wide view (750px)"}
+                  aria-label={panelWidth >= 650 ? "Restore standard width" : "Expand panel width"}
+                >
+                  {panelWidth >= 650 ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPanelOpen(false)}
+                  aria-label="Close editing panel"
+                  title="Collapse panel"
+                >
+                  <PanelLeftClose size={19} />
+                </button>
+              </div>
             </div>
-            <div className={styles.panelScroll}>{panelContent}</div>
+            <div className={styles.panelScroll}>
+              {panelContent}
+            </div>
+
+            {/* Draggable resize handle on right border */}
+            <div
+              className={`${styles.resizeHandle} ${isResizing ? styles.resizeHandleActive : ""}`}
+              onMouseDown={startResizing}
+              title="Drag right or left to adjust panel width"
+              role="separator"
+              aria-orientation="vertical"
+            >
+              <div className={styles.resizeHandleGrip} />
+            </div>
           </aside>
         )}
 
         <section ref={stageRef} className={`${styles.canvasStage} ${isViewMode ? styles.canvasViewMode : ""}`}>
-          {!isViewMode && !panelOpen && (
+          {!panelOpen && (
             <button type="button" className={`${styles.openPanel} d-print-none`} onClick={() => setPanelOpen(true)}>
-              <PanelLeftOpen size={18} /> Open editor
+              <PanelLeftOpen size={18} /> {isViewMode ? "Open panel" : "Open editor"}
             </button>
           )}
           {isViewMode && <span className={`${styles.viewBadge} d-print-none`}>View only</span>}
@@ -722,6 +976,24 @@ export default function ProposalWorkspace({
             <i />
             <button type="button" onClick={fitPage} title="Fit page" aria-label="Fit page"><Focus size={17} /></button>
             <button type="button" onClick={toggleFullscreen} title="Fullscreen" aria-label="Fullscreen"><Maximize2 size={17} /></button>
+            <i />
+            <button 
+              type="button" 
+              onClick={handleDownloadPdf} 
+              disabled={isDownloading} 
+              title="Download PDF" 
+              aria-label="Download PDF"
+            >
+              {isDownloading ? <Loader2 size={17} className={styles.spin} /> : <Download size={17} />}
+            </button>
+            <button 
+              type="button" 
+              onClick={handlePrint} 
+              title="Print" 
+              aria-label="Print"
+            >
+              <Printer size={17} />
+            </button>
           </div>
         </section>
       </div>

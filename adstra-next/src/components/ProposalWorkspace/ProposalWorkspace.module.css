@@ -1,7 +1,7 @@
 .workspace {
   --command-height: 60px;
   --rail-width: 78px;
-  --panel-width: 420px;
+  --panel-width: 450px;
   width: 100%;
   min-height: 100vh;
   height: 100dvh;
@@ -143,17 +143,68 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 10px 7px 9px;
+  padding: 8px 6px 20px;
   color: #c6cbd8;
   background: #171a22;
   border-right: 1px solid #2a2e3a;
   box-shadow: 5px 0 18px rgba(0,0,0,.14);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  box-sizing: border-box;
+}
+.toolRail::-webkit-scrollbar {
+  display: none;
 }
 
-.toolStack { display: grid; gap: 3px; }
-.toolButton { width: 100%; min-height: 58px; border: 0; border-radius: 7px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #afb6c7; background: transparent; cursor: pointer; font-size: 10.5px; transition: color .15s ease, background .15s ease; }
+.toolStack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.toolStackBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: auto;
+  flex-shrink: 0;
+  padding-bottom: 6px;
+}
+.toolRailDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 6px 4px 8px;
+  flex-shrink: 0;
+}
+.toolButton {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  border: 0;
+  border-radius: 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5px;
+  color: #afb6c7;
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.15;
+  transition: color .15s ease, background .15s ease, box-shadow .15s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
 .toolButton:hover { color: #fff; background: #242834; }
-.toolButtonActive { color: #fff; background: linear-gradient(145deg, #294cc6, #613fd1); box-shadow: 0 7px 15px rgba(42,57,173,.26); }
+.toolButtonActive {
+  color: #fff;
+  background: linear-gradient(145deg, #294cc6, #613fd1);
+  box-shadow: 0 4px 12px rgba(42,57,173,.28);
+}
 .toolButton:focus-visible { outline: 2px solid #6ed3ff; outline-offset: -2px; }
 
 .editorPanel {
@@ -161,9 +212,7 @@
   z-index: 20;
   width: var(--panel-width);
   min-width: 320px;
-  max-width: 800px;
-  resize: horizontal;
-  overflow: hidden; /* required for resize */
+  max-width: 1100px;
   flex-shrink: 0;
   height: 100%;
   display: flex;
@@ -171,15 +220,93 @@
   background: #f7f8fb;
   border-right: 1px solid #d9dde7;
   box-shadow: 10px 0 28px rgba(0,0,0,.19);
+  user-select: auto;
 }
 
-.panelHeader { min-height: 86px; padding: 17px 18px 14px 20px; display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #dfe2e9; background: #fff; }
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: none;
+}
+
+.resizeHandleGrip {
+  width: 4px;
+  height: 48px;
+  border-radius: 4px;
+  background: #cbd5e1;
+  transition: all 0.15s ease;
+}
+
+.resizeHandle:hover .resizeHandleGrip,
+.resizeHandleActive .resizeHandleGrip {
+  background: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+  height: 72px;
+}
+
+.resizeHandleActive {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.panelHeader {
+  min-height: 86px;
+  padding: 17px 18px 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid #dfe2e9;
+  background: #fff;
+}
 .panelHeader h1 { margin: 0; color: #172033; font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
 .panelHeader p { margin: 4px 0 0; color: #70798d; font-size: 11.5px; line-height: 1.4; }
-.panelHeader button { flex: 0 0 32px; height: 32px; border: 1px solid #e0e3eb; border-radius: 6px; display: grid; place-items: center; color: #667085; background: #fff; cursor: pointer; }
-.panelHeader button:hover { color: #294cc6; background: #f2f5ff; }
 
-.panelScroll { flex: 1; min-height: 0; overflow: auto; padding: 18px; scrollbar-color: #bbc1ce transparent; scrollbar-width: thin; }
+.panelHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.panelHeaderActions button,
+.panelHeader button {
+  flex: 0 0 32px;
+  height: 32px;
+  border: 1px solid #e0e3eb;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: #667085;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.panelHeaderActions button:hover,
+.panelHeader button:hover {
+  color: #294cc6;
+  background: #f2f5ff;
+  border-color: #c7d2fe;
+}
+
+.panelScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 18px 24px;
+  box-sizing: border-box;
+  scrollbar-color: #bbc1ce transparent;
+  scrollbar-width: thin;
+}
 .panelScroll :global(.form-control), .panelScroll :global(.form-select) { border-color: #d6dae4; border-radius: 6px; font-size: 13px; box-shadow: none; }
 .panelScroll :global(.form-control:focus), .panelScroll :global(.form-select:focus) { border-color: #526ce5; box-shadow: 0 0 0 3px rgba(82,108,229,.12); }
 .panelScroll :global(h5) { color: #25304a !important; font-size: 14px; }
@@ -374,7 +501,9 @@
   .workspace { height: auto; min-height: 100dvh; overflow: visible; --rail-width: 0px; }
   .workspaceBody { height: calc(100dvh - var(--command-height)); }
   .toolRail { position: absolute; bottom: 0; left: 0; right: 0; z-index: 90; width: 100%; height: 62px; padding: 4px; flex-direction: row; background: #171a22; border: 0; border-top: 1px solid #343846; }
-  .toolStack { flex: 1; display: flex; overflow-x: auto; }
+  .toolStack { display: flex; overflow-x: auto; }
+  .toolStackBottom { display: flex; overflow-x: auto; margin-top: 0; }
+  .toolRailDivider { width: 1px; height: 32px; margin: auto 4px; }
   .toolButton { min-width: 58px; min-height: 52px; }
   .toolRail > .toolButton { display: none; }
   .editorPanel { left: 0; width: 100%; bottom: 62px; }
@@ -413,3 +542,17 @@
     z-index: 9999;
   }
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+

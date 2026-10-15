@@ -49,9 +49,9 @@ export default function ProposalPreview({
   let totalGST = 0;
 
   services.forEach((item) => {
-    const qty = parseFloat(item.quantity || 1);
-    const rate = parseFloat(item.rate || 0);
-    const gstRate = parseFloat(item.gst || "18");
+    const qty = Number(item.quantity) || 1;
+    const rate = Number(item.rate) || 0;
+    const gstRate = Number(item.gst) || 18;
     const baseAmount = qty * rate;
     const gstAmount = (baseAmount * gstRate) / 100;
 

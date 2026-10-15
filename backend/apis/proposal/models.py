@@ -82,6 +82,37 @@ class ProposalService(models.Model):
     gst = models.DecimalField(max_digits=5, decimal_places=2, default=0, null=True, blank=True)
 
 
+class ServicePackage(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    category = models.CharField(max_length=100, blank=True, default="General")
+    description = models.TextField(blank=True, default="")
+    scope_details = models.TextField(blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class ServicePackageItem(models.Model):
+    package = models.ForeignKey(ServicePackage, on_delete=models.CASCADE, related_name='items')
+    description = models.CharField(max_length=500)
+    quantity = models.IntegerField(default=1)
+    rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    gst = models.DecimalField(max_digits=5, decimal_places=2, default=18)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f"{self.description} ({self.package.name})"
+
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

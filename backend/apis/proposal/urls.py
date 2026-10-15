@@ -3,6 +3,7 @@ from .views import (
     create_client, create_client_from_lead, create_proposal, delete_client, delete_proposal,
     eligible_leads, list_clients, list_proposals, my_proposals, proposal_requests,
     next_proposal_no, proposal_detail, update_client, update_proposal,
+    list_packages, create_package, update_package, delete_package, reset_packages,
 )
 
 urlpatterns = [
@@ -21,4 +22,11 @@ urlpatterns = [
     path('clients/from-lead/<int:lead_id>/', create_client_from_lead, name='create-client-from-lead'),
     path('clients/update/<int:pk>/', update_client, name='update_client'),
     path('clients/delete/<int:pk>/', delete_client, name='delete_client'),
+
+    # Dynamic Service Packages
+    path('packages/', list_packages, name='list-packages'),
+    path('packages/create/', create_package, name='create-package'),
+    path('packages/update/<int:pk>/', update_package, name='update-package'),
+    path('packages/delete/<int:pk>/', delete_package, name='delete-package'),
+    path('packages/reset/', reset_packages, name='reset-packages'),
 ]

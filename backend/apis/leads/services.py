@@ -479,39 +479,71 @@ class LeadQuotationService:
             year = timezone.localdate().year
             proposal_no = data.get("proposal_no") or f"AD/{year}/LEAD-{locked.id}"
             total = Decimal(str(data.get("total_amount") or locked.estimated_value or "0"))
-            client = locked.customer
+
+            client_company = " ".join(str(data.get("company_name") or locked.company_name or "").split()).strip()
+            client_name = str(data.get("client_name") or data.get("name") or locked.customer_name or locked.contact_person or client_company or "Lead customer").strip()
+            client_address = str(data.get("address") or locked.address or "").strip()
+            client_email = str(data.get("email") or locked.email or "").strip().lower()
+            raw_contact = str(data.get("contact") or locked.phone or locked.whatsapp_number or "").strip()
+            client_contact = ""
+            if raw_contact:
+                try:
+                    client_contact = normalize_phone(raw_contact)
+                except ValidationError:
+                    client_contact = raw_contact
+            client_gstin = str(data.get("gstin") or "").strip().upper() or None
+            client_lut = str(data.get("lut") or "").strip() or None
+
             client_id = data.get("client_id")
+            client = None
             if client_id:
                 try:
                     client = Client.objects.select_for_update().get(pk=client_id)
                 except Client.DoesNotExist as exc:
                     raise ValidationError({"client_id": "Client not found."}) from exc
-            elif client is None:
-                matches = DuplicateCustomerMatchingService.for_lead(
-                    locked,
-                    gstin=data.get("gstin", ""),
+            elif locked.customer_id:
+                client = locked.customer
+            else:
+                matches = DuplicateCustomerMatchingService.find(
+                    phone=client_contact,
+                    email=client_email,
+                    company_name=client_company,
+                    gstin=client_gstin or "",
                 )
-                if matches and not data.get("confirm_create_client"):
-                    raise DuplicateCustomerError(matches)
-                phone = ""
-                if locked.phone or locked.whatsapp_number:
-                    phone = normalize_phone(locked.phone or locked.whatsapp_number)
-                client = Client(
-                    company_name=" ".join((locked.company_name or "").split()) or None,
-                    name=locked.customer_name or locked.contact_person or locked.company_name or "Lead customer",
-                    address=locked.address or None,
-                    gstin=str(data.get("gstin") or "").strip().upper() or None,
-                    lut=str(data.get("lut") or "").strip() or None,
-                    email=(locked.email or "").strip().lower() or None,
-                    contact=phone or None,
-                )
-                client.full_clean()
-                client.save()
+                if matches:
+                    client = Client.objects.select_for_update().get(pk=matches[0]["id"])
+                else:
+                    client = Client.objects.create(
+                        company_name=client_company or None,
+                        name=client_name or "Lead customer",
+                        address=client_address or None,
+                        gstin=client_gstin,
+                        lut=client_lut,
+                        email=client_email or None,
+                        contact=client_contact or None,
+                    )
+
+            # Keep client company table updated with any edited contact info
+            client_updates = []
+            for field, val in [
+                ("company_name", client_company or None),
+                ("name", client_name or "Lead customer"),
+                ("address", client_address or None),
+                ("email", client_email or None),
+                ("contact", client_contact or None),
+                ("gstin", client_gstin),
+                ("lut", client_lut),
+            ]:
+                if val is not None and getattr(client, field) != val:
+                    setattr(client, field, val)
+                    client_updates.append(field)
+            if client_updates:
+                client.save(update_fields=client_updates)
 
             proposal = Proposal(
                 proposal_no=proposal_no,
-                reference=locked.lead_number,
-                company_name=data.get("company_name") or locked.company_name,
+                reference=data.get("reference") or locked.lead_number,
+                company_name=client_company or client.company_name or locked.company_name,
                 purpose=data.get("purpose") or locked.requirement_summary or locked.product or locked.service,
                 total_amount=total,
                 total_in_words=data.get("total_in_words") or "",
@@ -543,10 +575,27 @@ class LeadQuotationService:
                 )
                 section.full_clean()
                 section.save()
+            
+            locked_updates = ["customer", "quotation", "updated_at"]
             if locked.customer_id != client.id:
                 locked.customer = client
             locked.quotation = proposal
-            locked.save(update_fields=["customer", "quotation", "updated_at"])
+            if client_company and not locked.company_name:
+                locked.company_name = client_company
+                locked_updates.append("company_name")
+            if client_name and not locked.customer_name:
+                locked.customer_name = client_name
+                locked_updates.append("customer_name")
+            if client_email and not locked.email:
+                locked.email = client_email
+                locked_updates.append("email")
+            if client_contact and not locked.phone:
+                locked.phone = client_contact
+                locked_updates.append("phone")
+            if client_address and not locked.address:
+                locked.address = client_address
+                locked_updates.append("address")
+            locked.save(update_fields=locked_updates)
             if hasattr(locked, "proposal_request"):
                 locked.proposal_request.status = "completed"
                 locked.proposal_request.save(update_fields=["status", "updated_at"])

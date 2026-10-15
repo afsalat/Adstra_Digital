@@ -28,7 +28,7 @@ def convert_inbox_to_crm_lead(inbox_message, user=None, custom_data=None):
     handle_info = f"Captured from {inbox_message.platform.upper()} handle: @{inbox_message.sender_handle}" if inbox_message.sender_handle else ""
 
     lead = Lead.objects.create(
-        customer=crm_client,
+        customer=None,
         customer_name=customer_name,
         contact_person=customer_name,
         phone=phone,
