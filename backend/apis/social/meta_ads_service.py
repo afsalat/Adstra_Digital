@@ -10,6 +10,7 @@ import os
 import json
 import logging
 import time
+import datetime
 from datetime import timedelta
 from django.utils import timezone
 
@@ -42,9 +43,10 @@ def _graph(method: str, path: str, token: str, **kwargs):
     Unpacks Meta's exact error message on HTTP failures.
     Automatically JSON-encodes nested dicts/lists in kwargs['data'].
     """
-    url = f'{META_GRAPH_BASE}/{path}'
+    url = path if path.startswith('http') else f'{META_GRAPH_BASE}/{path}'
     kwargs.setdefault('params', {})
-    kwargs['params']['access_token'] = token
+    if 'access_token' not in kwargs['params'] and token:
+        kwargs['params']['access_token'] = token
 
     # Auto JSON-encode nested dict or list fields in data payload
     if 'data' in kwargs and isinstance(kwargs['data'], dict):
@@ -91,6 +93,23 @@ def _graph(method: str, path: str, token: str, **kwargs):
                 raise
             time.sleep(2 ** attempt)
     raise RuntimeError("Meta API request failed after 3 attempts")
+
+
+def _graph_paginate(path: str, token: str, params: dict = None, max_pages: int = 5) -> list:
+    """Fetch paginated data from Meta Graph API, following paging.next up to max_pages."""
+    all_data = []
+    current_path = path
+    current_params = dict(params or {})
+    for _ in range(max_pages):
+        resp = _graph('get', current_path, token, params=current_params)
+        data = resp.get('data', [])
+        all_data.extend(data)
+        next_url = resp.get('paging', {}).get('next')
+        if not next_url:
+            break
+        current_path = next_url
+        current_params = None  # next_url already includes all query params
+    return all_data
 
 
 def is_sandbox_mode(connection, token: str) -> bool:
@@ -232,6 +251,27 @@ def _get_fallback_page_post_id(connection, page_id: str, page_access_token: str 
     return ""
 
 
+def _get_or_create_pixel(ad_account_id: str, token: str) -> str:
+    """Fetch an existing pixel for the ad account, or create one if none exists."""
+    clean_acc_id = ad_account_id if str(ad_account_id).startswith('act_') else f"act_{ad_account_id}"
+    try:
+        resp = _graph('get', f'{clean_acc_id}/adspixels', token, params={'fields': 'id,name'})
+        pixels = resp.get('data', [])
+        if pixels and pixels[0].get('id'):
+            return str(pixels[0]['id'])
+    except Exception as e:
+        logger.debug("Failed fetching adspixels for %s: %s", clean_acc_id, e)
+
+    try:
+        created = _graph('post', f'{clean_acc_id}/adspixels', token, data={'name': 'Adstra Pixel'})
+        if created and created.get('id'):
+            return str(created['id'])
+    except Exception as e:
+        logger.debug("Failed creating adspixel for %s: %s", clean_acc_id, e)
+
+    return ""
+
+
 # ─── Campaign Publishing ────────────────────────────────────────────────────────
 
 def publish_campaign(connection, campaign, campaign_platform, desired_status: str = 'ACTIVE') -> dict:
@@ -315,19 +355,27 @@ def publish_campaign(connection, campaign, campaign_platform, desired_status: st
         _log_step(campaign_platform, f'Creating Meta Ad Set ({desired_status})')
         targeting = _build_targeting(campaign)
         daily_budget_paise = int(float(campaign.budget or 500) * 100)
+        opt_goal = _get_optimization_goal(campaign.objective)
         adset_post_data = {
             'name': f'{campaign.name} - Ad Set',
             'campaign_id': result['meta_campaign_id'],
             'daily_budget': max(daily_budget_paise, 10000),  # min 100 INR/day = 10000 paise
             'billing_event': 'IMPRESSIONS',
-            'optimization_goal': _get_optimization_goal(campaign.objective),
+            'optimization_goal': opt_goal,
             'bid_strategy': 'LOWEST_COST_WITHOUT_CAP',
             'targeting': targeting,
             'status': desired_status,
         }
 
-        # Promoted object required by Meta Marketing API v21.0 for leads, awareness, engagement
-        if page_id and objective in ('OUTCOME_LEADS', 'OUTCOME_ENGAGEMENT', 'OUTCOME_AWARENESS'):
+        # Promoted object required by Meta Marketing API v21.0
+        if objective == 'OUTCOME_SALES':
+            pixel_id = _get_or_create_pixel(ad_account_id, token)
+            if pixel_id:
+                adset_post_data['promoted_object'] = {'pixel_id': str(pixel_id), 'custom_event_type': 'PURCHASE'}
+                adset_post_data['optimization_goal'] = 'OFFSITE_CONVERSIONS'
+            else:
+                adset_post_data['optimization_goal'] = 'LINK_CLICKS'
+        elif page_id and objective in ('OUTCOME_LEADS', 'OUTCOME_ENGAGEMENT', 'OUTCOME_AWARENESS'):
             adset_post_data['promoted_object'] = {'page_id': str(page_id)}
 
         if campaign.start_date:
@@ -337,7 +385,29 @@ def publish_campaign(connection, campaign, campaign_platform, desired_status: st
         if campaign.end_date:
             adset_post_data['end_time'] = campaign.end_date.strftime('%Y-%m-%dT23:59:59')
 
-        adset_data = _graph('post', f'{ad_account_id}/adsets', token, data=adset_post_data)
+        try:
+            adset_data = _graph('post', f'{ad_account_id}/adsets', token, data=adset_post_data)
+        except Exception as exc:
+            err_msg = str(exc)
+            if 'promoted_object' in err_msg or '2490408' in err_msg or 'Performance goal' in err_msg:
+                logger.warning("Ad set creation failed due to promoted_object/goal (%s). Retrying with fallback...", err_msg)
+                if objective == 'OUTCOME_SALES':
+                    pixel_id = _get_or_create_pixel(ad_account_id, token)
+                    if pixel_id and 'pixel_id' not in adset_post_data.get('promoted_object', {}):
+                        adset_post_data['promoted_object'] = {'pixel_id': str(pixel_id), 'custom_event_type': 'PURCHASE'}
+                        adset_post_data['optimization_goal'] = 'OFFSITE_CONVERSIONS'
+                    else:
+                        adset_post_data.pop('promoted_object', None)
+                        adset_post_data['optimization_goal'] = 'LINK_CLICKS'
+                elif page_id and 'promoted_object' not in adset_post_data:
+                    adset_post_data['promoted_object'] = {'page_id': str(page_id)}
+                elif 'promoted_object' in adset_post_data:
+                    adset_post_data.pop('promoted_object', None)
+                    adset_post_data['optimization_goal'] = 'LINK_CLICKS'
+                adset_data = _graph('post', f'{ad_account_id}/adsets', token, data=adset_post_data)
+            else:
+                raise
+
         result['meta_ad_set_id'] = adset_data.get('id', '')
         meta.meta_ad_set_id = result['meta_ad_set_id']
         meta.save(update_fields=['meta_ad_set_id'])
@@ -410,8 +480,16 @@ def publish_campaign(connection, campaign, campaign_platform, desired_status: st
                     'targeting': targeting,
                     'status': desired_status,
                 }
-                if page_id:
+                if objective == 'OUTCOME_SALES':
+                    pixel_id = _get_or_create_pixel(ad_account_id, token)
+                    if pixel_id:
+                        new_adset_data['promoted_object'] = {'pixel_id': str(pixel_id), 'custom_event_type': 'PURCHASE'}
+                        new_adset_data['optimization_goal'] = 'OFFSITE_CONVERSIONS'
+                    else:
+                        new_adset_data['optimization_goal'] = 'LINK_CLICKS'
+                elif page_id and objective in ('OUTCOME_LEADS', 'OUTCOME_ENGAGEMENT', 'OUTCOME_AWARENESS'):
                     new_adset_data['promoted_object'] = {'page_id': str(page_id)}
+
                 adset_res = _graph('post', f'{ad_account_id}/adsets', token, data=new_adset_data)
                 result['meta_ad_set_id'] = adset_res.get('id', '')
                 meta.meta_ad_set_id = result['meta_ad_set_id']
@@ -1005,7 +1083,38 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
     }
 
     try:
-        # 1. Fetch live Campaigns from Meta Graph API
+        # 0. Check Ad Account Funding Source, Currency, and Balance
+        has_payment_error = False
+        currency_code = 'INR'
+        curr_sym = '₹'
+        try:
+            acc_info = _graph('get', ad_account_id, token, params={'fields': 'id,name,account_status,disable_reason,funding_source_details,balance,amount_spent,currency'})
+            currency_code = (acc_info.get('currency') or 'INR').upper()
+            CURRENCY_SYMBOLS = {
+                'INR': '₹',
+                'USD': '$',
+                'EUR': '€',
+                'GBP': '£',
+                'CAD': 'CA$',
+                'AUD': 'A$',
+                'AED': 'AED ',
+                'SGD': 'S$',
+                'JPY': '¥',
+            }
+            curr_sym = CURRENCY_SYMBOLS.get(currency_code, f"{currency_code} ")
+
+            funding = acc_info.get('funding_source_details') or {}
+            balance_val = float(acc_info.get('balance', 0) or 0)
+            if funding.get('type') == 20: # Indian prepaid balance
+                disp = str(funding.get('display_string', ''))
+                if balance_val <= 0 or '₹0.00' in disp or '0.00' in disp:
+                    has_payment_error = True
+            elif acc_info.get('account_status') in (2, 3, 7, 8, 9, 101, 102):
+                has_payment_error = True
+        except Exception as e:
+            logger.warning("Could not fetch account funding details: %s", e)
+
+        # 1. Fetch live Campaigns from Meta Graph API (with pagination)
         camp_params = {
             'fields': (
                 'id,name,status,effective_status,objective,buying_type,'
@@ -1014,10 +1123,9 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
             ),
             'limit': 150,
         }
-        camp_resp = _graph('get', f'{ad_account_id}/campaigns', token, params=camp_params)
-        raw_camps = camp_resp.get('data', [])
+        raw_camps = _graph_paginate(f'{ad_account_id}/campaigns', token, params=camp_params)
 
-        # 2. Fetch live Ad Sets from Meta Graph API
+        # 2. Fetch live Ad Sets from Meta Graph API (with pagination)
         adset_params = {
             'fields': (
                 'id,name,status,effective_status,campaign_id,'
@@ -1027,10 +1135,9 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
             ),
             'limit': 150,
         }
-        adset_resp = _graph('get', f'{ad_account_id}/adsets', token, params=adset_params)
-        raw_adsets = adset_resp.get('data', [])
+        raw_adsets = _graph_paginate(f'{ad_account_id}/adsets', token, params=adset_params)
 
-        # 3. Fetch live Ads from Meta Graph API
+        # 3. Fetch live Ads from Meta Graph API (with pagination)
         ad_params = {
             'fields': (
                 'id,name,status,effective_status,adset_id,campaign_id,'
@@ -1039,10 +1146,9 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
             ),
             'limit': 150,
         }
-        ad_resp = _graph('get', f'{ad_account_id}/ads', token, params=ad_params)
-        raw_ads = ad_resp.get('data', [])
+        raw_ads = _graph_paginate(f'{ad_account_id}/ads', token, params=ad_params)
 
-        # 4. Fetch Insights at all 3 levels
+        # 4. Fetch Insights at all 3 levels for the EXACT requested date range (no fake fallback)
         def _fetch_insights_map(level: str):
             imap = {}
             try:
@@ -1051,27 +1157,32 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                     'level': level,
                     'limit': 150,
                 }
+                active_preset = date_preset or 'last_30d'
                 if time_range and isinstance(time_range, dict) and time_range.get('since') and time_range.get('until'):
                     iparams['time_range'] = json.dumps({'since': str(time_range['since']), 'until': str(time_range['until'])})
-                elif date_preset and date_preset != 'custom':
-                    # Normalize Meta preset names
-                    preset_val = 'last_30d' if date_preset in ('last_30', 'last_30d') else date_preset
-                    if preset_val in ('last_7', 'last_7d'):
+                elif active_preset and active_preset != 'custom':
+                    preset_val = active_preset.lower().strip()
+                    if preset_val in ('last_30', 'last_30d', '30d'):
+                        preset_val = 'last_30d'
+                    elif preset_val in ('last_7', 'last_7d', '7d'):
                         preset_val = 'last_7d'
-                    elif preset_val in ('last_14', 'last_14d'):
+                    elif preset_val in ('last_14', 'last_14d', '14d'):
                         preset_val = 'last_14d'
-                    elif preset_val in ('last_28', 'last_28d'):
+                    elif preset_val in ('last_28', 'last_28d', '28d'):
                         preset_val = 'last_28d'
-                    elif preset_val in ('today', 'yesterday', 'this_month', 'last_month', 'maximum'):
-                        pass
+                    elif preset_val in ('last_90', 'last_90d', '90d'):
+                        preset_val = 'last_90d'
+                    elif preset_val in ('today', 'yesterday', 'this_month', 'last_month', 'this_quarter', 'maximum', 'lifetime'):
+                        if preset_val == 'lifetime':
+                            preset_val = 'maximum'
                     else:
-                        preset_val = 'maximum'
+                        preset_val = 'last_30d'
                     iparams['date_preset'] = preset_val
                 else:
-                    iparams['date_preset'] = 'maximum'
+                    iparams['date_preset'] = 'last_30d'
 
-                iresp = _graph('get', f'{ad_account_id}/insights', token, params=iparams)
-                for item in iresp.get('data', []):
+                items = _graph_paginate(f'{ad_account_id}/insights', token, params=iparams)
+                for item in items:
                     entity_id = item.get(f'{level}_id') or item.get('id')
                     if entity_id:
                         imap[str(entity_id)] = item
@@ -1083,40 +1194,132 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
         adset_insights = _fetch_insights_map('adset')
         ad_insights = _fetch_insights_map('ad')
 
-        # Campaign map for lookup
+        # Fast lookups
         camp_lookup = {str(c['id']): c.get('name', 'Campaign') for c in raw_camps}
         adset_lookup = {str(a['id']): a.get('name', 'Ad set') for a in raw_adsets}
+        adset_dict = {str(a['id']): a for a in raw_adsets}
 
-        def _format_delivery(status_str, effective_str=''):
-            s = (effective_str or status_str or 'ACTIVE').upper()
-            if 'DRAFT' in s:
+        # Map campaign to its primary ad set optimization goal for coherent result labeling
+        camp_to_adset_goal = {}
+        for a in raw_adsets:
+            cid = str(a.get('campaign_id', ''))
+            goal = a.get('optimization_goal')
+            if cid and goal and cid not in camp_to_adset_goal:
+                camp_to_adset_goal[cid] = goal
+
+        # Count active ads per ad set
+        adset_active_ads = {}
+        for ad in raw_ads:
+            asid = str(ad.get('adset_id', ''))
+            if asid:
+                is_ad_active = (ad.get('status', '').upper() == 'ACTIVE')
+                adset_active_ads[asid] = adset_active_ads.get(asid, 0) + (1 if is_ad_active else 0)
+
+        def _format_delivery(status_str, effective_str='', has_payment_error=False, is_ended=False, is_draft=False, parent_paused=False, active_ads_count=None, level='ad'):
+            eff = (effective_str or '').upper()
+            st = (status_str or '').upper()
+
+            # 1. Draft
+            if is_draft or 'DRAFT' in eff or 'DRAFT' in st:
                 return 'In draft'
-            if s == 'ACTIVE':
-                return 'Active'
-            if 'PAUSED' in s:
-                return 'Off'
-            if 'REVIEW' in s or 'PROCESS' in s:
-                return 'In review'
-            if 'ERROR' in s or 'ISSUE' in s or 'REJECTED' in s:
-                return 'Payment error'
-            if 'COMPLETED' in s or 'ARCHIVED' in s:
-                return 'Completed'
-            return s.capitalize()
 
-        def _parse_metrics(ins_item, objective=''):
-            if not ins_item:
+            # 2. Directly Paused / Off - in Meta, if an entity is paused, Delivery is ALWAYS 'Off'
+            if st == 'PAUSED' or eff == 'PAUSED':
+                return 'Off'
+
+            # 3. Parent Paused
+            if eff == 'ADSET_PAUSED' or (level == 'ad' and parent_paused):
+                return 'Ad set off'
+            if eff == 'CAMPAIGN_PAUSED':
+                return 'Campaign off'
+
+            # 4. Payment error / issues / rejected (Meta Ads Manager prioritizes payment error on all active entities)
+            if 'ERROR' in eff or 'ISSUE' in eff or 'REJECTED' in eff:
+                return 'Payment error'
+            if has_payment_error and (st == 'ACTIVE' or eff == 'ACTIVE'):
+                return 'Payment error'
+
+            # 5. Completed / Ended (only when active and reached schedule end date)
+            if eff == 'COMPLETED' or 'ARCHIVED' in eff or (is_ended and (st == 'ACTIVE' or eff == 'ACTIVE')):
+                return 'Completed'
+
+            # 6. Ad set with 0 active ads
+            if level == 'adset' and active_ads_count is not None and active_ads_count == 0 and (st == 'ACTIVE' or eff == 'ACTIVE'):
+                return 'No active ads'
+
+            # 7. In review
+            if 'REVIEW' in eff or 'PROCESS' in eff:
+                return 'In review'
+
+            # 8. Active
+            if eff == 'ACTIVE' or st == 'ACTIVE':
+                return 'Active'
+
+            return eff.capitalize() if eff else (st.capitalize() if st else 'Off')
+
+        def _parse_metrics(ins_item, goal_or_obj='', is_draft=False, level='ad'):
+            goal_str = str(goal_or_obj or '').upper()
+
+            # Determine objective subtexts based on Meta Ads Manager conventions
+            if 'LEAD' in goal_str:
+                res_label = 'Leads'
+                res_sub = 'Lead'
+                cost_sub = 'Per Lead'
+                bid_sub = 'Leads'
+            elif 'PROFILE' in goal_str or 'INSTAGRAM' in goal_str:
+                res_label = 'Clicks'
+                res_sub = 'Instagram profile visit'
+                cost_sub = 'Cost per Instagram pr...'
+                bid_sub = 'Instagram profile vi...'
+            elif 'LINK' in goal_str or 'TRAFFIC' in goal_str:
+                res_label = 'Clicks'
+                res_sub = 'Link click'
+                cost_sub = 'Per link click'
+                bid_sub = 'Link clicks'
+            elif 'ENGAGE' in goal_str:
+                res_label = 'Post engagements'
+                res_sub = 'Post engagement'
+                cost_sub = 'Per post engagement'
+                bid_sub = 'Post engagement'
+            elif 'PURCHASE' in goal_str or 'SALE' in goal_str:
+                res_label = 'Purchases'
+                res_sub = 'Purchase'
+                cost_sub = 'Per purchase'
+                bid_sub = 'Purchases'
+            elif 'REACH' in goal_str:
+                res_label = 'Reach'
+                res_sub = 'People reached'
+                cost_sub = 'Per 1,000 people reached'
+                bid_sub = 'Daily unique reach'
+            elif 'AWARE' in goal_str or 'IMPRESSION' in goal_str:
+                res_label = 'Impressions'
+                res_sub = 'Impressions'
+                cost_sub = 'Per 1,000 impressions'
+                bid_sub = 'Impressions'
+            else:
+                res_label = 'Results'
+                res_sub = 'Meta lead'
+                cost_sub = 'Per Meta lead'
+                bid_sub = 'Leads'
+
+            if is_draft or not ins_item:
+                amount_spent_str = '—' if is_draft else f"{curr_sym}0.00"
                 return {
                     'results': '—',
+                    'resultsSub': '' if is_draft else res_sub,
                     'costPerResult': '—',
-                    'amountSpent': '—',
+                    'costPerResultSub': '' if is_draft else cost_sub,
+                    'amountSpent': amount_spent_str,
                     'impressions': '—',
                     'reach': '—',
                     'clicks': '—',
                     'ctr': '—',
                     'cpc': '—',
+                    'bidStrategySub': bid_sub,
                     'raw_spend': 0.0,
                     'raw_results': 0,
                 }
+
             spend = float(ins_item.get('spend', 0.0) or 0.0)
             imp = int(float(ins_item.get('impressions', 0) or 0))
             reach = int(float(ins_item.get('reach', 0) or 0))
@@ -1124,49 +1327,65 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
             ctr_val = float(ins_item.get('ctr', 0.0) or 0.0)
             cpc_val = float(ins_item.get('cpc', 0.0) or 0.0)
 
-            # Results calculation
             actions = ins_item.get('actions', [])
             res_count = 0
-            res_label = 'Results'
-            obj_lower = str(objective or '').lower()
 
             for act in actions:
                 atype = act.get('action_type', '')
                 val = int(float(act.get('value', 0) or 0))
-                if 'lead' in obj_lower and ('lead' in atype or 'contact' in atype):
+                if ('link_click' in atype or 'landing_page' in atype) and ('LINK' in goal_str or 'PROFILE' in goal_str or 'TRAFFIC' in goal_str):
                     res_count += val
-                    res_label = 'Leads'
-                elif 'traffic' in obj_lower and ('link_click' in atype or 'landing_page' in atype):
+                elif ('lead' in atype or 'contact' in atype) and 'LEAD' in goal_str:
                     res_count += val
-                    res_label = 'Link clicks'
-                elif ('sales' in obj_lower or 'conversion' in obj_lower) and ('purchase' in atype):
+                elif ('post_engagement' in atype or 'page_engagement' in atype) and 'ENGAGE' in goal_str:
+                    if atype == 'post_engagement':
+                        res_count += val
+                elif ('purchase' in atype) and ('PURCHASE' in goal_str or 'SALE' in goal_str):
                     res_count += val
-                    res_label = 'Purchases'
-                elif 'engagement' in obj_lower and ('engagement' in atype or 'like' in atype):
-                    res_count += val
-                    res_label = 'Post engagements'
-                elif res_count == 0 and 'lead' in atype:
-                    res_count += val
-                    res_label = 'Leads'
 
             if res_count == 0 and actions:
                 for act in actions:
-                    if 'click' in act.get('action_type', ''):
+                    if 'link_click' == act.get('action_type'):
                         res_count = int(float(act.get('value', 0)))
                         res_label = 'Clicks'
                         break
+                    elif 'post_engagement' == act.get('action_type'):
+                        res_count = int(float(act.get('value', 0)))
+                        res_label = 'Post engagements'
+                        break
 
-            cost_per_res = round(spend / max(1, res_count), 2) if res_count > 0 else 0.0
+            cost_per_res = 0.0
+            cost_actions = ins_item.get('cost_per_action_type', [])
+            for cact in cost_actions:
+                catype = cact.get('action_type', '')
+                cval = float(cact.get('value', 0.0) or 0.0)
+                if ('link_click' in catype) and ('LINK' in goal_str or 'PROFILE' in goal_str):
+                    cost_per_res = cval
+                    break
+                elif 'lead' in catype and 'LEAD' in goal_str:
+                    cost_per_res = cval
+                    break
+                elif 'post_engagement' in catype and 'ENGAGE' in goal_str:
+                    cost_per_res = cval
+                    break
+
+            if cost_per_res == 0.0 and res_count > 0 and spend > 0:
+                cost_per_res = round(spend / res_count, 2)
+
+            amount_spent_str = f"{curr_sym}{spend:,.2f}" if spend > 0 else f"{curr_sym}0.00"
 
             return {
                 'results': f"{res_count:,} {res_label}" if res_count > 0 else '—',
-                'costPerResult': f"₹{cost_per_res:,.2f}" if cost_per_res > 0 else '—',
-                'amountSpent': f"₹{spend:,.2f}" if spend > 0 else '—',
+                'resultsSub': res_sub,
+                'costPerResult': f"{curr_sym}{cost_per_res:,.2f}" if cost_per_res > 0 else '—',
+                'costPerResultSub': cost_sub,
+                'amountSpent': amount_spent_str,
                 'impressions': f"{imp:,}" if imp > 0 else '—',
                 'reach': f"{reach:,}" if reach > 0 else '—',
                 'clicks': f"{clicks:,}" if clicks > 0 else '—',
                 'ctr': f"{ctr_val:.2f}%" if ctr_val > 0 else '—',
-                'cpc': f"₹{cpc_val:,.2f}" if cpc_val > 0 else '—',
+                'cpc': f"{curr_sym}{cpc_val:,.2f}" if cpc_val > 0 else '—',
+                'bidStrategySub': bid_sub,
                 'raw_spend': spend,
                 'raw_results': res_count,
             }
@@ -1175,18 +1394,35 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
         for c in raw_camps:
             cid = str(c['id'])
             c_ins = camp_insights.get(cid)
-            m = _parse_metrics(c_ins, c.get('objective'))
+            adset_goal = camp_to_adset_goal.get(cid)
+            effective_goal = adset_goal or c.get('objective')
+            m = _parse_metrics(c_ins, effective_goal, level='campaign')
             daily_b = float(c.get('daily_budget') or 0) / 100
             life_b = float(c.get('lifetime_budget') or 0) / 100
-            budget_str = f"₹{daily_b:,.2f}" if daily_b > 0 else (f"₹{life_b:,.2f}" if life_b > 0 else "Using ad set...")
+            budget_str = f"{curr_sym}{daily_b:,.2f}" if daily_b > 0 else (f"{curr_sym}{life_b:,.2f}" if life_b > 0 else "Using ad set bu...")
             budget_sub = "Daily" if daily_b > 0 else ("Lifetime" if life_b > 0 else "")
 
+            is_ended = False
+            ends_formatted = 'Ongoing'
+            if c.get('stop_time'):
+                try:
+                    sdt = datetime.datetime.fromisoformat(c['stop_time'].replace('Z', '+00:00'))
+                    ends_formatted = sdt.strftime('%d %b %Y')
+                    if sdt < datetime.datetime.now(sdt.tzinfo):
+                        is_ended = True
+                except Exception:
+                    ends_formatted = c.get('stop_time', '')[:10]
+
             eff_status = c.get('effective_status') or c.get('status') or 'ACTIVE'
-            delivery = _format_delivery(c.get('status'), eff_status)
+            delivery = _format_delivery(c.get('status'), eff_status, has_payment_error=has_payment_error, is_ended=is_ended, level='campaign')
             is_active = (c.get('status', '').upper() == 'ACTIVE')
 
             metrics_summary['spend'] += m['raw_spend']
             metrics_summary['results'] += m['raw_results']
+            if c_ins:
+                metrics_summary['impressions'] += int(float(c_ins.get('impressions', 0) or 0))
+                metrics_summary['reach'] += int(float(c_ins.get('reach', 0) or 0))
+                metrics_summary['clicks'] += int(float(c_ins.get('clicks', 0) or 0))
 
             campaigns.append({
                 'id': cid,
@@ -1198,15 +1434,18 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 'budget': budget_str,
                 'budgetSub': budget_sub,
                 'results': m['results'],
+                'resultsSub': m.get('resultsSub', ''),
                 'costPerResult': m['costPerResult'],
+                'costPerResultSub': m.get('costPerResultSub', ''),
                 'amountSpent': m['amountSpent'],
                 'impressions': m['impressions'],
                 'reach': m['reach'],
                 'clicks': m['clicks'],
                 'ctr': m['ctr'],
                 'cpc': m['cpc'],
-                'ends': c.get('stop_time', '')[:10] if c.get('stop_time') else 'Ongoing',
+                'ends': ends_formatted,
                 'attribution': '7-day click or 1-day view',
+                'attributionSub': 'All conversions',
                 'lastSignificantEdit': c.get('updated_time', '')[:10] or '—',
                 'active': is_active,
                 'level': 'campaign',
@@ -1217,14 +1456,26 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
         for a in raw_adsets:
             aid = str(a['id'])
             a_ins = adset_insights.get(aid)
-            m = _parse_metrics(a_ins, a.get('optimization_goal'))
+            m = _parse_metrics(a_ins, a.get('optimization_goal'), level='adset')
             daily_b = float(a.get('daily_budget') or 0) / 100
             life_b = float(a.get('lifetime_budget') or 0) / 100
-            budget_str = f"₹{daily_b:,.2f}" if daily_b > 0 else (f"₹{life_b:,.2f}" if life_b > 0 else "Using campaign...")
+            budget_str = f"{curr_sym}{daily_b:,.2f}" if daily_b > 0 else (f"{curr_sym}{life_b:,.2f}" if life_b > 0 else "Using campaign...")
             budget_sub = "Daily" if daily_b > 0 else ("Lifetime" if life_b > 0 else "")
 
+            is_ended = False
+            ends_formatted = 'Ongoing'
+            if a.get('end_time'):
+                try:
+                    edt = datetime.datetime.fromisoformat(a['end_time'].replace('Z', '+00:00'))
+                    ends_formatted = edt.strftime('%d %b %Y')
+                    if edt < datetime.datetime.now(edt.tzinfo):
+                        is_ended = True
+                except Exception:
+                    ends_formatted = a.get('end_time', '')[:10]
+
             eff_status = a.get('effective_status') or a.get('status') or 'ACTIVE'
-            delivery = _format_delivery(a.get('status'), eff_status)
+            act_count = adset_active_ads.get(aid, 0)
+            delivery = _format_delivery(a.get('status'), eff_status, has_payment_error=has_payment_error, is_ended=is_ended, active_ads_count=act_count, level='adset')
             is_active = (a.get('status', '').upper() == 'ACTIVE')
 
             adsets.append({
@@ -1233,19 +1484,22 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 'delivery': delivery,
                 'actions': '—',
                 'bidStrategy': a.get('bid_strategy') or 'Highest volume',
-                'bidStrategySub': (a.get('optimization_goal') or 'Leads').capitalize(),
+                'bidStrategySub': m.get('bidStrategySub', (a.get('optimization_goal') or 'Leads').capitalize()),
                 'budget': budget_str,
                 'budgetSub': budget_sub,
                 'results': m['results'],
+                'resultsSub': m.get('resultsSub', ''),
                 'costPerResult': m['costPerResult'],
+                'costPerResultSub': m.get('costPerResultSub', ''),
                 'amountSpent': m['amountSpent'],
                 'impressions': m['impressions'],
                 'reach': m['reach'],
                 'clicks': m['clicks'],
                 'ctr': m['ctr'],
                 'cpc': m['cpc'],
-                'ends': a.get('end_time', '')[:10] if a.get('end_time') else 'Ongoing',
+                'ends': ends_formatted,
                 'attribution': '7-day click or 1-day view',
+                'attributionSub': 'All conversions',
                 'lastSignificantEdit': a.get('updated_time', '')[:10] or '—',
                 'campaignName': camp_lookup.get(str(a.get('campaign_id')), 'Campaign'),
                 'campaignId': str(a.get('campaign_id', '')),
@@ -1258,11 +1512,61 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
         for ad in raw_ads:
             adid = str(ad['id'])
             ad_ins = ad_insights.get(adid)
-            m = _parse_metrics(ad_ins)
+            asid = str(ad.get('adset_id', ''))
+            parent_adset = adset_dict.get(asid)
+            goal = parent_adset.get('optimization_goal') if parent_adset else ''
+
+            m = _parse_metrics(ad_ins, goal, level='ad')
 
             eff_status = ad.get('effective_status') or ad.get('status') or 'ACTIVE'
-            delivery = _format_delivery(ad.get('status'), eff_status)
             is_active = (ad.get('status', '').upper() == 'ACTIVE')
+
+            parent_paused = (parent_adset.get('status', '').upper() == 'PAUSED') if parent_adset else False
+            is_ended = False
+            ends_formatted = 'Ongoing'
+            if parent_adset and parent_adset.get('end_time'):
+                try:
+                    edt = datetime.datetime.fromisoformat(parent_adset['end_time'].replace('Z', '+00:00'))
+                    ends_formatted = edt.strftime('%d %b %Y')
+                    if edt < datetime.datetime.now(edt.tzinfo):
+                        is_ended = True
+                except Exception:
+                    ends_formatted = parent_adset.get('end_time', '')[:10]
+
+            delivery = _format_delivery(
+                ad.get('status'),
+                eff_status,
+                has_payment_error=has_payment_error,
+                is_ended=is_ended,
+                parent_paused=parent_paused,
+                level='ad'
+            )
+
+            # Inherit budget from parent ad set if set, otherwise "Using campaign..."
+            ad_daily_b = float(parent_adset.get('daily_budget') or 0) / 100 if parent_adset else 0
+            ad_life_b = float(parent_adset.get('lifetime_budget') or 0) / 100 if parent_adset else 0
+            if ad_daily_b > 0:
+                ad_budget_str = f"{curr_sym}{ad_daily_b:,.2f}"
+                ad_budget_sub = "Daily"
+            elif ad_life_b > 0:
+                ad_budget_str = f"{curr_sym}{ad_life_b:,.2f}"
+                ad_budget_sub = "Lifetime"
+            else:
+                ad_budget_str = "Using campaign..."
+                ad_budget_sub = ""
+
+            # Active ads count for parent ad set
+            act_count = adset_active_ads.get(asid, 0)
+            active_ads_count_str = f"{act_count} active ad" if act_count == 1 else f"{act_count} active ads"
+
+            # Last significant edit formatting
+            last_edit_str = '—'
+            if ad.get('updated_time'):
+                try:
+                    udt = datetime.datetime.fromisoformat(ad['updated_time'].replace('Z', '+00:00'))
+                    last_edit_str = udt.strftime('%d %b %Y, %H:%M')
+                except Exception:
+                    last_edit_str = ad.get('updated_time', '')[:10]
 
             creative = ad.get('creative') or {}
             thumb_url = creative.get('image_url') or creative.get('thumbnail_url')
@@ -1274,32 +1578,42 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 'delivery': delivery,
                 'actions': '—',
                 'results': m['results'],
+                'resultsSub': m.get('resultsSub', ''),
                 'costPerResult': m['costPerResult'],
-                'budget': 'Using campaign...',
-                'budgetSub': '',
+                'costPerResultSub': m.get('costPerResultSub', ''),
+                'budget': ad_budget_str,
+                'budgetSub': ad_budget_sub,
                 'amountSpent': m['amountSpent'],
                 'impressions': m['impressions'],
                 'reach': m['reach'],
                 'clicks': m['clicks'],
                 'ctr': m['ctr'],
                 'cpc': m['cpc'],
-                'ends': 'Ongoing',
+                'ends': ends_formatted,
                 'attribution': '7-day click or 1-day view',
+                'attributionSub': 'All conversions',
                 'bidStrategy': 'Highest volume',
-                'bidStrategySub': 'Leads',
-                'lastSignificantEdit': ad.get('updated_time', '')[:10] or '—',
+                'bidStrategySub': m.get('bidStrategySub', 'Leads'),
+                'lastSignificantEdit': last_edit_str,
                 'qualityRanking': '—',
                 'engagementRanking': '—',
                 'conversionRanking': '—',
-                'adsetName': adset_lookup.get(str(ad.get('adset_id')), 'Ad set'),
-                'adsetId': str(ad.get('adset_id', '')),
+                'adsetName': adset_lookup.get(asid, 'Ad set'),
+                'adsetId': asid,
+                'adsetSubtitle': active_ads_count_str,
+                'activeAdsCount': active_ads_count_str,
                 'campaignName': camp_lookup.get(str(ad.get('campaign_id')), 'Campaign'),
                 'campaignId': str(ad.get('campaign_id', '')),
-                'activeAdsCount': '1 active ad' if is_active else '0 active ads',
                 'active': is_active,
                 'level': 'ad',
                 'is_draft': False,
             })
+
+        # Calculate CTR & CPC on summary
+        if metrics_summary['impressions'] > 0:
+            metrics_summary['ctr'] = round((metrics_summary['clicks'] / metrics_summary['impressions']) * 100, 2)
+        if metrics_summary['clicks'] > 0:
+            metrics_summary['cpc'] = round(metrics_summary['spend'] / metrics_summary['clicks'], 2)
 
         meta_live = True
 

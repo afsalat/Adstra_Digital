@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import {
@@ -694,6 +695,55 @@ export default function MetaAdsManagerAdsSection({
   const [pinnedAdIds, setPinnedAdIds] = useState(new Set());
   const [inlineEditing, setInlineEditing] = useState(null); // { id, name }
 
+  // Floating Portal Menu State (Image 2: ••• Row Actions Menu)
+  const [rowMenuCoords, setRowMenuCoords] = useState(null);
+  const [activeRowMenuAd, setActiveRowMenuAd] = useState(null);
+  const rowMenuPortalRef = useRef(null);
+
+  // Meta Ads Manager View History Drawer State
+  const [viewHistoryDrawerOpen, setViewHistoryDrawerOpen] = useState(false);
+  const [viewHistoryAd, setViewHistoryAd] = useState(null);
+  const [viewHistoryFilter, setViewHistoryFilter] = useState("all");
+
+  // Meta Automated Rules Modal State
+  const [rulesModalOpen, setRulesModalOpen] = useState(false);
+  const [rulesTargetAd, setRulesTargetAd] = useState(null);
+  const [rulesActiveTab, setRulesActiveTab] = useState("active");
+  const [automatedRulesList, setAutomatedRulesList] = useState([
+    {
+      id: "rule-1",
+      name: "Cost per result pause threshold",
+      condition: "Cost per result > ₹15.00 over 3 consecutive days",
+      action: "Turn off ad",
+      schedule: "Daily at 00:00",
+      enabled: true,
+    },
+    {
+      id: "rule-2",
+      name: "Scale budget on high CTR",
+      condition: "CTR (Link click-through rate) > 2.0% & Spend > ₹500",
+      action: "Increase daily budget by 10% (Max ₹2,500)",
+      schedule: "Weekly on Monday",
+      enabled: true,
+    },
+    {
+      id: "rule-3",
+      name: "High frequency fatigue alert",
+      condition: "Frequency > 2.8 in last 7 days",
+      action: "Send email notification to admin",
+      schedule: "Daily",
+      enabled: false,
+    },
+  ]);
+  const [newRuleForm, setNewRuleForm] = useState({
+    name: "",
+    action: "Turn off ad",
+    metric: "Cost per result",
+    operator: ">",
+    value: "12.00",
+    schedule: "Daily at midnight",
+  });
+
   const pillBtnStyle = {
     display: "inline-flex",
     alignItems: "center",
@@ -717,17 +767,108 @@ export default function MetaAdsManagerAdsSection({
   const rowMenuItemStyle = {
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     width: "100%",
-    padding: "7px 12px",
+    padding: "9px 16px",
     background: "transparent",
     border: "none",
-    color: "#1c1e21",
-    fontSize: "0.8rem",
-    fontWeight: 500,
+    color: "#050505",
+    fontSize: "0.85rem",
+    fontWeight: 450,
     textAlign: "left",
     cursor: "pointer",
-    transition: "background 0.1s ease",
+    transition: "background 0.12s ease",
+    lineHeight: "1.2",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  };
+
+  // Close row dropdown on outside click, window scroll or resize
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (openRowMenuId) {
+        if (rowMenuPortalRef.current && rowMenuPortalRef.current.contains(e.target)) return;
+        if (e.target.closest && e.target.closest(".meta-row-actions-more-dropdown")) return;
+        setOpenRowMenuId(null);
+        setRowMenuCoords(null);
+        setActiveRowMenuAd(null);
+      }
+    };
+    const handleScrollOrResize = () => {
+      if (openRowMenuId) {
+        setOpenRowMenuId(null);
+        setRowMenuCoords(null);
+        setActiveRowMenuAd(null);
+      }
+    };
+    window.addEventListener("mousedown", handleOutsideClick);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+    return () => {
+      window.removeEventListener("mousedown", handleOutsideClick);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+  }, [openRowMenuId]);
+
+  const getMenuPosition = () => {
+    if (!rowMenuCoords) return { top: 0, left: 0 };
+    const menuWidth = 175;
+    const menuHeight = 160;
+    let top = rowMenuCoords.bottom + 4;
+    let left = rowMenuCoords.left;
+
+    if (typeof window !== "undefined") {
+      if (top + menuHeight > window.innerHeight) {
+        top = Math.max(8, rowMenuCoords.top - menuHeight - 4);
+      }
+      if (left + menuWidth > window.innerWidth) {
+        left = Math.max(8, rowMenuCoords.right - menuWidth);
+      }
+    }
+    return { top, left };
+  };
+
+  const handleTriggerAnalyse = (ad) => {
+    setActiveChartAd(ad);
+    setChartsDrawerOpen(true);
+    if (showToast) showToast(`Analysing "${ad.name}"`, "info");
+    setOpenRowMenuId(null);
+    setRowMenuCoords(null);
+    setActiveRowMenuAd(null);
+  };
+
+  const handleTriggerPin = (ad) => {
+    const isPinned = pinnedAdIds.has(ad.id);
+    setPinnedAdIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(ad.id)) {
+        next.delete(ad.id);
+        if (showToast) showToast(`Unpinned "${ad.name}"`, "info");
+      } else {
+        next.add(ad.id);
+        if (showToast) showToast(`Pinned "${ad.name}" to top`, "info");
+      }
+      return next;
+    });
+    setOpenRowMenuId(null);
+    setRowMenuCoords(null);
+    setActiveRowMenuAd(null);
+  };
+
+  const handleTriggerViewHistory = (ad) => {
+    setViewHistoryAd(ad);
+    setViewHistoryDrawerOpen(true);
+    setOpenRowMenuId(null);
+    setRowMenuCoords(null);
+    setActiveRowMenuAd(null);
+  };
+
+  const handleTriggerRules = (ad) => {
+    setRulesTargetAd(ad);
+    setRulesModalOpen(true);
+    setOpenRowMenuId(null);
+    setRowMenuCoords(null);
+    setActiveRowMenuAd(null);
   };
 
   // Modals & Panels
@@ -2578,32 +2719,6 @@ export default function MetaAdsManagerAdsSection({
                               }}
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {/* 1. Publish (Image 2) */}
-                              <button
-                                type="button"
-                                title="Publish to Meta Ads Manager"
-                                onClick={() => {
-                                  if (onPublishAd) {
-                                    onPublishAd(ad);
-                                  } else if (showToast) {
-                                    showToast(`Publishing "${ad.name}" to Meta Ads Manager...`, "info");
-                                  }
-                                }}
-                                style={pillBtnStyle}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = "#f1f5f9";
-                                  e.currentTarget.style.borderColor = "#94a3b8";
-                                  e.currentTarget.style.color = "#0f172a";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = "#ffffff";
-                                  e.currentTarget.style.borderColor = "#cbd5e1";
-                                  e.currentTarget.style.color = "#334155";
-                                }}
-                              >
-                                <MetaPublishPillIcon />
-                                <span>Publish</span>
-                              </button>
 
                               {/* 2. Edit (Image 2) */}
                               <button
@@ -2655,7 +2770,24 @@ export default function MetaAdsManagerAdsSection({
                                 <button
                                   type="button"
                                   title="More actions"
-                                  onClick={() => setOpenRowMenuId(openRowMenuId === ad.id ? null : ad.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (openRowMenuId === ad.id) {
+                                      setOpenRowMenuId(null);
+                                      setRowMenuCoords(null);
+                                      setActiveRowMenuAd(null);
+                                    } else {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      setOpenRowMenuId(ad.id);
+                                      setRowMenuCoords({
+                                        top: rect.top,
+                                        bottom: rect.bottom,
+                                        left: rect.left,
+                                        right: rect.right,
+                                      });
+                                      setActiveRowMenuAd(ad);
+                                    }
+                                  }}
                                   style={{
                                     ...pillBtnStyle,
                                     padding: "2px 6px",
@@ -2677,170 +2809,6 @@ export default function MetaAdsManagerAdsSection({
                                 >
                                   <MoreHorizontal size={13} strokeWidth={2.4} />
                                 </button>
-
-                                {openRowMenuId === ad.id && (
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      top: "calc(100% + 4px)",
-                                      left: 0,
-                                      width: 175,
-                                      background: "#ffffff",
-                                      borderRadius: 8,
-                                      border: "1px solid #e2e8f0",
-                                      boxShadow: "0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.08)",
-                                      zIndex: 999,
-                                      padding: "4px 0",
-                                      fontSize: "0.8rem",
-                                    }}
-                                  >
-                                    {/* 1. Analyse (Image 2: Purple rosette flower) */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveChartAd(ad);
-                                        setChartsDrawerOpen(true);
-                                        if (showToast) showToast(`Analysing "${ad.name}"`, "info");
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={rowMenuItemStyle}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <MetaAnalyseIcon size={14} />
-                                      <span>Analyse</span>
-                                    </button>
-
-                                    {/* 2. Pin (Image 2: Pin icon) */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const isPinned = pinnedAdIds.has(ad.id);
-                                        setPinnedAdIds((prev) => {
-                                          const next = new Set(prev);
-                                          if (next.has(ad.id)) {
-                                            next.delete(ad.id);
-                                            if (showToast) showToast(`Unpinned "${ad.name}"`, "info");
-                                          } else {
-                                            next.add(ad.id);
-                                            if (showToast) showToast(`Pinned "${ad.name}" to top`, "info");
-                                          }
-                                          return next;
-                                        });
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={rowMenuItemStyle}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Pin size={13} color="#1c1e21" style={{ transform: "rotate(45deg)" }} />
-                                      <span>{pinnedAdIds.has(ad.id) ? "Unpin" : "Pin"}</span>
-                                    </button>
-
-                                    {/* 3. View history (Image 2: Clock icon) */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (showToast) {
-                                          showToast(
-                                            `Viewing change history for "${ad.name}" (Last edit: ${ad.lastSignificantEdit || ad.lastEdit || "Recent"})`,
-                                            "info"
-                                          );
-                                        }
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={rowMenuItemStyle}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Clock size={13} color="#1c1e21" strokeWidth={2} />
-                                      <span>View history</span>
-                                    </button>
-
-                                    {/* 4. Rules (Image 2: Opposing arrows icon) */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (showToast) {
-                                          showToast(`Automated rules configured for "${ad.name}"`, "info");
-                                        }
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={rowMenuItemStyle}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <MetaRulesIcon size={13} color="#1c1e21" />
-                                      <span>Rules</span>
-                                    </button>
-
-                                    {/* Divider for secondary utilities */}
-                                    <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
-
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setInlineEditing({ id: ad.id, name: ad.name });
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={rowMenuItemStyle}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Edit2 size={12} color="#64748b" />
-                                      <span>Quick edit name</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setPreviewAdModal(ad);
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={rowMenuItemStyle}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Eye size={12} color="#64748b" />
-                                      <span>Preview ad</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (typeof navigator !== "undefined" && navigator.clipboard) {
-                                          navigator.clipboard.writeText(ad.id);
-                                        }
-                                        if (showToast) showToast(`Copied ID: ${ad.id}`, "info");
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={rowMenuItemStyle}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Copy size={12} color="#64748b" />
-                                      <span>Copy ID</span>
-                                    </button>
-
-                                    <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
-
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setAds((prev) => prev.filter((a) => a.id !== ad.id));
-                                        setSelectedAdIds((prev) => prev.filter((id) => id !== ad.id));
-                                        if (showToast) showToast(`Deleted "${ad.name}"`, "info");
-                                        setOpenRowMenuId(null);
-                                      }}
-                                      style={{ ...rowMenuItemStyle, color: "#ef4444" }}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                    >
-                                      <Trash2 size={12} />
-                                      <span>Delete</span>
-                                    </button>
-                                  </div>
-                                )}
                               </div>
                             </div>
                           )}
@@ -2848,35 +2816,106 @@ export default function MetaAdsManagerAdsSection({
                       </div>
                     </td>
 
-                    {/* 4. Delivery (In draft with green hollow circle) */}
+                    {/* 4. Delivery (Real Meta status indicator) */}
                     <td style={tdStyle}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            border: "2px solid #16a34a",
-                            background: "transparent",
-                            display: "inline-block",
-                            flexShrink: 0,
-                          }}
-                        />
+                        {(() => {
+                          const d = String(ad.delivery || "").toLowerCase();
+                          if (d === "active") {
+                            return (
+                              <span
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: "50%",
+                                  background: "#16a34a",
+                                  display: "inline-block",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            );
+                          }
+                          if (d === "in draft" || d.includes("draft")) {
+                            return (
+                              <span
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: "50%",
+                                  border: "2px solid #16a34a",
+                                  background: "transparent",
+                                  display: "inline-block",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            );
+                          }
+                          if (d.includes("error") || d.includes("off") || d.includes("completed") || d.includes("paused")) {
+                            return (
+                              <span
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: "50%",
+                                  background: "#94a3b8",
+                                  display: "inline-block",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            );
+                          }
+                          return (
+                            <span
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                border: "2px solid #cbd5e1",
+                                background: "transparent",
+                                display: "inline-block",
+                                flexShrink: 0,
+                              }}
+                            />
+                          );
+                        })()}
                         <span style={{ color: "#334155", fontWeight: 500 }}>{ad.delivery}</span>
                       </div>
                     </td>
 
                     {/* 5. Actions */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.actions}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.actions || "—"}</td>
 
                     {/* 6. Attribution setting */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.attribution}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>
+                      <div>
+                        <div style={{ color: "#334155" }}>{ad.attribution || "7-day click or 1-day view"}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.attributionSub || "All conversions"}</div>
+                      </div>
+                    </td>
 
                     {/* 7. Results */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.results}</td>
+                    <td style={tdStyle}>
+                      <div>
+                        <div style={{ color: ad.results !== "—" ? "#0f172a" : "#64748b", fontWeight: ad.results !== "—" ? 600 : 400 }}>
+                          {ad.results || "—"}
+                        </div>
+                        {ad.resultsSub && (
+                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.resultsSub}</div>
+                        )}
+                      </div>
+                    </td>
 
                     {/* 8. Cost per result */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.costPerResult}</td>
+                    <td style={tdStyle}>
+                      <div>
+                        <div style={{ color: ad.costPerResult !== "—" ? "#0f172a" : "#64748b", fontWeight: ad.costPerResult !== "—" ? 600 : 400 }}>
+                          {ad.costPerResult || "—"}
+                        </div>
+                        {ad.costPerResultSub && (
+                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.costPerResultSub}</div>
+                        )}
+                      </div>
+                    </td>
 
                     {/* 9. Budget (Ad set) */}
                     <td style={tdStyle}>
@@ -2889,21 +2928,23 @@ export default function MetaAdsManagerAdsSection({
                     </td>
 
                     {/* 10. Amount spent */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.amountSpent}</td>
+                    <td style={{ ...tdStyle, color: ad.amountSpent !== "—" ? "#0f172a" : "#64748b", fontWeight: ad.amountSpent !== "—" && ad.amountSpent !== "₹0.00" ? 600 : 400 }}>
+                      {ad.amountSpent || "—"}
+                    </td>
 
                     {/* 11. Impressions */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.impressions}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.impressions || "—"}</td>
 
                     {/* 12. Reach */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.reach}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.reach || "—"}</td>
 
                     {/* 13. Ends */}
-                    <td style={{ ...tdStyle, color: "#334155" }}>{ad.ends}</td>
+                    <td style={{ ...tdStyle, color: "#334155" }}>{ad.ends || "Ongoing"}</td>
 
                     {/* 14. Bid strategy (Ad set) */}
                     <td style={tdStyle}>
                       <div>
-                        <div style={{ color: "#0f172a", fontWeight: 500 }}>{ad.bidStrategy}</div>
+                        <div style={{ color: "#0f172a", fontWeight: 500 }}>{ad.bidStrategy || "Highest volume"}</div>
                         {ad.bidStrategySub && (
                           <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.bidStrategySub}</div>
                         )}
@@ -2911,19 +2952,19 @@ export default function MetaAdsManagerAdsSection({
                     </td>
 
                     {/* 15. Last edit */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.lastEdit}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.lastEdit || "—"}</td>
 
                     {/* 16. Last significant edit */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.lastSignificantEdit}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.lastSignificantEdit || "—"}</td>
 
                     {/* 17. Quality ranking */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.qualityRanking}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.qualityRanking || "—"}</td>
 
                     {/* 18. Engagement rate ranking */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.engagementRanking}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.engagementRanking || "—"}</td>
 
                     {/* 19. Conversion rate ranking */}
-                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.conversionRanking}</td>
+                    <td style={{ ...tdStyle, color: "#64748b" }}>{ad.conversionRanking || "—"}</td>
 
                     {/* 20. Ad set name (Blue clickable link to jump to Ad sets tab!) */}
                     <td style={tdStyle}>
@@ -2941,8 +2982,8 @@ export default function MetaAdsManagerAdsSection({
                         >
                           {ad.adsetName}
                         </div>
-                        {ad.adsetSubtitle && (
-                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.adsetSubtitle}</div>
+                        {(ad.adsetSubtitle || ad.activeAdsCount) && (
+                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ad.adsetSubtitle || ad.activeAdsCount}</div>
                         )}
                       </div>
                     </td>
@@ -3276,16 +3317,18 @@ export default function MetaAdsManagerAdsSection({
             top: 0,
             right: 0,
             bottom: 0,
-            width: 460,
-            maxWidth: "92vw",
+            width: 520,
+            maxWidth: "94vw",
             background: "#ffffff",
-            boxShadow: "-10px 0 30px rgba(0,0,0,0.15)",
-            zIndex: 950,
+            boxShadow: "-12px 0 36px rgba(0,0,0,0.2)",
+            zIndex: 1060,
             display: "flex",
             flexDirection: "column",
-            borderLeft: "1px solid #e2e8f0",
+            borderLeft: "1px solid #cbd5e1",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           }}
         >
+          {/* Header */}
           <div
             style={{
               padding: "16px 20px",
@@ -3293,67 +3336,244 @@ export default function MetaAdsManagerAdsSection({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              background: "#ffffff",
             }}
           >
             <div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
-                Performance Insights
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <MetaAnalyseIcon size={20} />
+                <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
+                  Performance Insights
+                </span>
               </div>
-              <div style={{ fontSize: "0.78rem", color: "#64748b" }}>{activeChartAd.name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#0064e1" }}>
+                  {activeChartAd.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    background: activeChartAd.active || activeChartAd.delivery === "Active" ? "#dcfce7" : "#f1f5f9",
+                    color: activeChartAd.active || activeChartAd.delivery === "Active" ? "#16a34a" : "#64748b",
+                  }}
+                >
+                  {activeChartAd.delivery || (activeChartAd.active ? "Active" : "In draft")}
+                </span>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setChartsDrawerOpen(false)}
-              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b" }}
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}
             >
               <X size={18} />
             </button>
           </div>
 
-          <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-              <div style={{ padding: "12px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>
-                  Impressions
+          {/* Time range bar */}
+          <div
+            style={{
+              padding: "8px 20px",
+              background: "#f8fafc",
+              borderBottom: "1px solid #f1f5f9",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: "0.78rem",
+              color: "#64748b",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Calendar size={13} color="#64748b" />
+              <span>Last 30 days: 14 Sep 2026 - 13 Oct 2026</span>
+            </div>
+            <span style={{ fontWeight: 600, color: "#0064e1" }}>Meta Pixel Synced</span>
+          </div>
+
+          <div style={{ padding: "20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Primary KPI Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  Results
                 </div>
-                <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
-                  {activeChartAd.impressions !== "—" ? activeChartAd.impressions : "24,800"}
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartAd.results && activeChartAd.results !== "—" ? activeChartAd.results : "377 Clicks"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                  {activeChartAd.costPerResult && activeChartAd.costPerResult !== "—" ? `${activeChartAd.costPerResult} per result` : "₹0.67 per result"}
                 </div>
               </div>
-              <div style={{ padding: "12px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>
-                  Reach
-                </div>
-                <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
-                  {activeChartAd.reach !== "—" ? activeChartAd.reach : "19,250"}
-                </div>
-              </div>
-              <div style={{ padding: "12px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>
+
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
                   Amount Spent
                 </div>
-                <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
-                  {activeChartAd.amountSpent !== "—" ? activeChartAd.amountSpent : "₹1,450.00"}
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartAd.amountSpent && activeChartAd.amountSpent !== "—" ? activeChartAd.amountSpent : "₹253.61"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                  Budget: {activeChartAd.budget || "₹200.00 Daily"}
                 </div>
               </div>
-              <div style={{ padding: "12px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>
-                  Cost per result
+
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  Reach
                 </div>
-                <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
-                  {activeChartAd.costPerResult !== "—" ? activeChartAd.costPerResult : "₹4.20"}
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartAd.reach && activeChartAd.reach !== "—" ? activeChartAd.reach : "19,250"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#16a34a", marginTop: 2 }}>
+                  ↑ 12.4% vs previous period
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  Impressions
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartAd.impressions && activeChartAd.impressions !== "—" ? activeChartAd.impressions : "24,800"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                  Frequency: 1.29
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: "16px", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe", marginBottom: 20 }}>
+            {/* Secondary Delivery Metrics */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: 8,
+                padding: "12px",
+                borderRadius: 8,
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
+                textAlign: "center",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>CTR (Link)</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>2.14%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>CPC (Cost)</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>₹0.67</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>CPM</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>₹10.22</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Frequency</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>1.29</div>
+              </div>
+            </div>
+
+            {/* SVG Interactive Trend Chart */}
+            <div style={{ padding: "16px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#ffffff" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>Ad Performance Trend</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.74rem" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#0064e1" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0064e1" }} />
+                    Results
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#9333ea" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9333ea" }} />
+                    Spend
+                  </span>
+                </div>
+              </div>
+              <svg width="100%" height="130" viewBox="0 0 460 130" style={{ overflow: "visible" }}>
+                <defs>
+                  <linearGradient id="adChartBlueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0064e1" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#0064e1" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <path d="M 10 110 L 60 90 L 120 70 L 180 80 L 240 45 L 300 60 L 360 25 L 420 35 L 450 20 L 450 110 Z" fill="url(#adChartBlueGrad)" />
+                <path d="M 10 110 L 60 90 L 120 70 L 180 80 L 240 45 L 300 60 L 360 25 L 420 35 L 450 20" fill="none" stroke="#0064e1" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M 10 115 L 60 100 L 120 85 L 180 90 L 240 65 L 300 75 L 360 50 L 420 55 L 450 40" fill="none" stroke="#9333ea" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" />
+                {[
+                  { cx: 60, cy: 90 },
+                  { cx: 120, cy: 70 },
+                  { cx: 180, cy: 80 },
+                  { cx: 240, cy: 45 },
+                  { cx: 300, cy: 60 },
+                  { cx: 360, cy: 25 },
+                  { cx: 420, cy: 35 },
+                  { cx: 450, cy: 20 },
+                ].map((pt, i) => (
+                  <circle key={i} cx={pt.cx} cy={pt.cy} r="3.5" fill="#ffffff" stroke="#0064e1" strokeWidth="2" />
+                ))}
+              </svg>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: "0.7rem", color: "#94a3b8" }}>
+                <span>14 Sep</span>
+                <span>21 Sep</span>
+                <span>28 Sep</span>
+                <span>05 Oct</span>
+                <span>13 Oct</span>
+              </div>
+            </div>
+
+            {/* Demographics Breakdown */}
+            <div style={{ padding: "16px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#ffffff" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>Demographics (Age & Gender)</span>
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  { age: "18-24", pct: 32, male: 14, female: 18 },
+                  { age: "25-34", pct: 46, male: 22, female: 24 },
+                  { age: "35-44", pct: 14, male: 6, female: 8 },
+                  { age: "45+", pct: 8, male: 3, female: 5 },
+                ].map((d) => (
+                  <div key={d.age}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", marginBottom: 3 }}>
+                      <span style={{ fontWeight: 600, color: "#334155" }}>{d.age}</span>
+                      <span style={{ color: "#64748b" }}>{d.pct}% ({d.female}% Women, {d.male}% Men)</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: "#f1f5f9", overflow: "hidden", display: "flex" }}>
+                      <div style={{ width: `${d.female * 2}%`, background: "#9333ea" }} />
+                      <div style={{ width: `${d.male * 2}%`, background: "#0064e1" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Meta AI Recommendation */}
+            <div style={{ padding: "16px", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, color: "#1e40af", fontSize: "0.85rem", marginBottom: 6 }}>
                 <Sparkles size={16} color="#2563eb" />
                 <span>Meta AI Recommendation</span>
               </div>
-              <div style={{ fontSize: "0.8rem", color: "#1e3a8a", lineHeight: 1.45 }}>
-                Switching to Advantage+ placement could reduce cost per result by up to 14% based on similar campaigns.
+              <div style={{ fontSize: "0.8rem", color: "#1e3a8a", lineHeight: 1.45, marginBottom: 12 }}>
+                Switching to Advantage+ placement could reduce cost per result by up to 14% based on similar ad campaigns.
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (showToast) showToast("Applied Meta Advantage+ recommendation to this ad.", "success");
+                }}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Apply recommendation
+              </button>
             </div>
 
             <button
@@ -3364,12 +3584,12 @@ export default function MetaAdsManagerAdsSection({
               }}
               style={{
                 width: "100%",
-                padding: "9px",
+                padding: "10px",
                 borderRadius: 6,
                 border: "none",
-                background: "#0064e1",
+                background: "#0f172a",
                 color: "#ffffff",
-                fontSize: "0.84rem",
+                fontSize: "0.85rem",
                 fontWeight: 600,
                 cursor: "pointer",
               }}
@@ -3572,6 +3792,775 @@ export default function MetaAdsManagerAdsSection({
                 }}
               >
                 Edit in Meta Editor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── IMAGE 2 EXACT FORM PORTAL DROPDOWN (ANALYSE | PIN | VIEW HISTORY | RULES) ─── */}
+      {typeof document !== "undefined" && openRowMenuId && rowMenuCoords && activeRowMenuAd &&
+        createPortal(
+          <div
+            ref={rowMenuPortalRef}
+            style={{
+              position: "fixed",
+              top: getMenuPosition().top,
+              left: getMenuPosition().left,
+              width: 175,
+              background: "#ffffff",
+              borderRadius: 8,
+              border: "1px solid #dadde1",
+              boxShadow: "0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1)",
+              zIndex: 9999999,
+              padding: "6px 0",
+              fontSize: "0.85rem",
+              userSelect: "none",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 1. Analyse (Image 2: Purple rosette flower) */}
+            <button
+              type="button"
+              onClick={() => handleTriggerAnalyse(activeRowMenuAd)}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <MetaAnalyseIcon size={16} />
+              <span>Analyse</span>
+            </button>
+
+            {/* 2. Pin (Image 2: Pin icon) */}
+            <button
+              type="button"
+              onClick={() => handleTriggerPin(activeRowMenuAd)}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Pin size={15} color="#1c1e21" style={{ transform: "rotate(45deg)" }} />
+              <span>{pinnedAdIds.has(activeRowMenuAd.id) ? "Unpin" : "Pin"}</span>
+            </button>
+
+            {/* 3. View history (Image 2: Clock icon) */}
+            <button
+              type="button"
+              onClick={() => handleTriggerViewHistory(activeRowMenuAd)}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Clock size={15} color="#1c1e21" strokeWidth={1.8} />
+              <span>View history</span>
+            </button>
+
+            {/* 4. Rules (Image 2: Opposing arrows icon) */}
+            <button
+              type="button"
+              onClick={() => handleTriggerRules(activeRowMenuAd)}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <MetaRulesIcon size={15} color="#1c1e21" />
+              <span>Rules</span>
+            </button>
+          </div>,
+          document.body
+        )
+      }
+
+      {/* ─── META ADS MANAGER VIEW HISTORY DRAWER ─── */}
+      {viewHistoryDrawerOpen && viewHistoryAd && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 480,
+            maxWidth: "94vw",
+            background: "#ffffff",
+            boxShadow: "-10px 0 32px rgba(0,0,0,0.18)",
+            zIndex: 1060,
+            display: "flex",
+            flexDirection: "column",
+            borderLeft: "1px solid #cbd5e1",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "16px 20px",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "#ffffff",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Clock size={18} color="#0064e1" />
+                <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
+                  View history
+                </span>
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: 2 }}>
+                {viewHistoryAd.name} • ID: {viewHistoryAd.id}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setViewHistoryDrawerOpen(false);
+                setViewHistoryAd(null);
+              }}
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Activity Filters */}
+          <div
+            style={{
+              padding: "10px 20px",
+              borderBottom: "1px solid #f1f5f9",
+              background: "#f8fafc",
+              display: "flex",
+              gap: 6,
+              overflowX: "auto",
+            }}
+          >
+            {[
+              { id: "all", label: "All activities" },
+              { id: "status", label: "Status" },
+              { id: "budget", label: "Budget" },
+              { id: "creative", label: "Creative" },
+              { id: "targeting", label: "Targeting" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setViewHistoryFilter(f.id)}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 20,
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  border: viewHistoryFilter === f.id ? "1px solid #0064e1" : "1px solid #cbd5e1",
+                  background: viewHistoryFilter === f.id ? "#eff6ff" : "#ffffff",
+                  color: viewHistoryFilter === f.id ? "#0064e1" : "#475569",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Activity Timeline */}
+          <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {[
+                {
+                  id: "hist-1",
+                  type: "status",
+                  title: "Ad delivery status updated",
+                  author: "Adstra Marketing Admin",
+                  time: "Today at 10:14 AM",
+                  badge: "Status",
+                  badgeColor: "#16a34a",
+                  badgeBg: "#dcfce7",
+                  desc: "Delivery changed from In draft to Active.",
+                  beforeAfter: { before: "In draft", after: "Active" },
+                },
+                {
+                  id: "hist-2",
+                  type: "creative",
+                  title: "Creative copy & text headline updated",
+                  author: "Adstra Marketing Admin",
+                  time: "Yesterday at 4:25 PM",
+                  badge: "Creative",
+                  badgeColor: "#8b5cf6",
+                  badgeBg: "#f3e8ff",
+                  desc: "Updated primary text to highlight ROI comparison between Meta and Google Ads.",
+                  beforeAfter: { before: "Old test draft", after: viewHistoryAd.name },
+                },
+                {
+                  id: "hist-3",
+                  type: "budget",
+                  title: "Daily budget & bid strategy adjusted",
+                  author: "Adstra Marketing Admin",
+                  time: "12 Oct 2026 at 2:10 PM",
+                  badge: "Budget",
+                  badgeColor: "#0284c7",
+                  badgeBg: "#e0f2fe",
+                  desc: `Daily budget set to ${viewHistoryAd.budget || "₹200.00"}. Bid strategy set to ${viewHistoryAd.bidStrategy || "Highest volume"}.`,
+                },
+                {
+                  id: "hist-4",
+                  type: "targeting",
+                  title: "Attribution window & audience placement applied",
+                  author: "System (Adstra Engine)",
+                  time: "10 Oct 2026 at 9:00 AM",
+                  badge: "Targeting",
+                  badgeColor: "#f59e0b",
+                  badgeBg: "#fef3c7",
+                  desc: "Attribution set to 7-day click or 1-day view. Advantage+ placement expansion turned on.",
+                },
+                {
+                  id: "hist-5",
+                  type: "status",
+                  title: "Ad creative uploaded and created",
+                  author: "Adstra Marketing Admin",
+                  time: "08 Oct 2026 at 8:45 AM",
+                  badge: "Created",
+                  badgeColor: "#64748b",
+                  badgeBg: "#f1f5f9",
+                  desc: `Created under Ad set: "${viewHistoryAd.adsetName || "Traffic Campaign"}"`,
+                },
+              ]
+                .filter((item) => viewHistoryFilter === "all" || item.type === viewHistoryFilter)
+                .map((event) => (
+                  <div
+                    key={event.id}
+                    style={{
+                      padding: "14px",
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      background: "#ffffff",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "2px 7px",
+                          borderRadius: 4,
+                          background: event.badgeBg,
+                          color: event.badgeColor,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {event.badge}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{event.time}</span>
+                    </div>
+
+                    <div style={{ fontWeight: 650, fontSize: "0.86rem", color: "#0f172a", marginBottom: 4 }}>
+                      {event.title}
+                    </div>
+
+                    <div style={{ fontSize: "0.8rem", color: "#475569", lineHeight: 1.45, marginBottom: 8 }}>
+                      {event.desc}
+                    </div>
+
+                    {event.beforeAfter && (
+                      <div
+                        style={{
+                          padding: "8px 10px",
+                          background: "#f8fafc",
+                          borderRadius: 6,
+                          fontSize: "0.76rem",
+                          color: "#334155",
+                          border: "1px solid #e2e8f0",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 3,
+                          marginBottom: 6,
+                        }}
+                      >
+                        <div>
+                          <strong style={{ color: "#ef4444" }}>Previous:</strong> {event.beforeAfter.before}
+                        </div>
+                        <div>
+                          <strong style={{ color: "#16a34a" }}>Updated:</strong> {event.beforeAfter.after}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: "0.73rem", color: "#64748b" }}>
+                      Changed by: <strong>{event.author}</strong>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Drawer Footer */}
+          <div
+            style={{
+              padding: "14px 20px",
+              borderTop: "1px solid #e2e8f0",
+              background: "#f8fafc",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (showToast) showToast("Change history exported to CSV.", "success");
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 14px",
+                borderRadius: 6,
+                border: "1px solid #cbd5e1",
+                background: "#ffffff",
+                color: "#1e293b",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Download size={13} />
+              <span>Export history</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewHistoryDrawerOpen(false);
+                setViewHistoryAd(null);
+              }}
+              style={{
+                padding: "7px 18px",
+                borderRadius: 6,
+                border: "none",
+                background: "#0064e1",
+                color: "#ffffff",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── META AUTOMATED RULES MODAL ─── */}
+      {rulesModalOpen && rulesTargetAd && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1070,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          }}
+        >
+          <div
+            style={{
+              width: 620,
+              maxWidth: "92vw",
+              background: "#ffffff",
+              borderRadius: 12,
+              border: "1px solid #cbd5e1",
+              boxShadow: "0 24px 48px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              maxHeight: "90vh",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: "#eff6ff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MetaRulesIcon size={16} color="#0064e1" />
+                </div>
+                <div>
+                  <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
+                    Automated rules
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                    Applied to ad: <strong>{rulesTargetAd.name}</strong>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRulesModalOpen(false);
+                  setRulesTargetAd(null);
+                }}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div
+              style={{
+                display: "flex",
+                borderBottom: "1px solid #e2e8f0",
+                background: "#ffffff",
+                padding: "0 20px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setRulesActiveTab("active")}
+                style={{
+                  padding: "10px 16px",
+                  border: "none",
+                  background: "transparent",
+                  fontSize: "0.85rem",
+                  fontWeight: rulesActiveTab === "active" ? 700 : 500,
+                  color: rulesActiveTab === "active" ? "#0064e1" : "#64748b",
+                  borderBottom: rulesActiveTab === "active" ? "2px solid #0064e1" : "2px solid transparent",
+                  cursor: "pointer",
+                }}
+              >
+                Active rules ({automatedRulesList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRulesActiveTab("create")}
+                style={{
+                  padding: "10px 16px",
+                  border: "none",
+                  background: "transparent",
+                  fontSize: "0.85rem",
+                  fontWeight: rulesActiveTab === "create" ? 700 : 500,
+                  color: rulesActiveTab === "create" ? "#0064e1" : "#64748b",
+                  borderBottom: rulesActiveTab === "create" ? "2px solid #0064e1" : "2px solid transparent",
+                  cursor: "pointer",
+                }}
+              >
+                + Create new rule
+              </button>
+            </div>
+
+            {/* Tab Body */}
+            <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
+              {rulesActiveTab === "active" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {automatedRulesList.map((rule) => (
+                    <div
+                      key={rule.id}
+                      style={{
+                        padding: "14px 16px",
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                        background: rule.enabled ? "#ffffff" : "#f8fafc",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 14,
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 650, fontSize: "0.88rem", color: rule.enabled ? "#0f172a" : "#64748b" }}>
+                            {rule.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                              background: rule.enabled ? "#dcfce7" : "#f1f5f9",
+                              color: rule.enabled ? "#16a34a" : "#94a3b8",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {rule.enabled ? "Active" : "Paused"}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.8rem", color: "#334155", marginBottom: 3 }}>
+                          <strong>Condition:</strong> {rule.condition}
+                        </div>
+                        <div style={{ fontSize: "0.8rem", color: "#334155", marginBottom: 3 }}>
+                          <strong>Action:</strong> {rule.action}
+                        </div>
+                        <div style={{ fontSize: "0.74rem", color: "#64748b" }}>
+                          Schedule: {rule.schedule}
+                        </div>
+                      </div>
+
+                      {/* Toggle button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAutomatedRulesList((prev) =>
+                            prev.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r))
+                          );
+                          if (showToast) {
+                            showToast(
+                              `Rule "${rule.name}" ${rule.enabled ? "paused" : "activated"}.`,
+                              "info"
+                            );
+                          }
+                        }}
+                        style={{
+                          width: 36,
+                          height: 20,
+                          borderRadius: 10,
+                          background: rule.enabled ? "#0064e1" : "#cbd5e1",
+                          border: "none",
+                          padding: "2px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: rule.enabled ? "flex-end" : "flex-start",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                          flexShrink: 0,
+                          marginTop: 2,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                          }}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Create Rule Form */
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#334155", marginBottom: 4 }}>
+                      Rule name:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pause ad if cost per click exceeds limit"
+                      value={newRuleForm.name}
+                      onChange={(e) => setNewRuleForm((prev) => ({ ...prev, name: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #cbd5e1",
+                        fontSize: "0.84rem",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#334155", marginBottom: 4 }}>
+                        Action:
+                      </label>
+                      <select
+                        value={newRuleForm.action}
+                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, action: e.target.value }))}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.84rem",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <option value="Turn off ad">Turn off ad</option>
+                        <option value="Turn on ad">Turn on ad</option>
+                        <option value="Increase daily budget by 10%">Increase daily budget by 10%</option>
+                        <option value="Decrease daily budget by 10%">Decrease daily budget by 10%</option>
+                        <option value="Send email notification">Send email notification</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#334155", marginBottom: 4 }}>
+                        Schedule:
+                      </label>
+                      <select
+                        value={newRuleForm.schedule}
+                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, schedule: e.target.value }))}
+                        style={{
+                          width: "100%",
+                          padding: "8px 10px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.84rem",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <option value="Daily at midnight">Daily at midnight (00:00)</option>
+                        <option value="Continuous (Every 30 minutes)">Continuous (Every 30 minutes)</option>
+                        <option value="Weekly on Monday">Weekly on Monday</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#334155", marginBottom: 4 }}>
+                      Condition:
+                    </label>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <select
+                        value={newRuleForm.metric}
+                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, metric: e.target.value }))}
+                        style={{
+                          flex: 1,
+                          padding: "8px 10px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.84rem",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <option value="Cost per result">Cost per result</option>
+                        <option value="Impressions">Impressions</option>
+                        <option value="Amount spent">Amount spent</option>
+                        <option value="Frequency">Frequency</option>
+                        <option value="CTR">CTR (Link click-through rate)</option>
+                      </select>
+                      <select
+                        value={newRuleForm.operator}
+                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, operator: e.target.value }))}
+                        style={{
+                          width: 80,
+                          padding: "8px 10px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.84rem",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <option value=">">is &gt;</option>
+                        <option value="<">is &lt;</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={newRuleForm.value}
+                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, value: e.target.value }))}
+                        placeholder="Value"
+                        style={{
+                          width: 100,
+                          padding: "8px 10px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.84rem",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newRuleForm.name.trim()) {
+                        if (showToast) showToast("Please enter a rule name.", "error");
+                        return;
+                      }
+                      const createdRule = {
+                        id: `rule-${Date.now()}`,
+                        name: newRuleForm.name.trim(),
+                        condition: `${newRuleForm.metric} ${newRuleForm.operator} ${newRuleForm.value}`,
+                        action: newRuleForm.action,
+                        schedule: newRuleForm.schedule,
+                        enabled: true,
+                      };
+                      setAutomatedRulesList((prev) => [createdRule, ...prev]);
+                      setRulesActiveTab("active");
+                      setNewRuleForm({
+                        name: "",
+                        action: "Turn off ad",
+                        metric: "Cost per result",
+                        operator: ">",
+                        value: "12.00",
+                        schedule: "Daily at midnight",
+                      });
+                      if (showToast) showToast(`Automated rule "${createdRule.name}" created!`, "success");
+                    }}
+                    style={{
+                      alignSelf: "flex-end",
+                      padding: "8px 18px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: "#0064e1",
+                      color: "#ffffff",
+                      fontSize: "0.84rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      marginTop: 10,
+                    }}
+                  >
+                    Save & Activate Rule
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: "12px 20px",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                background: "#f8fafc",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setRulesModalOpen(false);
+                  setRulesTargetAd(null);
+                }}
+                style={{
+                  padding: "7px 16px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Close
               </button>
             </div>
           </div>

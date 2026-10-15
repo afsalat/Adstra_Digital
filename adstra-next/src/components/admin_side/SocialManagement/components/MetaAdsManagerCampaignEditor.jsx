@@ -42,6 +42,21 @@ import {
   Flag,
 } from "lucide-react";
 
+const Tv = ({ size = 14, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect width="20" height="15" x="2" y="7" rx="2" ry="2"/>
+    <polyline points="17 2 12 7 7 2"/>
+  </svg>
+);
+
+// Prohibited/Warning circle with slash icon (matching Image 2)
+const MetaProhibitedIcon = ({ size = 16, color = "#dc2626" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+    <circle cx="10" cy="10" r="8" stroke={color} strokeWidth="1.8" />
+    <line x1="4.5" y1="4.5" x2="15.5" y2="15.5" stroke={color} strokeWidth="1.8" />
+  </svg>
+);
+
 // Folder & Ad icons
 const MetaFolderIcon = ({ size = 16, active = false }) => (
   <svg
@@ -361,7 +376,7 @@ export default function MetaAdsManagerCampaignEditor({
   const defaultObj = initialData?.objective || "Leads";
   const [objective, setObjective] = useState(defaultObj);
   const [campaignName, setCampaignName] = useState(
-    initialData?.campaignName || `New ${defaultObj} Campaign`
+    initialData?.campaignName || `New ${defaultObj} campaign`
   );
   const [buyingType, setBuyingType] = useState(initialData?.buyingType || "Auction");
   const [templateToggleOn, setTemplateToggleOn] = useState(true);
@@ -391,50 +406,103 @@ export default function MetaAdsManagerCampaignEditor({
   const [specialDropdownOpen, setSpecialDropdownOpen] = useState(false);
   const specialDropdownRef = useRef(null);
 
-  // ── Ad Set Level State (Screenshot 2) ──
+  // ── Ad Set Level State (Meta Ads Manager Exact Replication) ──
   const [adsetName, setAdsetName] = useState(
-    initialData?.adsetName || `New ${defaultObj} Ad set`
+    initialData?.adsetName || `New ${defaultObj} ad set`
+  );
+  const [securitiesDisclaimerChecked, setSecuritiesDisclaimerChecked] = useState(false);
+  const [conversionLocation, setConversionLocation] = useState(
+    defaultObj === "App promotion" ? "app" : "instant_forms"
   );
   const [mobileAppStore, setMobileAppStore] = useState("Google Play Store");
   const [appNameQuery, setAppNameQuery] = useState("");
   const [countryAvailabilityChecked, setCountryAvailabilityChecked] = useState(false);
   const [performanceGoal, setPerformanceGoal] = useState("Maximise number of app installs");
+  const [leadPerformanceGoal, setLeadPerformanceGoal] = useState("Maximise number of leads");
+  const [awarenessGoal, setAwarenessGoal] = useState("Maximise reach of ads");
+  const [frequencyCapNumber, setFrequencyCapNumber] = useState(1);
+  const [frequencyCapDays, setFrequencyCapDays] = useState(7);
+  const [trafficLocation, setTrafficLocation] = useState("website");
+  const [trafficGoal, setTrafficGoal] = useState("Maximise number of link clicks");
+  const [engagementLocation, setEngagementLocation] = useState("on_ad");
+  const [engagementType, setEngagementType] = useState("video_views");
+  const [engagementGoal, setEngagementGoal] = useState("Maximise ThruPlay views");
+  const [salesLocation, setSalesLocation] = useState("website");
+  const [salesGoal, setSalesGoal] = useState("Maximise number of conversions");
+  const [leadTermsAccepted, setLeadTermsAccepted] = useState(false);
+  const [verifyingCardOpen, setVerifyingCardOpen] = useState(true);
+  const [showPlacementChangesNotice, setShowPlacementChangesNotice] = useState(true);
+  const [placementValueRulesOpen, setPlacementValueRulesOpen] = useState(true);
+  const [placementShowMoreOpen, setPlacementShowMoreOpen] = useState(false);
+  const [adSchedulingOpen, setAdSchedulingOpen] = useState(false);
   const [showEstimatedAudienceSize, setShowEstimatedAudienceSize] = useState(false);
-  const [startDate, setStartDate] = useState("2026-09-30");
-  const [startTime, setStartTime] = useState("10:45");
+  const [startDate, setStartDate] = useState("15-10-2026");
+  const [startTime, setStartTime] = useState("14:30");
   const [endDateEnabled, setEndDateEnabled] = useState(false);
-  const [endDate, setEndDate] = useState("2026-10-30");
+  const [endDate, setEndDate] = useState("30-11-2026");
+  const [endTime, setEndTime] = useState("23:59");
   const [targetLocation, setTargetLocation] = useState("India");
   const [ageMin, setAgeMin] = useState(18);
   const [ageMax, setAgeMax] = useState("65+");
   const [targetGender, setTargetGender] = useState("All");
   const [placementsType, setPlacementsType] = useState("advantage");
+  const [manualPlatforms, setManualPlatforms] = useState({
+    facebook: true,
+    instagram: true,
+    audienceNetwork: true,
+    messenger: true,
+  });
+  const [manualPlacementsList, setManualPlacementsList] = useState({
+    feeds: true,
+    storiesReels: true,
+    inStream: true,
+    search: true,
+    messages: true,
+    appsSites: true,
+  });
 
-  // ── Ad Level State (Screenshot 3) ──
+  // ── Ad Level State (Native Meta Ads Manager matching Images 2, 3, 4, 5) ──
   const [adName, setAdName] = useState(
-    initialData?.adName || `New ${defaultObj} Ad`
+    initialData?.adName || `New ${defaultObj} campaign - Ad`
   );
   const [partnershipAdEnabled, setPartnershipAdEnabled] = useState(false);
-  const [facebookPageConnected, setFacebookPageConnected] = useState(false);
-  const [facebookPage, setFacebookPage] = useState("Adstra Digital");
-  const [instagramAccount, setInstagramAccount] = useState("@adstradigital");
+  const [facebookPageConnected, setFacebookPageConnected] = useState(true);
+  const [facebookPage, setFacebookPage] = useState(initialData?.facebookPage || "Lioraa London");
+  const [instagramAccount, setInstagramAccount] = useState(initialData?.instagramAccount || "lioraalondon");
+  const [threadsProfile, setThreadsProfile] = useState(initialData?.threadsProfile || "");
+  const [whatsappNumber, setWhatsappNumber] = useState(initialData?.whatsappNumber || "");
   const [facebookPageModalOpen, setFacebookPageModalOpen] = useState(false);
-  const [newPageName, setNewPageName] = useState("Adstra Digital");
-  const [newPageCategory, setNewPageCategory] = useState("Marketing Agency");
+  const [newPageName, setNewPageName] = useState("Lioraa London");
+  const [newPageCategory, setNewPageCategory] = useState("Clothing (Brand)");
+  const [leadInstantForm, setLeadInstantForm] = useState("Lead Generation Form - High Intent (Recommended)");
+  const [previewPlacement, setPreviewPlacement] = useState("fb_feed");
+  const [createFormModalOpen, setCreateFormModalOpen] = useState(false);
+  const [newFormName, setNewFormName] = useState("Lead Generation Form - High Intent");
+
+  // Meta Ad Setup & Creative States (Images 3 & 4)
+  const [adSetupOption, setAdSetupOption] = useState("Use existing post");
+  const [multiAdvertiserAds, setMultiAdvertiserAds] = useState(true);
+  const [selectedPostId, setSelectedPostId] = useState("122207744828933412");
+  const [selectedPostDate, setSelectedPostDate] = useState("11 Oct 2026");
+  const [selectedPostTitle, setSelectedPostTitle] = useState("Your Navratri saree might be...");
+  const [aiTransparency, setAiTransparency] = useState(false);
+  const [addDestination, setAddDestination] = useState(false);
+  const [previewPlacementFilter, setPreviewPlacementFilter] = useState("all");
 
   const [adFormat, setAdFormat] = useState("single");
   const [primaryText, setPrimaryText] = useState(
-    initialData?.primaryText || "Grow your mobile presence with high-performing Meta app install campaigns managed by industry specialists. Reach engaged users and boost daily retention."
+    initialData?.primaryText ||
+      `Your Navratri saree might be right here ❤️\nNine days of devotion, colour, and beautiful traditions.\n\n🥻 UP TO 20% OFF Traditional Wear\nBUY A SAREE & GET 35% OFF ON READYMADE BLOUSE\nFREE UK DELIVERY\n\n🛍 Shop the Collection:\nhttps://lioraalondon.uk/collections/woman\n\n📞 +44 7766 010701`
   );
-  const [headline, setHeadline] = useState(initialData?.headline || "Download & Experience the Future");
-  const [descriptionText, setDescriptionText] = useState("Free install available on Google Play.");
-  const [callToAction, setCallToAction] = useState(initialData?.callToAction || "See details");
-  const [websiteUrl, setWebsiteUrl] = useState("https://play.google.com/store/apps");
+  const [headline, setHeadline] = useState(initialData?.headline || "Your Navratri saree might be right here ❤️");
+  const [descriptionText, setDescriptionText] = useState("Free UK delivery on all orders.");
+  const [callToAction, setCallToAction] = useState(initialData?.callToAction || "Learn more");
+  const [websiteUrl, setWebsiteUrl] = useState(initialData?.websiteUrl || "https://lioraalondon.uk/collections/woman");
   const [selectedCreativeUrl, setSelectedCreativeUrl] = useState(
-    initialData?.selectedCreativeUrl || PRESET_CREATIVES[0].url
+    initialData?.selectedCreativeUrl || "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=700&auto=format&fit=crop&q=80"
   );
   const [adPreviewEnabled, setAdPreviewEnabled] = useState(true);
-  const [adPreviewMode, setAdPreviewMode] = useState("empty");
+  const [adPreviewMode, setAdPreviewMode] = useState("live");
 
   // Sync state whenever initialData changes
   useEffect(() => {
@@ -846,7 +914,7 @@ export default function MetaAdsManagerCampaignEditor({
         overflow: "hidden",
       }}
     >
-      {/* â”€â”€ TOP NAV BAR (Exact match to Screenshots 1, 2, 3) â”€â”€ */}
+      {/* ── TOP NAV BAR (Exact match to Screenshots 1, 2, 3) ── */}
       <header
         style={{
           height: 48,
@@ -889,7 +957,7 @@ export default function MetaAdsManagerCampaignEditor({
           </button>
 
           {/* Breadcrumbs hierarchy (Matching Screenshots 1, 2, 3) */}
-          <nav aria-label="Breadcrumb" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <nav aria-label="Breadcrumb" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
             {/* 1. Campaign Breadcrumb */}
             <button
               type="button"
@@ -921,7 +989,7 @@ export default function MetaAdsManagerCampaignEditor({
             >
               <MetaFolderIcon size={15} active={activeLevel === "campaign"} />
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                {campaignName || "New App promotion Campaign"}
+                {campaignName || `New ${objective} campaign`}
               </span>
             </button>
 
@@ -944,7 +1012,7 @@ export default function MetaAdsManagerCampaignEditor({
                 fontSize: "0.86rem",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
-                maxWidth: 220,
+                maxWidth: 240,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -957,8 +1025,8 @@ export default function MetaAdsManagerCampaignEditor({
               }}
             >
               <MetaGridIcon size={15} active={activeLevel === "adset"} />
-              <span>
-                {activeLevel === "campaign" ? "1 Ad set" : adsetName || "New App promotion Ad set"}
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {activeLevel === "campaign" ? "1 Ad set" : adsetName || `New ${objective} ad set`}
               </span>
             </button>
 
@@ -981,7 +1049,7 @@ export default function MetaAdsManagerCampaignEditor({
                 fontSize: "0.86rem",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
-                maxWidth: 220,
+                maxWidth: 240,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -994,8 +1062,8 @@ export default function MetaAdsManagerCampaignEditor({
               }}
             >
               <MetaAdIcon size={15} active={activeLevel === "ad"} />
-              <span>
-                {activeLevel === "ad" ? adName || "New App promotion Ad" : "1 Ad"}
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {activeLevel === "ad" ? adName || `New ${objective} ad` : "1 Ad"}
               </span>
             </button>
 
@@ -1123,9 +1191,9 @@ export default function MetaAdsManagerCampaignEditor({
         </div>
       </header>
 
-      {/* â”€â”€ WORKSPACE BODY: Sidebar + Main Content â”€â”€ */}
+      {/* ── WORKSPACE BODY: Sidebar + Main Content ── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* â”€â”€ LEFT TREE NAVIGATION RAIL (Screenshots 1, 2, 3) â”€â”€ */}
+        {/* ── LEFT TREE NAVIGATION RAIL (Screenshots 1, 2, 3) ── */}
         {sidebarOpen && (
           <aside
             style={{
@@ -1197,7 +1265,7 @@ export default function MetaAdsManagerCampaignEditor({
                       maxWidth: 155,
                     }}
                   >
-                    {campaignName || "New App promotion Campaign"}
+                    {campaignName || `New ${objective} campaign`}
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -1239,11 +1307,14 @@ export default function MetaAdsManagerCampaignEditor({
                       maxWidth: 145,
                     }}
                   >
-                    {adsetName || "New App promotion Ad set"}
+                    {adsetName || `New ${objective} ad set`}
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <MoreHorizontal size={14} color="#8a8d91" />
+                  {objective === "Leads" && !leadTermsAccepted && (
+                    <MetaProhibitedIcon size={14} />
+                  )}
                 </div>
               </div>
 
@@ -1281,19 +1352,37 @@ export default function MetaAdsManagerCampaignEditor({
                       maxWidth: 130,
                     }}
                   >
-                    {adName || "New App promotion Ad"}
+                    {adName || `New ${objective} ad`}
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <MoreHorizontal size={14} color="#8a8d91" />
-                  <MetaStatusHalfCircleIcon size={14} />
+                  {objective === "Leads" && !leadTermsAccepted ? (
+                    <MetaProhibitedIcon size={14} />
+                  ) : (
+                    <div
+                      style={{
+                        width: 20,
+                        height: 12,
+                        borderRadius: 6,
+                        background: "#0064e1",
+                        padding: 1.5,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <div style={{ width: 9, height: 9, borderRadius: "50%", background: "#ffffff" }} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </aside>
         )}
 
-        {/* â”€â”€ MAIN CONTENT AREA â”€â”€ */}
+        {/* ── MAIN CONTENT AREA ── */}
         <main
           style={{
             flex: 1,
@@ -1303,14 +1392,14 @@ export default function MetaAdsManagerCampaignEditor({
           }}
         >
           <div style={{ maxWidth: 1120, margin: "0 auto" }}>
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+            {/* ════════════════════════════════════════════════════════
                 1. CAMPAIGN LEVEL VIEW (Matches Screenshot 1 exactly)
-               â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+               ════════════════════════════════════════════════════════ */}
             {activeLevel === "campaign" && (
               <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
                 {/* Left Column: Form Cards */}
                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* â”€â”€ CARD 1: Campaign name (Screenshot 1) â”€â”€ */}
+                  {/* ── CARD 1: Campaign name (Screenshot 1) ── */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -1429,28 +1518,6 @@ export default function MetaAdsManagerCampaignEditor({
                             }}
                           />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCampaignEditingMode(false);
-                            setTemplateModalOpen(true);
-                          }}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "#0064e1",
-                            fontSize: "0.86rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            padding: 0,
-                            display: "inline-flex",
-                            alignItems: "center",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-                        >
-                          Edit template
-                        </button>
                       </div>
                     ) : (
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -1500,7 +1567,7 @@ export default function MetaAdsManagerCampaignEditor({
                     )}
                   </div>
 
-                  {/* â”€â”€ CARD 2: Campaign details (Screenshot 1) â”€â”€ */}
+                  {/* ── CARD 2: Campaign details (Screenshot 1) ── */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -1578,7 +1645,7 @@ export default function MetaAdsManagerCampaignEditor({
                       </div>
                     </div>
 
-                    {/* Campaign objective â€” Meta style: label only + info alert (matching Image 1) */}
+                    {/* Campaign objective — Meta style: label only + info alert (matching Image 1) */}
                     <div style={{ marginBottom: 18 }}>
                       <div
                         style={{
@@ -1607,7 +1674,7 @@ export default function MetaAdsManagerCampaignEditor({
                         {objective}
                       </div>
 
-                      {/* Radio list â€” full objectives */}
+                      {/* Radio list — full objectives */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
                         {OBJECTIVES_LIST.map((item) => {
                           const IconComp = item.icon;
@@ -1617,10 +1684,19 @@ export default function MetaAdsManagerCampaignEditor({
                               key={item.id}
                               onClick={() => {
                                 setObjective(item.id);
-                                if (campaignName.startsWith("New ")) {
+                                if (campaignName.startsWith("New ") || campaignName.endsWith("campaign")) {
                                   setCampaignName(`New ${item.id} campaign`);
-                                  setAdsetName(`New ${item.id} ad set`);
-                                  setAdName(`New ${item.id} ad`);
+                                  setAdsetName(`New ${item.id} campaign - Ad Set`);
+                                  setAdName(`New ${item.id} campaign - Ad`);
+                                }
+                                if (item.id === "App promotion") {
+                                  setConversionLocation("app");
+                                } else if (item.id === "Leads") {
+                                  setConversionLocation("instant_forms");
+                                } else if (item.id === "Traffic") {
+                                  setConversionLocation("website");
+                                } else if (item.id === "Engagement") {
+                                  setConversionLocation("messenger");
                                 }
                               }}
                               style={{
@@ -1771,7 +1847,7 @@ export default function MetaAdsManagerCampaignEditor({
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <input
                               type="text"
-                              placeholder="e.g. â‚¹50,000"
+                              placeholder="e.g. ₹50,000"
                               value={campaignSpendingLimit}
                               onChange={(e) => setCampaignSpendingLimit(e.target.value)}
                               style={{
@@ -1791,7 +1867,7 @@ export default function MetaAdsManagerCampaignEditor({
                     </div>
                   </div>
 
-                  {/* â”€â”€ CARD 3: Budget (Advantage+ on) (Matching Image 1) â”€â”€ */}
+                  {/* ── CARD 3: Budget (Advantage+ on) (Matching Image 1) ── */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -1943,7 +2019,7 @@ export default function MetaAdsManagerCampaignEditor({
                           </div>
 
                           <div style={{ display: "flex", alignItems: "center", border: "1px solid #cbd5e1", borderRadius: 6, overflow: "hidden", background: "#ffffff", width: 190 }}>
-                            <span style={{ padding: "8px 10px", color: "#475569", fontSize: "0.9rem", fontWeight: 600, background: "#f8fafc", borderRight: "1px solid #e2e8f0" }}>â‚¹</span>
+                            <span style={{ padding: "8px 10px", color: "#475569", fontSize: "0.9rem", fontWeight: 600, background: "#f8fafc", borderRight: "1px solid #e2e8f0" }}>₹</span>
                             <input
                               type="number"
                               value={budgetAmount}
@@ -1955,7 +2031,7 @@ export default function MetaAdsManagerCampaignEditor({
                         </div>
 
                         <div style={{ fontSize: "0.8rem", color: "#475569" }}>
-                          We'll spend around â‚¹{formattedBudget} per day. Your maximum daily spend is â‚¹{maxDailySpend} and your maximum weekly spend is â‚¹{maxWeeklySpend}.{" "}
+                          We'll spend around ₹{formattedBudget} per day. Your maximum daily spend is ₹{maxDailySpend} and your maximum weekly spend is ₹{maxWeeklySpend}.{" "}
                           <a href="#about-daily" onClick={(e) => e.preventDefault()} style={{ color: "#0064e1", textDecoration: "none" }}>About daily budget</a>
                         </div>
                       </div>
@@ -1986,7 +2062,7 @@ export default function MetaAdsManagerCampaignEditor({
                     </div>
                   </div>
 
-                  {/* â”€â”€ CARD 4: Campaign frequency control (Matching Image 1) â”€â”€ */}
+                  {/* ── CARD 4: Campaign frequency control (Matching Image 1) ── */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2050,7 +2126,7 @@ export default function MetaAdsManagerCampaignEditor({
                     </div>
                   </div>
 
-                  {/* â”€â”€ CARD 5: A/B test (Matching Image 1 & Image 2) â”€â”€ */}
+                  {/* ── CARD 5: A/B test (Matching Image 1 & Image 2) ── */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2114,7 +2190,7 @@ export default function MetaAdsManagerCampaignEditor({
                     </div>
                   </div>
 
-                  {/* â”€â”€ CARD 6: Special Ad Categories (Matching Image 1 & Image 2) â”€â”€ */}
+                  {/* ── CARD 6: Special Ad Categories (Matching Image 1 & Image 2) ── */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2442,7 +2518,7 @@ export default function MetaAdsManagerCampaignEditor({
                             color: "#1c1e21",
                           }}
                         >
-                          <span>âœ¦ Advantage+ app campaign</span>
+                          <span>✦ Advantage+ app campaign</span>
                           <Info size={13} color="#65676b" />
                         </div>
                         <span
@@ -2470,14 +2546,46 @@ export default function MetaAdsManagerCampaignEditor({
               </div>
             )}
 
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+            {/* ════════════════════════════════════════════════════════
                 2. AD SET LEVEL VIEW (Matches Screenshot 2 exactly)
-               â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+               ════════════════════════════════════════════════════════ */}
             {activeLevel === "adset" && (
               <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
                 {/* Left Column: Form Cards */}
                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* Card 1: Ad set name */}
+                  {/* Securities and investments disclaimer (matching Image 2) */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      padding: "2px 4px 6px 4px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id="securities-disclaimer"
+                      checked={securitiesDisclaimerChecked}
+                      onChange={(e) => setSecuritiesDisclaimerChecked(e.target.checked)}
+                      style={{ marginTop: 2, width: 16, height: 16, accentColor: "#0064e1", cursor: "pointer" }}
+                    />
+                    <label
+                      htmlFor="securities-disclaimer"
+                      style={{ fontSize: "0.86rem", color: "#1c1e21", cursor: "pointer", lineHeight: 1.4 }}
+                    >
+                      This ad set includes ads related to securities and investments
+                      <br />
+                      <a
+                        href="#verification-requirements"
+                        onClick={(e) => e.preventDefault()}
+                        style={{ color: "#0064e1", textDecoration: "none", fontSize: "0.82rem" }}
+                      >
+                        About verification requirements
+                      </a>
+                    </label>
+                  </div>
+
+                  {/* Card 1: Ad set name (matching Image 1) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2505,7 +2613,7 @@ export default function MetaAdsManagerCampaignEditor({
                         type="text"
                         value={adsetName}
                         onChange={(e) => setAdsetName(e.target.value)}
-                        placeholder="Enter ad set name"
+                        placeholder={`New ${objective} ad set`}
                         style={{
                           flex: 1,
                           padding: "8px 12px",
@@ -2529,13 +2637,15 @@ export default function MetaAdsManagerCampaignEditor({
                           cursor: "pointer",
                           whiteSpace: "nowrap",
                         }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9fa")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
                       >
                         Create template
                       </button>
                     </div>
                   </div>
 
-                  {/* Card 2: App promotion (Screenshot 2) */}
+                  {/* Card 2: Conversion / Performance goal (Dynamically rendered by objective) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2555,166 +2665,634 @@ export default function MetaAdsManagerCampaignEditor({
                     >
                       <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
                       <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
-                        App promotion
+                        {objective === "App promotion"
+                          ? "App promotion"
+                          : objective === "Awareness"
+                          ? "Performance goal"
+                          : "Conversion"}
                       </h2>
                     </div>
 
-                    {/* Mobile app store */}
-                    <div style={{ marginBottom: 16 }}>
-                      <label
-                        style={{
-                          display: "block",
-                          fontSize: "0.86rem",
-                          fontWeight: 700,
-                          color: "#1c1e21",
-                          marginBottom: 4,
-                        }}
-                      >
-                        Mobile app store
-                      </label>
-                      <div style={{ position: "relative" }}>
-                        <select
-                          value={mobileAppStore}
-                          onChange={(e) => setMobileAppStore(e.target.value)}
+                    {/* DYNAMIC BY OBJECTIVE */}
+                    {objective === "Awareness" && (
+                      <div>
+                        <div style={{ marginBottom: 16 }}>
+                          <label
+                            style={{
+                              display: "block",
+                              fontSize: "0.86rem",
+                              fontWeight: 700,
+                              color: "#1c1e21",
+                              marginBottom: 4,
+                            }}
+                          >
+                            Performance goal
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={awarenessGoal}
+                              onChange={(e) => setAwarenessGoal(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "9px 34px 9px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                background: "#ffffff",
+                                color: "#1c1e21",
+                                appearance: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="Maximise reach of ads">Maximise reach of ads (Recommended)</option>
+                              <option value="Maximise number of impressions">Maximise number of impressions</option>
+                              <option value="Maximise ad recall lift">Maximise ad recall lift</option>
+                              <option value="Maximise 2-second continuous video views">Maximise 2-second continuous video views</option>
+                            </select>
+                            <ChevronDown
+                              size={15}
+                              color="#65676b"
+                              style={{
+                                position: "absolute",
+                                right: 12,
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                pointerEvents: "none",
+                              }}
+                            />
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#65676b", marginTop: 4 }}>
+                            {awarenessGoal === "Maximise reach of ads" &&
+                              "We'll try to show your ads to the maximum number of people."}
+                            {awarenessGoal === "Maximise number of impressions" &&
+                              "We'll try to show your ads to people as many times as possible."}
+                            {awarenessGoal === "Maximise ad recall lift" &&
+                              "We'll try to show your ads to people who are likely to remember seeing them."}
+                            {awarenessGoal === "Maximise 2-second continuous video views" &&
+                              "We'll try to show your video ads to people who will watch at least 2 continuous seconds."}
+                          </div>
+                        </div>
+
+                        {/* Frequency Cap */}
+                        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #f0f2f5" }}>
+                          <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Frequency cap
+                          </div>
+                          <div style={{ fontSize: "0.8rem", color: "#65676b", marginBottom: 8 }}>
+                            A frequency cap lets you limit how often people see your ads.
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <input
+                              type="number"
+                              value={frequencyCapNumber}
+                              onChange={(e) => setFrequencyCapNumber(Number(e.target.value))}
+                              style={{ width: 64, padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                            />
+                            <span style={{ fontSize: "0.86rem", color: "#1c1e21" }}>impression every</span>
+                            <input
+                              type="number"
+                              value={frequencyCapDays}
+                              onChange={(e) => setFrequencyCapDays(Number(e.target.value))}
+                              style={{ width: 64, padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                            />
+                            <span style={{ fontSize: "0.86rem", color: "#1c1e21" }}>days</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {objective === "Traffic" && (
+                      <div>
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Conversion location
+                          </label>
+                          <div style={{ fontSize: "0.82rem", color: "#65676b", marginBottom: 10 }}>
+                            Choose where you want to send traffic.
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                            {[
+                              { id: "website", label: "Website (Recommended)", desc: "Send traffic to your website.", icon: Globe },
+                              { id: "app", label: "App", desc: "Send traffic to your mobile app.", icon: Smartphone },
+                              { id: "messenger", label: "Messenger", desc: "Send people to Messenger chats.", icon: MessageSquare },
+                              { id: "calls", label: "Calls", desc: "Get people to call your business.", icon: PhoneCall },
+                            ].map((loc) => {
+                              const IconComponent = loc.icon;
+                              const isSelected = trafficLocation === loc.id;
+                              return (
+                                <div
+                                  key={loc.id}
+                                  onClick={() => setTrafficLocation(loc.id)}
+                                  style={{
+                                    border: isSelected ? "2px solid #0064e1" : "1px solid #cbd5e1",
+                                    borderRadius: 8,
+                                    padding: "10px 12px",
+                                    background: isSelected ? "#f0f7ff" : "#ffffff",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                    <IconComponent size={16} color={isSelected ? "#0064e1" : "#1c1e21"} />
+                                    <span style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>{loc.label}</span>
+                                  </div>
+                                  <div style={{ fontSize: "0.78rem", color: "#65676b" }}>{loc.desc}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Performance goal
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={trafficGoal}
+                              onChange={(e) => setTrafficGoal(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "9px 34px 9px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                background: "#ffffff",
+                                color: "#1c1e21",
+                                appearance: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="Maximise number of link clicks">Maximise number of link clicks (Recommended)</option>
+                              <option value="Maximise number of landing page views">Maximise number of landing page views</option>
+                              <option value="Maximise reach of ads">Maximise reach of ads</option>
+                              <option value="Maximise number of impressions">Maximise number of impressions</option>
+                            </select>
+                            <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#65676b", marginTop: 4 }}>
+                            We'll try to show your ads to the people most likely to click on them.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {objective === "Engagement" && (
+                      <div>
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Conversion location
+                          </label>
+                          <div style={{ fontSize: "0.82rem", color: "#65676b", marginBottom: 10 }}>
+                            Choose where you want to drive engagement.
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                            {[
+                              { id: "on_ad", label: "On your ad (Recommended)", desc: "Get video views or post interactions.", icon: Megaphone },
+                              { id: "messaging", label: "Messaging apps", desc: "Start conversations on Messenger/WhatsApp.", icon: MessageSquare },
+                              { id: "page", label: "Facebook Page", desc: "Get people to like your Page.", icon: Flag },
+                            ].map((loc) => {
+                              const IconComponent = loc.icon;
+                              const isSelected = engagementLocation === loc.id;
+                              return (
+                                <div
+                                  key={loc.id}
+                                  onClick={() => setEngagementLocation(loc.id)}
+                                  style={{
+                                    border: isSelected ? "2px solid #0064e1" : "1px solid #cbd5e1",
+                                    borderRadius: 8,
+                                    padding: "10px 12px",
+                                    background: isSelected ? "#f0f7ff" : "#ffffff",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                    <IconComponent size={16} color={isSelected ? "#0064e1" : "#1c1e21"} />
+                                    <span style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>{loc.label}</span>
+                                  </div>
+                                  <div style={{ fontSize: "0.78rem", color: "#65676b" }}>{loc.desc}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {engagementLocation === "on_ad" && (
+                          <div style={{ marginBottom: 16 }}>
+                            <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Engagement type
+                            </label>
+                            <div style={{ position: "relative" }}>
+                              <select
+                                value={engagementType}
+                                onChange={(e) => setEngagementType(e.target.value)}
+                                style={{
+                                  width: "100%",
+                                  padding: "9px 34px 9px 12px",
+                                  borderRadius: 6,
+                                  border: "1px solid #cbd5e1",
+                                  fontSize: "0.88rem",
+                                  background: "#ffffff",
+                                  color: "#1c1e21",
+                                  appearance: "none",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <option value="video_views">Video views (Recommended)</option>
+                                <option value="post_engagement">Post engagement</option>
+                                <option value="event_responses">Event responses</option>
+                              </select>
+                              <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Performance goal
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={engagementGoal}
+                              onChange={(e) => setEngagementGoal(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "9px 34px 9px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                background: "#ffffff",
+                                color: "#1c1e21",
+                                appearance: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="Maximise ThruPlay views">Maximise ThruPlay views (Recommended)</option>
+                              <option value="Maximise 2-second continuous video views">Maximise 2-second continuous video views</option>
+                              <option value="Maximise post engagement">Maximise engagement with a post</option>
+                              <option value="Maximise Page likes">Maximise Page likes</option>
+                            </select>
+                            <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {objective === "Leads" && (
+                      <div>
+                        {/* Conversion location selector */}
+                        <div style={{ marginBottom: 18 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Conversion location
+                          </label>
+                          <div style={{ fontSize: "0.82rem", color: "#65676b", marginBottom: 10 }}>
+                            Choose where you want to generate leads.
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 }}>
+                            {[
+                              { id: "instant_forms", label: "Instant forms", desc: "Generate leads by asking people to fill out a form.", icon: FileText },
+                              { id: "messenger", label: "Messenger", desc: "Generate leads by starting chats in Messenger.", icon: MessageSquare },
+                              { id: "website", label: "Website", desc: "Generate leads through your website.", icon: Globe },
+                              { id: "app", label: "App", desc: "Generate leads through your mobile app.", icon: Smartphone },
+                            ].map((loc) => {
+                              const IconComponent = loc.icon;
+                              const isSelected = conversionLocation === loc.id;
+                              return (
+                                <div
+                                  key={loc.id}
+                                  onClick={() => setConversionLocation(loc.id)}
+                                  style={{
+                                    border: isSelected ? "2px solid #0064e1" : "1px solid #cbd5e1",
+                                    borderRadius: 8,
+                                    padding: "12px 14px",
+                                    background: isSelected ? "#f0f7ff" : "#ffffff",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 4,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <div
+                                      style={{
+                                        width: 16,
+                                        height: 16,
+                                        borderRadius: "50%",
+                                        border: isSelected ? "5px solid #0064e1" : "1.5px solid #65676b",
+                                        background: "#ffffff",
+                                        boxSizing: "border-box",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                    <IconComponent size={16} color={isSelected ? "#0064e1" : "#1c1e21"} />
+                                    <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>{loc.label}</span>
+                                  </div>
+                                  <div style={{ fontSize: "0.78rem", color: "#65676b", paddingLeft: 24, lineHeight: 1.35 }}>
+                                    {loc.desc}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Performance goal (Exact Match to Image 1) */}
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Performance goal
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={leadPerformanceGoal}
+                              onChange={(e) => setLeadPerformanceGoal(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "9px 34px 9px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                background: "#ffffff",
+                                color: "#1c1e21",
+                                appearance: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="Maximise number of leads">Maximise number of leads (Recommended)</option>
+                              <option value="Maximise number of conversion leads">Maximise number of conversion leads</option>
+                            </select>
+                            <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#65676b", marginTop: 4 }}>
+                            We'll try to show your ads to the people most likely to submit your form.
+                          </div>
+                        </div>
+
+                        {/* Blue Info Callout Box (Exact match to Image 1) */}
+                        <div
                           style={{
-                            width: "100%",
-                            padding: "9px 34px 9px 12px",
-                            borderRadius: 6,
-                            border: "1px solid #cbd5e1",
-                            fontSize: "0.9rem",
-                            color: "#1c1e21",
-                            background: "#ffffff",
-                            cursor: "pointer",
-                            appearance: "none",
-                            outline: "none",
+                            border: "1px solid #cbe4ff",
+                            borderRadius: 8,
+                            background: "#f0f7ff",
+                            padding: "14px 16px",
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 12,
                           }}
                         >
-                          <option value="Google Play Store">Google Play Store</option>
-                          <option value="Apple App Store">Apple App Store</option>
-                          <option value="Amazon Appstore">Amazon Appstore</option>
-                          <option value="Windows Store">Windows Store</option>
-                        </select>
-                        <ChevronDown
-                          size={15}
-                          color="#65676b"
-                          style={{
-                            position: "absolute",
-                            right: 12,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            pointerEvents: "none",
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* App name search */}
-                    <div style={{ marginBottom: 12 }}>
-                      <label
-                        style={{
-                          display: "block",
-                          fontSize: "0.86rem",
-                          fontWeight: 700,
-                          color: "#1c1e21",
-                          marginBottom: 4,
-                        }}
-                      >
-                        App name
-                      </label>
-                      <div style={{ position: "relative" }}>
-                        <Search
-                          size={16}
-                          color="#65676b"
-                          style={{
-                            position: "absolute",
-                            left: 12,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                          }}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Enter app name, app ID or exact app store URL"
-                          value={appNameQuery}
-                          onChange={(e) => setAppNameQuery(e.target.value)}
-                          style={{
-                            width: "100%",
-                            padding: "9px 12px 9px 36px",
-                            borderRadius: 6,
-                            border: "1px solid #cbd5e1",
-                            fontSize: "0.88rem",
-                            color: "#1c1e21",
-                            outline: "none",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Checkbox: Find your app */}
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        cursor: "pointer",
-                        marginBottom: 16,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={countryAvailabilityChecked}
-                        onChange={(e) => setCountryAvailabilityChecked(e.target.checked)}
-                        style={{ width: 16, height: 16, accentColor: "#0064e1" }}
-                      />
-                      <span style={{ fontSize: "0.86rem", color: "#1c1e21" }}>
-                        Find your app by selecting a country where it's available.
-                      </span>
-                    </label>
-
-                    {/* Performance goal */}
-                    <div style={{ marginBottom: 16 }}>
-                      <div
-                        style={{
-                          fontSize: "0.86rem",
-                          fontWeight: 700,
-                          color: "#1c1e21",
-                          marginBottom: 4,
-                        }}
-                      >
-                        Performance goal
-                      </div>
-                      <div style={{ fontSize: "0.86rem", color: "#1c1e21" }}>
-                        Maximise number of app installs
-                      </div>
-                    </div>
-
-                    {/* Callout box (Screenshot 2) */}
-                    <div
-                      style={{
-                        border: "1px solid #e4e6eb",
-                        borderRadius: 8,
-                        background: "#ffffff",
-                        padding: "14px 16px",
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 12,
-                      }}
-                    >
-                      <Info size={18} color="#1c1e21" style={{ flexShrink: 0, marginTop: 1 }} />
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                        <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
-                          In-app ad impression and in-app purchase now available
+                          <Info size={18} color="#0064e1" style={{ flexShrink: 0, marginTop: 1 }} />
+                          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                            <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                              Instant forms load instantly on mobile
+                            </div>
+                            <div style={{ fontSize: "0.82rem", color: "#475569", lineHeight: 1.45 }}>
+                              People can view and submit your form without leaving facebook or Instagram, leading to higher completion rates.
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ fontSize: "0.82rem", color: "#475569", lineHeight: 1.45 }}>
-                          To reach people who may drive higher in-app ad value, choose Maximise value
-                          of conversions
+
+                        {/* Facebook Page & Lead Generation Terms */}
+                        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #f0f2f5" }}>
+                          <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#1c1e21", marginBottom: 6 }}>
+                            Facebook Page
+                          </label>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: 6,
+                              padding: "8px 12px",
+                              background: "#ffffff",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: "50%",
+                                  background: "#0064e1",
+                                  color: "#fff",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontWeight: 700,
+                                  fontSize: "0.78rem",
+                                }}
+                              >
+                                {facebookPage?.charAt(0) || "A"}
+                              </div>
+                              <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1c1e21" }}>
+                                {facebookPage || "Adstra Digital"}
+                              </span>
+                            </div>
+
+                            {!leadTermsAccepted ? (
+                              <button
+                                type="button"
+                                onClick={() => setLeadTermsAccepted(true)}
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: "#0064e1",
+                                  background: "none",
+                                  border: "none",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Accept Terms
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: "0.78rem", color: "#15803d", display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                                <Check size={12} /> Terms accepted
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {objective === "App promotion" && (
+                      <div>
+                        {/* Mobile app store */}
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Mobile app store
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={mobileAppStore}
+                              onChange={(e) => setMobileAppStore(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "9px 34px 9px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.9rem",
+                                color: "#1c1e21",
+                                background: "#ffffff",
+                                cursor: "pointer",
+                                appearance: "none",
+                                outline: "none",
+                              }}
+                            >
+                              <option value="Google Play Store">Google Play Store</option>
+                              <option value="Apple App Store">Apple App Store</option>
+                              <option value="Amazon Appstore">Amazon Appstore</option>
+                              <option value="Windows Store">Windows Store</option>
+                            </select>
+                            <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                          </div>
+                        </div>
+
+                        {/* App name search */}
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            App name
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <Search size={16} color="#65676b" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                            <input
+                              type="text"
+                              placeholder="Enter app name, app ID or exact app store URL"
+                              value={appNameQuery}
+                              onChange={(e) => setAppNameQuery(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "9px 12px 9px 36px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                color: "#1c1e21",
+                                outline: "none",
+                                boxSizing: "border-box",
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Checkbox: Find your app */}
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 16 }}>
+                          <input
+                            type="checkbox"
+                            checked={countryAvailabilityChecked}
+                            onChange={(e) => setCountryAvailabilityChecked(e.target.checked)}
+                            style={{ width: 16, height: 16, accentColor: "#0064e1" }}
+                          />
+                          <span style={{ fontSize: "0.86rem", color: "#1c1e21" }}>
+                            Find your app by selecting a country where it's available.
+                          </span>
+                        </label>
+
+                        {/* Performance goal */}
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Performance goal
+                          </div>
+                          <div style={{ fontSize: "0.86rem", color: "#1c1e21", fontWeight: 500 }}>
+                            Maximise number of app installs
+                          </div>
+                        </div>
+
+                        {/* Callout box */}
+                        <div
+                          style={{
+                            border: "1px solid #e4e6eb",
+                            borderRadius: 8,
+                            background: "#ffffff",
+                            padding: "14px 16px",
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 12,
+                          }}
+                        >
+                          <Info size={18} color="#1c1e21" style={{ flexShrink: 0, marginTop: 1 }} />
+                          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                            <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                              In-app ad impression and in-app purchase now available
+                            </div>
+                            <div style={{ fontSize: "0.82rem", color: "#475569", lineHeight: 1.45 }}>
+                              To reach people who may drive higher in-app ad value, choose Maximise value of conversions
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {objective === "Sales" && (
+                      <div>
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Conversion location
+                          </label>
+                          <div style={{ fontSize: "0.82rem", color: "#65676b", marginBottom: 10 }}>
+                            Choose where you want to drive sales.
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                            {[
+                              { id: "website", label: "Website (Recommended)", desc: "Drive sales on your website.", icon: Globe },
+                              { id: "app", label: "App", desc: "Drive sales in your mobile app.", icon: Smartphone },
+                              { id: "website_app", label: "Website and app", desc: "Drive sales across both.", icon: LayoutGrid },
+                              { id: "messaging", label: "Messaging apps", desc: "Drive sales in Messenger/WhatsApp.", icon: MessageSquare },
+                            ].map((loc) => {
+                              const IconComponent = loc.icon;
+                              const isSelected = salesLocation === loc.id;
+                              return (
+                                <div
+                                  key={loc.id}
+                                  onClick={() => setSalesLocation(loc.id)}
+                                  style={{
+                                    border: isSelected ? "2px solid #0064e1" : "1px solid #cbd5e1",
+                                    borderRadius: 8,
+                                    padding: "10px 12px",
+                                    background: isSelected ? "#f0f7ff" : "#ffffff",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                    <IconComponent size={16} color={isSelected ? "#0064e1" : "#1c1e21"} />
+                                    <span style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>{loc.label}</span>
+                                  </div>
+                                  <div style={{ fontSize: "0.78rem", color: "#65676b" }}>{loc.desc}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Performance goal
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={salesGoal}
+                              onChange={(e) => setSalesGoal(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "9px 34px 9px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                background: "#ffffff",
+                                color: "#1c1e21",
+                                appearance: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="Maximise number of conversions">Maximise number of conversions (Recommended)</option>
+                              <option value="Maximise value of conversions">Maximise value of conversions</option>
+                              <option value="Maximise number of landing page views">Maximise number of landing page views</option>
+                            </select>
+                            <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Card 3: Budget & schedule */}
+                  {/* Card 3: Budget & schedule (Exact match to Image 1) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2738,61 +3316,213 @@ export default function MetaAdsManagerCampaignEditor({
                       </h2>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                    {/* Budget row if Advantage campaign budget is off */}
+                    {!shareBudgetEnabled && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 14 }}>
+                          <div>
+                            <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Budget
+                            </label>
+                            <div style={{ position: "relative" }}>
+                              <select
+                                value={budgetType}
+                                onChange={(e) => setBudgetType(e.target.value)}
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 30px 8px 12px",
+                                  borderRadius: 6,
+                                  border: "1px solid #cbd5e1",
+                                  fontSize: "0.88rem",
+                                  background: "#ffffff",
+                                  color: "#1c1e21",
+                                  appearance: "none",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <option value="daily">Daily budget</option>
+                                <option value="lifetime">Lifetime budget</option>
+                              </select>
+                              <ChevronDown size={14} color="#65676b" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Amount
+                            </label>
+                            <div style={{ position: "relative" }}>
+                              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#65676b", fontSize: "0.88rem", fontWeight: 600 }}>
+                                ₹
+                              </span>
+                              <input
+                                type="number"
+                                value={budgetAmount}
+                                onChange={(e) => setBudgetAmount(Number(e.target.value))}
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 12px 8px 28px",
+                                  borderRadius: 6,
+                                  border: "1px solid #cbd5e1",
+                                  fontSize: "0.88rem",
+                                  color: "#1c1e21",
+                                  boxSizing: "border-box",
+                                  outline: "none",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Start date & time pickers (matching Image 1) */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                       <div>
                         <label
                           style={{
                             display: "block",
                             fontSize: "0.84rem",
                             fontWeight: 700,
+                            color: "#1c1e21",
                             marginBottom: 4,
                           }}
                         >
                           Start date
                         </label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          style={{
-                            width: "100%",
-                            padding: "8px 10px",
-                            borderRadius: 6,
-                            border: "1px solid #cbd5e1",
-                            fontSize: "0.88rem",
-                            boxSizing: "border-box",
-                          }}
-                        />
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="text"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            placeholder="15-10-2026"
+                            style={{
+                              width: "100%",
+                              padding: "8px 36px 8px 12px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              fontSize: "0.88rem",
+                              color: "#1c1e21",
+                              boxSizing: "border-box",
+                              outline: "none",
+                            }}
+                          />
+                          <Calendar
+                            size={16}
+                            color="#65676b"
+                            style={{
+                              position: "absolute",
+                              right: 12,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              pointerEvents: "none",
+                            }}
+                          />
+                        </div>
                       </div>
+
                       <div>
                         <label
                           style={{
                             display: "block",
                             fontSize: "0.84rem",
                             fontWeight: 700,
+                            color: "#1c1e21",
                             marginBottom: 4,
                           }}
                         >
                           Start time
                         </label>
-                        <input
-                          type="time"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          style={{
-                            width: "100%",
-                            padding: "8px 10px",
-                            borderRadius: 6,
-                            border: "1px solid #cbd5e1",
-                            fontSize: "0.88rem",
-                            boxSizing: "border-box",
-                          }}
-                        />
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="text"
+                            value={startTime}
+                            onChange={(e) => setStartTime(e.target.value)}
+                            placeholder="14:30"
+                            style={{
+                              width: "100%",
+                              padding: "8px 36px 8px 12px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              fontSize: "0.88rem",
+                              color: "#1c1e21",
+                              boxSizing: "border-box",
+                              outline: "none",
+                            }}
+                          />
+                          <Clock
+                            size={16}
+                            color="#65676b"
+                            style={{
+                              position: "absolute",
+                              right: 12,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              pointerEvents: "none",
+                            }}
+                          />
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Set an end date checkbox */}
+                    <div>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: endDateEnabled ? 10 : 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={endDateEnabled}
+                          onChange={(e) => setEndDateEnabled(e.target.checked)}
+                          style={{ width: 16, height: 16, accentColor: "#0064e1" }}
+                        />
+                        <span style={{ fontSize: "0.86rem", color: "#1c1e21" }}>
+                          Set an end date
+                        </span>
+                      </label>
+
+                      {endDateEnabled && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 10 }}>
+                          <div style={{ position: "relative" }}>
+                            <input
+                              type="text"
+                              value={endDate}
+                              onChange={(e) => setEndDate(e.target.value)}
+                              placeholder="30-11-2026"
+                              style={{
+                                width: "100%",
+                                padding: "8px 36px 8px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                boxSizing: "border-box",
+                                outline: "none",
+                              }}
+                            />
+                            <Calendar size={16} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }} />
+                          </div>
+                          <div style={{ position: "relative" }}>
+                            <input
+                              type="text"
+                              value={endTime}
+                              onChange={(e) => setEndTime(e.target.value)}
+                              placeholder="23:59"
+                              style={{
+                                width: "100%",
+                                padding: "8px 36px 8px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                boxSizing: "border-box",
+                                outline: "none",
+                              }}
+                            />
+                            <Clock size={16} color="#65676b" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Card 4: Audience controls */}
+                  {/* Card 4: Audience controls (Exact match to Image 1) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2816,7 +3546,7 @@ export default function MetaAdsManagerCampaignEditor({
                       </h2>
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                       <div>
                         <label
                           style={{
@@ -2824,25 +3554,38 @@ export default function MetaAdsManagerCampaignEditor({
                             fontWeight: 700,
                             display: "block",
                             marginBottom: 4,
+                            color: "#1c1e21",
                           }}
                         >
                           Locations
                         </label>
-                        <input
-                          type="text"
-                          value={targetLocation}
-                          onChange={(e) => setTargetLocation(e.target.value)}
+                        <div
                           style={{
-                            width: "100%",
-                            padding: "8px 12px",
-                            borderRadius: 6,
                             border: "1px solid #cbd5e1",
-                            fontSize: "0.88rem",
-                            boxSizing: "border-box",
+                            borderRadius: 6,
+                            padding: "8px 12px",
+                            background: "#ffffff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
                           }}
-                        />
+                        >
+                          <span style={{ fontSize: "0.88rem", color: "#1c1e21", fontWeight: 500 }}>{targetLocation}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = prompt("Enter target location(s):", targetLocation);
+                              if (next) setTargetLocation(next);
+                            }}
+                            style={{ background: "none", border: "none", color: "#0064e1", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+
+                      {/* Age range & Gender (Image 1 layout) */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                         <div>
                           <label
                             style={{
@@ -2850,6 +3593,7 @@ export default function MetaAdsManagerCampaignEditor({
                               fontWeight: 700,
                               display: "block",
                               marginBottom: 4,
+                              color: "#1c1e21",
                             }}
                           >
                             Age range
@@ -2858,16 +3602,18 @@ export default function MetaAdsManagerCampaignEditor({
                             <input
                               type="number"
                               value={ageMin}
-                              onChange={(e) => setAgeMin(e.target.value)}
+                              onChange={(e) => setAgeMin(Number(e.target.value))}
                               style={{
                                 width: "100%",
                                 padding: "8px 10px",
                                 borderRadius: 6,
                                 border: "1px solid #cbd5e1",
                                 fontSize: "0.88rem",
+                                color: "#1c1e21",
+                                outline: "none",
                               }}
                             />
-                            <span>to</span>
+                            <span style={{ fontSize: "0.84rem", color: "#65676b" }}>to</span>
                             <input
                               type="text"
                               value={ageMax}
@@ -2878,10 +3624,13 @@ export default function MetaAdsManagerCampaignEditor({
                                 borderRadius: 6,
                                 border: "1px solid #cbd5e1",
                                 fontSize: "0.88rem",
+                                color: "#1c1e21",
+                                outline: "none",
                               }}
                             />
                           </div>
                         </div>
+
                         <div>
                           <label
                             style={{
@@ -2889,32 +3638,39 @@ export default function MetaAdsManagerCampaignEditor({
                               fontWeight: 700,
                               display: "block",
                               marginBottom: 4,
+                              color: "#1c1e21",
                             }}
                           >
                             Gender
                           </label>
-                          <select
-                            value={targetGender}
-                            onChange={(e) => setTargetGender(e.target.value)}
-                            style={{
-                              width: "100%",
-                              padding: "8px 10px",
-                              borderRadius: 6,
-                              border: "1px solid #cbd5e1",
-                              fontSize: "0.88rem",
-                              background: "#ffffff",
-                            }}
-                          >
-                            <option value="All">All genders</option>
-                            <option value="Men">Men</option>
-                            <option value="Women">Women</option>
-                          </select>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={targetGender}
+                              onChange={(e) => setTargetGender(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "8px 30px 8px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.88rem",
+                                background: "#ffffff",
+                                color: "#1c1e21",
+                                appearance: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="All">All genders</option>
+                              <option value="Men">Men</option>
+                              <option value="Women">Women</option>
+                            </select>
+                            <ChevronDown size={14} color="#65676b" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Card 5: Placements */}
+                  {/* Card 5: Placements (Exact match to Image 2 & Meta) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -2928,25 +3684,100 @@ export default function MetaAdsManagerCampaignEditor({
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
-                        marginBottom: 14,
+                        justifyContent: "space-between",
+                        marginBottom: 6,
                       }}
                     >
-                      <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
-                      <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
-                        Placements
-                      </h2>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
+                        <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
+                          Placements
+                        </h2>
+                      </div>
+
+                      <span
+                        style={{
+                          background: "#dcfce7",
+                          color: "#15803d",
+                          padding: "3px 10px",
+                          borderRadius: 12,
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        ✦ Advantage+ on
+                      </span>
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontSize: "0.84rem", color: "#475569", lineHeight: 1.45, marginBottom: 14 }}>
+                      We'll automatically show ads in the places where people are likely to respond.{" "}
+                      <a
+                        href="#about-placements"
+                        onClick={(e) => e.preventDefault()}
+                        style={{ color: "#0064e1", textDecoration: "none" }}
+                      >
+                        About placements
+                      </a>
+                    </div>
+
+                    {/* Info Notice: Changes to placement settings are coming soon (Image 2) */}
+                    {showPlacementChangesNotice && (
+                      <div
+                        style={{
+                          border: "1px solid #e4e6eb",
+                          borderRadius: 8,
+                          background: "#ffffff",
+                          padding: "16px 18px",
+                          marginBottom: 16,
+                          position: "relative",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                          <Info size={18} color="#1c1e21" style={{ flexShrink: 0, marginTop: 2 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                              <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
+                                Changes to placement settings are coming soon
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setShowPlacementChangesNotice(false)}
+                                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "#65676b" }}
+                              >
+                                <X size={15} />
+                              </button>
+                            </div>
+                            <div style={{ fontSize: "0.82rem", color: "#475569", lineHeight: 1.45, marginBottom: 8 }}>
+                              Excluding placements or platforms will no longer be available for your ad sets.
+                              You'll still have options to manage how and where your ads appear:
+                            </div>
+                            <ul style={{ margin: "0 0 10px 0", paddingLeft: 18, fontSize: "0.82rem", color: "#475569", lineHeight: 1.5 }}>
+                              <li>Increase or decrease your bid for placements in <strong>Placement value rules</strong></li>
+                              <li>Customise your creative for each placement in <strong>Ad creative</strong></li>
+                              <li>Manage account-level placement exclusions in <strong>Account controls</strong></li>
+                            </ul>
+                            <a
+                              href="#about-advantage-placements"
+                              onClick={(e) => e.preventDefault()}
+                              style={{ color: "#0064e1", textDecoration: "none", fontSize: "0.82rem", fontWeight: 500 }}
+                            >
+                              About Advantage+ placements
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Placements Choices */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
                       <label
                         style={{
-                          padding: "10px 14px",
+                          padding: "12px 14px",
                           borderRadius: 6,
-                          border:
-                            placementsType === "advantage"
-                              ? "1.5px solid #0064e1"
-                              : "1px solid #cbd5e1",
+                          border: placementsType === "advantage" ? "1.5px solid #0064e1" : "1px solid #cbd5e1",
                           background: placementsType === "advantage" ? "#f0f7ff" : "#ffffff",
                           display: "flex",
                           alignItems: "flex-start",
@@ -2956,26 +3787,168 @@ export default function MetaAdsManagerCampaignEditor({
                       >
                         <input
                           type="radio"
-                          name="placements"
+                          name="placementsType"
                           checked={placementsType === "advantage"}
                           onChange={() => setPlacementsType("advantage")}
                           style={{ marginTop: 2, accentColor: "#0064e1" }}
                         />
                         <div>
-                          <div style={{ fontSize: "0.88rem", fontWeight: 700 }}>
+                          <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
                             Advantage+ placements (recommended)
                           </div>
-                          <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                            Maximize budget and help show your ads to more people across Facebook,
-                            Instagram, Audience Network and Messenger.
+                          <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 2 }}>
+                            Maximize budget and help show your ads to more people across Facebook, Instagram, Audience Network and Messenger.
+                          </div>
+                        </div>
+                      </label>
+
+                      <label
+                        style={{
+                          padding: "12px 14px",
+                          borderRadius: 6,
+                          border: placementsType === "manual" ? "1.5px solid #0064e1" : "1px solid #cbd5e1",
+                          background: placementsType === "manual" ? "#f0f7ff" : "#ffffff",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 12,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="placementsType"
+                          checked={placementsType === "manual"}
+                          onChange={() => setPlacementsType("manual")}
+                          style={{ marginTop: 2, accentColor: "#0064e1" }}
+                        />
+                        <div>
+                          <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
+                            Manual placements
+                          </div>
+                          <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 2 }}>
+                            Manually choose the places to show your ad.
                           </div>
                         </div>
                       </label>
                     </div>
+
+                    {/* Accordion: Placement value rules (Image 2) */}
+                    <div
+                      style={{
+                        border: "1px solid #e4e6eb",
+                        borderRadius: 8,
+                        background: "#ffffff",
+                        padding: "14px 16px",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <div
+                        onClick={() => setPlacementValueRulesOpen((prev) => !prev)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          cursor: "pointer",
+                          marginBottom: placementValueRulesOpen ? 10 : 0,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
+                          <span>Placement value rules</span>
+                          <Info size={13} color="#65676b" />
+                        </div>
+                        <ChevronDown
+                          size={16}
+                          color="#65676b"
+                          style={{
+                            transform: placementValueRulesOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.15s ease",
+                          }}
+                        />
+                      </div>
+
+                      {placementValueRulesOpen && (
+                        <div>
+                          <div style={{ fontSize: "0.82rem", color: "#475569", lineHeight: 1.45, marginBottom: 12 }}>
+                            Prioritise the placements that matter most to your business by adjusting bids for them.{" "}
+                            <a href="#about-value-rules" onClick={(e) => e.preventDefault()} style={{ color: "#0064e1", textDecoration: "none" }}>
+                              About value rules
+                            </a>
+                          </div>
+                          <button
+                            type="button"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "7px 14px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#ffffff",
+                              color: "#1c1e21",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9fa")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                          >
+                            <Plus size={14} />
+                            <span>Create a rule set</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Account controls (Image 2) */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                        <span>Account controls</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "#64748b" }}>
+                        Excluded placements: None
+                      </div>
+                    </div>
+
+                    {/* Show more settings link (Image 2) */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setPlacementShowMoreOpen((prev) => !prev)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#0064e1",
+                          fontSize: "0.84rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: 0,
+                        }}
+                      >
+                        <span>{placementShowMoreOpen ? "Show fewer settings" : "Show more settings"}</span>
+                        <ChevronDown
+                          size={14}
+                          style={{
+                            transform: placementShowMoreOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.15s ease",
+                          }}
+                        />
+                      </button>
+                      {placementShowMoreOpen && (
+                        <div style={{ marginTop: 10, padding: 12, background: "#f8fafc", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: "0.82rem", color: "#475569" }}>
+                          <div><strong>Inventory filter:</strong> Standard inventory (recommended)</div>
+                          <div style={{ marginTop: 6 }}><strong>Block lists:</strong> None</div>
+                          <div style={{ marginTop: 6 }}><strong>Content type exclusions:</strong> None</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Right Column: Campaign score + Audience definition (Screenshot 2) */}
+                {/* Right Column: Campaign score + Validation Warning + Audience definition */}
                 <div
                   style={{
                     width: 300,
@@ -2987,7 +3960,7 @@ export default function MetaAdsManagerCampaignEditor({
                     top: 16,
                   }}
                 >
-                  {/* Campaign score card */}
+                  {/* Campaign score card (Image 1 & Image 2) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -3061,7 +4034,7 @@ export default function MetaAdsManagerCampaignEditor({
                             color: "#1c1e21",
                           }}
                         >
-                          <span>âœ¦ Advantage+ app campaign</span>
+                          <span>✦ Advantage+ {objective === "App promotion" ? "app" : objective === "Leads" ? "leads" : objective.toLowerCase()} campaign</span>
                           <Info size={13} color="#65676b" />
                         </div>
                         <span
@@ -3086,7 +4059,73 @@ export default function MetaAdsManagerCampaignEditor({
                     </div>
                   </div>
 
-                  {/* Audience definition card (Screenshot 2) */}
+                  {/* Verifying your changes Alert Card (Image 2) */}
+                  {objective === "Leads" && !leadTermsAccepted && (
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: 8,
+                        border: "1px solid #fca5a5",
+                        borderLeft: "4px solid #dc2626",
+                        padding: "16px 18px",
+                        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: verifyingCardOpen ? 10 : 0,
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setVerifyingCardOpen((prev) => !prev)}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <MetaProhibitedIcon size={16} color="#dc2626" />
+                          <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
+                            Verifying your changes
+                          </span>
+                        </div>
+                        <ChevronUp
+                          size={16}
+                          color="#65676b"
+                          style={{
+                            transform: verifyingCardOpen ? "rotate(0deg)" : "rotate(180deg)",
+                            transition: "transform 0.15s ease",
+                          }}
+                        />
+                      </div>
+
+                      {verifyingCardOpen && (
+                        <div>
+                          <div style={{ fontSize: "0.82rem", color: "#475569", lineHeight: 1.45, marginBottom: 12 }}>
+                            Terms of service not accepted: You can't run lead ads until your Facebook Page accepts Facebook's Lead Generation Terms of Service. (#1815089)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setLeadTermsAccepted(true)}
+                            style={{
+                              padding: "6px 16px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              background: "#ffffff",
+                              color: "#1c1e21",
+                              fontSize: "0.84rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9fa")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Audience definition card (Image 1 & Image 2) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -3111,7 +4150,7 @@ export default function MetaAdsManagerCampaignEditor({
                       <Info size={13} color="#65676b" />
                     </div>
 
-                    <div style={{ fontSize: "0.84rem", color: "#1c1e21", fontWeight: 550, marginBottom: 6 }}>
+                    <div style={{ fontSize: "0.84rem", color: "#1c1e21", fontWeight: 600, marginBottom: 6 }}>
                       Your audience is broad.
                     </div>
 
@@ -3174,21 +4213,33 @@ export default function MetaAdsManagerCampaignEditor({
                     {showEstimatedAudienceSize && (
                       <div
                         style={{
-                          marginTop: 10,
-                          padding: "10px 12px",
+                          marginTop: 12,
+                          padding: "12px 14px",
                           borderRadius: 6,
                           background: "#f8fafc",
-                          fontSize: "0.8rem",
+                          fontSize: "0.82rem",
                           color: "#334155",
                           border: "1px solid #e2e8f0",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
                         }}
                       >
                         <div>
-                          <strong>Estimated audience size:</strong> 28,500,000 â€“ 33,500,000
+                          <div style={{ fontWeight: 600, color: "#1c1e21", display: "flex", alignItems: "center", gap: 4 }}>
+                            <span>Estimated audience size:</span>
+                            <span style={{ fontWeight: 700 }}>598,500,000 – 704,100,000</span>
+                            <Info size={12} color="#65676b" />
+                          </div>
+                          <div style={{ fontSize: "0.76rem", color: "#64748b", marginTop: 2 }}>
+                            Estimates don't include Advantage+ audience
+                          </div>
                         </div>
-                        <div style={{ marginTop: 4 }}>
-                          <strong>Estimated daily results:</strong> Reach 14K â€“ 41K â€¢ Installs 180 â€“
-                          520
+                        <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 8 }}>
+                          <div style={{ fontWeight: 600, color: "#1c1e21", marginBottom: 2 }}>Estimated daily results</div>
+                          <div style={{ fontSize: "0.8rem", color: "#475569" }}>
+                            Reach <strong>14K – 41K</strong> • Conversions <strong>180 – 520</strong>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -3197,14 +4248,11 @@ export default function MetaAdsManagerCampaignEditor({
               </div>
             )}
 
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-                3. AD LEVEL VIEW (Matches Screenshot 3 exactly)
-               â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
             {activeLevel === "ad" && (
-              <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-                {/* Left Column: Form Cards */}
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* Card 1: Ad name */}
+              <div style={{ display: "flex", gap: 24, alignItems: "flex-start", position: "relative" }}>
+                {/* ── LEFT COLUMN: FORM CARDS (Images 2, 3, 4, 5) ── */}
+                <div style={{ flex: "1 1 500px", minWidth: 440, display: "flex", flexDirection: "column", gap: 16 }}>
+                  {/* Card 1: Ad name (Image 2) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -3214,25 +4262,18 @@ export default function MetaAdsManagerCampaignEditor({
                       boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 12,
-                      }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                       <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
                       <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
                         Ad name
                       </h2>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+                    <div style={{ display: "flex", gap: 10 }}>
                       <input
                         type="text"
                         value={adName}
                         onChange={(e) => setAdName(e.target.value)}
-                        placeholder="Enter ad name"
                         style={{
                           flex: 1,
                           padding: "8px 12px",
@@ -3245,6 +4286,7 @@ export default function MetaAdsManagerCampaignEditor({
                       />
                       <button
                         type="button"
+                        onClick={() => setTemplateModalOpen(true)}
                         style={{
                           padding: "8px 16px",
                           borderRadius: 6,
@@ -3262,7 +4304,7 @@ export default function MetaAdsManagerCampaignEditor({
                     </div>
                   </div>
 
-                  {/* Card 2: Partnership ad (Screenshot 3) */}
+                  {/* Card 2: Partnership ad (Image 2) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -3319,19 +4361,18 @@ export default function MetaAdsManagerCampaignEditor({
                     </div>
 
                     <div style={{ fontSize: "0.84rem", color: "#334155", lineHeight: 1.45 }}>
-                      Run ads with creators, brands and other businesses. These ads leverage signals
-                      from both profiles to improve campaign performance.{" "}
+                      Run ads with creators, brands and other businesses to improve campaign performance.{" "}
                       <a
-                        href="#about-partnership"
+                        href="#creator-hub"
                         onClick={(e) => e.preventDefault()}
                         style={{ color: "#0064e1", textDecoration: "none", fontWeight: 500 }}
                       >
-                        About partnership ads
+                        Go to Creator Marketing Hub to view creator content
                       </a>
                     </div>
                   </div>
 
-                  {/* Card 3: Identity (Screenshot 3) */}
+                  {/* Card 3: Identity (Image 2) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -3341,18 +4382,19 @@ export default function MetaAdsManagerCampaignEditor({
                       boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <MetaIdentityIcon size={18} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
                       <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
                         Identity
                       </h2>
                     </div>
 
                     <div style={{ fontSize: "0.84rem", color: "#475569", marginBottom: 16 }}>
-                      The profiles and app that will be used in your ad.
+                      The profiles that will be used in your ad.
                     </div>
 
-                    <div style={{ marginBottom: 12 }}>
+                    {/* Field 1: Facebook Page (Image 2) */}
+                    <div style={{ marginBottom: 16 }}>
                       <div
                         style={{
                           display: "flex",
@@ -3361,113 +4403,235 @@ export default function MetaAdsManagerCampaignEditor({
                           fontSize: "0.86rem",
                           fontWeight: 700,
                           color: "#1c1e21",
-                          marginBottom: 8,
+                          marginBottom: 6,
                         }}
                       >
                         <span>* Facebook Page</span>
                         <Info size={13} color="#65676b" />
                       </div>
 
-                      {/* Callout box (Screenshot 3) */}
                       <div
                         style={{
-                          background: "#f0f7ff",
-                          border: "1px solid #cce3fd",
-                          borderRadius: 6,
-                          padding: "12px 14px",
+                          position: "relative",
                           display: "flex",
-                          alignItems: "flex-start",
-                          gap: 10,
-                          marginBottom: 14,
+                          alignItems: "center",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: 6,
+                          background: "#ffffff",
+                          padding: "6px 12px",
                         }}
                       >
-                        <Info size={16} color="#0064e1" style={{ flexShrink: 0, marginTop: 1 }} />
-                        <div style={{ fontSize: "0.82rem", color: "#1c1e21", lineHeight: 1.45 }}>
-                          A Facebook Page is required to run ads. If no Page is available, create one
-                          below. If your Page is not loading, wait a moment and refresh.
-                        </div>
-                      </div>
-
-                      {/* If Facebook Page is connected */}
-                      {facebookPageConnected ? (
                         <div
                           style={{
-                            padding: "10px 14px",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: 6,
-                            background: "#f8fafc",
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            background: "#050505",
+                            color: "#ffffff",
                             display: "flex",
                             alignItems: "center",
-                            justifyContent: "space-between",
+                            justifyContent: "center",
+                            fontWeight: 700,
+                            fontSize: "0.82rem",
+                            marginRight: 10,
+                            flexShrink: 0,
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div
-                              style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: "50%",
-                                background: "#0064e1",
-                                color: "#ffffff",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontWeight: 700,
-                                fontSize: "0.9rem",
-                              }}
-                            >
-                              {facebookPage.charAt(0)}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
-                                {facebookPage}
-                              </div>
-                              <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                                Connected Facebook Page
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setFacebookPageModalOpen(true)}
+                          {facebookPage ? facebookPage.charAt(0) : "L"}
+                        </div>
+                        <input
+                          type="text"
+                          value={facebookPage}
+                          onChange={(e) => setFacebookPage(e.target.value)}
+                          style={{
+                            flex: 1,
+                            border: "none",
+                            outline: "none",
+                            fontSize: "0.88rem",
+                            fontWeight: 600,
+                            color: "#1c1e21",
+                            background: "transparent",
+                          }}
+                        />
+                        <ChevronDown size={16} color="#65676b" style={{ marginLeft: 8 }} />
+                      </div>
+                    </div>
+
+                    {/* Field 2: Instagram profile (Image 2) */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          fontSize: "0.86rem",
+                          fontWeight: 700,
+                          color: "#1c1e21",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span>Instagram profile</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
+
+                      <div
+                        style={{
+                          position: "relative",
+                          display: "flex",
+                          alignItems: "center",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: 6,
+                          background: "#ffffff",
+                          padding: "6px 12px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            background: "#050505",
+                            color: "#ffffff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 700,
+                            fontSize: "0.82rem",
+                            marginRight: 10,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {instagramAccount ? instagramAccount.charAt(0) : "l"}
+                        </div>
+                        <input
+                          type="text"
+                          value={instagramAccount}
+                          onChange={(e) => setInstagramAccount(e.target.value)}
+                          style={{
+                            flex: 1,
+                            border: "none",
+                            outline: "none",
+                            fontSize: "0.88rem",
+                            fontWeight: 600,
+                            color: "#1c1e21",
+                            background: "transparent",
+                          }}
+                        />
+                        <ChevronDown size={16} color="#65676b" style={{ marginLeft: 8 }} />
+                      </div>
+                    </div>
+
+                    {/* Field 3: Threads profile (Image 2) */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          fontSize: "0.86rem",
+                          fontWeight: 700,
+                          color: "#1c1e21",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span>Threads profile</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ flex: 1, position: "relative" }}>
+                          <select
+                            value={threadsProfile}
+                            onChange={(e) => setThreadsProfile(e.target.value)}
                             style={{
-                              background: "transparent",
-                              border: "none",
-                              color: "#0064e1",
-                              fontSize: "0.82rem",
-                              fontWeight: 600,
+                              width: "100%",
+                              padding: "8px 30px 8px 12px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              fontSize: "0.88rem",
+                              background: "#ffffff",
+                              color: threadsProfile ? "#1c1e21" : "#65676b",
+                              appearance: "none",
                               cursor: "pointer",
                             }}
                           >
-                            Switch Page
-                          </button>
+                            <option value="">Select a Threads profile</option>
+                            <option value="@lioraalondon">@lioraalondon</option>
+                            <option value="@adstradigital">@adstradigital</option>
+                          </select>
+                          <ChevronDown
+                            size={14}
+                            color="#65676b"
+                            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+                          />
                         </div>
-                      ) : (
-                        /* Button: Create Page (Screenshot 3) */
+                        <span style={{ fontSize: "0.84rem", color: "#65676b" }}>or</span>
                         <button
                           type="button"
-                          onClick={() => setFacebookPageModalOpen(true)}
                           style={{
-                            padding: "8px 18px",
+                            padding: "8px 14px",
                             borderRadius: 6,
                             border: "1px solid #cbd5e1",
                             background: "#ffffff",
                             color: "#1c1e21",
-                            fontSize: "0.88rem",
+                            fontSize: "0.84rem",
                             fontWeight: 600,
                             cursor: "pointer",
-                            transition: "background 0.15s ease",
+                            whiteSpace: "nowrap",
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9fa")}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
                         >
-                          Create Page
+                          Create profile
                         </button>
-                      )}
+                      </div>
+                    </div>
+
+                    {/* Field 4: WhatsApp phone number (Image 2) */}
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          fontSize: "0.86rem",
+                          fontWeight: 700,
+                          color: "#1c1e21",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span>WhatsApp phone number</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
+
+                      <div style={{ position: "relative" }}>
+                        <select
+                          value={whatsappNumber}
+                          onChange={(e) => setWhatsappNumber(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "8px 30px 8px 12px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            fontSize: "0.88rem",
+                            background: "#ffffff",
+                            color: whatsappNumber ? "#1c1e21" : "#65676b",
+                            appearance: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <option value="">Select a WhatsApp number</option>
+                          <option value="+44 7766 010701">+44 7766 010701 (Lioraa London)</option>
+                          <option value="+91 98765 43210">+91 98765 43210 (Adstra Business)</option>
+                        </select>
+                        <ChevronDown
+                          size={14}
+                          color="#65676b"
+                          style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Card 4: Ad Setup & Creative */}
+                  {/* Card 4: Ad setup (Image 3) */}
                   <div
                     style={{
                       background: "#ffffff",
@@ -3477,266 +4641,651 @@ export default function MetaAdsManagerCampaignEditor({
                       boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 14,
-                      }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                      <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
+                      <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
+                        Ad setup
+                      </h2>
+                    </div>
+
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ position: "relative" }}>
+                        <select
+                          value={adSetupOption}
+                          onChange={(e) => setAdSetupOption(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "9px 34px 9px 12px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            fontSize: "0.9rem",
+                            background: "#ffffff",
+                            color: "#1c1e21",
+                            appearance: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <option value="Use existing post">Use existing post</option>
+                          <option value="Create ad">Create ad</option>
+                          <option value="Use Creative Hub mockup">Use Creative Hub mockup</option>
+                        </select>
+                        <ChevronDown
+                          size={16}
+                          color="#65676b"
+                          style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Multi-advertiser ads checkbox (Image 3) */}
+                    <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={multiAdvertiserAds}
+                        onChange={(e) => setMultiAdvertiserAds(e.target.checked)}
+                        style={{ width: 16, height: 16, marginTop: 2, accentColor: "#0064e1" }}
+                      />
+                      <div>
+                        <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                          Multi-advertiser ads
+                        </div>
+                        <div style={{ fontSize: "0.82rem", color: "#65676b", lineHeight: 1.45, marginTop: 2 }}>
+                          Your ad can appear with others in the same ad unit to help promote discoverability. Your ad creative may be resized or cropped.{" "}
+                          <a href="#about-multi" onClick={(e) => e.preventDefault()} style={{ color: "#0064e1", textDecoration: "none" }}>
+                            About multi-advertiser ads
+                          </a>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Card 5: Ad creative (Images 3 & 4) */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: 8,
+                      border: "1px solid #e4e6eb",
+                      padding: "18px 22px",
+                      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
                       <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
                         Ad creative
                       </h2>
                     </div>
 
-                    {/* Media selector */}
-                    <div style={{ marginBottom: 14 }}>
-                      <label
-                        style={{
-                          fontSize: "0.84rem",
-                          fontWeight: 700,
-                          display: "block",
-                          marginBottom: 6,
-                        }}
-                      >
-                        Select Media
-                      </label>
-                      <div style={{ display: "flex", gap: 10 }}>
-                        {PRESET_CREATIVES.map((c) => (
-                          <div
-                            key={c.id}
-                            onClick={() => {
-                              setSelectedCreativeUrl(c.url);
-                              setAdPreviewMode("feed");
-                            }}
-                            style={{
-                              width: 72,
-                              height: 72,
-                              borderRadius: 6,
-                              overflow: "hidden",
-                              cursor: "pointer",
-                              border:
-                                selectedCreativeUrl === c.url
-                                  ? "2.5px solid #0064e1"
-                                  : "1px solid #cbd5e1",
-                              position: "relative",
-                            }}
-                          >
-                            <img
-                              src={c.url}
-                              alt={c.label}
-                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                            {selectedCreativeUrl === c.url && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: 3,
-                                  right: 3,
-                                  background: "#0064e1",
-                                  color: "#fff",
-                                  borderRadius: "50%",
-                                  width: 16,
-                                  height: 16,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Check size={10} strokeWidth={3} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                    <div style={{ fontSize: "0.84rem", color: "#475569", marginBottom: 14 }}>
+                      Select and optimise your ad text, media and enhancements.
+                    </div>
+
+                    {/* Notice Callout (Image 3) */}
+                    <div
+                      style={{
+                        background: "#f0f7ff",
+                        border: "1px solid #cce3fd",
+                        borderRadius: 6,
+                        padding: "10px 14px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <Info size={16} color="#0064e1" style={{ flexShrink: 0 }} />
+                      <div style={{ fontSize: "0.82rem", color: "#1c1e21" }}>
+                        Your Instagram ad will render Facebook mentions as regular text.
                       </div>
                     </div>
 
-                    {/* Primary text */}
-                    <div style={{ marginBottom: 12 }}>
-                      <label
+                    {/* Selected Facebook Post Snippet (Image 3) */}
+                    <div
+                      style={{
+                        border: "1px solid #e4e6eb",
+                        borderRadius: 8,
+                        padding: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        marginBottom: 14,
+                        background: "#fafbfd",
+                      }}
+                    >
+                      <img
+                        src={selectedCreativeUrl}
+                        alt="Selected post"
+                        style={{ width: 48, height: 48, borderRadius: 6, objectFit: "cover", border: "1px solid #cbd5e1" }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "#65676b" }}>
+                          <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#0064e1", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 700 }}>f</span>
+                          <span>Facebook post</span>
+                        </div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                          {selectedPostTitle}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#65676b", marginTop: 2 }}>
+                          {selectedPostId} • {selectedPostDate}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Change post / Create post buttons (Image 3) */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextIdx = (PRESET_CREATIVES.findIndex(c => c.url === selectedCreativeUrl) + 1) % PRESET_CREATIVES.length;
+                          setSelectedCreativeUrl(PRESET_CREATIVES[nextIdx].url);
+                        }}
                         style={{
-                          fontSize: "0.84rem",
-                          fontWeight: 700,
-                          display: "block",
-                          marginBottom: 4,
+                          flex: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                          padding: "8px 14px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#1c1e21",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
                         }}
                       >
+                        <FileText size={15} color="#1c1e21" />
+                        <span>Change post</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const promptText = window.prompt("Enter new primary text for post:", primaryText);
+                          if (promptText) setPrimaryText(promptText);
+                        }}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                          padding: "8px 14px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#1c1e21",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Plus size={16} color="#1c1e21" />
+                        <span>Create post</span>
+                      </button>
+                    </div>
+
+                    {/* Enter post ID link (Image 3) */}
+                    <div style={{ marginBottom: 14 }}>
+                      <span
+                        onClick={() => {
+                          const id = window.prompt("Enter Facebook post ID:", selectedPostId);
+                          if (id) setSelectedPostId(id);
+                        }}
+                        style={{ color: "#0064e1", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer" }}
+                      >
+                        Enter post ID
+                      </span>
+                    </div>
+
+                    {/* AI Info Checkbox (Image 3 & 4) */}
+                    <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 16 }}>
+                      <input
+                        type="checkbox"
+                        checked={aiTransparency}
+                        onChange={(e) => setAiTransparency(e.target.checked)}
+                        style={{ width: 16, height: 16, marginTop: 2, accentColor: "#0064e1" }}
+                      />
+                      <div>
+                        <div style={{ fontSize: "0.86rem", color: "#1c1e21" }}>
+                          Ad includes media created or edited with AI
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#65676b", marginTop: 2 }}>
+                          Ticking this box may add an AI info label to your ad.{" "}
+                          <a href="#ai-info" onClick={(e) => e.preventDefault()} style={{ color: "#0064e1", textDecoration: "none" }}>
+                            About AI transparency
+                          </a>
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Primary Text (Image 4) */}
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 6 }}>
                         Primary text
                       </label>
                       <textarea
-                        rows={3}
+                        rows={7}
                         value={primaryText}
                         onChange={(e) => setPrimaryText(e.target.value)}
                         style={{
                           width: "100%",
-                          padding: "8px 10px",
+                          padding: "10px 12px",
                           borderRadius: 6,
                           border: "1px solid #cbd5e1",
                           fontSize: "0.86rem",
+                          color: "#1c1e21",
+                          lineHeight: 1.5,
                           boxSizing: "border-box",
+                          fontFamily: "inherit",
                           resize: "vertical",
                         }}
                       />
                     </div>
 
-                    {/* Headline */}
-                    <div style={{ marginBottom: 12 }}>
-                      <label
+                    {/* Add a destination checkbox (Image 4) */}
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={addDestination}
+                          onChange={(e) => setAddDestination(e.target.checked)}
+                          style={{ width: 16, height: 16, marginTop: 2, accentColor: "#0064e1" }}
+                        />
+                        <div>
+                          <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                            Add a destination
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#65676b", lineHeight: 1.4, marginTop: 2 }}>
+                            If you add a destination, you can send people immediately after they've tapped or clicked your ad to a website, a full-screen experience or a call. If you don't, they'll be sent to your Facebook Page or Instagram profile.
+                          </div>
+                        </div>
+                      </label>
+
+                      {addDestination && (
+                        <div style={{ marginTop: 12, paddingLeft: 26 }}>
+                          <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                            Website URL
+                          </label>
+                          <input
+                            type="text"
+                            value={websiteUrl}
+                            onChange={(e) => setWebsiteUrl(e.target.value)}
+                            style={{
+                              width: "100%",
+                              padding: "8px 12px",
+                              borderRadius: 6,
+                              border: "1px solid #cbd5e1",
+                              fontSize: "0.88rem",
+                              boxSizing: "border-box",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Call to action (Image 4) */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 6 }}>
+                        <span>Call to action</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
+                      <div style={{ position: "relative" }}>
+                        <select
+                          value={callToAction}
+                          onChange={(e) => setCallToAction(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "8px 30px 8px 12px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            fontSize: "0.88rem",
+                            background: "#ffffff",
+                            color: "#1c1e21",
+                            appearance: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <option value="Learn more">Learn more</option>
+                          <option value="Shop now">Shop now</option>
+                          <option value="See details">See details</option>
+                          <option value="Sign up">Sign up</option>
+                          <option value="Send WhatsApp message">Send WhatsApp message</option>
+                          <option value="Contact us">Contact us</option>
+                        </select>
+                        <ChevronDown size={14} color="#65676b" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                      </div>
+                    </div>
+
+                    {/* Edit placement dropdown (Image 4) */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 6 }}>
+                        Edit placement
+                      </div>
+                      <div style={{ position: "relative" }}>
+                        <select
+                          value={previewPlacementFilter}
+                          onChange={(e) => setPreviewPlacementFilter(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "8px 34px 8px 34px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            fontSize: "0.88rem",
+                            background: "#ffffff",
+                            color: "#1c1e21",
+                            appearance: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <option value="all">Select a placement to edit</option>
+                          <option value="feeds">Feeds (Facebook & Instagram)</option>
+                          <option value="stories">Stories & Reels</option>
+                          <option value="marketplace">Marketplace</option>
+                        </select>
+                        <LayoutGrid size={15} color="#65676b" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                        <ChevronDown size={14} color="#65676b" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                      </div>
+                    </div>
+
+                    {/* Advantage+ creative enhancements (0/3) (Image 4 & 5) */}
+                    <div style={{ borderTop: "1px solid #f0f2f5", paddingTop: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                          <span>Advantage+ creative enhancements (0/3)</span>
+                          <Info size={13} color="#65676b" />
+                        </div>
+                        <button
+                          type="button"
+                          style={{
+                            padding: "4px 12px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            background: "#ffffff",
+                            color: "#1c1e21",
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Try it out
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {["Visual touch-ups", "Add animation", "Show spotlights"].map((item) => (
+                          <div
+                            key={item}
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 14,
+                              background: "#f0f2f5",
+                              fontSize: "0.78rem",
+                              color: "#65676b",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <span>{item}</span>
+                            <span style={{ fontWeight: 700, color: "#475569" }}>Off</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 6: Creative testing (Image 5) */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: 8,
+                      border: "1px solid #e4e6eb",
+                      padding: "18px 22px",
+                      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "1rem", fontWeight: 700, color: "#1c1e21", marginBottom: 6 }}>
+                      <span>Creative testing</span>
+                      <Info size={13} color="#65676b" />
+                    </div>
+                    <div style={{ fontSize: "0.84rem", color: "#475569", lineHeight: 1.45, marginBottom: 12 }}>
+                      Compare up to 7 different versions of your creative in a test that helps ensure delivery to new test ads.{" "}
+                      <a href="#about-test" onClick={(e) => e.preventDefault()} style={{ color: "#0064e1", textDecoration: "none" }}>
+                        About creative testing
+                      </a>
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        padding: "7px 16px",
+                        borderRadius: 6,
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#1c1e21",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Set up test
+                    </button>
+                  </div>
+
+                  {/* Card 7: Tracking (Image 5) */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: 8,
+                      border: "1px solid #e4e6eb",
+                      padding: "18px 22px",
+                      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <CheckCircle2 size={18} color="#008000" strokeWidth={2.5} />
+                      <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1c1e21" }}>
+                        Tracking
+                      </h2>
+                    </div>
+
+                    <div style={{ fontSize: "0.84rem", color: "#475569", marginBottom: 16 }}>
+                      Choose conversion events to track. This ad account's selected conversion dataset will be tracked by default.
+                    </div>
+
+                    {/* Website events */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                        <span>Website events</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
+                      <button
+                        type="button"
                         style={{
+                          padding: "5px 14px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#1c1e21",
                           fontSize: "0.84rem",
-                          fontWeight: 700,
-                          display: "block",
-                          marginBottom: 4,
+                          fontWeight: 600,
+                          cursor: "pointer",
                         }}
                       >
-                        Headline
+                        Set up
+                      </button>
+                    </div>
+
+                    {/* App events checkbox */}
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                        <input type="checkbox" style={{ width: 16, height: 16, accentColor: "#0064e1" }} />
+                        <span style={{ fontSize: "0.86rem", color: "#1c1e21" }}>App events</span>
                       </label>
+                    </div>
+
+                    {/* Offline events */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                        <span>Offline events</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
+                      <button
+                        type="button"
+                        style={{
+                          padding: "5px 14px",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#1c1e21",
+                          fontSize: "0.84rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Set up
+                      </button>
+                    </div>
+
+                    {/* URL parameters */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                        <span>URL parameters</span>
+                        <Info size={13} color="#65676b" />
+                      </div>
                       <input
                         type="text"
-                        value={headline}
-                        onChange={(e) => setHeadline(e.target.value)}
+                        placeholder="key1=value1&key2=value2"
+                        defaultValue="utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}"
                         style={{
                           width: "100%",
-                          padding: "8px 10px",
+                          padding: "8px 12px",
                           borderRadius: 6,
                           border: "1px solid #cbd5e1",
                           fontSize: "0.86rem",
                           boxSizing: "border-box",
+                          color: "#475569",
+                          marginBottom: 6,
                         }}
                       />
+                      <span style={{ color: "#0064e1", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer" }}>
+                        Build a URL parameter
+                      </span>
                     </div>
 
-                    {/* Call to action (Defaults to "See details" matching Screenshot 1 note!) */}
-                    <div style={{ marginBottom: 12 }}>
-                      <label
+                    {/* Third-party reporting */}
+                    <div style={{ borderTop: "1px solid #f0f2f5", paddingTop: 14 }}>
+                      <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                        Third-party reporting
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "#65676b", lineHeight: 1.4, marginBottom: 10 }}>
+                        Meta purchases may not be included in your Google reporting. Connect your account to measure actions on ads that send people to your website or shop.{" "}
+                        <a href="#about-reporting" onClick={(e) => e.preventDefault()} style={{ color: "#0064e1", textDecoration: "none" }}>
+                          Learn more
+                        </a>
+                      </div>
+                      <button
+                        type="button"
                         style={{
-                          fontSize: "0.84rem",
-                          fontWeight: 700,
-                          display: "block",
-                          marginBottom: 4,
-                        }}
-                      >
-                        Call to action
-                      </label>
-                      <select
-                        value={callToAction}
-                        onChange={(e) => setCallToAction(e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "8px 10px",
+                          padding: "6px 16px",
                           borderRadius: 6,
                           border: "1px solid #cbd5e1",
-                          fontSize: "0.86rem",
                           background: "#ffffff",
+                          color: "#1c1e21",
+                          fontSize: "0.84rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
                         }}
                       >
-                        <option value="See details">See details (Recommended)</option>
-                        <option value="Install now">Install now</option>
-                        <option value="Download">Download</option>
-                        <option value="Learn more">Learn more</option>
-                        <option value="Play game">Play game</option>
-                        <option value="Use app">Use app</option>
-                      </select>
+                        Connect
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Column: Campaign score + Ad preview (Screenshot 3) */}
+                {/* ── RIGHT COLUMN: NATIVE META MULTI-PLACEMENT AD PREVIEW PANEL (Images 2, 3, 4, 5) ── */}
                 <div
                   style={{
-                    width: 330,
-                    flexShrink: 0,
+                    flex: "1 1 540px",
+                    minWidth: 480,
+                    maxWidth: 620,
                     display: "flex",
                     flexDirection: "column",
-                    gap: 16,
+                    gap: 14,
                     position: "sticky",
                     top: 16,
+                    maxHeight: "calc(100vh - 120px)",
+                    overflowY: "auto",
+                    paddingRight: 6,
                   }}
                 >
-                  {/* Campaign score card with dropdown arrow (Screenshot 3) */}
+                  {/* Card 1: Campaign recommendations (Image 2, 3, 4, 5) */}
                   <div
                     style={{
                       background: "#ffffff",
                       borderRadius: 8,
                       border: "1px solid #e4e6eb",
-                      padding: "16px 20px",
+                      padding: "14px 18px",
                       boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <div
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: "50%",
-                            border: "3.5px solid #008000",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontWeight: 700,
-                            fontSize: "0.95rem",
-                            color: "#008000",
-                            flexShrink: 0,
-                          }}
-                        >
-                          100
-                        </div>
-                        <div>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 5,
-                              fontSize: "0.88rem",
-                              fontWeight: 700,
-                              color: "#1c1e21",
-                            }}
-                          >
-                            Campaign score
-                            <Info size={13} color="#65676b" />
-                          </div>
-                          <div style={{ fontSize: "0.82rem", color: "#475569", marginTop: 2 }}>
-                            You're using our recommended setup.
-                          </div>
-                        </div>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        background: "#ecfdf5",
+                        color: "#059669",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Sparkles size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
+                        Campaign recommendations
                       </div>
-                      <ChevronDown size={18} color="#65676b" style={{ cursor: "pointer" }} />
+                      <div style={{ fontSize: "0.8rem", color: "#475569", marginTop: 1 }}>
+                        All recommended settings applied.
+                      </div>
                     </div>
                   </div>
 
-                  {/* Ad preview card (Screenshot 3) */}
+                  {/* Card 2: Ad preview container (Images 2, 3, 4, 5) */}
                   <div
                     style={{
                       background: "#ffffff",
                       borderRadius: 8,
                       border: "1px solid #e4e6eb",
-                      overflow: "hidden",
                       boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+                      overflow: "hidden",
                     }}
                   >
-                    {/* Header Row (Screenshot 3) */}
+                    {/* Header bar (Image 2) */}
                     <div
                       style={{
-                        padding: "12px 14px",
+                        padding: "12px 16px",
                         borderBottom: "1px solid #f0f2f5",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
                       }}
                     >
-                      {/* Left: Ad preview toggle switch */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {/* Left: Ad preview toggle */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div
                           role="switch"
                           aria-checked={adPreviewEnabled}
                           onClick={() => setAdPreviewEnabled((prev) => !prev)}
                           style={{
-                            width: 32,
-                            height: 18,
-                            borderRadius: 9,
+                            width: 36,
+                            height: 20,
+                            borderRadius: 10,
                             background: adPreviewEnabled ? "#0064e1" : "#cbd5e1",
                             padding: 2,
                             cursor: "pointer",
@@ -3749,211 +5298,441 @@ export default function MetaAdsManagerCampaignEditor({
                         >
                           <span
                             style={{
-                              width: 14,
-                              height: 14,
+                              width: 16,
+                              height: 16,
                               borderRadius: "50%",
                               background: "#ffffff",
                               boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
                             }}
                           />
                         </div>
-                        <span style={{ fontSize: "0.85rem", fontWeight: 650, color: "#1c1e21" }}>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1c1e21" }}>
                           Ad preview
                         </span>
                       </div>
 
-                      {/* Right icons: Review defaults, Expand, Share (Screenshot 3) */}
+                      {/* Right icons: Review defaults, Expand, Share (Image 2) */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <button
                           type="button"
-                          onClick={() =>
-                            setAdPreviewMode((prev) => (prev === "empty" ? "feed" : "empty"))
-                          }
-                          title="Toggle between Empty illustration and Live preview"
                           style={{
-                            padding: "4px 10px",
+                            padding: "4px 12px",
                             borderRadius: 4,
                             border: "1px solid #cbd5e1",
                             background: "#ffffff",
                             color: "#1c1e21",
-                            fontSize: "0.78rem",
+                            fontSize: "0.8rem",
                             fontWeight: 600,
                             cursor: "pointer",
                           }}
                         >
-                          {adPreviewMode === "empty" ? "View live" : "Review defaults"}
+                          Review defaults
                         </button>
                         <button
                           type="button"
                           style={{
-                            padding: 5,
-                            border: "none",
-                            background: "transparent",
+                            padding: "5px",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 4,
+                            background: "#ffffff",
                             cursor: "pointer",
                             color: "#65676b",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
                         >
-                          <Maximize2 size={14} />
+                          <Maximize2 size={13} />
                         </button>
                         <button
                           type="button"
                           style={{
+                            padding: "5px 8px",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 4,
+                            background: "#ffffff",
+                            cursor: "pointer",
+                            color: "#65676b",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: 2,
-                            padding: 5,
-                            border: "none",
-                            background: "transparent",
-                            cursor: "pointer",
-                            color: "#65676b",
+                            gap: 3,
                           }}
                         >
-                          <Share2 size={14} />
+                          <Share2 size={13} />
                           <ChevronDown size={11} />
                         </button>
                       </div>
                     </div>
 
-                    {/* Preview Body */}
-                    {adPreviewEnabled ? (
-                      adPreviewMode === "empty" ? (
-                        /* Exact Meta Graphic Placeholder matching Screenshot 3 */
-                        <MetaEmptyPreviewIllustration />
-                      ) : (
-                        /* Live Feed Post Preview */
-                        <div style={{ padding: "14px" }}>
-                          <div
+                    {/* Sub-bar: 4 Device Placement View Icons (Image 2) */}
+                    <div
+                      style={{
+                        padding: "8px 16px",
+                        borderBottom: "1px solid #f0f2f5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "#fafbfd",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {[
+                          { id: "all", label: "Feeds", icon: LayoutGrid },
+                          { id: "stories", label: "Stories", icon: Smartphone },
+                          { id: "marketplace", label: "Marketplace", icon: ShoppingBag },
+                          { id: "video", label: "In-stream", icon: Tv },
+                        ].map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setPreviewPlacementFilter(m.id)}
                             style={{
+                              padding: "4px 8px",
+                              borderRadius: 4,
+                              border: previewPlacementFilter === m.id ? "1.5px solid #0064e1" : "1px solid transparent",
+                              background: previewPlacementFilter === m.id ? "#e7f3ff" : "transparent",
+                              color: previewPlacementFilter === m.id ? "#0064e1" : "#65676b",
+                              cursor: "pointer",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "space-between",
-                              marginBottom: 10,
+                              gap: 4,
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div
-                                style={{
-                                  width: 36,
-                                  height: 36,
-                                  borderRadius: "50%",
-                                  background: "#0064e1",
-                                  color: "#fff",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontWeight: 700,
-                                  fontSize: "0.95rem",
-                                }}
-                              >
-                                {facebookPage.charAt(0)}
-                              </div>
-                              <div>
-                                <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#050505" }}>
-                                  {facebookPage}
-                                </div>
+                            <m.icon size={14} />
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#008000" }}>
+                        <CheckCircle2 size={15} color="#008000" />
+                      </div>
+                    </div>
+
+                    {/* Preview Body with Multi-Placement Grid (Images 2, 3, 4, 5) */}
+                    {adPreviewEnabled ? (
+                      <div style={{ padding: "16px", background: "#f0f2f5", display: "flex", flexDirection: "column", gap: 16 }}>
+                        {/* ── ROW 1: FACEBOOK FEED & INSTAGRAM FEED (Image 2) ── */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          {/* Placement 1: Facebook Feed Preview */}
+                          <div
+                            style={{
+                              background: "#ffffff",
+                              borderRadius: 8,
+                              border: "1px solid #e4e6eb",
+                              overflow: "hidden",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                              display: "flex",
+                              flexDirection: "column",
+                            }}
+                          >
+                            {/* FB Header */}
+                            <div style={{ padding: "10px 12px 6px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <div
                                   style={{
-                                    fontSize: "0.74rem",
-                                    color: "#65676b",
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: "50%",
+                                    background: "#050505",
+                                    color: "#ffffff",
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: 4,
+                                    justifyContent: "center",
+                                    fontWeight: 700,
+                                    fontSize: "0.85rem",
+                                    flexShrink: 0,
                                   }}
                                 >
-                                  <span>Sponsored</span> â€¢ <Globe size={11} />
+                                  {facebookPage ? facebookPage.charAt(0) : "L"}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "#050505", lineHeight: 1.2 }}>
+                                    {facebookPage}
+                                  </div>
+                                  <div style={{ fontSize: "0.72rem", color: "#65676b", display: "flex", alignItems: "center", gap: 3 }}>
+                                    <span>Sponsored</span> • <Globe size={10} />
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#65676b" }}>
+                                <MoreHorizontal size={14} />
+                                <X size={14} />
+                              </div>
+                            </div>
+
+                            {/* FB Primary Text */}
+                            <div style={{ padding: "0 12px 8px 12px", fontSize: "0.78rem", color: "#050505", lineHeight: 1.35, maxHeight: 54, overflow: "hidden" }}>
+                              {primaryText.split("\n").slice(0, 2).join(" ")} ...see more
+                            </div>
+
+                            {/* FB Media Image */}
+                            <div style={{ width: "100%", height: 210, background: "#000", overflow: "hidden" }}>
+                              <img
+                                src={selectedCreativeUrl}
+                                alt="Feed ad creative"
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                            </div>
+
+                            {/* FB Social Footer */}
+                            <div style={{ padding: "6px 12px", borderBottom: "1px solid #f0f2f5", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.72rem", color: "#65676b" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#0064e1", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem" }}>👍</span>
+                                <span>1</span>
+                              </div>
+                              <div>1 share</div>
+                            </div>
+
+                            <div style={{ padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "space-around", fontSize: "0.74rem", fontWeight: 600, color: "#65676b" }}>
+                              <span>Like</span>
+                              <span>Comment</span>
+                              <span>Share</span>
+                            </div>
+                          </div>
+
+                          {/* Placement 2: Instagram Feed Preview */}
+                          <div
+                            style={{
+                              background: "#ffffff",
+                              borderRadius: 8,
+                              border: "1px solid #e4e6eb",
+                              overflow: "hidden",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                              display: "flex",
+                              flexDirection: "column",
+                            }}
+                          >
+                            {/* IG Header */}
+                            <div style={{ padding: "10px 12px 6px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: "50%",
+                                    background: "#050505",
+                                    color: "#ffffff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontWeight: 700,
+                                    fontSize: "0.8rem",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {instagramAccount ? instagramAccount.charAt(0) : "l"}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#050505", lineHeight: 1.2 }}>
+                                    {instagramAccount}
+                                  </div>
+                                  <div style={{ fontSize: "0.7rem", color: "#65676b" }}>
+                                    Sponsored
+                                  </div>
+                                </div>
+                              </div>
+                              <MoreHorizontal size={14} color="#65676b" />
+                            </div>
+
+                            {/* IG Media */}
+                            <div style={{ width: "100%", height: 210, background: "#000", overflow: "hidden" }}>
+                              <img
+                                src={selectedCreativeUrl}
+                                alt="IG ad creative"
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                            </div>
+
+                            {/* IG CTA strip */}
+                            <div
+                              style={{
+                                padding: "6px 12px",
+                                background: "#f8fafc",
+                                borderBottom: "1px solid #e2e8f0",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                fontSize: "0.76rem",
+                                fontWeight: 600,
+                                color: "#0064e1",
+                              }}
+                            >
+                              <span>{callToAction}</span>
+                              <ChevronRight size={14} />
+                            </div>
+
+                            {/* IG Icons bar */}
+                            <div style={{ padding: "6px 12px 4px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", color: "#262626" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{ cursor: "pointer" }}>♡</span>
+                                <span style={{ cursor: "pointer" }}>💬</span>
+                                <span style={{ cursor: "pointer" }}>✈</span>
+                              </div>
+                              <span style={{ cursor: "pointer" }}>🔖</span>
+                            </div>
+
+                            {/* IG Caption */}
+                            <div style={{ padding: "0 12px 10px 12px", fontSize: "0.75rem", color: "#050505", lineHeight: 1.35, maxHeight: 38, overflow: "hidden" }}>
+                              <strong>{instagramAccount}</strong> {primaryText.split("\n")[0]} ... more
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ── ROW 2: INSTAGRAM STORIES & FACEBOOK STORIES (Images 3 & 4) ── */}
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                            <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1c1e21", display: "flex", alignItems: "center", gap: 6 }}>
+                              <Smartphone size={14} color="#0064e1" />
+                              <span>Instagram Stories & Facebook Stories</span>
+                            </div>
+                            <MoreHorizontal size={14} color="#65676b" />
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            {/* Instagram Story 9:16 Card */}
+                            <div
+                              style={{
+                                width: "100%",
+                                height: 290,
+                                borderRadius: 10,
+                                overflow: "hidden",
+                                position: "relative",
+                                background: "#050505",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                              }}
+                            >
+                              <img
+                                src={selectedCreativeUrl}
+                                alt="Story Creative"
+                                style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }}
+                              />
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  background: "linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.65) 100%)",
+                                }}
+                              />
+
+                              {/* Story Progress Bar */}
+                              <div style={{ position: "absolute", top: 8, left: 8, right: 8, height: 2, background: "rgba(255,255,255,0.4)", borderRadius: 1 }}>
+                                <div style={{ width: "65%", height: "100%", background: "#fff", borderRadius: 1 }} />
+                              </div>
+
+                              {/* Story Top Profile */}
+                              <div style={{ position: "absolute", top: 16, left: 10, right: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#000", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700 }}>
+                                  L
+                                </div>
+                                <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#ffffff" }}>
+                                  {instagramAccount}
+                                </span>
+                                <span style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.7)" }}>Sponsored</span>
+                              </div>
+
+                              {/* Story Bottom Swipe-up CTA */}
+                              <div style={{ position: "absolute", bottom: 12, left: 10, right: 10, textAlign: "center" }}>
+                                <div style={{ fontSize: "0.75rem", color: "#ffffff", marginBottom: 4, textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>
+                                  {callToAction}
+                                </div>
+                                <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 16, borderRadius: 8, background: "rgba(255,255,255,0.3)" }}>
+                                  <ChevronUp size={12} color="#fff" />
                                 </div>
                               </div>
                             </div>
-                            <MoreHorizontal size={16} color="#65676b" />
-                          </div>
 
-                          <div
-                            style={{
-                              fontSize: "0.84rem",
-                              color: "#050505",
-                              lineHeight: 1.4,
-                              marginBottom: 10,
-                            }}
-                          >
-                            {primaryText}
-                          </div>
-
-                          <div
-                            style={{
-                              width: "100%",
-                              height: 180,
-                              borderRadius: 6,
-                              overflow: "hidden",
-                              background: "#f0f2f5",
-                              marginBottom: 10,
-                            }}
-                          >
-                            <img
-                              src={selectedCreativeUrl}
-                              alt="Creative"
-                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                          </div>
-
-                          <div
-                            style={{
-                              background: "#f0f2f5",
-                              padding: "8px 12px",
-                              borderRadius: 6,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 10,
-                            }}
-                          >
-                            <div style={{ overflow: "hidden" }}>
-                              <div
-                                style={{
-                                  fontSize: "0.72rem",
-                                  color: "#65676b",
-                                  textTransform: "uppercase",
-                                }}
-                              >
-                                PLAY.GOOGLE.COM
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "0.86rem",
-                                  fontWeight: 700,
-                                  color: "#050505",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {headline}
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
+                            {/* Reels 9:16 Card (Image 5) */}
+                            <div
                               style={{
-                                padding: "6px 14px",
-                                borderRadius: 6,
-                                background: "#0064e1",
-                                color: "#ffffff",
-                                border: "none",
-                                fontSize: "0.82rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
+                                width: "100%",
+                                height: 290,
+                                borderRadius: 10,
+                                overflow: "hidden",
+                                position: "relative",
+                                background: "#050505",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
                               }}
                             >
-                              {callToAction}
-                            </button>
+                              <img
+                                src={selectedCreativeUrl}
+                                alt="Reels Creative"
+                                style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.95 }}
+                              />
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  background: "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%)",
+                                }}
+                              />
+
+                              <div style={{ position: "absolute", top: 10, left: 10, fontSize: "0.75rem", fontWeight: 700, color: "#fff" }}>
+                                Reels
+                              </div>
+
+                              {/* Vertical Right Actions (Image 5) */}
+                              <div style={{ position: "absolute", right: 8, bottom: 40, display: "flex", flexDirection: "column", gap: 10, alignItems: "center", color: "#fff", fontSize: "0.68rem" }}>
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                  <span>♡</span>
+                                  <span>1</span>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                  <span>💬</span>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                  <span>✈</span>
+                                </div>
+                              </div>
+
+                              {/* Reels Bottom Caption & CTA (Image 5) */}
+                              <div style={{ position: "absolute", bottom: 10, left: 10, right: 38 }}>
+                                <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "#fff" }}>{facebookPage}</div>
+                                <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.9)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                                  {headline}
+                                </div>
+                                <div style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4, background: "#0064e1", color: "#fff", padding: "3px 10px", borderRadius: 4, fontSize: "0.72rem", fontWeight: 600 }}>
+                                  <span>{callToAction}</span>
+                                  <ChevronRight size={10} />
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      )
+
+                        {/* Footer disclaimer (Image 5) */}
+                        <div style={{ fontSize: "0.74rem", color: "#65676b", textAlign: "center", marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                          <span>Ad rendering and interaction may vary based on device, format and other factors.</span>
+                          <Info size={12} color="#65676b" />
+                        </div>
+                      </div>
                     ) : (
                       <div style={{ padding: 40, textAlign: "center", color: "#65676b", fontSize: "0.85rem" }}>
                         Preview is turned off
                       </div>
                     )}
+                  </div>
+
+                  {/* Floating Meta AI gradient sparkle button (Images 2, 3, 4, 5) */}
+                  <div
+                    title="Meta AI Assistant"
+                    style={{
+                      position: "fixed",
+                      bottom: 74,
+                      right: 32,
+                      width: 44,
+                      height: 44,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #3b82f6 100%)",
+                      color: "#ffffff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 4px 14px rgba(168, 85, 247, 0.4)",
+                      cursor: "pointer",
+                      zIndex: 20,
+                    }}
+                  >
+                    <Sparkles size={20} />
                   </div>
                 </div>
               </div>
@@ -3962,7 +5741,7 @@ export default function MetaAdsManagerCampaignEditor({
         </main>
       </div>
 
-      {/* â”€â”€ BOTTOM STICKY ACTION BAR (Screenshots 1, 2, 3) â”€â”€ */}
+      {/* ── BOTTOM STICKY ACTION BAR (Screenshots 1, 2, 3) ── */}
       <footer
         style={{
           background: "#ffffff",
@@ -4122,7 +5901,227 @@ export default function MetaAdsManagerCampaignEditor({
         </div>
       </footer>
 
-      {/* â”€â”€ CREATE FACEBOOK PAGE MODAL â”€â”€ */}
+      {/* ── CREATE FACEBOOK PAGE MODAL ── */}
+      {/* ── CREATE INSTANT FORM MODAL ── */}
+      {createFormModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setCreateFormModalOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100000,
+            background: "rgba(0, 0, 0, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#ffffff",
+              borderRadius: 10,
+              width: "100%",
+              maxWidth: 540,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+              overflow: "hidden",
+              border: "1px solid #e4e6eb",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e4e6eb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#1c1e21" }}>
+                Create instant form
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCreateFormModalOpen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#65676b",
+                  padding: 4,
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", maxHeight: "70vh", overflowY: "auto" }}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                  Form name
+                </label>
+                <input
+                  type="text"
+                  value={newFormName}
+                  onChange={(e) => setNewFormName(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.9rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#1c1e21", marginBottom: 6 }}>
+                  Form type
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <label
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 6,
+                      padding: "10px 14px",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      cursor: "pointer",
+                      background: "#f0f7ff",
+                    }}
+                  >
+                    <input type="radio" name="formType" defaultChecked style={{ marginTop: 2, accentColor: "#0064e1" }} />
+                    <div>
+                      <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                        Higher intent (Recommended)
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#65676b" }}>
+                        Add a review step that gives people a chance to confirm their info before submitting.
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    style={{
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 6,
+                      padding: "10px 14px",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input type="radio" name="formType" style={{ marginTop: 2, accentColor: "#0064e1" }} />
+                    <div>
+                      <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1c1e21" }}>
+                        More volume
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#65676b" }}>
+                        Use a form that is quick to complete and submit on a mobile device.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#1c1e21", marginBottom: 6 }}>
+                  User questions (Prefilled automatically)
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#f8fafc", padding: "12px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", color: "#1c1e21" }}>
+                    <input type="checkbox" defaultChecked disabled style={{ accentColor: "#0064e1" }} />
+                    <span>Full name (Required)</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", color: "#1c1e21" }}>
+                    <input type="checkbox" defaultChecked disabled style={{ accentColor: "#0064e1" }} />
+                    <span>Email address (Required)</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", color: "#1c1e21" }}>
+                    <input type="checkbox" defaultChecked style={{ accentColor: "#0064e1" }} />
+                    <span>Phone number</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", color: "#1c1e21" }}>
+                    <input type="checkbox" defaultChecked style={{ accentColor: "#0064e1" }} />
+                    <span>City</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                  Privacy policy link
+                </label>
+                <input
+                  type="text"
+                  defaultValue="https://adstradigital.com/privacy-policy"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "14px 20px",
+                borderTop: "1px solid #e4e6eb",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                background: "#f8fafc",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setCreateFormModalOpen(false)}
+                style={{
+                  padding: "7px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#1c1e21",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLeadInstantForm(newFormName || "Lead Generation Form - High Intent");
+                  setCreateFormModalOpen(false);
+                }}
+                style={{
+                  padding: "7px 20px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Create form
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {facebookPageModalOpen && (
         <div
           role="dialog"

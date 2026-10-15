@@ -2937,33 +2937,70 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
         if since and until:
             time_range = {'since': since, 'until': until}
 
-        # Find connected Meta connections
-        all_meta_conns = PlatformConnection.objects.filter(platform='meta').order_by('-status', '-last_synced_at')
+        # Find active connected Meta connections
+        all_meta_conns = PlatformConnection.objects.filter(
+            platform='meta',
+            status='connected'
+        ).exclude(
+            access_token_encrypted=''
+        ).order_by('-last_synced_at', '-id')
 
+        if client_id and client_id != 'all':
+            client_conns = all_meta_conns.filter(client_profile_id=client_id)
+            if client_conns.exists():
+                all_meta_conns = client_conns
+
+        seen_acc_ids = set()
         available_accounts = []
         for c in all_meta_conns:
-            acc_num = str(c.account_id or '').replace('act_', '')
-            available_accounts.append({
-                'id': c.account_id,
-                'name': c.account_name or f"Meta Ad Account ({acc_num})",
-                'display_id': acc_num,
-                'status': c.status,
-                'currency': c.metadata.get('currency', 'INR') if isinstance(c.metadata, dict) else 'INR',
-                'connection_id': c.id,
-            })
+            if c.account_id:
+                acc_num = str(c.account_id).replace('act_', '').strip()
+                if acc_num and acc_num not in seen_acc_ids:
+                    seen_acc_ids.add(acc_num)
+                    formatted_id = c.account_id if str(c.account_id).startswith('act_') else f"act_{acc_num}"
+                    available_accounts.append({
+                        'id': formatted_id,
+                        'name': c.account_name or f"Meta Ad Account ({acc_num})",
+                        'display_id': acc_num,
+                        'status': c.status,
+                        'currency': c.metadata.get('currency', 'INR') if isinstance(c.metadata, dict) else 'INR',
+                        'connection_id': c.id,
+                    })
+
+            # Also check any additional ad_accounts discovered in metadata
+            if isinstance(c.metadata, dict) and isinstance(c.metadata.get('ad_accounts'), list):
+                for meta_acc in c.metadata['ad_accounts']:
+                    m_id = str(meta_acc.get('id') or '').strip()
+                    m_num = m_id.replace('act_', '').strip()
+                    if m_num and m_num not in seen_acc_ids:
+                        seen_acc_ids.add(m_num)
+                        available_accounts.append({
+                            'id': m_id if m_id.startswith('act_') else f"act_{m_num}",
+                            'name': meta_acc.get('name') or f"Meta Ad Account ({m_num})",
+                            'display_id': m_num,
+                            'status': 'connected',
+                            'currency': meta_acc.get('currency', 'INR'),
+                            'connection_id': c.id,
+                        })
 
         # Select connection
         connection = None
         if req_account_id:
-            clean_req = str(req_account_id).replace('act_', '')
+            clean_req = str(req_account_id).replace('act_', '').strip()
             connection = all_meta_conns.filter(
-                Q(account_id__icontains=clean_req), status='connected'
-            ).first() or all_meta_conns.filter(
                 Q(account_id__icontains=clean_req)
             ).first()
+            if not connection:
+                for c in all_meta_conns:
+                    if isinstance(c.metadata, dict) and any(
+                        str(a.get('id', '')).replace('act_', '').strip() == clean_req
+                        for a in c.metadata.get('ad_accounts', [])
+                    ):
+                        connection = c
+                        break
 
         if not connection:
-            connection = all_meta_conns.filter(status='connected').first() or all_meta_conns.first()
+            connection = all_meta_conns.first()
 
         if not connection:
             # Return empty baseline
@@ -2994,115 +3031,235 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                 c['backendId'] = cp.campaign.id
                 c['is_draft'] = False
 
-        # Only merge local drafts that are NOT yet published to Meta
-        published_camp_ids = set(cp.campaign_id for cp in published_cps if cp.campaign_id)
-        local_drafts = SocialCampaign.objects.filter(status='draft').exclude(id__in=published_camp_ids).order_by('-created_at')
-        if client_id and client_id != 'all':
-            local_drafts = local_drafts.filter(client_profile_id=client_id)
+        # Only merge local drafts if explicitly requested via include_drafts=true (default is published only)
+        include_drafts = request.query_params.get('include_drafts', 'false').lower() == 'true'
+        if include_drafts:
+            published_camp_ids = set(cp.campaign_id for cp in published_cps if cp.campaign_id)
+            local_drafts = SocialCampaign.objects.filter(status='draft').exclude(id__in=published_camp_ids).order_by('-created_at')
+            if client_id and client_id != 'all':
+                local_drafts = local_drafts.filter(client_profile_id=client_id)
 
-        meta_camp_ids = set(c['id'] for c in data['campaigns'])
+            meta_camp_ids = set(c['id'] for c in data['campaigns'])
 
-        for lc in local_drafts:
-            lc_id = f"c-local-{lc.id}"
-            if lc_id not in meta_camp_ids:
-                data['campaigns'].append({
-                    'id': lc_id,
-                    'name': lc.name,
-                    'delivery': 'In draft',
-                    'actions': '—',
-                    'bidStrategy': 'Using campaign budget',
-                    'bidStrategySub': (lc.objective or 'Leads').replace('_', ' ').capitalize(),
-                    'budget': f"₹{float(lc.budget or 1000):,.2f}",
-                    'budgetSub': 'Daily',
-                    'results': '—',
-                    'costPerResult': '—',
-                    'amountSpent': '—',
-                    'impressions': '—',
-                    'reach': '—',
-                    'clicks': '—',
-                    'ctr': '—',
-                    'cpc': '—',
-                    'ends': lc.end_date.strftime('%Y-%m-%d') if lc.end_date else 'Ongoing',
-                    'attribution': '7-day click or 1-day view',
-                    'lastSignificantEdit': lc.updated_at.strftime('%Y-%m-%d') if lc.updated_at else '—',
-                    'active': False,
-                    'backendId': lc.id,
-                    'level': 'campaign',
-                    'is_draft': True,
-                })
+            for lc in local_drafts:
+                lc_id = f"c-local-{lc.id}"
+                if lc_id not in meta_camp_ids:
+                    data['campaigns'].append({
+                        'id': lc_id,
+                        'name': lc.name,
+                        'delivery': 'In draft',
+                        'actions': '—',
+                        'bidStrategy': 'Using campaign budget',
+                        'bidStrategySub': (lc.objective or 'Leads').replace('_', ' ').capitalize(),
+                        'budget': f"₹{float(lc.budget or 1000):,.2f}",
+                        'budgetSub': 'Daily',
+                        'results': '—',
+                        'resultsSub': '',
+                        'costPerResult': '—',
+                        'costPerResultSub': '',
+                        'amountSpent': '—',
+                        'impressions': '—',
+                        'reach': '—',
+                        'clicks': '—',
+                        'ctr': '—',
+                        'cpc': '—',
+                        'ends': lc.end_date.strftime('%Y-%m-%d') if lc.end_date else 'Ongoing',
+                        'attribution': '7-day click or 1-day view',
+                        'attributionSub': 'All conversions',
+                        'lastSignificantEdit': lc.updated_at.strftime('%Y-%m-%d') if lc.updated_at else '—',
+                        'active': False,
+                        'backendId': lc.id,
+                        'level': 'campaign',
+                        'is_draft': True,
+                    })
 
-                as_id = f"as-local-{lc.id}"
+                    as_id = f"as-local-{lc.id}"
+                    data['adsets'].append({
+                        'id': as_id,
+                        'name': f"{lc.name} Ad set",
+                        'delivery': 'In draft',
+                        'actions': '—',
+                        'bidStrategy': 'Highest volume',
+                        'bidStrategySub': (lc.objective or 'Leads').capitalize(),
+                        'budget': f"₹{float(lc.budget or 1000):,.2f}",
+                        'budgetSub': 'Daily',
+                        'results': '—',
+                        'resultsSub': '',
+                        'costPerResult': '—',
+                        'costPerResultSub': '',
+                        'amountSpent': '—',
+                        'impressions': '—',
+                        'reach': '—',
+                        'clicks': '—',
+                        'ctr': '—',
+                        'cpc': '—',
+                        'ends': lc.end_date.strftime('%Y-%m-%d') if lc.end_date else 'Ongoing',
+                        'attribution': '7-day click or 1-day view',
+                        'attributionSub': 'All conversions',
+                        'lastSignificantEdit': '—',
+                        'campaignName': lc.name,
+                        'campaignId': lc_id,
+                        'active': False,
+                        'backendId': lc.id,
+                        'level': 'adset',
+                        'is_draft': True,
+                    })
+
+                    ad_id = f"ad-local-{lc.id}"
+                    data['ads'].append({
+                        'id': ad_id,
+                        'name': f"{lc.name} Ad",
+                        'thumb': lc.creative_image_url or None,
+                        'delivery': 'In draft',
+                        'actions': '—',
+                        'results': '—',
+                        'resultsSub': '',
+                        'costPerResult': '—',
+                        'costPerResultSub': '',
+                        'budget': 'Using campaign...',
+                        'budgetSub': '',
+                        'amountSpent': '—',
+                        'impressions': '—',
+                        'reach': '—',
+                        'clicks': '—',
+                        'ctr': '—',
+                        'cpc': '—',
+                        'ends': 'Ongoing',
+                        'attribution': '7-day click or 1-day view',
+                        'attributionSub': 'All conversions',
+                        'bidStrategy': 'Highest volume',
+                        'bidStrategySub': 'Leads',
+                        'lastSignificantEdit': '—',
+                        'qualityRanking': '—',
+                        'engagementRanking': '—',
+                        'conversionRanking': '—',
+                        'adsetName': f"{lc.name} Ad set",
+                        'adsetId': as_id,
+                        'adsetSubtitle': '0 active ads',
+                        'campaignName': lc.name,
+                        'campaignId': lc_id,
+                        'activeAdsCount': '0 active ads',
+                        'active': False,
+                        'backendId': lc.id,
+                        'level': 'ad',
+                        'is_draft': True,
+                    })
+
+        # Ensure that every campaign in data['campaigns'] has at least its ad set and ad represented
+        existing_adset_camp_ids = set(str(a.get('campaignId', '')) for a in data['adsets'])
+        for c in data['campaigns']:
+            cid_str = str(c.get('id', ''))
+            if cid_str and cid_str not in existing_adset_camp_ids:
+                as_id = f"as-synced-{cid_str}"
+                ad_id = f"ad-synced-{cid_str}"
+                camp_name = c.get('name', 'Campaign')
+                c_deliv = c.get('delivery') or ('Active' if c.get('active') else 'Off')
+                if c_deliv == 'In draft':
+                    c_deliv = 'Off'
                 data['adsets'].append({
                     'id': as_id,
-                    'name': f"{lc.name} Ad set",
-                    'delivery': 'In draft',
+                    'name': f"{camp_name} - Ad Set",
+                    'delivery': c_deliv,
                     'actions': '—',
-                    'bidStrategy': 'Highest volume',
-                    'bidStrategySub': (lc.objective or 'Leads').capitalize(),
-                    'budget': f"₹{float(lc.budget or 1000):,.2f}",
-                    'budgetSub': 'Daily',
-                    'results': '—',
-                    'costPerResult': '—',
-                    'amountSpent': '—',
-                    'impressions': '—',
-                    'reach': '—',
-                    'clicks': '—',
-                    'ctr': '—',
-                    'cpc': '—',
-                    'ends': lc.end_date.strftime('%Y-%m-%d') if lc.end_date else 'Ongoing',
+                    'bidStrategy': c.get('bidStrategy', 'Highest volume'),
+                    'bidStrategySub': c.get('bidStrategySub', 'Leads'),
+                    'budget': c.get('budget', 'Using campaign...'),
+                    'budgetSub': c.get('budgetSub', ''),
+                    'results': c.get('results', '—'),
+                    'resultsSub': c.get('resultsSub', ''),
+                    'costPerResult': c.get('costPerResult', '—'),
+                    'costPerResultSub': c.get('costPerResultSub', ''),
+                    'amountSpent': c.get('amountSpent', '—'),
+                    'impressions': c.get('impressions', '—'),
+                    'reach': c.get('reach', '—'),
+                    'clicks': c.get('clicks', '—'),
+                    'ctr': c.get('ctr', '—'),
+                    'cpc': c.get('cpc', '—'),
+                    'ends': c.get('ends', 'Ongoing'),
                     'attribution': '7-day click or 1-day view',
+                    'attributionSub': 'All conversions',
                     'lastSignificantEdit': '—',
-                    'campaignName': lc.name,
-                    'campaignId': lc_id,
-                    'active': False,
-                    'backendId': lc.id,
+                    'campaignName': camp_name,
+                    'campaignId': cid_str,
+                    'active': c.get('active', False),
+                    'backendId': c.get('backendId'),
                     'level': 'adset',
-                    'is_draft': True,
+                    'is_draft': c.get('is_draft', False),
                 })
-
-                ad_id = f"ad-local-{lc.id}"
                 data['ads'].append({
                     'id': ad_id,
-                    'name': f"{lc.name} Ad",
-                    'thumb': lc.creative_image_url or None,
-                    'delivery': 'In draft',
+                    'name': f"{camp_name} - Ad",
+                    'thumb': None,
+                    'delivery': c_deliv,
                     'actions': '—',
-                    'results': '—',
-                    'costPerResult': '—',
+                    'results': c.get('results', '—'),
+                    'resultsSub': c.get('resultsSub', ''),
+                    'costPerResult': c.get('costPerResult', '—'),
+                    'costPerResultSub': c.get('costPerResultSub', ''),
                     'budget': 'Using campaign...',
                     'budgetSub': '',
-                    'amountSpent': '—',
-                    'impressions': '—',
-                    'reach': '—',
-                    'clicks': '—',
-                    'ctr': '—',
-                    'cpc': '—',
-                    'ends': 'Ongoing',
+                    'amountSpent': c.get('amountSpent', '—'),
+                    'impressions': c.get('impressions', '—'),
+                    'reach': c.get('reach', '—'),
+                    'clicks': c.get('clicks', '—'),
+                    'ctr': c.get('ctr', '—'),
+                    'cpc': c.get('cpc', '—'),
+                    'ends': c.get('ends', 'Ongoing'),
                     'attribution': '7-day click or 1-day view',
-                    'bidStrategy': 'Highest volume',
-                    'bidStrategySub': 'Leads',
+                    'attributionSub': 'All conversions',
+                    'bidStrategy': c.get('bidStrategy', 'Highest volume'),
+                    'bidStrategySub': c.get('bidStrategySub', 'Leads'),
                     'lastSignificantEdit': '—',
                     'qualityRanking': '—',
                     'engagementRanking': '—',
                     'conversionRanking': '—',
-                    'adsetName': f"{lc.name} Ad set",
+                    'adsetName': f"{camp_name} - Ad Set",
                     'adsetId': as_id,
-                    'campaignName': lc.name,
-                    'campaignId': lc_id,
-                    'activeAdsCount': '0 active ads',
-                    'active': False,
-                    'backendId': lc.id,
+                    'adsetSubtitle': '1 active ad' if c.get('active') else '0 active ads',
+                    'campaignName': camp_name,
+                    'campaignId': cid_str,
+                    'activeAdsCount': '1 active ad' if c.get('active') else '0 active ads',
+                    'active': c.get('active', False),
+                    'backendId': c.get('backendId'),
                     'level': 'ad',
-                    'is_draft': True,
+                    'is_draft': c.get('is_draft', False),
                 })
 
-        acc_num = str(connection.account_id or '').replace('act_', '')
+        # Filter strictly to published items when include_drafts is False
+        if not include_drafts:
+            data['campaigns'] = [
+                c for c in data['campaigns']
+                if not c.get('is_draft') and c.get('delivery') != 'In draft' and not str(c.get('id', '')).startswith('c-local-')
+            ]
+            data['adsets'] = [
+                a for a in data['adsets']
+                if not a.get('is_draft') and a.get('delivery') != 'In draft' and not str(a.get('id', '')).startswith('as-local-')
+            ]
+            data['ads'] = [
+                ad for ad in data['ads']
+                if not ad.get('is_draft') and ad.get('delivery') != 'In draft' and not str(ad.get('id', '')).startswith('ad-local-')
+            ]
+
+        target_account_id = connection.account_id
+        target_name = connection.account_name
+        target_currency = connection.metadata.get('currency', 'INR') if isinstance(connection.metadata, dict) else 'INR'
+        if req_account_id:
+            clean_req = str(req_account_id).replace('act_', '').strip()
+            if clean_req != str(connection.account_id).replace('act_', '').strip() and isinstance(connection.metadata, dict):
+                for a in connection.metadata.get('ad_accounts', []):
+                    if str(a.get('id', '')).replace('act_', '').strip() == clean_req:
+                        target_account_id = a.get('id')
+                        target_name = a.get('name') or target_name
+                        target_currency = a.get('currency', target_currency)
+                        break
+
+        acc_num = str(target_account_id or '').replace('act_', '').strip()
         connected_account = {
-            'id': connection.account_id,
-            'name': connection.account_name or f"Meta Ad Account ({acc_num})",
+            'id': target_account_id if str(target_account_id).startswith('act_') else f"act_{acc_num}",
+            'name': target_name or f"Meta Ad Account ({acc_num})",
             'display_id': acc_num,
             'status': connection.status,
-            'currency': connection.metadata.get('currency', 'INR') if isinstance(connection.metadata, dict) else 'INR',
+            'currency': target_currency,
             'connection_id': connection.id,
         }
 
