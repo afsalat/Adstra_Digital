@@ -25,6 +25,7 @@ import {
 import FullOverviewDashboardTab from "./components/FullOverviewDashboardTab";
 import DedicatedSocialSection from "./components/DedicatedSocialSection";
 import MediaLibraryTab from "./components/MediaLibraryTab";
+import CampaignDashboardTab from "./components/CampaignDashboardTab";
 import CampaignsTab from "./components/CampaignsTab";
 import AnalyticsReportsTab from "./components/AnalyticsReportsTab";
 import TeamDesignationTreeTab from "./components/TeamDesignationTreeTab";
@@ -32,13 +33,22 @@ import SocialSettingsTab from "./components/SocialSettingsTab";
 import CreatePostModal from "./components/CreatePostModal";
 import AIAssistantModal from "./components/AIAssistantModal";
 import ClientCompanySearchSelect from "./components/ClientCompanySearchSelect";
+import MentionsBell from "./components/MentionsBell";
+import ClientQuickRail from "./components/ClientQuickRail";
+import { SocialFeedbackHost } from "./components/SocialFeedback";
 
 function SocialManagementInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "overview";
+  const initialSubTab = searchParams.get("subtab") || "dashboard";
 
   const [activeMainModule, setActiveMainModule] = useState(initialTab);
+  const [campaignSubTab, setCampaignSubTab] = useState(
+    ["dashboard", "campaign_management"].includes(initialSubTab)
+      ? initialSubTab
+      : "dashboard"
+  );
   const [selectedClientId, setSelectedClientId] = useState("all");
 
   // Data states
@@ -57,13 +67,37 @@ function SocialManagementInner() {
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [prefilledPostData, setPrefilledPostData] = useState(null);
 
+  // Request to open a post's drawer (e.g. clicking an @mention): { postId, tab, nonce }
+  const [focusRequest, setFocusRequest] = useState(null);
+
   // Sync tab from URL if it changes
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam && ["overview", "social", "assets", "campaigns", "reports", "team_tree", "settings"].includes(tabParam)) {
       setActiveMainModule(tabParam);
     }
+    const subTabParam = searchParams.get("subtab");
+    if (subTabParam && ["dashboard", "campaign_management"].includes(subTabParam)) {
+      setCampaignSubTab(subTabParam);
+    }
   }, [searchParams]);
+
+  // Persist active tab/subtab in the URL so a reload keeps the user on the same module
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", activeMainModule);
+    if (activeMainModule === "campaigns") {
+      params.set("subtab", campaignSubTab);
+    } else {
+      params.delete("subtab");
+    }
+    if (activeMainModule !== "social") params.delete("stage");
+    const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  }, [activeMainModule, campaignSubTab]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -131,6 +165,15 @@ function SocialManagementInner() {
     setCreateModalOpen(true);
   };
 
+  const handleOpenMention = (mention) => {
+    setActiveMainModule("social");
+    // The post may belong to a client that's filtered out right now
+    if (selectedClientId !== "all" && String(selectedClientId) !== String(mention.client_id)) {
+      setSelectedClientId("all");
+    }
+    setFocusRequest({ postId: mention.post_id, tab: "comments", nonce: Date.now() });
+  };
+
   const handleApplyAiContent = ({ caption, hashtags }) => {
     setPrefilledPostData({
       primary_caption: caption,
@@ -157,7 +200,7 @@ function SocialManagementInner() {
               <Share2 size={24} color="#4f46e5" /> Adstra Digital Marketing Hub
             </h2>
             <p>
-              Dedicated modules for microsoft & Adstra Digital marketing operations
+              Dedicated modules for Microsoft & Adstra Digital marketing operations
             </p>
           </div>
         </div>
@@ -189,10 +232,19 @@ function SocialManagementInner() {
             }}
             className="social-create-btn"
           >
-            <Plus size={18} /> + Create Post
+            <Plus size={18} /> Create Post
           </button>
         </div>
       </header>
+
+      {/* Floating client rail + @mentions inbox (always visible) */}
+      <ClientQuickRail
+        clients={activeClients}
+        value={selectedClientId}
+        onChange={(newId) => setSelectedClientId(newId)}
+      >
+        <MentionsBell onOpenMention={handleOpenMention} />
+      </ClientQuickRail>
 
       {/* Main Separate Modules Navigation */}
       <nav
@@ -207,6 +259,9 @@ function SocialManagementInner() {
           gap: 6,
           boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
           overflowX: "auto",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
         }}
       >
         {[
@@ -270,6 +325,7 @@ function SocialManagementInner() {
             mediaAssets={mediaAssets}
             inboxMessages={inboxMessages}
             selectedClientId={selectedClientId}
+            onSelectClient={setSelectedClientId}
             onRefresh={fetchData}
             onOpenCreatePost={(data = null) => {
               setPrefilledPostData(data || null);
@@ -277,6 +333,7 @@ function SocialManagementInner() {
             }}
             onOpenCreateWithAsset={handleOpenCreateWithAsset}
             onOpenAiStudio={() => setAiModalOpen(true)}
+            focusRequest={focusRequest}
           />
         )}
 
@@ -291,12 +348,71 @@ function SocialManagementInner() {
         )}
 
         {activeMainModule === "campaigns" && (
-          <CampaignsTab
-            campaigns={campaigns}
-            clients={activeClients}
-            platformConnections={platformConnections}
-            onRefresh={fetchData}
-          />
+          <div>
+            {/* Secondary Tab Bar for Campaigns */}
+            <nav
+              style={{
+                display: "flex",
+                background: "#ffffff",
+                padding: "4px 6px",
+                borderRadius: 12,
+                border: "1px solid #e2e8f0",
+                marginBottom: 20,
+                gap: 4,
+                boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
+                width: "fit-content",
+              }}
+            >
+              {[
+                { id: "dashboard", label: "Dashboard" },
+                { id: "campaign_management", label: "Campaign Management" },
+              ].map((subTab) => {
+                const isActive = campaignSubTab === subTab.id;
+                return (
+                  <button
+                    key={subTab.id}
+                    onClick={() => setCampaignSubTab(subTab.id)}
+                    style={{
+                      padding: "8px 20px",
+                      borderRadius: 9,
+                      fontSize: "0.85rem",
+                      fontWeight: isActive ? 700 : 550,
+                      cursor: "pointer",
+                      border: "none",
+                      background: isActive ? "#0f172a" : "transparent",
+                      color: isActive ? "#ffffff" : "#64748b",
+                      boxShadow: isActive ? "0 2px 8px rgba(15, 23, 42, 0.12)" : "none",
+                      transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {subTab.label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Dashboard Sub-Tab */}
+            {campaignSubTab === "dashboard" && (
+              <CampaignDashboardTab
+                campaigns={campaigns}
+                clients={activeClients}
+                selectedClientId={selectedClientId}
+                onNavigateToCampaigns={() => setCampaignSubTab("campaign_management")}
+                onRefresh={fetchData}
+              />
+            )}
+
+            {/* Campaign Management Sub-Tab */}
+            {campaignSubTab === "campaign_management" && (
+              <CampaignsTab
+                campaigns={campaigns}
+                clients={activeClients}
+                selectedClientId={selectedClientId}
+                onRefresh={fetchData}
+              />
+            )}
+          </div>
         )}
 
         {activeMainModule === "reports" && (
@@ -304,6 +420,8 @@ function SocialManagementInner() {
             selectedClientId={selectedClientId}
             clients={activeClients}
             posts={posts}
+            campaigns={campaigns}
+            dashboardData={dashboardData}
           />
         )}
 
@@ -347,6 +465,7 @@ function SocialManagementInner() {
         />
       )}
 
+      <SocialFeedbackHost />
     </div>
   );
 }

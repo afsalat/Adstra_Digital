@@ -20,6 +20,8 @@ from apis.social.models import (
     PostApprovalHistory,
     SocialInboxMessage,
     SocialDailyAnalytics,
+    PostComment,
+    PostCommentMention,
 )
 from apis.social.serializers import (
     SocialClientProfileSerializer,
@@ -30,7 +32,10 @@ from apis.social.serializers import (
     PostApprovalHistorySerializer,
     SocialInboxMessageSerializer,
     SocialDailyAnalyticsSerializer,
+    PostCommentSerializer,
+    PostCommentMentionSerializer,
 )
+from apis.user.models import CustomUser
 from apis.social.services import (
     convert_inbox_to_crm_lead,
     record_approval_action,
@@ -222,13 +227,118 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-        return qs
+        qs = qs.select_related('client_profile', 'campaign', 'created_by', 'assigned_to', 'writer', 'designer', 'reviewer')
+        if self.action == 'list':
+            # Only for the read-only list: detail actions append history and must not serialize a stale cache
+            qs = qs.prefetch_related('approval_history')
+        return qs.annotate(comment_count=Count('comments', distinct=True))
+
+    ASSIGNABLE_ROLES = {'writer': 'Writer', 'designer': 'Designer', 'reviewer': 'Reviewer'}
+    SCRIPT_STAGES = ('script', 'draft', 'script_approval')
+
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        """Set (or clear with user_id=null) the writer / designer / reviewer of a post."""
+        post = self.get_object()
+        role = request.data.get('role')
+        if role not in self.ASSIGNABLE_ROLES:
+            return Response({'error': 'role must be writer, designer or reviewer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_id = request.data.get('user_id')
+        assignee = None
+        if user_id not in (None, ''):
+            assignee = CustomUser.objects.filter(id=user_id, is_active=True).first()
+            if not assignee:
+                return Response({'error': 'That team member was not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if getattr(post, f'{role}_id') != (assignee.id if assignee else None):
+            setattr(post, role, assignee)
+            post.save(update_fields=[role, 'updated_at'])
+            label = self.ASSIGNABLE_ROLES[role]
+            user = request.user if request.user.is_authenticated else None
+            actor = getattr(user, 'fullname', '') or getattr(user, 'username', '') or 'Team Member'
+            note = f'{label}: {assignee.fullname or assignee.username}' if assignee else f'{label} unassigned'
+            record_approval_action(post, f'{label} Assigned' if assignee else f'{label} Unassigned', actor, 'Team Member', note, event_type='note')
+        post = self.get_queryset().get(pk=post.pk)
+        return Response(SocialPostSerializer(post, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'])
+    def set_priority(self, request, pk=None):
+        post = self.get_object()
+        priority = request.data.get('priority')
+        valid = dict(SocialPost.PRIORITY_CHOICES)
+        if priority not in valid:
+            return Response({'error': f'priority must be one of: {", ".join(valid)}.'}, status=status.HTTP_400_BAD_REQUEST)
+        if post.priority != priority:
+            post.priority = priority
+            post.save(update_fields=['priority', 'updated_at'])
+            user = request.user if request.user.is_authenticated else None
+            actor = getattr(user, 'fullname', '') or getattr(user, 'username', '') or 'Team Member'
+            record_approval_action(post, 'Priority Changed', actor, 'Team Member', f'Priority set to {valid[priority]}', event_type='note')
+        post = self.get_queryset().get(pk=post.pk)
+        return Response(SocialPostSerializer(post, context={'request': request}).data)
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticated])
+    def comments(self, request, pk=None):
+        """GET: the post's comment thread (also marks your mentions on it read). POST: add a comment."""
+        post = self.get_object()
+        if request.method == 'GET':
+            PostCommentMention.objects.filter(user=request.user, comment__post=post, is_read=False).update(is_read=True)
+            qs = post.comments.select_related('author').prefetch_related('mentions')
+            return Response(PostCommentSerializer(qs, many=True, context={'request': request}).data)
+
+        body = (request.data.get('body') or '').strip()
+        if not body:
+            return Response({'error': 'Comment text is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(body) > 5000:
+            return Response({'error': 'Comments are limited to 5000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_ids = request.data.get('mention_ids') or []
+        if not isinstance(raw_ids, list):
+            return Response({'error': 'mention_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        mention_ids = {int(i) for i in raw_ids if str(i).isdigit()}
+
+        user = request.user
+        comment = PostComment.objects.create(
+            post=post,
+            author=user,
+            author_name=getattr(user, 'fullname', '') or user.username,
+            author_role=getattr(user, 'designation', '') or getattr(user, 'role', '') or '',
+            body=body,
+        )
+
+        # Only keep mentions whose @name is still in the text (the user may have deleted it after picking)
+        lowered = body.lower()
+        mentioned = [
+            u for u in CustomUser.objects.filter(id__in=mention_ids, is_active=True).exclude(id=user.id)
+            if f'@{(u.fullname or u.username).lower()}' in lowered or f'@{u.username.lower()}' in lowered
+        ]
+        PostCommentMention.objects.bulk_create([PostCommentMention(comment=comment, user=u) for u in mentioned])
+
+        return Response(PostCommentSerializer(comment, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=['delete'],
+        url_path=r'comments/(?P<comment_id>[0-9]+)',
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def delete_comment(self, request, pk=None, comment_id=None):
+        post = self.get_object()
+        comment = post.comments.filter(id=comment_id).first()
+        if not comment:
+            return Response({'error': 'Comment not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not PostCommentSerializer(comment, context={'request': request}).data['can_delete']:
+            return Response({'error': 'You can only delete your own comments.'}, status=status.HTTP_403_FORBIDDEN)
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
         actor_role = self.request.data.get('actor_role') or 'Content Creator'
-        post = serializer.save(created_by=user)
+        # Whoever writes the script owns the post; no separate assignment step
+        post = serializer.save(created_by=user, writer=serializer.validated_data.get('writer') or user)
         initial_action = 'submitted_review' if post.status == 'script_approval' else 'created'
         notes = self.request.data.get('script_notes') or self.request.data.get('notes') or ('Submitted directly for script review' if post.status == 'script_approval' else 'Initial post draft created')
         record_approval_action(post, initial_action, actor_name, actor_role, notes)
@@ -244,6 +354,12 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         actor_name = self.request.data.get('actor_name') or (getattr(user, 'fullname', '') or getattr(user, 'username', '') if user else '') or 'Team Member'
         actor_role = self.request.data.get('actor_role') or 'Content Creator'
         notes = self.request.data.get('notes') or self.request.data.get('update_reason')
+
+        # Posts started from a content plan have no owner yet: the first person to fill in the script takes it
+        if user and not post.writer_id and post.status in self.SCRIPT_STAGES:
+            post.writer = user
+            post.save(update_fields=['writer'])
+            record_approval_action(post, 'Writer Assigned', actor_name, actor_role, f'Writer: {actor_name} (filled in the script)', event_type='note')
 
         # If post was rejected and is now resubmitted for approval
         if prev_feedback and post.status == 'script_approval':
@@ -313,6 +429,25 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         record_approval_action(post, 'changes_requested', actor, 'Reviewer', notes)
         return Response(SocialPostSerializer(post).data)
 
+    @staticmethod
+    def _pending_script_rework(post):
+        """Latest Team Review / Client Review → Scripts revision whose redesign hasn't happened yet.
+
+        Extra script-approval bounces in between are fine; a full rejection or a
+        later move into Designing means there is nothing pending.
+        """
+        source = (post.approval_history
+                  .filter(event_type='revision', to_stage='script',
+                          from_stage__in=['team_review', 'internal_review', 'client_review'])
+                  .order_by('-timestamp', '-id')
+                  .first())
+        if not source:
+            return None
+        later = post.approval_history.filter(timestamp__gt=source.timestamp)
+        if later.filter(to_stage='designing').exists() or later.filter(event_type='rejection').exists():
+            return None
+        return source
+
     @action(detail=True, methods=['post'])
     def transition_stage(self, request, pk=None):
         post = self.get_object()
@@ -374,6 +509,13 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             else:
                 post.scheduled_at = None
 
+        reason_categories = request.data.get('reason_categories') or []
+        if not isinstance(reason_categories, list):
+            reason_categories = [reason_categories]
+        reason_categories = [str(c)[:60] for c in reason_categories if c][:12]
+        severity = (request.data.get('severity') or '')[:20]
+        rejected_by = (request.data.get('rejected_by') or '')[:20]
+
         prev_status = post.status
         prev_feedback = post.client_feedback
         post.status = target_stage
@@ -381,11 +523,42 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         if target_stage == 'published':
             post.published_at = timezone.now()
 
-        if action_type == 'reject' or 'reject' in notes.lower():
+        event_type = 'transition'
+        if action_type == 'reject':
+            # Revision loopback: content goes back for rework
+            event_type = 'revision'
             post.client_feedback = notes
+            post.revision_count = (post.revision_count or 0) + 1
+            if prev_status == 'client_review':
+                post.client_revision_count = (post.client_revision_count or 0) + 1
+            post.last_revision_categories = reason_categories
+        elif action_type == 'reject_final':
+            # Entire content rejected: dropped, or restarted from a fresh script
+            event_type = 'rejection'
+            post.rejection_reason = notes
+            post.rejection_categories = reason_categories
+            post.rejected_by = rejected_by or ('client' if prev_status == 'client_review' else 'internal')
+            post.rejected_from_stage = prev_status
+            post.rejected_at = timezone.now()
+            post.client_feedback = notes if target_stage != 'content_rejected' else ''
+        elif action_type == 'restore':
+            post.client_feedback = post.rejection_reason
         elif target_stage in ['script_approval', 'team_review', 'client_review', 'approved', 'published']:
             # Resubmitted or approved: clear previous loopback critique
             post.client_feedback = ''
+
+        # A script revision requested at Team Review / Client Review: once the
+        # rewritten script is re-approved, the existing creative is outdated, so
+        # Designing gets it back as redo work with the original feedback attached.
+        script_rework_source = None
+        if action_type == 'advance' and prev_status == 'script_approval' and target_stage == 'designing':
+            script_rework_source = self._pending_script_rework(post)
+            if script_rework_source:
+                who = 'client' if script_rework_source.from_stage == 'client_review' else 'team QA'
+                post.client_feedback = (
+                    f"Script was revised after {who} feedback — update the design to match the new script.\n"
+                    f"Original feedback: {script_rework_source.notes}"
+                )
 
         try:
             post.save()
@@ -399,10 +572,10 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                 action_label = "Script Rejected (Rework Requested)"
                 actor_role = actor_role or "Content Reviewer"
             elif prev_status in ['team_review', 'internal_review']:
-                action_label = "Team QA Rejected (Rework Requested)"
+                action_label = "Team QA: Script Rework Requested" if target_stage == 'script' else "Team QA Rejected (Rework Requested)"
                 actor_role = actor_role or "QA Lead"
             elif prev_status == 'client_review':
-                action_label = "Client Requested Changes"
+                action_label = "Client Requested Script Changes" if target_stage == 'script' else "Client Requested Changes"
                 actor_role = actor_role or "Client"
             else:
                 action_label = f"Rejected: Returned to {target_stage.replace('_', ' ').title()}"
@@ -416,7 +589,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                     action_label = "Submitted for Script Approval"
                     actor_role = actor_role or "Content Creator"
             elif target_stage == 'designing':
-                action_label = "Script Approved → Moved to Designing"
+                action_label = "Revised Script Approved → Redesign Needed" if script_rework_source else "Script Approved → Moved to Designing"
                 actor_role = actor_role or "Content Reviewer"
             elif target_stage == 'team_review':
                 if prev_feedback:
@@ -444,6 +617,19 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         elif action_type == 'update':
             action_label = "Post Reworked / Updated"
             actor_role = actor_role or "Creative Team"
+        elif action_type == 'reject_final':
+            who = 'Client' if post.rejected_by == 'client' else 'Internal'
+            if target_stage == 'content_rejected':
+                action_label = f"Content Rejected by {who} (Dropped)"
+            else:
+                action_label = f"Content Rejected by {who} (Restart Script)"
+            actor_role = actor_role or ("Client" if post.rejected_by == 'client' else "Reviewer")
+        elif action_type == 'restore':
+            action_label = "Rejected Content Restored to Scripts"
+            actor_role = actor_role or "Workflow Lead"
+
+        if event_type == 'transition' and action_type == 'advance' and target_stage in ['designing', 'client_review', 'approved', 'scheduled']:
+            event_type = 'approval'
 
         try:
             record_approval_action(
@@ -451,7 +637,13 @@ class SocialPostViewSet(viewsets.ModelViewSet):
                 (action_label or "Stage Updated")[:50],
                 (actor or "Team Member")[:150],
                 (actor_role or "Workflow Team")[:50],
-                notes or f"Moved from {prev_status} to {target_stage}"
+                notes or f"Moved from {prev_status} to {target_stage}",
+                event_type=event_type,
+                from_stage=prev_status,
+                to_stage=target_stage,
+                reason_categories=reason_categories if event_type in ['revision', 'rejection'] else [],
+                severity=severity,
+                revision_round=post.revision_count if event_type == 'revision' else 0,
             )
         except Exception:
             pass
@@ -491,7 +683,6 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         import os, re, time
         from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
         from django.conf import settings
 
         media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
@@ -502,7 +693,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
         filename = f"{post.id}_{clean_base}_{int(time.time())}{ext}"
         file_path = os.path.join('social_media', filename)
-        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+        # Stream the original upload to storage in chunks — bytes are kept exactly as uploaded (no re-encoding)
+        saved_path = default_storage.save(file_path, file)
 
         file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
 
@@ -534,6 +726,40 @@ class SocialPostViewSet(viewsets.ModelViewSet):
             'post': SocialPostSerializer(post).data
         })
 
+    @action(detail=True, methods=['get'], url_path='download_media')
+    def download_media(self, request, pk=None):
+        """Serve a post's deliverable as an attachment, byte-for-byte identical to the uploaded file."""
+        import re
+        from urllib.parse import urlparse, unquote
+        from django.conf import settings
+        from django.http import FileResponse, HttpResponseRedirect
+
+        post = self.get_object()
+        urls = post.media_urls if isinstance(post.media_urls, list) else []
+        try:
+            idx = int(request.query_params.get('index', 0) or 0)
+        except (TypeError, ValueError):
+            idx = 0
+        if idx < 0 or idx >= len(urls) or not urls[idx]:
+            return Response({'error': 'No deliverable attached to this post.'}, status=status.HTTP_404_NOT_FOUND)
+
+        url = str(urls[idx])
+        path = unquote(urlparse(url).path)
+        if path.startswith(settings.MEDIA_URL):
+            media_root = os.path.normpath(settings.MEDIA_ROOT)
+            full_path = os.path.normpath(os.path.join(media_root, path[len(settings.MEDIA_URL):]))
+            if full_path.startswith(media_root + os.sep) and os.path.isfile(full_path):
+                base, ext = os.path.splitext(os.path.basename(full_path))
+                # Stored as "<post_id>_<name>_<timestamp>"; hand back "<name>"
+                clean = re.sub(rf'^{post.id}_', '', base)
+                clean = re.sub(r'_\d{9,}$', '', clean) or f'post_{post.id}'
+                return FileResponse(open(full_path, 'rb'), as_attachment=True, filename=f'{clean}{ext}')
+
+        # Externally hosted asset (cloud link): send the browser to the original
+        if url.startswith(('http://', 'https://')):
+            return HttpResponseRedirect(url)
+        return Response({'error': 'Deliverable file could not be found.'}, status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_generic(self, request):
         file = request.FILES.get('file') or request.FILES.get('media')
@@ -542,7 +768,6 @@ class SocialPostViewSet(viewsets.ModelViewSet):
 
         import os, re, time
         from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
         from django.conf import settings
 
         media_dir = os.path.join(settings.MEDIA_ROOT, 'social_media')
@@ -553,7 +778,8 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         clean_base = re.sub(r'[^a-zA-Z0-9_\-]', '_', base)
         filename = f"media_{clean_base}_{int(time.time())}{ext}"
         file_path = os.path.join('social_media', filename)
-        saved_path = default_storage.save(file_path, ContentFile(file.read()))
+        # Stream the original upload to storage in chunks — bytes are kept exactly as uploaded (no re-encoding)
+        saved_path = default_storage.save(file_path, file)
 
         file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved_path}")
         return Response({'url': file_url, 'file_url': file_url})
@@ -575,24 +801,51 @@ class PublicClientReviewView(APIView):
         except SocialPost.DoesNotExist:
             return Response({'error': 'Invalid or expired review link.'}, status=status.HTTP_404_NOT_FOUND)
 
-        action_type = request.data.get('action') # 'approve' or 'request_changes'
+        action_type = request.data.get('action') # 'approve' | 'request_changes' | 'reject'
         notes = request.data.get('notes', '')
         reviewer_name = request.data.get('reviewer_name', f'{post.client_profile.name} Client')
+        reason_categories = request.data.get('reason_categories') or []
+        if not isinstance(reason_categories, list):
+            reason_categories = [reason_categories]
+        reason_categories = [str(c)[:60] for c in reason_categories if c][:12]
+
+        if post.status != 'client_review' and action_type in ['approve', 'request_changes', 'reject']:
+            return Response({'error': 'This post is no longer awaiting your review.'}, status=status.HTTP_409_CONFLICT)
 
         if action_type == 'approve':
-            post.status = 'scheduled' if post.scheduled_at else 'approved'
+            post.status = 'approved'
             post.client_feedback = ''
             post.save(update_fields=['status', 'client_feedback'])
-            record_approval_action(post, 'client_approved', reviewer_name, 'Client', notes or 'Approved by client')
+            record_approval_action(post, 'Client Approved via Review Link', reviewer_name, 'Client', notes or 'Approved by client',
+                                   event_type='approval', from_stage='client_review', to_stage='approved')
             return Response({'status': 'approved', 'message': 'Post approved successfully! Thank you.'})
         elif action_type == 'request_changes':
             # Per workflow diagram: Client Review rejection loops back to Scheduled / Designing
             post.status = 'designing'
             post.client_feedback = notes
-            post.save(update_fields=['status', 'client_feedback'])
-            record_approval_action(post, 'client_changes_requested', reviewer_name, 'Client', notes or 'Changes requested by client (Returned to Designing)')
+            post.revision_count = (post.revision_count or 0) + 1
+            post.client_revision_count = (post.client_revision_count or 0) + 1
+            post.last_revision_categories = reason_categories
+            post.save(update_fields=['status', 'client_feedback', 'revision_count', 'client_revision_count', 'last_revision_categories'])
+            record_approval_action(post, 'Client Requested Changes', reviewer_name, 'Client', notes or 'Changes requested by client (Returned to Designing)',
+                                   event_type='revision', from_stage='client_review', to_stage='designing',
+                                   reason_categories=reason_categories, revision_round=post.revision_count)
             return Response({'status': 'changes_requested', 'message': 'Feedback received. Creative team will revise in Scheduled / Designing.'})
-        
+        elif action_type == 'reject':
+            if not notes.strip():
+                return Response({'error': 'Please share the reason for rejecting this content.'}, status=status.HTTP_400_BAD_REQUEST)
+            post.status = 'content_rejected'
+            post.rejection_reason = notes
+            post.rejection_categories = reason_categories
+            post.rejected_by = 'client'
+            post.rejected_from_stage = 'client_review'
+            post.rejected_at = timezone.now()
+            post.save()
+            record_approval_action(post, 'Content Rejected by Client (Dropped)', reviewer_name, 'Client', notes,
+                                   event_type='rejection', from_stage='client_review', to_stage='content_rejected',
+                                   reason_categories=reason_categories)
+            return Response({'status': 'rejected', 'message': 'Your decision has been recorded. The team will follow up with a new concept.'})
+
         return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -668,7 +921,11 @@ class SocialCampaignViewSet(viewsets.ModelViewSet):
         if client_id and client_id != 'all':
             qs = qs.filter(client_profile_id=client_id)
         if campaign_id and campaign_id != 'all':
-            qs = qs.filter(id=campaign_id)
+            clean_cid = str(campaign_id).replace('meta_', '')
+            if str(campaign_id).isdigit():
+                qs = qs.filter(Q(id=int(campaign_id)) | Q(meta_campaign_id=campaign_id) | Q(meta_campaign_id=clean_cid))
+            else:
+                qs = qs.filter(Q(meta_campaign_id=campaign_id) | Q(meta_campaign_id=clean_cid))
         if status_filter and status_filter != 'all':
             qs = qs.filter(status=status_filter)
 
@@ -1074,6 +1331,93 @@ class SocialCampaignViewSet(viewsets.ModelViewSet):
             'top_campaign': top_campaign,
         })
 
+    @action(detail=False, methods=['post'], url_path='google/draft')
+    def google_draft(self, request):
+        """
+        Save or update a Google Ads campaign draft.
+        Creates a new SocialCampaign or updates existing draft with google_ fields.
+        """
+        data = request.data
+        campaign_id = data.get('campaign_id')
+
+        # Required: client_profile
+        client_profile_id = data.get('client_profile_id') or data.get('client_profile')
+
+        try:
+            if campaign_id:
+                campaign = SocialCampaign.objects.get(id=campaign_id)
+            else:
+                # Find or create a client profile
+                client_profile = None
+                if client_profile_id:
+                    try:
+                        client_profile = SocialClientProfile.objects.get(id=client_profile_id)
+                    except SocialClientProfile.DoesNotExist:
+                        pass
+                if not client_profile:
+                    client_profile = SocialClientProfile.objects.first()
+                if not client_profile:
+                    return Response({'error': 'No client profile found. Please create a client profile first.'}, status=400)
+
+                campaign = SocialCampaign(
+                    client_profile=client_profile,
+                    name=data.get('name', 'Google Ads Campaign Draft'),
+                    objective='traffic',
+                    ad_platforms=['google'],
+                    platforms=['google'],
+                    status='draft',
+                )
+
+            # Update google-specific fields
+            google_fields = [
+                'google_campaign_type', 'google_objective', 'google_bidding_strategy',
+                'google_bidding_config', 'google_campaign_settings', 'google_keywords',
+                'google_ad_groups', 'google_ads_data', 'google_asset_groups', 'google_assets',
+                'google_daily_budget', 'google_phone_number', 'google_final_url', 'google_draft_step',
+            ]
+            for field in google_fields:
+                if field in data:
+                    setattr(campaign, field, data[field])
+
+            # Update general fields
+            if 'name' in data:
+                campaign.name = data['name']
+            if 'budget' in data:
+                campaign.budget = data['budget']
+            if 'start_date' in data:
+                campaign.start_date = data['start_date']
+            if 'end_date' in data:
+                campaign.end_date = data['end_date']
+            if 'landing_page_url' in data:
+                campaign.landing_page_url = data['landing_page_url']
+
+            campaign.ad_platforms = ['google']
+            campaign.platforms = ['google']
+            campaign.campaign_type = data.get('google_campaign_type', campaign.campaign_type or 'SEARCH')
+
+            campaign.save()
+
+            return Response({
+                'campaign_id': campaign.id,
+                'message': 'Draft saved successfully',
+                'google_draft_step': campaign.google_draft_step,
+            })
+        except SocialCampaign.DoesNotExist:
+            return Response({'error': f'Campaign {campaign_id} not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=True, methods=['post'], url_path='google-publish')
+    def google_publish(self, request, pk=None):
+        """
+        Publish a Google Ads campaign through the Google Ads API.
+        """
+        from apis.social.campaign_publishing_service import publish_campaign as run_publish
+        result = run_publish(int(pk), user=request.user)
+        if result.get('success'):
+            return Response(result, status=200)
+        else:
+            return Response(result, status=422)
 
 
 class SocialInboxViewSet(viewsets.ModelViewSet):
@@ -1128,6 +1472,89 @@ class SocialInboxViewSet(viewsets.ModelViewSet):
             'lead': LeadSerializer(lead).data,
             'inbox_message': SocialInboxMessageSerializer(msg).data,
         })
+
+
+class SocialMentionsView(APIView):
+    """The signed-in user's @mentions in post comments (newest first)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        qs = PostCommentMention.objects.filter(user=request.user).select_related('comment__post__client_profile')
+        unread_count = qs.filter(is_read=False).count()
+        if request.query_params.get('unread') in ('1', 'true'):
+            qs = qs.filter(is_read=False)
+        return Response({
+            'unread_count': unread_count,
+            'results': PostCommentMentionSerializer(qs[:50], many=True).data,
+        })
+
+    def post(self, request):
+        """Mark mentions read: {"ids": [...]} or {} for all."""
+        qs = PostCommentMention.objects.filter(user=request.user, is_read=False)
+        ids = request.data.get('ids')
+        if isinstance(ids, list):
+            qs = qs.filter(id__in=[i for i in ids if str(i).isdigit()])
+        return Response({'updated': qs.update(is_read=True)})
+
+
+class SocialTeamMembersView(APIView):
+    """Active team members who can be @mentioned."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        users = CustomUser.objects.filter(is_active=True).order_by('fullname', 'username')
+        return Response([
+            {
+                'id': u.id,
+                'name': u.fullname or u.username,
+                'username': u.username,
+                'role': u.role,
+                'designation': u.designation or '',
+            }
+            for u in users
+        ])
+
+
+class MistakeInsightsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from apis.social.insights import build_mistake_insights
+        try:
+            days = max(7, min(int(request.query_params.get('days', 90)), 365))
+        except (TypeError, ValueError):
+            days = 90
+        return Response(build_mistake_insights(request.query_params.get('client_id'), days))
+
+
+class MistakeFixApplyView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from apis.social.insights import apply_fix
+        category = (request.data.get('category') or '').strip()
+        if not category:
+            return Response({'error': 'category is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            days = max(7, min(int(request.data.get('days', 90)), 365))
+        except (TypeError, ValueError):
+            days = 90
+        checklist = request.data.get('checklist')
+        if checklist is not None and not isinstance(checklist, list):
+            return Response({'error': 'checklist must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+        fix, created, updated = apply_fix(
+            category=category,
+            client_id=request.data.get('client_id'),
+            applied_by=request.data.get('applied_by') or '',
+            title=request.data.get('title'),
+            checklist=[str(i)[:200] for i in checklist] if checklist else None,
+            lesson=request.data.get('lesson') or '',
+            days=days,
+        )
+        return Response(
+            {'id': fix.id, 'created': created, 'posts_updated': updated},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
 class SocialAnalyticsView(APIView):
@@ -1221,39 +1648,382 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
     serializer_class = PlatformConnectionSerializer
     permission_classes = [permissions.AllowAny]
 
+    def _ensure_seed_data(self):
+        from apis.social.models import PlatformConnection, SocialClientProfile
+        from apis.social.encryption import encrypt_token
+        from datetime import timedelta
+        # If no active connections matching the Image format exist, seed them
+        if not PlatformConnection.objects.filter(account_name__icontains='ABC Technologies').exists():
+            client, _ = SocialClientProfile.objects.get_or_create(
+                name='ABC Technologies',
+                defaults={
+                    'slug': 'abc-technologies',
+                    'primary_color': '#2563eb',
+                    'package_tier': 'Enterprise Growth',
+                    'is_active': True,
+                }
+            )
+            now = timezone.now()
+            # 1. Meta Ads (123456789)
+            PlatformConnection.objects.update_or_create(
+                platform='meta',
+                account_id='123456789',
+                defaults={
+                    'client_profile': client,
+                    'account_name': 'ABC Technologies - Meta',
+                    'access_token_encrypted': encrypt_token('meta_sample_token_abc_123456789'),
+                    'token_expires_at': now + timedelta(days=60),
+                    'status': 'connected',
+                    'metadata': {
+                        'currency': 'INR',
+                        'timezone': 'Asia/Kolkata (IST)',
+                        'client_name': 'ABC Technologies',
+                        'page_name': 'ABC Technologies Official',
+                    },
+                    'last_synced_at': now,
+                }
+            )
+            # 2. Google Ads (987-654-321)
+            PlatformConnection.objects.update_or_create(
+                platform='google',
+                account_id='987-654-321',
+                defaults={
+                    'client_profile': client,
+                    'account_name': 'ABC Technologies - Google',
+                    'access_token_encrypted': encrypt_token('google_sample_token_abc_987654321'),
+                    'refresh_token_encrypted': encrypt_token('google_sample_refresh_987654321'),
+                    'token_expires_at': now + timedelta(days=60),
+                    'status': 'connected',
+                    'metadata': {
+                        'currency': 'INR',
+                        'timezone': 'Asia/Kolkata (IST)',
+                        'client_name': 'ABC Technologies',
+                        'customer_id': '987-654-321',
+                    },
+                    'last_synced_at': now,
+                }
+            )
+            # 3. LinkedIn Ads (98765412)
+            PlatformConnection.objects.update_or_create(
+                platform='linkedin',
+                account_id='98765412',
+                defaults={
+                    'client_profile': client,
+                    'account_name': 'ABC Technologies - Linkedin',
+                    'access_token_encrypted': encrypt_token('linkedin_sample_token_abc_98765412'),
+                    'token_expires_at': now + timedelta(days=60),
+                    'status': 'connected',
+                    'metadata': {
+                        'currency': 'INR',
+                        'timezone': 'Asia/Kolkata (IST)',
+                        'client_name': 'ABC Technologies',
+                        'account_id': '98765412',
+                    },
+                    'last_synced_at': now,
+                }
+            )
+
     def get_queryset(self):
+        try:
+            self._ensure_seed_data()
+        except Exception:
+            pass
         qs = super().get_queryset()
         client_id = self.request.query_params.get('client_id')
         platform = self.request.query_params.get('platform')
+        search = self.request.query_params.get('search')
+
         if client_id and client_id != 'all':
-            qs = qs.filter(client_profile_id=client_id)
-        if platform:
+            if str(client_id).isdigit():
+                qs = qs.filter(client_profile_id=client_id)
+            else:
+                qs = qs.filter(
+                    models.Q(client_profile__name__icontains=client_id) |
+                    models.Q(metadata__client_name__icontains=client_id)
+                )
+
+        if platform and platform != 'all':
             qs = qs.filter(platform=platform)
+
+        if search:
+            qs = qs.filter(
+                models.Q(account_name__icontains=search) |
+                models.Q(account_id__icontains=search) |
+                models.Q(client_profile__name__icontains=search)
+            )
+
         return qs
+
+    def create(self, request, *args, **kwargs):
+        from apis.social.encryption import encrypt_token
+        from datetime import timedelta
+        data = request.data.copy()
+        platform = data.get('platform', 'meta')
+        account_name = data.get('account_name', '').strip()
+        account_id = data.get('account_id', '').strip()
+        client_id = data.get('client_profile') or data.get('client_id')
+        currency = data.get('currency', 'INR')
+        timezone_val = data.get('timezone', 'Asia/Kolkata (IST)')
+        raw_token = data.get('access_token') or f'{platform}_token_{account_id or "acc"}'
+
+        meta_dict = {
+            'currency': currency,
+            'timezone': timezone_val,
+        }
+        if client_id:
+            try:
+                from apis.social.models import SocialClientProfile
+                cp = SocialClientProfile.objects.filter(id=client_id).first()
+                if cp:
+                    meta_dict['client_name'] = cp.name
+            except Exception:
+                pass
+
+        conn = PlatformConnection.objects.create(
+            platform=platform,
+            account_name=account_name or f"{platform.capitalize()} Ad Account",
+            account_id=account_id or "123456789",
+            client_profile_id=client_id if client_id and str(client_id).isdigit() else None,
+            status='connected',
+            access_token_encrypted=encrypt_token(raw_token),
+            token_expires_at=timezone.now() + timedelta(days=60),
+            metadata=meta_dict,
+            last_synced_at=timezone.now(),
+        )
+        return Response(PlatformConnectionSerializer(conn).data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        conn = self.get_object()
+        data = request.data
+        if 'account_name' in data:
+            conn.account_name = data['account_name']
+        if 'account_id' in data:
+            conn.account_id = data['account_id']
+        if 'status' in data:
+            conn.status = data['status']
+        if 'currency' in data or 'timezone' in data or 'client_name' in data:
+            if not isinstance(conn.metadata, dict):
+                conn.metadata = {}
+            if 'currency' in data:
+                conn.metadata['currency'] = data['currency']
+            if 'timezone' in data:
+                conn.metadata['timezone'] = data['timezone']
+            if 'client_name' in data:
+                conn.metadata['client_name'] = data['client_name']
+        if 'client_profile' in data:
+            cid = data['client_profile']
+            conn.client_profile_id = cid if cid and str(cid).isdigit() else None
+        conn.save()
+        return Response(PlatformConnectionSerializer(conn).data)
+
+    @action(detail=False, methods=['post'], url_path='sandbox-connect')
+    def sandbox_connect(self, request):
+        """Connect a mock account in sandbox mode for testing and local dev."""
+        from apis.social.encryption import encrypt_token
+        from datetime import timedelta
+        platform = request.data.get('platform', 'meta')
+        client_id = request.data.get('client_id')
+        acc_id = 'act_SANDBOX_123' if platform == 'meta' else '123-456-7890'
+        acc_name = f'Sandbox {platform.capitalize()} Account'
+        conn, _ = PlatformConnection.objects.update_or_create(
+            platform=platform,
+            client_profile_id=client_id if client_id and str(client_id).isdigit() else None,
+            defaults={
+                'account_name': acc_name,
+                'account_id': acc_id,
+                'status': 'connected',
+                'access_token_encrypted': encrypt_token(f'mock_{platform}_token'),
+                'token_expires_at': timezone.now() + timedelta(days=90),
+                'metadata': {'page_id': 'PAGE_123', 'page_name': 'Sandbox Page'},
+                'last_synced_at': timezone.now(),
+            }
+        )
+        return Response({
+            'success': True,
+            'message': f'Connected {platform} in sandbox mode.',
+            'connection': PlatformConnectionSerializer(conn).data,
+        })
 
     # ── OAuth URL initiation ──
 
     @action(detail=False, methods=['get'], url_path='meta/oauth-url')
     def meta_oauth_url(self, request):
         """Return the Meta OAuth dialog URL for the user to navigate to."""
-        from apis.social.token_service import get_meta_oauth_url, META_APP_ID
-        if not META_APP_ID:
-            return Response({
-                'error': 'META_APP_ID is not configured in backend .env. Please set META_APP_ID or connect directly using a Meta Access Token.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        from apis.social.token_service import get_meta_oauth_url, get_meta_app_id, get_meta_redirect_uri
         client_id = request.query_params.get('client_id', '')
         state = f'meta_{client_id}'
-        url = get_meta_oauth_url(state=state)
-        return Response({'oauth_url': url, 'platform': 'meta'})
+        app_id = get_meta_app_id()
+        if not app_id or app_id == 'YOUR_META_APP_ID':
+            return Response({
+                'is_configured': False,
+                'error': 'Meta App ID is not configured. Please set META_APP_ID and META_APP_SECRET in backend/.env to connect to Meta.',
+                'registered_redirect_uri': get_meta_redirect_uri(),
+                'platform': 'meta'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            url = get_meta_oauth_url(state=state)
+            return Response({
+                'is_configured': True,
+                'oauth_url': url,
+                'platform': 'meta',
+                'app_id': app_id,
+                'redirect_uri': get_meta_redirect_uri(),
+            })
+        except Exception as e:
+            return Response({
+                'is_configured': False,
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='meta/configure-credentials')
+    def meta_configure_credentials(self, request):
+        """
+        Securely save or update META_APP_ID, META_APP_SECRET, and META_REDIRECT_URI in backend/.env
+        and reload into Django process environment immediately.
+        """
+        from django.conf import settings
+        app_id = request.data.get('app_id', '').strip()
+        app_secret = request.data.get('app_secret', '').strip()
+        redirect_uri = request.data.get('redirect_uri', '').strip() or 'http://localhost:8000/api/social/platform-connections/meta/callback/'
+
+        if not app_id:
+            return Response({'error': 'Meta App ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update running os.environ and settings
+        os.environ['META_APP_ID'] = app_id
+        setattr(settings, 'META_APP_ID', app_id)
+        if app_secret:
+            os.environ['META_APP_SECRET'] = app_secret
+            setattr(settings, 'META_APP_SECRET', app_secret)
+        if redirect_uri:
+            os.environ['META_REDIRECT_URI'] = redirect_uri
+            setattr(settings, 'META_REDIRECT_URI', redirect_uri)
+
+        # Persist to backend/.env file
+        try:
+            env_file = getattr(settings, 'BASE_DIR', None)
+            if env_file:
+                env_path = env_file / '.env'
+                lines = []
+                if env_path.exists():
+                    with open(env_path, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+
+                updated_keys = set()
+                new_lines = []
+                for line in lines:
+                    stripped = line.strip()
+                    if stripped.startswith('META_APP_ID='):
+                        new_lines.append(f'META_APP_ID={app_id}\n')
+                        updated_keys.add('META_APP_ID')
+                    elif stripped.startswith('META_APP_SECRET=') and app_secret:
+                        new_lines.append(f'META_APP_SECRET={app_secret}\n')
+                        updated_keys.add('META_APP_SECRET')
+                    elif stripped.startswith('META_REDIRECT_URI=') and redirect_uri:
+                        new_lines.append(f'META_REDIRECT_URI={redirect_uri}\n')
+                        updated_keys.add('META_REDIRECT_URI')
+                    else:
+                        new_lines.append(line)
+
+                if 'META_APP_ID' not in updated_keys:
+                    new_lines.append(f'META_APP_ID={app_id}\n')
+                if app_secret and 'META_APP_SECRET' not in updated_keys:
+                    new_lines.append(f'META_APP_SECRET={app_secret}\n')
+                if redirect_uri and 'META_REDIRECT_URI' not in updated_keys:
+                    new_lines.append(f'META_REDIRECT_URI={redirect_uri}\n')
+
+                with open(env_path, 'w', encoding='utf-8') as f:
+                    f.writelines(new_lines)
+        except Exception as e:
+            logger.warning("Failed to persist credentials to .env: %s", e)
+
+        return Response({
+            'success': True,
+            'message': 'Meta credentials configured successfully.',
+            'app_id': app_id,
+            'redirect_uri': redirect_uri,
+        })
+
+    @action(detail=False, methods=['get'], url_path='meta/status')
+    def meta_status(self, request):
+        """Check Meta OAuth status and real connected ad accounts."""
+        from apis.social.token_service import get_meta_app_id, get_meta_app_secret
+        app_id = get_meta_app_id()
+        app_secret = get_meta_app_secret()
+        is_configured = bool(app_id and app_secret and app_id != 'YOUR_META_APP_ID')
+
+        client_id = request.query_params.get('client_id')
+        qs = PlatformConnection.objects.filter(platform='meta')
+        if client_id and client_id != 'all' and str(client_id).isdigit():
+            qs = qs.filter(client_profile_id=client_id)
+
+        meta_conn = qs.filter(status='connected').first()
+        if not meta_conn:
+            meta_conn = qs.first()
+
+        is_connected = bool(meta_conn and meta_conn.status == 'connected' and meta_conn.access_token_encrypted)
+
+        ad_accounts = []
+        if is_connected:
+            from apis.social import meta_ads_service
+            try:
+                ad_accounts = meta_ads_service.get_ad_accounts(meta_conn)
+                if ad_accounts and isinstance(meta_conn.metadata, dict):
+                    meta_conn.metadata['ad_accounts'] = ad_accounts
+                    meta_conn.save(update_fields=['metadata', 'updated_at'])
+            except Exception as e:
+                logger.warning("Failed to refresh live Meta ad accounts: %s", e)
+                if isinstance(meta_conn.metadata, dict):
+                    ad_accounts = meta_conn.metadata.get('ad_accounts', [])
+
+        return Response({
+            'is_configured': is_configured,
+            'is_connected': is_connected,
+            'connection': PlatformConnectionSerializer(meta_conn).data if meta_conn and is_connected else None,
+            'ad_accounts': ad_accounts,
+            'app_id': app_id if is_configured else '',
+        })
+
+    @action(detail=False, methods=['post'], url_path='meta/disconnect')
+    def meta_disconnect(self, request):
+        """Disconnect all Meta connections."""
+        client_id = request.data.get('client_id')
+        qs = PlatformConnection.objects.filter(platform='meta')
+        if client_id and client_id != 'all' and str(client_id).isdigit():
+            qs = qs.filter(client_profile_id=client_id)
+        qs.update(
+            access_token_encrypted='',
+            refresh_token_encrypted='',
+            status='disconnected',
+            updated_at=timezone.now(),
+        )
+        return Response({'success': True, 'status': 'disconnected'})
 
     @action(detail=False, methods=['get'], url_path='google/oauth-url')
     def google_oauth_url(self, request):
         """Return the Google OAuth consent URL for the user to navigate to."""
-        from apis.social.token_service import get_google_oauth_url
+        from apis.social.token_service import get_google_oauth_url, GOOGLE_CLIENT_ID
         client_id = request.query_params.get('client_id', '')
+        conn_id = request.query_params.get('connection_id', '')
         state = f'google_{client_id}'
+        if not GOOGLE_CLIENT_ID:
+            auth_url = f'/socialmanagement/oauth/authorize?platform=google&client_id={client_id}&connection_id={conn_id}&state={state}'
+            return Response({'oauth_url': auth_url, 'platform': 'google', 'is_simulated': True})
         url = get_google_oauth_url(state=state)
-        return Response({'oauth_url': url, 'platform': 'google'})
+        return Response({'oauth_url': url, 'platform': 'google', 'is_simulated': False})
+
+    @action(detail=False, methods=['get'], url_path='linkedin/oauth-url')
+    def linkedin_oauth_url(self, request):
+        """Return the LinkedIn OAuth authorization URL for the user to navigate to."""
+        from apis.social.token_service import get_linkedin_oauth_url, LINKEDIN_CLIENT_ID
+        client_id = request.query_params.get('client_id', '')
+        conn_id = request.query_params.get('connection_id', '')
+        state = f'linkedin_{client_id}'
+        if not LINKEDIN_CLIENT_ID:
+            auth_url = f'/socialmanagement/oauth/authorize?platform=linkedin&client_id={client_id}&connection_id={conn_id}&state={state}'
+            return Response({'oauth_url': auth_url, 'platform': 'linkedin', 'is_simulated': True})
+        url = get_linkedin_oauth_url(state=state)
+        return Response({'oauth_url': url, 'platform': 'linkedin', 'is_simulated': False})
 
     # ── OAuth Callbacks ──
 
@@ -1262,23 +2032,53 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         """
         Handles the Meta OAuth callback.
         Exchanges code for long-lived token, fetches ad accounts, saves PlatformConnection.
+        Supports both browser redirects (returning branded redirect bridge) and direct JSON API requests.
         """
+        import urllib.parse
         from datetime import timedelta
+        from django.conf import settings
+        from django.http import HttpResponse, HttpResponseRedirect
         from apis.social.token_service import exchange_meta_code_for_token
         from apis.social.encryption import encrypt_token
         from apis.social import meta_ads_service
 
+        # Frontend base URL for redirecting browser users back to settings dashboard
+        frontend_origin = (
+            os.environ.get('FRONTEND_URL')
+            or os.environ.get('NEXT_PUBLIC_SITE_URL')
+            or ('http://localhost:3000' if settings.DEBUG else 'https://adstradigital.com')
+        ).rstrip('/')
+        frontend_dashboard_url = f"{frontend_origin}/socialmanagement?tab=settings"
+
+        # Determine if caller expects raw JSON (e.g. POST, format=json, or explicit application/json header without html)
+        accept_header = request.headers.get('Accept', '')
+        format_param = request.query_params.get('format', '')
+        wants_json = (
+            request.method == 'POST'
+            or format_param == 'json'
+            or (accept_header.startswith('application/json') and 'text/html' not in accept_header)
+        )
+
         code = request.query_params.get('code') or request.data.get('code', '')
         state = request.query_params.get('state') or request.data.get('state', '')
-        error = request.query_params.get('error')
+        error = request.query_params.get('error') or request.query_params.get('error_description')
 
         if error:
-            return Response({'error': f'Meta OAuth denied: {error}'}, status=status.HTTP_400_BAD_REQUEST)
+            if wants_json:
+                return Response({'error': f'Meta OAuth denied: {error}'}, status=status.HTTP_400_BAD_REQUEST)
+            err_dest = f"{frontend_dashboard_url}&oauth_error={urllib.parse.quote(str(error))}"
+            return HttpResponseRedirect(err_dest)
+
         if not code:
-            return Response({'error': 'Missing authorization code'}, status=status.HTTP_400_BAD_REQUEST)
+            if wants_json:
+                return Response({'error': 'Missing authorization code'}, status=status.HTTP_400_BAD_REQUEST)
+            err_dest = f"{frontend_dashboard_url}&oauth_error=missing_code"
+            return HttpResponseRedirect(err_dest)
 
         # Parse client_id from state: 'meta_{client_id}'
         client_id = state.replace('meta_', '').strip() or None
+        if client_id and not str(client_id).isdigit():
+            client_id = None
 
         try:
             token_data = exchange_meta_code_for_token(code)
@@ -1301,33 +2101,137 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
             account_id = first_account.get('id', '')
             account_name = first_account.get('name', 'Meta Ad Account')
 
-            conn, created = PlatformConnection.objects.update_or_create(
-                client_profile_id=client_id if client_id else None,
+            existing_conn = PlatformConnection.objects.filter(
                 platform='meta',
-                account_id=account_id,
-                defaults={
-                    'account_name': account_name,
-                    'access_token_encrypted': encrypt_token(access_token),
-                    'token_expires_at': expires_at,
-                    'status': 'connected',
-                    'metadata': {
+                client_profile_id=client_id if client_id else None
+            ).first()
+
+            if existing_conn:
+                conn = existing_conn
+                conn.account_id = account_id or conn.account_id or 'act_primary'
+                conn.account_name = account_name or conn.account_name or 'Meta Ad Account'
+                conn.access_token_encrypted = encrypt_token(access_token)
+                conn.token_expires_at = expires_at
+                conn.status = 'connected'
+                conn.last_synced_at = timezone.now()
+                meta_dict = conn.metadata if isinstance(conn.metadata, dict) else {}
+                meta_dict.update({
+                    'page_id': first_page.get('id', '') or meta_dict.get('page_id', ''),
+                    'page_name': first_page.get('name', '') or meta_dict.get('page_name', ''),
+                    'ad_accounts': ad_accounts[:10],
+                    'pages': pages[:10],
+                })
+                conn.metadata = meta_dict
+                conn.save()
+            else:
+                conn = PlatformConnection.objects.create(
+                    client_profile_id=client_id if client_id else None,
+                    platform='meta',
+                    account_id=account_id or 'act_primary',
+                    account_name=account_name or 'Meta Ad Account',
+                    access_token_encrypted=encrypt_token(access_token),
+                    token_expires_at=expires_at,
+                    status='connected',
+                    metadata={
                         'page_id': first_page.get('id', ''),
                         'page_name': first_page.get('name', ''),
-                        'ad_accounts': ad_accounts[:5],
-                        'pages': pages[:5],
+                        'ad_accounts': ad_accounts[:10],
+                        'pages': pages[:10],
                     },
-                    'last_synced_at': timezone.now(),
-                }
-            )
-            return Response({
-                'success': True,
-                'connection': PlatformConnectionSerializer(conn).data,
-                'ad_accounts': ad_accounts,
-                'pages': pages,
-            })
+                    last_synced_at=timezone.now(),
+                )
+
+            if wants_json:
+                return Response({
+                    'success': True,
+                    'connection': PlatformConnectionSerializer(conn).data,
+                    'ad_accounts': ad_accounts,
+                    'pages': pages,
+                })
+
+            # Branded HTML bridge for browser redirect
+            redirect_dest = f"{frontend_dashboard_url}&oauth_success=meta"
+            html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Adstra Digital &bull; Meta Authorization</title>
+  <meta http-equiv="refresh" content="2;url={redirect_dest}">
+  <style>
+    body {{
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }}
+    .card {{
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 36px 32px;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
+    }}
+    .icon {{
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      background: #16a34a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: bold;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4);
+    }}
+    h1 {{ font-size: 1.3rem; font-weight: 700; margin: 0 0 8px; color: #ffffff; }}
+    p {{ font-size: 0.88rem; color: #94a3b8; margin: 0 0 24px; line-height: 1.45; }}
+    .btn {{
+      display: inline-block;
+      background: #2563eb;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: 10px;
+    }}
+    .btn:hover {{ background: #1d4ed8; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">&#10003;</div>
+    <h1>Meta Account Connected!</h1>
+    <p>Your Meta Ads and Facebook Pages are linked successfully to Adstra Digital. Redirecting back to your dashboard...</p>
+    <a class="btn" href="{redirect_dest}">Return to Dashboard</a>
+  </div>
+  <script>
+    if (window.opener) {{
+      window.opener.postMessage({{ type: 'ADSTRA_OAUTH_SUCCESS', platform: 'meta' }}, '*');
+      setTimeout(function() {{ window.close(); }}, 1200);
+    }} else {{
+      setTimeout(function() {{ window.location.href = "{redirect_dest}"; }}, 1200);
+    }}
+  </script>
+</body>
+</html>"""
+            return HttpResponse(html_content, content_type="text/html")
+
         except Exception as exc:
-            return Response({'error': f'Meta OAuth failed: {str(exc)}'},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if wants_json:
+                return Response({'error': f'Meta OAuth failed: {str(exc)}'},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            err_dest = f"{frontend_dashboard_url}&oauth_error={urllib.parse.quote(str(exc))}"
+            return HttpResponseRedirect(err_dest)
 
     @action(detail=False, methods=['get', 'post'], url_path='google/callback')
     def google_callback(self, request):
@@ -1408,6 +2312,26 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         conn.save(update_fields=['access_token_encrypted', 'refresh_token_encrypted', 'status', 'updated_at'])
         return Response({'success': True, 'status': 'disconnected'})
 
+    @action(detail=True, methods=['post', 'get'], url_path='reconnect')
+    def reconnect(self, request, pk=None):
+        """
+        Reconnect button action:
+        On click, reauthorizes the account, refreshes the access token, and
+        automatically updates the account status to Connected.
+        """
+        conn = self.get_object()
+        from apis.social.token_service import reauthorize_connection
+        custom_token = request.data.get('access_token') if request.method == 'POST' else None
+        success = reauthorize_connection(conn, custom_token=custom_token)
+        if success:
+            return Response({
+                'success': True,
+                'message': f'Successfully reauthorized {conn.account_name or conn.get_platform_display()} and refreshed access token.',
+                'status': 'connected',
+                'connection': PlatformConnectionSerializer(conn).data,
+            })
+        return Response({'error': 'Failed to reauthorize connection'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['post'], url_path='refresh-token')
     def refresh_token(self, request, pk=None):
         """Manually trigger a token refresh for a connection."""
@@ -1418,6 +2342,9 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         elif conn.platform == 'google':
             from apis.social.token_service import refresh_google_token
             success = refresh_google_token(conn)
+        elif conn.platform == 'linkedin':
+            from apis.social.token_service import refresh_linkedin_token
+            success = refresh_linkedin_token(conn)
         else:
             return Response({'error': 'Unsupported platform'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1454,6 +2381,9 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
 
         if not account_id:
             return Response({'error': 'account_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if conn.platform == 'meta' and account_id and not account_id.startswith('act_'):
+            account_id = f'act_{account_id}'
 
         conn.account_id = account_id
         conn.account_name = account_name or account_id
@@ -1663,14 +2593,157 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
         except SocialCampaign.DoesNotExist:
             return Response({'error': 'Campaign not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        account_id = request.data.get('account_id')
         # Pre-publish validation
-        errors = validate_campaign_for_publishing(campaign)
+        errors = validate_campaign_for_publishing(campaign, requested_account_id=account_id)
         if errors:
             return Response({'success': False, 'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = publish_campaign(campaign_id=int(campaign_id), user=request.user)
+        result = publish_campaign(
+            campaign_id=int(campaign_id),
+            user=request.user,
+            account_id=account_id,
+            desired_status=request.data.get('status', 'ACTIVE'),
+        )
         code = status.HTTP_200_OK if result.get('success') else status.HTTP_422_UNPROCESSABLE_ENTITY
         return Response(result, status=code)
+
+    @action(detail=False, methods=['post'], url_path='publish-drafts')
+    def publish_drafts(self, request):
+        """
+        Batch or direct publish draft campaigns, ad sets, and ads directly to Meta Ads Manager.
+        """
+        from apis.social.campaign_publishing_service import (
+            publish_campaign, validate_campaign_for_publishing
+        )
+        from apis.social.models import SocialCampaign, SocialClientProfile, CampaignPlatform
+        from apis.social.serializers import SocialCampaignSerializer
+
+        account_id = request.data.get('account_id') or 'act_830629501946359'
+        campaign_ids = request.data.get('campaign_ids', [])
+        draft_campaigns = request.data.get('draft_campaigns', [])
+        global_status = (request.data.get('status') or 'ACTIVE').upper()
+
+        objective_map = {
+            'awareness': 'brand_awareness',
+            'brand awareness': 'brand_awareness',
+            'traffic': 'traffic',
+            'engagement': 'engagement',
+            'leads': 'lead_generation',
+            'lead generation': 'lead_generation',
+            'app promotion': 'lead_generation',
+            'sales': 'conversions',
+            'conversions': 'conversions',
+        }
+
+        default_client = SocialClientProfile.objects.filter(is_active=True).first()
+        if not default_client:
+            default_client = SocialClientProfile.objects.first()
+
+        created_or_found_ids = []
+        item_status_map = {}
+
+        # 1. Process draft_campaigns objects
+        for d in draft_campaigns:
+            c_name = d.get('name') or d.get('campaignName') or 'New Meta Campaign'
+            c_obj_raw = str(d.get('objective') or d.get('bidStrategySub') or 'leads').lower()
+            c_obj = objective_map.get(c_obj_raw, 'lead_generation')
+
+            raw_b = d.get('budget') or d.get('budgetAmount') or 500
+            try:
+                c_budget = float(str(raw_b).replace('₹', '').replace(',', '').strip())
+            except Exception:
+                c_budget = 500.0
+
+            client_id = d.get('client_id')
+            client = SocialClientProfile.objects.filter(id=client_id).first() if client_id else default_client
+
+            d_status = str(d.get('status') or global_status or 'ACTIVE').upper()
+            target_status = 'ACTIVE' if d_status in ('ACTIVE', 'LIVE') else 'PAUSED'
+
+            # Try to match existing campaign by backendId, id, Meta ID or name
+            camp = None
+            if d.get('backendId'):
+                camp = SocialCampaign.objects.filter(id=d['backendId']).first()
+            if not camp and d.get('id'):
+                raw_id_str = str(d['id'])
+                if raw_id_str.startswith('c-local-'):
+                    sub_id = raw_id_str.replace('c-local-', '')
+                    if sub_id.isdigit():
+                        camp = SocialCampaign.objects.filter(id=int(sub_id)).first()
+                elif raw_id_str.isdigit():
+                    camp = SocialCampaign.objects.filter(id=int(raw_id_str)).first()
+                if not camp:
+                    cp_match = CampaignPlatform.objects.filter(meta_campaign_id=raw_id_str).select_related('campaign').first()
+                    if cp_match and cp_match.campaign:
+                        camp = cp_match.campaign
+
+            if not camp:
+                camp = SocialCampaign.objects.filter(name=c_name, client_profile=client).first()
+
+            if not camp:
+                camp = SocialCampaign.objects.create(
+                    client_profile=client,
+                    name=c_name,
+                    objective=c_obj,
+                    budget=c_budget,
+                    platforms=['meta'],
+                    ad_platforms=['meta'],
+                    campaign_type='FEED_STORIES',
+                    primary_text=d.get('primaryText') or d.get('headline') or c_name,
+                    headline=d.get('headline') or c_name,
+                    creative_image_url=d.get('selectedCreativeUrl') or d.get('thumb') or '',
+                    status='active' if target_status == 'ACTIVE' else 'draft',
+                )
+            else:
+                camp.objective = c_obj
+                camp.budget = c_budget
+                camp.ad_platforms = ['meta']
+                camp.save()
+
+            created_or_found_ids.append(camp.id)
+            item_status_map[camp.id] = target_status
+
+        # Merge with explicit campaign_ids
+        all_ids = list(set([int(x) for x in campaign_ids if str(x).isdigit()] + created_or_found_ids))
+
+        if not all_ids:
+            return Response({'error': 'No campaigns provided to publish.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        results = {}
+        all_success = True
+
+        for cid in all_ids:
+            try:
+                camp = SocialCampaign.objects.get(id=cid)
+                desired_stat = item_status_map.get(cid, global_status)
+                pub_res = publish_campaign(
+                    campaign_id=cid,
+                    user=request.user,
+                    account_id=account_id,
+                    desired_status=desired_stat
+                )
+                results[str(cid)] = {
+                    'campaign_name': camp.name,
+                    'result': pub_res,
+                }
+                if not pub_res.get('success'):
+                    all_success = False
+            except Exception as e:
+                results[str(cid)] = {'error': str(e), 'success': False}
+                all_success = False
+
+        # Return updated campaigns list
+        updated_qs = SocialCampaign.objects.filter(id__in=all_ids)
+        serialized = SocialCampaignSerializer(updated_qs, many=True).data
+
+        return Response({
+            'success': all_success,
+            'published_count': len(all_ids),
+            'results': results,
+            'campaigns': serialized,
+            'account_id': account_id,
+        })
 
     @action(detail=False, methods=['post'], url_path=r'campaigns/(?P<campaign_id>\d+)/sync')
     def sync(self, request, campaign_id=None):
@@ -1840,3 +2913,721 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
             'placement_performance': meta_perf.get('placements', []),
             'buying_type': meta_perf.get('buying_type', 'Auction'),
         })
+
+    @action(detail=False, methods=['get'], url_path='meta-account-data')
+    def meta_account_data(self, request):
+        """
+        Unified Meta Marketing API endpoint returning:
+        - Campaigns
+        - Ad sets
+        - Ads
+        - Live performance metrics for requested date_preset
+        - Connected ad account details
+        - Merged local drafts
+        """
+        from apis.social.models import PlatformConnection, SocialCampaign, SocialClientProfile
+        from apis.social import meta_ads_service
+
+        client_id = request.query_params.get('client_id')
+        req_account_id = request.query_params.get('account_id')
+        date_preset = request.query_params.get('date_preset', 'last_30d')
+        since = request.query_params.get('since')
+        until = request.query_params.get('until')
+        time_range = None
+        if since and until:
+            time_range = {'since': since, 'until': until}
+
+        # Find connected Meta connections
+        all_meta_conns = PlatformConnection.objects.filter(platform='meta').order_by('-status', '-last_synced_at')
+
+        available_accounts = []
+        for c in all_meta_conns:
+            acc_num = str(c.account_id or '').replace('act_', '')
+            available_accounts.append({
+                'id': c.account_id,
+                'name': c.account_name or f"Meta Ad Account ({acc_num})",
+                'display_id': acc_num,
+                'status': c.status,
+                'currency': c.metadata.get('currency', 'INR') if isinstance(c.metadata, dict) else 'INR',
+                'connection_id': c.id,
+            })
+
+        # Select connection
+        connection = None
+        if req_account_id:
+            clean_req = str(req_account_id).replace('act_', '')
+            connection = all_meta_conns.filter(
+                Q(account_id__icontains=clean_req), status='connected'
+            ).first() or all_meta_conns.filter(
+                Q(account_id__icontains=clean_req)
+            ).first()
+
+        if not connection:
+            connection = all_meta_conns.filter(status='connected').first() or all_meta_conns.first()
+
+        if not connection:
+            # Return empty baseline
+            return Response({
+                'connected_account': None,
+                'available_accounts': [],
+                'campaigns': [],
+                'adsets': [],
+                'ads': [],
+                'metrics_summary': {'spend': 0, 'impressions': 0, 'reach': 0, 'clicks': 0, 'results': 0},
+                'meta_live': False,
+                'meta_error': 'No Meta account connected in Settings.',
+            })
+
+        data = meta_ads_service.fetch_all_meta_account_data(connection, date_preset=date_preset, time_range=time_range)
+
+        # Match Meta campaigns with local CampaignPlatform records to link backendId
+        from apis.social.models import CampaignPlatform
+        published_cps = CampaignPlatform.objects.filter(
+            platform='meta',
+            meta_campaign_id__isnull=False
+        ).select_related('campaign')
+        meta_id_to_cp = {str(cp.meta_campaign_id): cp for cp in published_cps}
+
+        for c in data['campaigns']:
+            cp = meta_id_to_cp.get(str(c['id']))
+            if cp and cp.campaign:
+                c['backendId'] = cp.campaign.id
+                c['is_draft'] = False
+
+        # Only merge local drafts that are NOT yet published to Meta
+        published_camp_ids = set(cp.campaign_id for cp in published_cps if cp.campaign_id)
+        local_drafts = SocialCampaign.objects.filter(status='draft').exclude(id__in=published_camp_ids).order_by('-created_at')
+        if client_id and client_id != 'all':
+            local_drafts = local_drafts.filter(client_profile_id=client_id)
+
+        meta_camp_ids = set(c['id'] for c in data['campaigns'])
+
+        for lc in local_drafts:
+            lc_id = f"c-local-{lc.id}"
+            if lc_id not in meta_camp_ids:
+                data['campaigns'].append({
+                    'id': lc_id,
+                    'name': lc.name,
+                    'delivery': 'In draft',
+                    'actions': '—',
+                    'bidStrategy': 'Using campaign budget',
+                    'bidStrategySub': (lc.objective or 'Leads').replace('_', ' ').capitalize(),
+                    'budget': f"₹{float(lc.budget or 1000):,.2f}",
+                    'budgetSub': 'Daily',
+                    'results': '—',
+                    'costPerResult': '—',
+                    'amountSpent': '—',
+                    'impressions': '—',
+                    'reach': '—',
+                    'clicks': '—',
+                    'ctr': '—',
+                    'cpc': '—',
+                    'ends': lc.end_date.strftime('%Y-%m-%d') if lc.end_date else 'Ongoing',
+                    'attribution': '7-day click or 1-day view',
+                    'lastSignificantEdit': lc.updated_at.strftime('%Y-%m-%d') if lc.updated_at else '—',
+                    'active': False,
+                    'backendId': lc.id,
+                    'level': 'campaign',
+                    'is_draft': True,
+                })
+
+                as_id = f"as-local-{lc.id}"
+                data['adsets'].append({
+                    'id': as_id,
+                    'name': f"{lc.name} Ad set",
+                    'delivery': 'In draft',
+                    'actions': '—',
+                    'bidStrategy': 'Highest volume',
+                    'bidStrategySub': (lc.objective or 'Leads').capitalize(),
+                    'budget': f"₹{float(lc.budget or 1000):,.2f}",
+                    'budgetSub': 'Daily',
+                    'results': '—',
+                    'costPerResult': '—',
+                    'amountSpent': '—',
+                    'impressions': '—',
+                    'reach': '—',
+                    'clicks': '—',
+                    'ctr': '—',
+                    'cpc': '—',
+                    'ends': lc.end_date.strftime('%Y-%m-%d') if lc.end_date else 'Ongoing',
+                    'attribution': '7-day click or 1-day view',
+                    'lastSignificantEdit': '—',
+                    'campaignName': lc.name,
+                    'campaignId': lc_id,
+                    'active': False,
+                    'backendId': lc.id,
+                    'level': 'adset',
+                    'is_draft': True,
+                })
+
+                ad_id = f"ad-local-{lc.id}"
+                data['ads'].append({
+                    'id': ad_id,
+                    'name': f"{lc.name} Ad",
+                    'thumb': lc.creative_image_url or None,
+                    'delivery': 'In draft',
+                    'actions': '—',
+                    'results': '—',
+                    'costPerResult': '—',
+                    'budget': 'Using campaign...',
+                    'budgetSub': '',
+                    'amountSpent': '—',
+                    'impressions': '—',
+                    'reach': '—',
+                    'clicks': '—',
+                    'ctr': '—',
+                    'cpc': '—',
+                    'ends': 'Ongoing',
+                    'attribution': '7-day click or 1-day view',
+                    'bidStrategy': 'Highest volume',
+                    'bidStrategySub': 'Leads',
+                    'lastSignificantEdit': '—',
+                    'qualityRanking': '—',
+                    'engagementRanking': '—',
+                    'conversionRanking': '—',
+                    'adsetName': f"{lc.name} Ad set",
+                    'adsetId': as_id,
+                    'campaignName': lc.name,
+                    'campaignId': lc_id,
+                    'activeAdsCount': '0 active ads',
+                    'active': False,
+                    'backendId': lc.id,
+                    'level': 'ad',
+                    'is_draft': True,
+                })
+
+        acc_num = str(connection.account_id or '').replace('act_', '')
+        connected_account = {
+            'id': connection.account_id,
+            'name': connection.account_name or f"Meta Ad Account ({acc_num})",
+            'display_id': acc_num,
+            'status': connection.status,
+            'currency': connection.metadata.get('currency', 'INR') if isinstance(connection.metadata, dict) else 'INR',
+            'connection_id': connection.id,
+        }
+
+        return Response({
+            'connected_account': connected_account,
+            'available_accounts': available_accounts,
+            'campaigns': data['campaigns'],
+            'adsets': data['adsets'],
+            'ads': data['ads'],
+            'metrics_summary': data['metrics_summary'],
+            'meta_live': data['meta_live'],
+            'meta_error': data['meta_error'],
+        })
+
+    @action(detail=False, methods=['post'], url_path='import-campaigns')
+    def import_campaigns(self, request):
+        """
+        Import live campaigns from the connected Meta Ad Account into local
+        SocialCampaign and CampaignPlatform models without creating duplicates.
+        """
+        from apis.social.models import PlatformConnection, SocialCampaign, CampaignPlatform, SocialClientProfile
+        from apis.social import meta_ads_service
+
+        req_account_id = request.data.get('account_id') or request.query_params.get('account_id')
+        all_meta_conns = PlatformConnection.objects.filter(platform='meta')
+        connection = None
+        if req_account_id:
+            clean_req = str(req_account_id).replace('act_', '')
+            connection = all_meta_conns.filter(account_id__icontains=clean_req, status='connected').first() or all_meta_conns.filter(account_id__icontains=clean_req).first()
+        if not connection:
+            connection = all_meta_conns.filter(status='connected').first() or all_meta_conns.first()
+
+        if not connection:
+            return Response({'error': 'No connected Meta account found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            token = meta_ads_service.get_valid_access_token(connection)
+            raw_acc_id = str(connection.account_id or '').replace('act_', '')
+            ad_account_id = f"act_{raw_acc_id}"
+            camp_resp = meta_ads_service._graph('get', f'{ad_account_id}/campaigns', token, params={
+                'fields': 'id,name,status,effective_status,objective,buying_type,daily_budget,lifetime_budget,start_time,stop_time,created_time,updated_time',
+                'limit': 150,
+            })
+            raw_camps = camp_resp.get('data', [])
+        except Exception as exc:
+            return Response({'error': f'Failed to fetch campaigns from Meta: {str(exc)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        objective_map = {
+            'outcome_awareness': 'brand_awareness',
+            'outcome_traffic': 'traffic',
+            'outcome_engagement': 'engagement',
+            'outcome_leads': 'lead_generation',
+            'outcome_app_promotion': 'lead_generation',
+            'outcome_sales': 'conversions',
+        }
+
+        default_client = connection.client_profile or SocialClientProfile.objects.filter(is_active=True).first() or SocialClientProfile.objects.first()
+
+        imported_count = 0
+        updated_count = 0
+
+        for c in raw_camps:
+            meta_id = str(c['id'])
+            c_name = c.get('name', 'Meta Campaign')
+            c_status = 'active' if (c.get('status', '').upper() == 'ACTIVE') else 'paused'
+            obj_raw = str(c.get('objective', '')).lower()
+            c_obj = objective_map.get(obj_raw, 'lead_generation')
+            b_val = float(c.get('daily_budget') or c.get('lifetime_budget') or 0) / 100
+            if b_val <= 0:
+                b_val = 1000.0
+
+            # Check if already imported
+            cp = CampaignPlatform.objects.filter(platform='meta', meta_campaign_id=meta_id).first()
+            if cp:
+                cp.status = c_status
+                cp.publish_status = 'published'
+                cp.save(update_fields=['status', 'publish_status', 'updated_at'])
+                if cp.campaign:
+                    cp.campaign.name = c_name
+                    cp.campaign.status = c_status
+                    cp.campaign.budget = b_val
+                    cp.campaign.save(update_fields=['name', 'status', 'budget', 'updated_at'])
+                updated_count += 1
+            else:
+                camp = SocialCampaign.objects.filter(name=c_name, client_profile=default_client).first()
+                if not camp:
+                    camp = SocialCampaign.objects.create(
+                        client_profile=default_client,
+                        name=c_name,
+                        objective=c_obj,
+                        budget=b_val,
+                        platforms=['meta'],
+                        ad_platforms=['meta'],
+                        campaign_type='ADVANTAGE_PLUS',
+                        status=c_status,
+                        headline=c_name,
+                        primary_text=c_name,
+                    )
+                else:
+                    camp.status = c_status
+                    camp.budget = b_val
+                    camp.save(update_fields=['status', 'budget', 'updated_at'])
+
+                CampaignPlatform.objects.create(
+                    campaign=camp,
+                    connection=connection,
+                    platform='meta',
+                    meta_campaign_id=meta_id,
+                    publish_status='published',
+                    status=c_status,
+                )
+                imported_count += 1
+
+        return Response({
+            'success': True,
+            'imported_count': imported_count,
+            'updated_count': updated_count,
+            'total_meta_campaigns': len(raw_camps),
+            'message': f"Successfully synced {len(raw_camps)} Meta campaigns ({imported_count} new, {updated_count} updated).",
+        })
+
+    @action(detail=False, methods=['post'], url_path='discard-drafts')
+    def discard_drafts(self, request):
+        """
+        Discard ONLY unpublished local drafts. Published campaigns and Meta campaigns are NOT touched.
+        """
+        from apis.social.models import SocialCampaign, CampaignPlatform
+
+        published_camp_ids = CampaignPlatform.objects.filter(
+            publish_status='published'
+        ).values_list('campaign_id', flat=True)
+
+        drafts_qs = SocialCampaign.objects.filter(
+            status='draft'
+        ).exclude(id__in=published_camp_ids)
+
+        draft_ids = request.data.get('draft_ids')
+        if draft_ids and isinstance(draft_ids, list):
+            clean_ids = []
+            for d in draft_ids:
+                s = str(d).replace('c-local-', '').replace('as-local-', '').replace('ad-local-', '')
+                if s.isdigit():
+                    clean_ids.append(int(s))
+            if clean_ids:
+                drafts_qs = drafts_qs.filter(id__in=clean_ids)
+
+        deleted_count, _ = drafts_qs.delete()
+        return Response({
+            'success': True,
+            'deleted_count': deleted_count,
+            'message': f"Successfully discarded {deleted_count} unpublished drafts.",
+        })
+
+    @action(detail=False, methods=['post'], url_path='toggle-status')
+    def toggle_status(self, request):
+        """Toggle active / paused status on a Meta Campaign, Ad Set, or Ad."""
+        from apis.social.models import PlatformConnection, SocialCampaign, CampaignPlatform
+        from apis.social import meta_ads_service
+
+        entity_id = str(request.data.get('id', '')).strip()
+        level = request.data.get('level', 'campaign')
+        new_status = request.data.get('status', 'ACTIVE').upper()
+        req_account_id = request.data.get('account_id')
+
+        if not entity_id:
+            return Response({'error': 'id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Handle local database campaign
+        if entity_id.startswith('c-local-') or entity_id.startswith('as-local-') or entity_id.startswith('ad-local-'):
+            local_id = entity_id.split('-')[-1]
+            try:
+                camp = SocialCampaign.objects.get(id=local_id)
+                camp.status = 'active' if new_status == 'ACTIVE' else 'paused'
+                camp.save(update_fields=['status', 'updated_at'])
+                return Response({'success': True, 'id': entity_id, 'status': new_status})
+            except SocialCampaign.DoesNotExist:
+                pass
+
+        # Call live Meta API
+        conn = PlatformConnection.objects.filter(platform='meta', status='connected').first()
+        if not conn:
+            conn = PlatformConnection.objects.filter(platform='meta').first()
+
+        try:
+            if conn:
+                meta_ads_service.toggle_meta_entity_status(conn, level, entity_id, new_status)
+
+            # Sync local database if this entity is a campaign
+            if level == 'campaign':
+                cp = CampaignPlatform.objects.filter(platform='meta', meta_campaign_id=entity_id).first()
+                if cp:
+                    local_st = 'active' if new_status == 'ACTIVE' else 'paused'
+                    cp.status = local_st
+                    cp.save(update_fields=['status', 'updated_at'])
+                    if cp.campaign:
+                        cp.campaign.status = local_st
+                        cp.campaign.save(update_fields=['status', 'updated_at'])
+
+            return Response({'success': True, 'id': entity_id, 'status': new_status})
+        except Exception as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='create-entity')
+    def create_entity(self, request):
+        """Create a Campaign, Ad Set, or Ad directly or save as draft."""
+        from apis.social.models import SocialCampaign, SocialClientProfile
+        data = request.data.get('data', {})
+        level = request.data.get('level', 'campaign')
+        is_draft = request.data.get('is_draft', True)
+
+        c_name = data.get('name') or data.get('campaignName') or 'New Meta Campaign'
+        c_obj = data.get('objective') or 'lead_generation'
+        c_budget = float(data.get('budgetAmount') or data.get('budget') or 1000)
+
+        default_client = SocialClientProfile.objects.filter(is_active=True).first() or SocialClientProfile.objects.first()
+
+        camp = SocialCampaign.objects.create(
+            client_profile=default_client,
+            name=c_name,
+            objective=c_obj,
+            budget=c_budget,
+            platforms=['meta'],
+            ad_platforms=['meta'],
+            campaign_type='ADVANTAGE_PLUS',
+            status='draft' if is_draft else 'active',
+            headline=data.get('headline') or c_name,
+            primary_text=data.get('primaryText') or c_name,
+            creative_image_url=data.get('thumb') or data.get('selectedCreativeUrl') or '',
+        )
+
+        return Response({
+            'success': True,
+            'campaign_id': camp.id,
+            'message': f'Campaign "{camp.name}" {"saved as draft" if is_draft else "created successfully"}!',
+        })
+
+    @action(detail=False, methods=['post'], url_path='update-entity')
+    def update_entity(self, request):
+        """Update name, budget, or settings on a campaign, adset, or ad."""
+        from apis.social.models import PlatformConnection, SocialCampaign
+        from apis.social import meta_ads_service
+
+        entity_id = str(request.data.get('id', '')).strip()
+        level = request.data.get('level', 'campaign')
+        update_data = request.data.get('data', {})
+
+        if entity_id.startswith('c-local-') or entity_id.startswith('as-local-') or entity_id.startswith('ad-local-'):
+            local_id = entity_id.split('-')[-1]
+            try:
+                camp = SocialCampaign.objects.get(id=local_id)
+                if 'name' in update_data:
+                    camp.name = update_data['name']
+                if 'budget' in update_data:
+                    camp.budget = float(update_data['budget'])
+                camp.save()
+                return Response({'success': True, 'id': entity_id, 'data': update_data})
+            except SocialCampaign.DoesNotExist:
+                pass
+
+        conn = PlatformConnection.objects.filter(platform='meta', status='connected').first() or PlatformConnection.objects.filter(platform='meta').first()
+        if conn:
+            try:
+                res = meta_ads_service.update_meta_entity(conn, level, entity_id, update_data)
+                return Response({'success': True, 'id': entity_id, 'result': res})
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'success': True, 'id': entity_id})
+
+    @action(detail=False, methods=['post'], url_path='duplicate-entity')
+    def duplicate_entity(self, request):
+        """Duplicate an entity with (Copy) suffix."""
+        from apis.social.models import PlatformConnection, SocialCampaign
+        from apis.social import meta_ads_service
+
+        entity_id = str(request.data.get('id', '')).strip()
+        level = request.data.get('level', 'campaign')
+        copies = int(request.data.get('copies', 1))
+
+        if entity_id.startswith('c-local-') or entity_id.startswith('as-local-') or entity_id.startswith('ad-local-'):
+            local_id = entity_id.split('-')[-1]
+            try:
+                camp = SocialCampaign.objects.get(id=local_id)
+                camp.pk = None
+                camp.name = f"{camp.name} (Copy)"
+                camp.status = 'draft'
+                camp.save()
+                return Response({'success': True, 'new_id': f'c-local-{camp.id}'})
+            except SocialCampaign.DoesNotExist:
+                pass
+
+        conn = PlatformConnection.objects.filter(platform='meta', status='connected').first() or PlatformConnection.objects.filter(platform='meta').first()
+        if conn:
+            try:
+                res = meta_ads_service.duplicate_meta_entity(conn, level, entity_id, copies)
+                return Response({'success': True, 'duplicates': res})
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'success': True, 'id': entity_id})
+
+    @action(detail=False, methods=['post'], url_path='delete-entity')
+    def delete_entity(self, request):
+        """Delete an entity on Meta or locally."""
+        from apis.social.models import PlatformConnection, SocialCampaign
+        from apis.social import meta_ads_service
+
+        entity_id = str(request.data.get('id', '')).strip()
+        level = request.data.get('level', 'campaign')
+
+        if entity_id.startswith('c-local-') or entity_id.startswith('as-local-') or entity_id.startswith('ad-local-'):
+            local_id = entity_id.split('-')[-1]
+            SocialCampaign.objects.filter(id=local_id).delete()
+            return Response({'success': True, 'id': entity_id})
+
+        conn = PlatformConnection.objects.filter(platform='meta', status='connected').first() or PlatformConnection.objects.filter(platform='meta').first()
+        if conn:
+            try:
+                meta_ads_service.delete_meta_entity(conn, level, entity_id)
+                return Response({'success': True, 'id': entity_id})
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'success': True, 'id': entity_id})
+
+    @action(detail=False, methods=['get', 'post'], url_path='automated-rules')
+    def automated_rules(self, request):
+        """List or create custom automated rules matching Meta Ads Manager."""
+        from apis.social.models import SocialAutomatedRule
+        from django.utils import timezone
+
+        account_id = request.query_params.get('account_id') or request.data.get('account_id') or '1405144991733037'
+
+        if request.method == 'GET':
+            rules = SocialAutomatedRule.objects.filter(status__in=['ACTIVE', 'PAUSED'])
+            if account_id and account_id != 'all':
+                clean_id = account_id.replace('act_', '')
+                rules = rules.filter(account_id__icontains=clean_id)
+
+            # If no rules exist in db yet, seed initial standard rule
+            if not rules.exists():
+                seed_rule = SocialAutomatedRule.objects.create(
+                    account_id=account_id.replace('act_', ''),
+                    rule_name='Pause ads if Cost per Result > ₹450',
+                    apply_to='all_active_campaigns',
+                    action='turn_off',
+                    action_details={'adjustment_type': 'turn_off'},
+                    conditions=[
+                        {'metric': 'cost_per_result', 'operator': 'greater_than', 'value': 450, 'currency': 'INR'}
+                    ],
+                    time_range='maximum',
+                    schedule='continuously',
+                    notification_fb=True,
+                    notification_email=False,
+                    subscribers=['Athira S (athira@adstradigital.com)'],
+                    status='ACTIVE',
+                )
+                rules = [seed_rule]
+
+            data = [
+                {
+                    'id': r.id,
+                    'account_id': r.account_id,
+                    'rule_name': r.rule_name,
+                    'apply_to': r.apply_to,
+                    'action': r.action,
+                    'action_details': r.action_details,
+                    'conditions': r.conditions,
+                    'time_range': r.time_range,
+                    'schedule': r.schedule,
+                    'schedule_details': r.schedule_details,
+                    'notification_fb': r.notification_fb,
+                    'notification_email': r.notification_email,
+                    'subscribers': r.subscribers,
+                    'status': r.status,
+                    'last_run_at': r.last_run_at.isoformat() if r.last_run_at else None,
+                    'created_at': r.created_at.isoformat() if hasattr(r, 'created_at') and r.created_at else None,
+                }
+                for r in rules
+            ]
+            return Response({'success': True, 'rules': data})
+
+        # POST: Create a new custom automated rule
+        rule_name = str(request.data.get('rule_name', '')).strip()
+        if not rule_name:
+            return Response({'error': 'Rule name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        apply_to = request.data.get('apply_to', 'all_active_campaigns')
+        action_val = request.data.get('action', 'turn_off')
+        action_details = request.data.get('action_details', {})
+        conditions = request.data.get('conditions', [])
+        time_range = request.data.get('time_range', 'maximum')
+        schedule_val = request.data.get('schedule', 'continuously')
+        schedule_details = request.data.get('schedule_details', {})
+        notification_fb = bool(request.data.get('notification_fb', True))
+        notification_email = bool(request.data.get('notification_email', False))
+        subscribers = request.data.get('subscribers', [])
+
+        rule = SocialAutomatedRule.objects.create(
+            account_id=str(account_id).replace('act_', ''),
+            rule_name=rule_name,
+            apply_to=apply_to,
+            action=action_val,
+            action_details=action_details,
+            conditions=conditions,
+            time_range=time_range,
+            schedule=schedule_val,
+            schedule_details=schedule_details,
+            notification_fb=notification_fb,
+            notification_email=notification_email,
+            subscribers=subscribers,
+            status='ACTIVE',
+            last_run_at=timezone.now(),
+        )
+
+        return Response({
+            'success': True,
+            'message': f'Automated rule "{rule_name}" created successfully.',
+            'rule': {
+                'id': rule.id,
+                'account_id': rule.account_id,
+                'rule_name': rule.rule_name,
+                'apply_to': rule.apply_to,
+                'action': rule.action,
+                'action_details': rule.action_details,
+                'conditions': rule.conditions,
+                'time_range': rule.time_range,
+                'schedule': rule.schedule,
+                'notification_fb': rule.notification_fb,
+                'notification_email': rule.notification_email,
+                'subscribers': rule.subscribers,
+                'status': rule.status,
+            }
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], url_path='execute-automated-rule')
+    def execute_automated_rule(self, request):
+        """Evaluate and execute custom automated rules against active campaigns."""
+        from apis.social.models import SocialAutomatedRule, SocialCampaign, PlatformConnection
+        from apis.social import meta_ads_service
+        from django.utils import timezone
+
+        rule_id = request.data.get('rule_id')
+        rule = None
+        if rule_id:
+            rule = SocialAutomatedRule.objects.filter(id=rule_id).first()
+
+        if not rule:
+            rule = SocialAutomatedRule.objects.filter(status='ACTIVE').first()
+
+        if not rule:
+            return Response({'success': False, 'message': 'No active rule to execute.'})
+
+        # Evaluate conditions against live campaigns
+        conn = PlatformConnection.objects.filter(platform='meta', status='connected').first() or PlatformConnection.objects.filter(platform='meta').first()
+        campaigns_data = []
+        if conn:
+            try:
+                acc_data = meta_ads_service.fetch_full_account_data(conn)
+                campaigns_data = acc_data.get('campaigns', [])
+            except Exception:
+                pass
+
+        if not campaigns_data:
+            local_camps = SocialCampaign.objects.all()[:10]
+            campaigns_data = [
+                {'id': f'c-local-{c.id}', 'name': c.name, 'status': 'ACTIVE', 'spend': float(c.total_budget or 500), 'cost_per_result': 320.0}
+                for c in local_camps
+            ]
+
+        affected_items = []
+        for camp in campaigns_data:
+            # Check condition match
+            match = True
+            for cond in rule.conditions:
+                metric = cond.get('metric', 'cost_per_result')
+                op = cond.get('operator', 'greater_than')
+                val = float(cond.get('value', 0) or 0)
+                camp_val = float(camp.get(metric, 0) or 0)
+
+                if op == 'greater_than' and not (camp_val > val):
+                    match = False
+                elif op == 'smaller_than' and not (camp_val < val):
+                    match = False
+                elif op == 'between':
+                    val_max = float(cond.get('value_max', val) or val)
+                    if not (val <= camp_val <= val_max):
+                        match = False
+
+            if match:
+                affected_items.append({
+                    'id': camp.get('id'),
+                    'name': camp.get('name'),
+                    'action': rule.action,
+                })
+
+        # Update last run
+        rule.last_run_at = timezone.now()
+        hist = rule.execution_history or []
+        hist.insert(0, {
+            'timestamp': timezone.now().isoformat(),
+            'affected_count': len(affected_items),
+            'affected_items': affected_items,
+        })
+        rule.execution_history = hist[:20]
+        rule.save(update_fields=['last_run_at', 'execution_history'])
+
+        return Response({
+            'success': True,
+            'rule_id': rule.id,
+            'rule_name': rule.rule_name,
+            'evaluated_count': len(campaigns_data),
+            'affected_count': len(affected_items),
+            'affected_items': affected_items,
+            'message': f'Rule "{rule.rule_name}" evaluated successfully. {len(affected_items)} entities affected.',
+        })
+
+    @action(detail=False, methods=['post'], url_path='delete-automated-rule')
+    def delete_automated_rule(self, request):
+        """Delete an automated rule."""
+        from apis.social.models import SocialAutomatedRule
+        rule_id = request.data.get('rule_id')
+        if rule_id:
+            SocialAutomatedRule.objects.filter(id=rule_id).delete()
+            return Response({'success': True, 'id': rule_id})
+        return Response({'error': 'Rule ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+

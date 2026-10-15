@@ -240,17 +240,126 @@ export default function FullOverviewDashboardTab({
   const viewAllBtn = {
     background:"none",border:"none",color:"#4f46e5",fontWeight:700,fontSize:"0.78rem",cursor:"pointer",padding:0,
   };
+  const adPerf = dashboardData?.ad_performance;
 
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
 
+      {/* ══ META ADS PERFORMANCE STRIP ═════════════════════════════════════ */}
+      {adPerf?.connected && (
+        <div
+          style={{
+            background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+            borderRadius: 14,
+            padding: "14px 20px",
+            color: "#ffffff",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            boxShadow: "0 4px 16px rgba(15, 23, 42, 0.12)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: "rgba(24, 119, 242, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#1877f2",
+                fontWeight: 900,
+                fontSize: "1.1rem",
+              }}
+            >
+              f
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontWeight: 800, fontSize: "0.92rem" }}>
+                  {adPerf.account_name || "Meta Ad Account"}
+                </span>
+                <span
+                  style={{
+                    background: "rgba(16, 185, 129, 0.2)",
+                    color: "#34d399",
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  Connected & Authorized
+                </span>
+              </div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                ID: {adPerf.account_id}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: "0.65rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Ad Spend</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#38bdf8" }}>
+                ₹{Number(adPerf.total_spend || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.65rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Ad Impressions</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#ffffff" }}>
+                {Number(adPerf.total_impressions || 0).toLocaleString("en-IN")}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.65rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Ad Reach</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#a7f3d0" }}>
+                {Number(adPerf.total_reach || 0).toLocaleString("en-IN")}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.65rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Ad Clicks</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#fde047" }}>
+                {Number(adPerf.total_clicks || 0).toLocaleString("en-IN")}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.65rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Leads</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#fb7185" }}>
+                {Number(adPerf.total_leads || 0).toLocaleString("en-IN")}
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigateTab("campaigns")}
+              style={{
+                background: "rgba(255, 255, 255, 0.12)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                color: "#ffffff",
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Manage Campaigns →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ══ ROW 1 · 5 KPI CARDS ══════════════════════════════════════════ */}
       <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16 }}>
         {[
-          { label:"Total Audience",    value:totalFollowers.toLocaleString(),   growth:"+12.4% vs previous 30 days", color:"#4f46e5",bg:"#eef2ff",icon:<Users size={19}/>,   spark:[110,125,118,135,140,130,149] },
-          { label:"Total Reach",       value:totalReach.toLocaleString(),       growth:"+18.2% vs previous 30 days", color:"#16a34a",bg:"#f0fdf4",icon:<Eye size={19}/>,    spark:[180,210,195,230,245,255,262] },
+          { label:"Total Audience",    value:totalFollowers.toLocaleString("en-IN"),   growth:"+12.4% vs previous 30 days", color:"#4f46e5",bg:"#eef2ff",icon:<Users size={19}/>,   spark:[110,125,118,135,140,130,149] },
+          { label:"Total Reach",       value:totalReach.toLocaleString("en-IN"),       growth:"+18.2% vs previous 30 days", color:"#16a34a",bg:"#f0fdf4",icon:<Eye size={19}/>,    spark:[180,210,195,230,245,255,262] },
           { label:"Engagement Rate",   value:`${engagementRate}%`,              growth:"+0.8% vs previous 30 days",  color:"#db2777",bg:"#fdf2f8",icon:<Heart size={19}/>,  spark:[4.8,5.1,5.3,5.0,5.4,5.6,5.87] },
-          { label:"Impressions",       value:totalImpressions.toLocaleString(), growth:"+21% vs previous 30 days",   color:"#2563eb",bg:"#eff6ff",icon:<BarChart2 size={19}/>,spark:[310,360,340,390,420,460,482] },
+          { label:"Impressions",       value:totalImpressions.toLocaleString("en-IN"), growth:"+21% vs previous 30 days",   color:"#2563eb",bg:"#eff6ff",icon:<BarChart2 size={19}/>,spark:[310,360,340,390,420,460,482] },
           { label:"Posts Published",   value:String(postsPublished),            growth:"+15.3% vs previous 30 days", color:"#ea580c",bg:"#fff7ed",icon:<Send size={19}/>,   spark:[110,128,120,140,155,170,186] },
         ].map(kpi => (
           <div key={kpi.label} style={{ ...panel,display:"flex",flexDirection:"column",gap:10 }}>

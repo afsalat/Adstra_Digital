@@ -1,19 +1,20 @@
 /* =============================================================================
-   CAMPAIGN REPORT SECTION - EXECUTIVE DOWNLOADABLE REPORT STYLES
-   Design System: Clean, Simple, Professional Corporate / Agency Report
-   Color Palette: Deep Slate (#0f172a), Meta Blue (#0866FF), Emerald (#059669)
+   CAMPAIGN & CLIENT REPORTS HUB - UNIFIED DESIGN SYSTEM
+   Theme: Authoritative Corporate / Agency Dashboard & Client Presentation
+   Color Palette: Deep Slate (#0f172a), Meta Blue (#0866FF), Emerald (#059669),
+   Muted Gray (#64748b), Pure White (#ffffff), Subtle Borders (#e2e8f0)
 ============================================================================= */
 
-.cr-wrapper {
+.cr-unified-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   width: 100%;
   color: #0f172a;
   background: transparent;
   font-family: inherit;
   animation: crFadeIn 0.2s ease-out;
-  padding-bottom: 30px;
+  padding-bottom: 50px;
 }
 
 @keyframes crFadeIn {
@@ -27,97 +28,140 @@
   }
 }
 
+/* Toast Banner */
+.cr-toast-banner {
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  animation: crSlideDown 0.2s ease-out;
+}
+
+@keyframes crSlideDown {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* =============================================================================
-   1. TOP ACTION TOOLBAR
+   1. TOP LEVEL MASTHEAD
 ============================================================================= */
-.cr-toolbar {
+.cr-top-masthead {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 10px 16px;
+  border-radius: 14px;
+  padding: 20px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
-.cr-toolbar-left {
+.cr-masthead-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
-/* Compact arrow-only back button */
-.cr-btn-back-arrow {
+.cr-btn-back-square {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   color: #334155;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.cr-btn-back-arrow:hover {
+.cr-btn-back-square:hover {
   background: #f1f5f9;
   border-color: #94a3b8;
   color: #0f172a;
   transform: translateX(-2px);
 }
 
-.cr-toolbar-right {
+.cr-header-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cr-header-brand-badge {
+  font-size: 0.72rem;
+  font-weight: 850;
+  color: #0866FF;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.04em;
+}
+
+.cr-header-category-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+
+.cr-main-title {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.cr-main-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.cr-masthead-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.cr-timeframe-pills {
-  display: flex;
-  background: #f1f5f9;
-  padding: 3px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.cr-timeframe-pill {
-  background: transparent;
-  border: none;
-  padding: 5px 11px;
-  font-size: 0.77rem;
-  font-weight: 700;
-  color: #64748b;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.cr-timeframe-pill:hover {
-  color: #0f172a;
-}
-
-.cr-timeframe-pill.active {
-  background: #ffffff;
-  color: #0866FF;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
+/* Button styles */
 .cr-btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 13px;
+  padding: 8px 15px;
   border-radius: 8px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 650;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .cr-btn-secondary {
@@ -144,253 +188,554 @@
   border-color: #005ce6;
 }
 
+.cr-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.cr-btn-active {
+  background: #0f172a;
+  border: 1px solid #0f172a;
+  color: #ffffff;
+}
+
 /* =============================================================================
-   2. REPORT DOCUMENT CONTAINER (Downloadable / Printable Page)
+   2. TOP CONTROLS & FILTER BAR
 ============================================================================= */
-.cr-document {
+.cr-filters-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 32px 36px;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  padding: 12px 18px;
   display: flex;
-  flex-direction: column;
-  gap: 28px;
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
-/* =============================================================================
-   3. DOCUMENT HEADER (Clean, wide executive layout without top-right card)
-============================================================================= */
-.cr-doc-header {
-  border-bottom: 2px solid #f1f5f9;
-  padding-bottom: 20px;
-}
-
-.cr-doc-branding {
+.cr-filter-group-item {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cr-doc-agency-badge {
-  display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
   flex-wrap: wrap;
 }
 
-.cr-agency-logo {
-  font-size: 0.95rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: #0f172a;
+.cr-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.cr-timeframe-pill-cluster {
+  display: flex;
   background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 5px;
+  padding: 3px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
 
-.cr-agency-sub {
-  font-size: 0.7rem;
-  font-weight: 750;
+.cr-tf-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 10px;
+  font-size: 0.77rem;
+  font-weight: 700;
   color: #64748b;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.cr-doc-badge-source {
-  display: inline-flex;
-  align-items: center;
-  background: #eff6ff;
-  color: #0866FF;
-  border: 1px solid #bfdbfe;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 750;
-  text-transform: uppercase;
-}
-
-.cr-doc-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 850;
+.cr-tf-btn:hover {
   color: #0f172a;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
 }
 
-.cr-doc-subtitle {
-  margin: 0;
-  font-size: 0.84rem;
+.cr-tf-btn.active {
+  background: #ffffff;
+  color: #0866FF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.cr-select-dropdown {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  min-width: 170px;
+  max-width: 260px;
+  transition: border-color 0.15s ease;
+}
+
+.cr-select-dropdown:focus {
+  border-color: #0866FF;
+}
+
+.cr-platform-btn-cluster {
+  display: flex;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.cr-platform-pill {
+  background: transparent;
+  border: none;
+  padding: 4px 11px;
+  font-size: 0.77rem;
+  font-weight: 700;
   color: #64748b;
-  line-height: 1.45;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cr-platform-pill:hover {
+  color: #0f172a;
+}
+
+.cr-platform-pill.active {
+  background: #ffffff;
+  color: #0866FF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 /* =============================================================================
-   4. SECTIONS COMMON
+   3. UNIFIED PRIMARY TABS NAV (Campaign Report vs Client Report)
 ============================================================================= */
-.cr-section {
+.cr-primary-tabs-nav {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.cr-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.cr-section-title {
-  margin: 0;
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-}
-
-.cr-section-caption {
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-/* =============================================================================
-   5. KPI GRID (5 Crisp Cards)
-============================================================================= */
-.cr-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
 
-.cr-kpi-card {
+.cr-tabs-toggle-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.cr-tab-button {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  position: relative;
+}
+
+.cr-tab-button:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.cr-tab-button.active {
+  background: #ffffff;
+  border-color: #0866FF;
+  box-shadow: 0 4px 12px rgba(8, 102, 255, 0.08);
+}
+
+.cr-tab-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.cr-tab-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.cr-tab-button.active .cr-tab-title {
+  color: #0866FF;
+}
+
+.cr-tab-sub {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.cr-tab-count-pill {
+  font-size: 0.73rem;
+  font-weight: 750;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 9px;
+  border-radius: 9999px;
+}
+
+.cr-tab-badge-client {
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 4px 9px;
+  border-radius: 9999px;
+}
+
+/* Quick Jump Anchors */
+.cr-quick-jump-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.cr-jump-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cr-jump-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.cr-jump-links a {
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: #475569;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.cr-jump-links a:hover {
+  background: #f1f5f9;
+  color: #0866FF;
+}
+
+/* =============================================================================
+   4. DOCUMENT & SECTION CONTAINERS
+============================================================================= */
+.cr-document-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.cr-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cr-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cr-section-masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 14px;
+}
+
+.cr-masthead-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cr-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cr-icon-badge.blue {
+  background: #eff6ff;
+  color: #0866FF;
+  border: 1px solid #bfdbfe;
+}
+
+.cr-icon-badge.emerald {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.cr-icon-badge.purple {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.cr-icon-badge.amber {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.cr-sec-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+}
+
+.cr-sec-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 0.77rem;
+  color: #64748b;
+}
+
+.cr-sec-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cr-status-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.cr-status-tag.active {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.cr-status-tag.viewed {
+  background: #eff6ff;
+  color: #0866FF;
+  border: 1px solid #bfdbfe;
+}
+
+.cr-status-tag.draft {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.cr-date-pill {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+/* =============================================================================
+   5. OVERVIEW SPECIFICATIONS GRID
+============================================================================= */
+.cr-overview-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.cr-meta-cell {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cr-meta-cell.full-width {
+  grid-column: 1 / -1;
+}
+
+.cr-cell-label {
+  font-size: 0.69rem;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cr-cell-val {
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.cr-pacing-cell-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.cr-pacing-pct {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #0866FF;
+}
+
+.cr-progress-bar-rail {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.cr-progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.cr-pacing-notes {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 5px;
+}
+
+/* =============================================================================
+   6. KPI MATRICES
+============================================================================= */
+.cr-kpi-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.cr-metric-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: border-color 0.15s ease;
+  gap: 4px;
+  transition: all 0.15s ease;
 }
 
-.cr-kpi-card:hover {
+.cr-metric-card:hover {
   border-color: #cbd5e1;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
 }
 
-.cr-kpi-label {
-  font-size: 0.72rem;
+.cr-metric-card.highlight-card {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.cr-metric-label {
+  font-size: 0.71rem;
   font-weight: 750;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 
-.cr-kpi-value {
-  font-size: 1.4rem;
+.cr-metric-number {
+  font-size: 1.45rem;
   font-weight: 850;
   color: #0f172a;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
-.text-blue {
-  color: #0866FF;
+.cr-metric-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.73rem;
+  margin-top: 4px;
 }
 
-.text-green {
+.cr-trend-badge {
+  font-size: 0.7rem;
+  font-weight: 750;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.cr-trend-badge.green {
+  background: #ecfdf5;
   color: #059669;
 }
 
-.cr-kpi-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.72rem;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.cr-badge-subtle {
+.cr-trend-badge.neutral {
   background: #f1f5f9;
-  color: #334155;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.69rem;
+  color: #475569;
 }
 
 /* =============================================================================
-   6. OVERALL CAMPAIGN PERFORMANCE GRAPH CARD & RECHARTS
+   7. PERFORMANCE TRENDS (CHARTS)
 ============================================================================= */
-.cr-graph-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 20px 22px;
+.cr-chart-controls {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
-}
-
-.cr-graph-card-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.cr-graph-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cr-graph-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.72rem;
-  font-weight: 750;
-  color: #0866FF;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.cr-graph-title {
-  margin: 0;
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.01em;
-}
-
-.cr-graph-tabs {
+.cr-metric-pills-selector {
   display: flex;
   background: #f1f5f9;
   padding: 3px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
-  gap: 2px;
 }
 
-.cr-graph-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.cr-metric-toggle-btn {
   background: transparent;
   border: none;
-  padding: 5px 12px;
+  padding: 5px 11px;
   font-size: 0.76rem;
   font-weight: 700;
   color: #64748b;
@@ -399,417 +744,1220 @@
   transition: all 0.15s ease;
 }
 
-.cr-graph-tab:hover {
+.cr-metric-toggle-btn:hover {
   color: #0f172a;
 }
 
-.cr-graph-tab.active {
+.cr-metric-toggle-btn.active {
   background: #ffffff;
   color: #0866FF;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.cr-graph-info-note {
+.cr-resolution-toggle {
   display: flex;
-  align-items: center;
-  gap: 8px;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.75rem;
+  padding: 2px;
+}
+
+.cr-res-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 9px;
+  font-size: 0.73rem;
+  font-weight: 700;
   color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-.cr-chart-container {
-  width: 100%;
-  position: relative;
-}
-
-/* Custom Tooltip Styling for Recharts */
-.cr-tooltip-box {
+.cr-res-btn.active {
   background: #0f172a;
   color: #ffffff;
-  border-radius: 8px;
-  padding: 8px 12px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
-  font-size: 0.75rem;
-  border: 1px solid #334155;
-  pointer-events: none;
 }
 
-.cr-tooltip-date {
-  font-weight: 750;
-  color: #94a3b8;
-  font-size: 0.72rem;
-  margin-bottom: 6px;
-  border-bottom: 1px solid #1e293b;
-  padding-bottom: 4px;
+.cr-chart-canvas-wrapper {
+  width: 100%;
+  margin-top: 8px;
 }
 
-.cr-tooltip-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cr-tooltip-row {
+.cr-chart-loading {
+  height: 320px;
   display: flex;
   align-items: center;
-  gap: 7px;
-}
-
-.cr-tooltip-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.cr-tooltip-label {
-  color: #cbd5e1;
-  font-weight: 550;
-}
-
-.cr-tooltip-val {
-  font-weight: 750;
-  color: #ffffff;
-  margin-left: auto;
-  padding-left: 8px;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
 }
 
 /* =============================================================================
-   7. MARKETING CONVERSION FUNNEL
+   8. CONVERSION FUNNEL
 ============================================================================= */
-.cr-funnel-card {
+.cr-funnel-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px 2px;
+}
+
+.cr-funnel-stage-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 170px;
+}
+
+.cr-funnel-box {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 18px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.cr-funnel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.cr-funnel-title-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cr-funnel-title {
-  margin: 0;
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.cr-funnel-caption {
-  font-size: 0.73rem;
-  color: #64748b;
-}
-
-.cr-funnel-steps {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  position: relative;
-}
-
-.cr-funnel-step {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 9px;
-  padding: 12px 14px;
+  border-top: 4px solid #0866FF;
+  border-radius: 10px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  position: relative;
+  flex: 1;
 }
 
-.cr-step-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.cr-step-num {
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: #94a3b8;
-}
-
-.cr-step-rate {
-  font-size: 0.69rem;
+.cr-funnel-stage-name {
+  font-size: 0.73rem;
   font-weight: 750;
-  color: #0866FF;
-  background: #eff6ff;
-  padding: 1px 5px;
-  border-radius: 4px;
+  color: #64748b;
+  text-transform: uppercase;
 }
 
-.cr-step-val {
-  font-size: 1.25rem;
+.cr-funnel-stage-count {
+  font-size: 1.35rem;
   font-weight: 850;
-  color: #0f172a;
   letter-spacing: -0.02em;
-  margin-top: 2px;
 }
 
-.cr-step-name {
-  font-size: 0.76rem;
-  font-weight: 750;
+.cr-funnel-stage-rate {
+  font-size: 0.75rem;
+  font-weight: 700;
   color: #334155;
 }
 
-.cr-step-label {
+.cr-funnel-drop-tag {
   font-size: 0.69rem;
-  color: #64748b;
-  line-height: 1.3;
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+  display: inline-block;
+  width: fit-content;
 }
 
-.cr-step-arrow {
-  position: absolute;
-  right: -13px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* =============================================================================
-   8. EFFICIENCY & RATE PERFORMANCE STRIP
-============================================================================= */
-.cr-rates-strip {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-}
-
-.cr-rate-cell {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 14px;
+.cr-funnel-arrow-connector {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.cr-rate-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.cr-rate-val {
-  font-size: 1.15rem;
-  font-weight: 850;
-  color: #0f172a;
-  letter-spacing: -0.01em;
-}
-
-.cr-rate-sub {
-  font-size: 0.69rem;
-  color: #64748b;
-}
-
-/* Multi-Campaign Comparative Bar Chart Card */
-.cr-comp-graph-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 18px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.cr-comp-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-
-.cr-comp-title {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.cr-comp-subtitle {
-  margin: 2px 0 0;
-  font-size: 0.74rem;
-  color: #64748b;
+  justify-content: center;
 }
 
 /* =============================================================================
-   9. CAMPAIGN BREAKDOWN TABLE
+   9. BREAKDOWN DATA TABLE
 ============================================================================= */
-.cr-table-container {
+.cr-table-responsive {
+  width: 100%;
   overflow-x: auto;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #ffffff;
 }
 
-.cr-table {
+.cr-data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
   text-align: left;
 }
 
-.cr-table thead {
+.cr-data-table thead tr {
   background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.cr-table th {
-  padding: 10px 14px;
+.cr-data-table th {
+  padding: 10px 12px;
+  font-size: 0.71rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cr-data-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.cr-data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.cr-data-table td {
+  padding: 12px;
+  color: #334155;
+}
+
+.cr-cell-primary {
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.cr-cell-secondary {
   font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.cr-badge-creative {
+  font-size: 0.72rem;
+  font-weight: 650;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.cr-badge-platform {
+  font-size: 0.71rem;
+  font-weight: 750;
+  background: #eff6ff;
+  color: #0866FF;
+  border: 1px solid #bfdbfe;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.cr-badge-rep-type {
+  font-size: 0.73rem;
+  font-weight: 650;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.cr-row-action-cluster {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.cr-btn-tiny {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cr-btn-tiny:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* =============================================================================
+   10. AUDIENCE & CREATIVE PERFORMANCE CARDS
+============================================================================= */
+.cr-audience-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.cr-audience-tile {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cr-tile-heading {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cr-audience-breakdown-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cr-dist-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cr-dist-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #334155;
+}
+
+.cr-dist-bar-rail {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.cr-dist-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+}
+
+/* Creative Cards Grid */
+.cr-creatives-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.cr-creative-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.cr-creative-card:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.cr-creative-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cr-creative-status-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.cr-creative-status-badge.good {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.cr-creative-status-badge.optimal {
+  background: #eff6ff;
+  color: #0866FF;
+  border: 1px solid #bfdbfe;
+}
+
+.cr-creative-status-badge.warning {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.cr-creative-type {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.cr-creative-name {
+  margin: 2px 0 0 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.cr-creative-hook {
+  margin: 0;
+  font-size: 0.74rem;
+  font-style: italic;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.cr-creative-stat-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 4px;
+}
+
+.cr-cr-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.cr-cr-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.cr-cr-val {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Insights Tiles Grid */
+.cr-insights-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.cr-insight-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cr-insight-box.full-span {
+  grid-column: 1 / -1;
+}
+
+.cr-insight-box-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cr-insight-box-header h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cr-insight-box p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+/* =============================================================================
+   11. TAB 2: CLIENT REPORT PRESENTATION STYLES
+============================================================================= */
+.cr-client-actions-banner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.cr-client-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cr-client-banner-text strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.cr-client-banner-text span {
+  font-size: 0.77rem;
+  color: #3b82f6;
+}
+
+.cr-client-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cr-client-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+.cr-client-doc-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cr-client-brand-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 14px;
+}
+
+.cr-client-agency-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cr-logo-main {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: 0.08em;
+}
+
+.cr-logo-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #0866FF;
+  letter-spacing: 0.05em;
+}
+
+.cr-client-badge-official {
+  font-size: 0.74rem;
+  font-weight: 750;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.cr-client-main-heading {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+}
+
+.cr-client-summary-meta {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.cr-client-summary-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cr-cs-label {
+  font-size: 0.68rem;
   font-weight: 750;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.cr-table tbody tr {
-  border-bottom: 1px solid #f1f5f9;
-  transition: background-color 0.1s ease;
-}
-
-.cr-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.cr-table tbody tr:hover {
-  background-color: #f8fafc;
-}
-
-.cr-table td {
-  padding: 11px 14px;
-  vertical-align: middle;
-  color: #1e293b;
-}
-
-.cr-camp-cell-name {
+.cr-cs-val {
+  font-size: 0.84rem;
   font-weight: 750;
   color: #0f172a;
-  line-height: 1.3;
 }
 
-.cr-camp-cell-sub {
-  font-size: 0.72rem;
-  color: #64748b;
-  margin-top: 1px;
+/* Statement Highlight Box */
+.cr-client-statement-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-left: 5px solid #059669;
+  border-radius: 10px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.cr-camp-source-tag {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.68rem;
-  font-weight: 700;
+.cr-cs-badge {
+  font-size: 0.7rem;
+  font-weight: 850;
+  color: #059669;
+  letter-spacing: 0.06em;
 }
 
-.cr-camp-source-meta {
-  background: #eff6ff;
-  color: #0866FF;
-  border: 1px solid #bfdbfe;
+.cr-cs-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #14532d;
+  line-height: 1.55;
 }
 
-.cr-camp-source-dash {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-}
-
-.cr-tag-objective {
-  display: inline-block;
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #dbeafe;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 0.71rem;
-  font-weight: 700;
-  text-transform: capitalize;
-}
-
-/* =============================================================================
-   10. DOCUMENT FOOTER
-============================================================================= */
-.cr-doc-footer {
+.cr-cs-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 16px;
-  font-size: 0.73rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #059669;
+  margin-top: 6px;
+}
+
+/* Client KPI Cards */
+.cr-client-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.cr-client-kpi-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.cr-client-kpi-box:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.cr-client-kpi-box.highlight-client-box {
+  background: #f8fbff;
+  border-color: #bfdbfe;
+}
+
+.cr-ck-label {
+  font-size: 0.74rem;
+  font-weight: 750;
   color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cr-ck-value {
+  font-size: 1.65rem;
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.cr-ck-mom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cr-mom-badge {
+  font-size: 0.7rem;
+  font-weight: 750;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.cr-mom-badge.green {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.cr-mom-badge.neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.cr-mom-note {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+/* Channels Grid */
+.cr-channels-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.cr-channel-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cr-channel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.cr-channel-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cr-channel-share-badge {
+  font-size: 0.7rem;
+  font-weight: 750;
+  background: #eff6ff;
+  color: #0866FF;
+  padding: 2px 7px;
+  border-radius: 9999px;
+}
+
+.cr-channel-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.cr-ch-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.cr-ch-stat span {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.cr-ch-stat strong {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Client Charts Grid */
+.cr-client-charts-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.cr-client-chart-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cr-client-chart-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cr-caption-pill {
+  font-size: 0.69rem;
+  font-weight: 750;
+  background: #eff6ff;
+  color: #0866FF;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.cr-caption-pill.green {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.cr-chart-inner {
+  width: 100%;
+}
+
+/* Client Simplified Funnel */
+.cr-client-funnel-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.cr-cf-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 200px;
+}
+
+.cr-cf-number {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-weight: 850;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cr-cf-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cr-cf-title {
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.cr-cf-count {
+  font-size: 1.35rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.cr-cf-desc {
+  font-size: 0.73rem;
+  color: #334155;
+}
+
+.cr-cf-divider {
+  display: flex;
+  align-items: center;
+}
+
+/* Interpretation Grid */
+.cr-interpretation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.cr-interp-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cr-interp-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  color: #0f172a;
+}
+
+.cr-interp-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Key Trends Pill Grid */
+.cr-keytrends-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.cr-kt-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cr-kt-title {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #334155;
+}
+
+.cr-kt-metric {
+  font-size: 1.15rem;
+  font-weight: 850;
+}
+
+.cr-kt-card p {
+  margin: 4px 0 0 0;
+  font-size: 0.74rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+/* Recommendations List */
+.cr-recs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cr-rec-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.cr-rec-badge-num {
+  width: 28px;
+  height: 28px;
+  background: #eff6ff;
+  color: #0866FF;
+  border: 1px solid #bfdbfe;
+  border-radius: 50%;
+  font-weight: 850;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cr-rec-body strong {
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cr-rec-body p {
+  margin: 3px 0 0 0;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+/* Conclusion Sign-off */
+.cr-conclusion-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cr-conclusion-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cr-concl-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 850;
+  color: #0f172a;
+}
+
+.cr-concl-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.cr-concl-body p {
+  margin: 0 0 8px 0;
+  font-size: 0.84rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.cr-concl-signoff {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+  margin-top: 8px;
   flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cr-signoff-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cr-so-title {
+  font-size: 0.69rem;
+  font-weight: 750;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.cr-so-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* =============================================================================
+   12. MODALS STYLING
+============================================================================= */
+.cr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 20px;
+}
+
+.cr-modal-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: crModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes crModalPop {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.cr-modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cr-modal-title-wrap {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.cr-footer-left {
+.cr-modal-title-wrap h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 850;
+  color: #0f172a;
+}
+
+.cr-btn-close-modal {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.cr-btn-close-modal:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cr-modal-form {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cr-modal-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.cr-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cr-form-field label {
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cr-input-text,
+.cr-textarea {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cr-input-text:focus,
+.cr-textarea:focus {
+  border-color: #0866FF;
+}
+
+.cr-input-disabled {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.cr-attachment-pill {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 650;
 }
 
-.cr-footer-right {
+.cr-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cr-checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #334155;
+  text-transform: none;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.cr-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 /* =============================================================================
-   11. RESPONSIVE BREAKPOINTS
+   13. UTILITY CLASSES
 ============================================================================= */
-@media (max-width: 1100px) {
-  .cr-kpi-grid,
-  .cr-rates-strip {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .cr-funnel-steps {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .cr-step-arrow {
-    display: none;
-  }
+.text-blue {
+  color: #0866FF !important;
 }
 
-@media (max-width: 768px) {
-  .cr-kpi-grid,
-  .cr-rates-strip {
-    grid-template-columns: 1fr 1fr;
-  }
-  .cr-funnel-steps {
-    grid-template-columns: 1fr;
-  }
-  .cr-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .cr-toolbar-right {
-    justify-content: flex-start;
-  }
+.text-green {
+  color: #059669 !important;
+}
+
+.text-purple {
+  color: #7c3aed !important;
+}
+
+.text-muted {
+  color: #64748b !important;
 }
 
 /* =============================================================================
-   12. PRINT & PDF MEDIA STYLES
+   14. PRINT & PDF OPTIMIZATION
 ============================================================================= */
 @media print {
   @page {
@@ -839,7 +1987,13 @@
   header,
   aside,
   .sidebar,
-  button {
+  button,
+  .cr-top-masthead,
+  .cr-filters-card,
+  .cr-primary-tabs-nav,
+  .cr-client-actions-banner,
+  .cr-masthead-actions,
+  .cr-toast-banner {
     display: none !important;
   }
 
@@ -872,20 +2026,54 @@
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
+    color: #000000 !important;
   }
 
   .cr-section,
   .cr-graph-card,
-  .cr-funnel-card {
+  .cr-funnel-card,
+  .cr-section-card,
+  .cr-client-section-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  .cr-kpi-card,
-  .cr-graph-card,
-  .cr-funnel-card,
-  .cr-rate-cell {
-    border: 1px solid #cbd5e1 !important;
-    box-shadow: none !important;
+  .cr-document-container {
+    gap: 30px;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .cr-overview-meta-grid,
+  .cr-kpi-matrix-grid,
+  .cr-audience-grid-4,
+  .cr-creatives-grid,
+  .cr-keytrends-pill-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cr-client-kpis-grid,
+  .cr-channels-summary-grid,
+  .cr-client-charts-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .cr-client-summary-meta {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .cr-overview-meta-grid,
+  .cr-kpi-matrix-grid,
+  .cr-audience-grid-4,
+  .cr-creatives-grid,
+  .cr-keytrends-pill-grid,
+  .cr-tabs-toggle-container {
+    grid-template-columns: 1fr;
   }
 }

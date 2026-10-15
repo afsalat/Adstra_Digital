@@ -43,6 +43,7 @@ import PostTimelineModal from "./PostTimelineModal";
 import ScriptViewModal from "./ScriptViewModal";
 import WorkDetailsModal from "./WorkDetailsModal";
 import MediaPreviewModal from "./MediaPreviewModal";
+import { notify, askConfirm } from "./SocialFeedback";
 
 // The 7 Stages defined in the operational workflow diagram
 const WORKFLOW_STAGES = [
@@ -256,7 +257,7 @@ export default function WorkflowPipelineTab({
       } else if (err.message) {
         errorMsg = err.message;
       }
-      alert(errorMsg);
+      notify(errorMsg);
     } finally {
       setSubmittingAction(false);
     }
@@ -275,20 +276,20 @@ export default function WorkflowPipelineTab({
       return res.data;
     } catch (err) {
       console.error("Upload error:", err);
-      alert(err.response?.data?.error || "Failed to upload media deliverable.");
+      notify(err.response?.data?.error || "Failed to upload media deliverable.");
       return null;
     }
   };
 
   const handlePublishNow = async (post) => {
-    if (!confirm(`Are you sure you want to publish "${post.title || 'this post'}" immediately across platforms?`)) {
+    if (!await askConfirm(`Are you sure you want to publish "${post.title || 'this post'}" immediately across platforms?`)) {
       return;
     }
     try {
       await axios.post(`${API_BASE_URL}/social/posts/${post.id}/publish_now/`);
       onRefresh();
     } catch (err) {
-      alert("Error publishing post.");
+      notify("Error publishing post.");
     }
   };
 
@@ -924,7 +925,7 @@ export default function WorkflowPipelineTab({
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(editMediaUrl);
-                              alert("Asset link copied to clipboard!");
+                              notify("Asset link copied to clipboard!");
                             }}
                             style={{
                               padding: "5px 9px",

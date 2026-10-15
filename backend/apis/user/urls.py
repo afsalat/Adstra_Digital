@@ -13,4 +13,10 @@ urlpatterns = [
     path('work_report/<int:user_id>/', views.update_work_report, name="work_report"),
     path('reset-password/<int:user_id>/', views.reset_password, name="reset_password"),
     path('role-permissions/', views.role_permissions, name="role_permissions"),
+
+    # Meta (Facebook) OAuth User Authentication
+    path('auth/meta/url/', views.meta_oauth_url_view, name="meta_oauth_login_url"),
+    path('auth/meta/login/', views.meta_oauth_login_view, name="meta_oauth_login"),
+    path('auth/meta/callback/', views.meta_oauth_callback_view, name="meta_oauth_callback"),
+    path('auth/meta/callback', views.meta_oauth_callback_view, name="meta_oauth_callback_noslash"),
 ]

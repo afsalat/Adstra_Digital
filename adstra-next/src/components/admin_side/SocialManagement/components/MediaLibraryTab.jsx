@@ -34,6 +34,7 @@ import {
   AlertCircle,
   Pencil,
 } from "lucide-react";
+import { notify, askConfirm } from "./SocialFeedback";
 
 export default function MediaLibraryTab({
   mediaAssets = [],
@@ -223,7 +224,7 @@ export default function MediaLibraryTab({
   // Delete asset
   const handleDeleteAsset = async (assetId, e) => {
     e?.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this asset from the library?")) {
+    if (!await askConfirm("Are you sure you want to delete this asset from the library?")) {
       return;
     }
 
@@ -235,7 +236,7 @@ export default function MediaLibraryTab({
       }
       onRefresh?.();
     } catch (err) {
-      alert("Failed to delete asset: " + (err.response?.data?.detail || err.message));
+      notify("Failed to delete asset: " + (err.response?.data?.detail || err.message));
     } finally {
       setDeletingId(null);
     }
@@ -1221,7 +1222,7 @@ export default function MediaLibraryTab({
                       {asset.file_format || "PNG"} • {formatBytes(asset.file_size_bytes)}
                     </td>
                     <td style={{ padding: "10px 16px", fontSize: "0.78rem", color: "#64748b" }}>
-                      {asset.created_at ? new Date(asset.created_at).toLocaleDateString() : "—"}
+                      {asset.created_at ? new Date(asset.created_at).toLocaleDateString("en-IN") : "—"}
                     </td>
                     <td style={{ padding: "10px 16px", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: 5 }}>

@@ -16,46 +16,46 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddConstraint(
             model_name='lead',
-            constraint=models.CheckConstraint(condition=models.Q(('lead_score__gte', 0), ('lead_score__lte', 100)), name='lead_score_between_0_100'),
+            constraint=models.CheckConstraint(check=models.Q(('lead_score__gte', 0), ('lead_score__lte', 100)), name='lead_score_between_0_100'),
         ),
         migrations.AddConstraint(
             model_name='lead',
-            constraint=models.CheckConstraint(condition=models.Q(('conversion_probability__gte', 0), ('conversion_probability__lte', 100)), name='lead_probability_0_100'),
+            constraint=models.CheckConstraint(check=models.Q(('conversion_probability__gte', 0), ('conversion_probability__lte', 100)), name='lead_probability_0_100'),
         ),
         migrations.AddConstraint(
             model_name='lead',
-            constraint=models.CheckConstraint(condition=models.Q(('estimated_value__isnull', True), ('estimated_value__gte', 0), _connector='OR'), name='lead_estimated_value_nonnegative'),
+            constraint=models.CheckConstraint(check=models.Q(('estimated_value__isnull', True), ('estimated_value__gte', 0), _connector='OR'), name='lead_estimated_value_nonnegative'),
         ),
         migrations.AddConstraint(
             model_name='leadcall',
-            constraint=models.CheckConstraint(condition=models.Q(('ended_at__isnull', True), ('ended_at__gte', models.F('started_at')), _connector='OR'), name='lead_call_end_after_start'),
+            constraint=models.CheckConstraint(check=models.Q(('ended_at__isnull', True), ('ended_at__gte', models.F('started_at')), _connector='OR'), name='lead_call_end_after_start'),
         ),
         migrations.AddConstraint(
             model_name='leadconversion',
-            constraint=models.CheckConstraint(condition=models.Q(('final_value__gte', 0), ('discount__gte', 0)), name='lead_conversion_values_nonnegative'),
+            constraint=models.CheckConstraint(check=models.Q(('final_value__gte', 0), ('discount__gte', 0)), name='lead_conversion_values_nonnegative'),
         ),
         migrations.AddConstraint(
             model_name='leadcostestimate',
-            constraint=models.CheckConstraint(condition=models.Q(('development_cost__gte', 0), ('product_cost__gte', 0), ('infrastructure_cost__gte', 0), ('implementation_cost__gte', 0), ('support_cost__gte', 0), ('tax__gte', 0), ('discount__gte', 0), ('internal_margin__gte', 0), ('final_amount__gte', 0)), name='lead_estimate_amounts_nonnegative'),
+            constraint=models.CheckConstraint(check=models.Q(('development_cost__gte', 0), ('product_cost__gte', 0), ('infrastructure_cost__gte', 0), ('implementation_cost__gte', 0), ('support_cost__gte', 0), ('tax__gte', 0), ('discount__gte', 0), ('internal_margin__gte', 0), ('final_amount__gte', 0)), name='lead_estimate_amounts_nonnegative'),
         ),
         migrations.AddConstraint(
             model_name='leadmeeting',
-            constraint=models.CheckConstraint(condition=models.Q(('scheduled_end__gt', models.F('scheduled_start'))), name='lead_meeting_end_after_start'),
+            constraint=models.CheckConstraint(check=models.Q(('scheduled_end__gt', models.F('scheduled_start'))), name='lead_meeting_end_after_start'),
         ),
         migrations.AddConstraint(
             model_name='leadtask',
-            constraint=models.CheckConstraint(condition=models.Q(('start_at__isnull', True), ('due_at__isnull', True), ('due_at__gte', models.F('start_at')), _connector='OR'), name='lead_task_due_after_start'),
+            constraint=models.CheckConstraint(check=models.Q(('start_at__isnull', True), ('due_at__isnull', True), ('due_at__gte', models.F('start_at')), _connector='OR'), name='lead_task_due_after_start'),
         ),
         migrations.AddConstraint(
             model_name='productdemo',
-            constraint=models.CheckConstraint(condition=models.Q(('trial_start__isnull', True), ('trial_end__isnull', True), ('trial_end__gte', models.F('trial_start')), _connector='OR'), name='lead_demo_trial_dates_valid'),
+            constraint=models.CheckConstraint(check=models.Q(('trial_start__isnull', True), ('trial_end__isnull', True), ('trial_end__gte', models.F('trial_start')), _connector='OR'), name='lead_demo_trial_dates_valid'),
         ),
         migrations.AddConstraint(
             model_name='servicerequirement',
-            constraint=models.CheckConstraint(condition=models.Q(('estimated_budget__isnull', True), ('estimated_budget__gte', 0), _connector='OR'), name='lead_requirement_budget_nonnegative'),
+            constraint=models.CheckConstraint(check=models.Q(('estimated_budget__isnull', True), ('estimated_budget__gte', 0), _connector='OR'), name='lead_requirement_budget_nonnegative'),
         ),
         migrations.AddConstraint(
             model_name='servicerequirement',
-            constraint=models.CheckConstraint(condition=models.Q(('expected_start_date__isnull', True), ('expected_completion_date__isnull', True), ('expected_completion_date__gte', models.F('expected_start_date')), _connector='OR'), name='lead_requirement_dates_valid'),
+            constraint=models.CheckConstraint(check=models.Q(('expected_start_date__isnull', True), ('expected_completion_date__isnull', True), ('expected_completion_date__gte', models.F('expected_start_date')), _connector='OR'), name='lead_requirement_dates_valid'),
         ),
     ]

@@ -50,13 +50,17 @@ def convert_inbox_to_crm_lead(inbox_message, user=None, custom_data=None):
     return lead
 
 
-def record_approval_action(post, action, actor_name, actor_role='Team', notes=''):
+def record_approval_action(post, action, actor_name, actor_role='Team', notes='', **extra):
+    """Append an audit event. `extra` may carry event_type, from_stage, to_stage,
+    reason_categories, severity and revision_round for revision/rejection reporting."""
+    allowed = {'event_type', 'from_stage', 'to_stage', 'reason_categories', 'severity', 'revision_round'}
     PostApprovalHistory.objects.create(
         post=post,
         action=action,
         actor_name=actor_name,
         actor_role=actor_role,
         notes=notes,
+        **{k: v for k, v in extra.items() if k in allowed and v is not None},
     )
 
 

@@ -34,7 +34,7 @@ urlpatterns = [
     path('leads/', include(('apis.leads.urls', 'leads'), namespace='leads_compat')),
     path('chat/', include('apis.chat.urls')),
     path('social/', include('apis.social.urls')),
-    path('', include('apis.leads.root_urls')),
+    path('', include(('apis.leads.root_urls', 'lead_management_root'), namespace='lead_management_root_compat')),
 
     # API-prefixed paths for frontend /api compatibility
     path('api/user/', include('apis.user.urls')),
@@ -47,12 +47,29 @@ urlpatterns = [
     path('api/leads/', include(('apis.leads.urls', 'leads'), namespace='leads')),
     path('api/chat/', include('apis.chat.urls')),
     path('api/social/', include('apis.social.urls')),
-    path('api/', include('apis.leads.root_urls')),
+    path('api/', include(('apis.leads.root_urls', 'lead_management_root'), namespace='lead_management_root')),
 
     path('robots.txt', robots_txt, name='robots_txt'),
 ]
 
 
+def serve_media(request, path, **kwargs):
+    from django.views.static import serve as static_serve
+
+    primary_root = settings.MEDIA_ROOT
+    if os.path.exists(os.path.join(primary_root, path)):
+        return static_serve(request, path, document_root=primary_root, **kwargs)
+
+    frontend_media_root = os.path.join(settings.BASE_DIR.parent, 'adstra-next', 'public', 'media')
+    if os.path.exists(os.path.join(frontend_media_root, path)):
+        return static_serve(request, path, document_root=frontend_media_root, **kwargs)
+
+    return static_serve(request, path, document_root=primary_root, **kwargs)
+
+
 # Serve media files in development and cPanel hosting
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    from django.urls import re_path
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve_media),
+    ]

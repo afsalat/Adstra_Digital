@@ -1,0 +1,1330 @@
+/* ==========================================================================
+   Ad Accounts Section — Pixel-Perfect match to Image 3 and Image 2 Workflow
+   ========================================================================== */
+
+.ad-accounts-main-wrap {
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #0f172a;
+  animation: adFadeIn 0.22s ease-out;
+}
+
+@keyframes adFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Top Header: Title + Subtitle + Buttons
+   -------------------------------------------------------------------------- */
+.ad-accounts-top-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.ad-accounts-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ad-accounts-h1 {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ad-accounts-p {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.ad-accounts-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ad-btn-connect-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+}
+
+.ad-btn-connect-primary:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   Platform Filter Tabs (All Accounts, Meta, Google Ads, LinkedIn Ads)
+   Matching Image 3
+   -------------------------------------------------------------------------- */
+.ad-platform-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.ad-platform-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  white-space: nowrap;
+}
+
+.ad-platform-pill:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.ad-platform-pill.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+}
+
+.ad-pill-icon {
+  flex-shrink: 0;
+}
+
+.ad-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.ad-platform-pill.active .ad-pill-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* --------------------------------------------------------------------------
+   Metric Summary Cards (4 Columns)
+   Total Accounts | Connected | Disconnected | Pending
+   Matching Image 3
+   -------------------------------------------------------------------------- */
+.ad-metrics-cards-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.ad-metric-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.ad-metric-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ad-metric-icon-box.blue-link {
+  background: #eff6ff;
+}
+
+.ad-metric-icon-box.green-dot-box {
+  background: #f0fdf4;
+}
+
+.ad-metric-icon-box.red-dot-box {
+  background: #fef2f2;
+}
+
+.ad-metric-icon-box.yellow-dot-box {
+  background: #fffbeb;
+}
+
+.ad-status-dot-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.ad-status-dot-inner.green {
+  background: #16a34a;
+}
+
+.ad-status-dot-inner.red {
+  background: #ef4444;
+}
+
+.ad-status-dot-inner.yellow {
+  background: #f59e0b;
+}
+
+.ad-metric-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ad-metric-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.ad-metric-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* --------------------------------------------------------------------------
+   Search & Filter Bar
+   Matching Image 3
+   -------------------------------------------------------------------------- */
+.ad-search-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ad-search-box {
+  position: relative;
+  flex: 1;
+  max-width: 100%;
+}
+
+.ad-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.ad-search-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 38px 0 38px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 0.86rem;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.ad-search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ad-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.ad-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.ad-search-clear:hover {
+  color: #0f172a;
+}
+
+.ad-filter-dropdown-wrapper {
+  position: relative;
+}
+
+.ad-btn-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.ad-btn-filter-trigger:hover,
+.ad-btn-filter-trigger.active {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.ad-filter-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 250px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12);
+  padding: 14px;
+  z-index: 50;
+  animation: adFadeIn 0.15s ease-out;
+}
+
+.ad-filter-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ad-filter-reset-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.ad-filter-popover-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.ad-filter-popover-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ad-filter-select {
+  width: 100%;
+  height: 34px;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
+  padding: 0 8px;
+  font-size: 0.83rem;
+  color: #0f172a;
+  outline: none;
+  background: #f8fafc;
+}
+
+/* --------------------------------------------------------------------------
+   Accounts Table Card
+   Matching Image 3
+   -------------------------------------------------------------------------- */
+.ad-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.ad-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ad-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ad-table th {
+  padding: 13px 18px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.ad-table td {
+  padding: 15px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.86rem;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.ad-table tbody tr {
+  transition: background 0.12s ease;
+}
+
+.ad-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.ad-table tbody tr.row-selected {
+  background: #eff6ff;
+}
+
+.ad-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  margin: 0;
+}
+
+.ad-platform-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ad-platform-text {
+  font-weight: 550;
+  color: #0f172a;
+}
+
+.ad-client-text {
+  color: #334155;
+  font-weight: 500;
+}
+
+.ad-acc-name-text {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ad-acc-id-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ad-id-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.83rem;
+  color: #475569;
+  background: #f8fafc;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid #e2e8f0;
+}
+
+.ad-copy-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ad-copy-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Status Pill */
+.ad-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.ad-status-pill.connected {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.ad-status-pill.disconnected {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.ad-status-pill.pending {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #b45309;
+}
+
+.ad-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ad-status-dot.connected {
+  background: #16a34a;
+}
+
+.ad-status-dot.disconnected {
+  background: #ef4444;
+}
+
+.ad-status-dot.pending {
+  background: #f59e0b;
+}
+
+.ad-connected-on-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ad-connected-on-cell .ad-date {
+  font-size: 0.84rem;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.ad-connected-on-cell .ad-time {
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.ad-actions-trigger {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ad-actions-trigger:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ad-actions-popover {
+  position: absolute;
+  right: 18px;
+  top: calc(100% - 4px);
+  width: 145px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.14);
+  padding: 6px;
+  z-index: 50;
+  animation: adFadeIn 0.15s ease-out;
+  text-align: left;
+}
+
+.ad-action-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.12s ease;
+}
+
+.ad-action-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ad-action-item.danger {
+  color: #ef4444;
+}
+
+.ad-action-item.danger:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.ad-empty-cell {
+  text-align: center;
+  padding: 50px 20px !important;
+}
+
+.ad-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #64748b;
+}
+
+.ad-btn-reset-filters {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ad-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ad-footer-text {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.ad-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ad-bulk-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.ad-btn-bulk-disconnect {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.ad-btn-bulk-deselect {
+  background: none;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   IMAGE 2: 5-Step Connect Ad Account Modal
+   -------------------------------------------------------------------------- */
+.ad-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: adFadeIn 0.2s ease-out;
+}
+
+.ad-modal-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 530px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  animation: adScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes adScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ad-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 10;
+}
+
+.ad-modal-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.ad-step-container {
+  padding: 28px 30px;
+}
+
+.ad-modal-header {
+  margin-bottom: 22px;
+}
+
+.ad-modal-title {
+  font-size: 1.28rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+}
+
+.ad-modal-subtitle {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.ad-modal-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ad-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ad-form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.ad-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.ad-form-select {
+  width: 100%;
+  height: 44px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 0 36px 0 14px;
+  font-size: 0.88rem;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 0.15s ease;
+}
+
+.ad-form-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.ad-select-chevron {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+/* Platform Choice Cards (Image 2 - Step 2) */
+.ad-platform-cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.ad-platform-choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px 12px 14px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  position: relative;
+}
+
+.ad-platform-choice-card:hover {
+  border-color: #93c5fd;
+  background: #f8fafc;
+}
+
+.ad-platform-choice-card.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.ad-choice-logo-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+}
+
+.ad-choice-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ad-choice-radio {
+  margin-top: 2px;
+}
+
+.ad-radio-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+}
+
+.ad-radio-circle.checked {
+  border-color: #2563eb;
+  background: #2563eb;
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.ad-modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.ad-btn-primary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.ad-btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.ad-btn-secondary {
+  height: 44px;
+  padding: 0 20px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-weight: 550;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.ad-btn-secondary:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* --------------------------------------------------------------------------
+   Step 3: Authorize Screen (Image 2 - Step 3)
+   -------------------------------------------------------------------------- */
+.ad-modal-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.ad-modal-back-btn:hover {
+  color: #0f172a;
+}
+
+.ad-auth-screen-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px 10px 14px;
+}
+
+.ad-auth-logo-large {
+  margin-bottom: 18px;
+}
+
+.ad-auth-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.ad-auth-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  max-width: 380px;
+  margin: 0 0 26px 0;
+  line-height: 1.5;
+}
+
+.ad-btn-oauth-continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+  height: 46px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+}
+
+.ad-btn-oauth-continue:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.ad-btn-oauth-continue:disabled {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.ad-spin-icon {
+  animation: adSpin 0.9s linear infinite;
+}
+
+@keyframes adSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ad-auth-secure-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.77rem;
+  color: #64748b;
+  margin-top: 18px;
+}
+
+/* --------------------------------------------------------------------------
+   Step 4: Select Ad Account (Image 2 - Step 4)
+   -------------------------------------------------------------------------- */
+.ad-step4-subbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+}
+
+.ad-step4-platform-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ad-step4-search {
+  position: relative;
+  width: 180px;
+}
+
+.ad-step4-search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.ad-step4-search input {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px 0 28px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.ad-fetched-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.ad-fetched-acc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.ad-fetched-acc-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.ad-fetched-acc-item.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.ad-fetched-acc-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-fetched-acc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ad-fetched-acc-name {
+  font-size: 0.86rem;
+  color: #0f172a;
+}
+
+.ad-fetched-acc-id {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.ad-fetched-acc-tag {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.ad-fetched-acc-item.selected .ad-fetched-acc-tag {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* --------------------------------------------------------------------------
+   Step 5: Account Connected Success (Image 2 - Step 5)
+   -------------------------------------------------------------------------- */
+.ad-success-screen-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ad-success-check-icon {
+  margin-bottom: 14px;
+}
+
+.ad-success-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.ad-success-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 20px 0;
+}
+
+.ad-success-details-card {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.ad-success-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 0.84rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ad-success-detail-row:last-child {
+  border-bottom: none;
+}
+
+.ad-success-detail-row .label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.ad-success-detail-row .val {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.ad-success-detail-row .val.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.ad-success-detail-row .platform-val {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ad-btn-done {
+  width: 100%;
+  height: 44px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.ad-btn-done:hover {
+  background: #1d4ed8;
+}
+
+.ad-success-bottom-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.77rem;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-top: 14px;
+  text-align: left;
+}
+
+/* --------------------------------------------------------------------------
+   Toast Notification
+   -------------------------------------------------------------------------- */
+.ad-toast-notice {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 12px 18px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  font-size: 0.85rem;
+  font-weight: 500;
+  z-index: 2000;
+  animation: adToastSlideIn 0.22s ease-out;
+}
+
+@keyframes adToastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Breakpoints
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .ad-metrics-cards-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ad-how-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .ad-accounts-top-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ad-metrics-cards-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ad-platform-cards-row {
+    grid-template-columns: 1fr;
+  }
+}

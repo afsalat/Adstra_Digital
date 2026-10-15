@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { XIcon, GoogleIcon, TikTokIcon, renderPlatformIcon } from "./PlatformIcons";
 import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
+import { notify } from "./SocialFeedback";
 
 const ALL_PLATFORMS = [
   { id: "instagram", label: "Instagram", color: "#e1306c", icon: <Instagram size={14} /> },
@@ -1327,7 +1328,7 @@ export default function CreatePostModal({
 
   const handleSubmit = async () => {
     if (!primaryCaption.trim() && !title.trim() && !scriptNotes.trim()) {
-      alert("Please write a post caption, title, or script outline.");
+      notify("Please write a post caption, title, or script outline.");
       return;
     }
 
@@ -1411,7 +1412,7 @@ export default function CreatePostModal({
       onSuccess();
       onClose();
     } catch (err) {
-      alert(err.response?.data?.error || "Error saving post. Please verify all fields.");
+      notify(err.response?.data?.error || "Error saving post. Please verify all fields.");
     } finally {
       setSubmitting(false);
     }
@@ -1645,7 +1646,7 @@ export default function CreatePostModal({
                       type="button"
                       onClick={() => {
                         if (isTextModeMediaDisabled && !active) {
-                          alert(`${p.label} requires an image or video to publish. Switch Post Format to Single Image or Reel to publish to ${p.label}.`);
+                          notify(`${p.label} requires an image or video to publish. Switch Post Format to Single Image or Reel to publish to ${p.label}.`);
                         }
                         togglePlatform(p.id);
                       }}
@@ -1732,7 +1733,7 @@ export default function CreatePostModal({
                       type="button"
                       onClick={() => {
                         if (isTextModeMediaDisabled && !active) {
-                          alert(`TikTok requires a video to publish. Switch Post Format to Reel / Short Video to publish to TikTok.`);
+                          notify(`TikTok requires a video to publish. Switch Post Format to Reel / Short Video to publish to TikTok.`);
                         }
                         togglePlatform(p.id);
                       }}

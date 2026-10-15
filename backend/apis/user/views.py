@@ -422,3 +422,221 @@ def role_permissions(request):
         "roles": ROLE_PERMISSIONS,
         "permissions": PERMISSIONS,
     }, status=status.HTTP_200_OK)
+
+
+# ─── Meta OAuth User Authentication Endpoints ─────────────────────────────────
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def meta_oauth_url_view(request):
+    """
+    Generate and return the Meta OAuth login dialog URL for user login.
+    Uses META_APP_ID from .env.
+    """
+    import urllib.parse
+    from .meta_auth import get_meta_login_url, get_meta_auth_config
+
+    redirect_uri = request.query_params.get('redirect_uri', '').strip()
+    state = request.query_params.get('state', 'meta_user_login').strip()
+    app_id, app_secret, default_redirect = get_meta_auth_config()
+    oauth_url = get_meta_login_url(redirect_uri=redirect_uri or None, state=state)
+
+    return Response({
+        "oauth_url": oauth_url,
+        "client_id": app_id,
+        "redirect_uri": redirect_uri or default_redirect,
+        "configured": bool(app_id and app_secret and app_id != 'YOUR_META_APP_ID')
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
+def meta_oauth_login_view(request):
+    """
+    Authenticate or register a user using Meta OAuth credentials.
+    Accepts authorization code (to exchange via META_APP_ID & META_APP_SECRET)
+    or direct access_token. Returns JWT authentication token and user data.
+    """
+    from .meta_auth import (
+        exchange_code_for_user_token,
+        fetch_meta_user_profile,
+        authenticate_or_register_meta_user
+    )
+
+    code = request.data.get('code', '').strip()
+    access_token = request.data.get('access_token', '').strip()
+    redirect_uri = request.data.get('redirect_uri', '').strip()
+    location = request.data.get('location', '')
+
+    if not code and not access_token:
+        return Response({"error": "Either authorization code or access_token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        if not access_token:
+            token_data = exchange_code_for_user_token(code, redirect_uri=redirect_uri or None)
+            access_token = token_data.get('access_token', '')
+
+        meta_profile = fetch_meta_user_profile(access_token)
+        user, jwt_token, checkin_status = authenticate_or_register_meta_user(
+            meta_profile, location=location, request=request
+        )
+
+        return Response({
+            "message": f"Login successful, {checkin_status}",
+            "token": jwt_token,
+            "user": UserSerializer(user).data,
+            "meta_profile": {
+                "id": meta_profile.get("id"),
+                "name": meta_profile.get("name"),
+                "email": meta_profile.get("email"),
+            }
+        }, status=status.HTTP_200_OK)
+
+    except PermissionError as pe:
+        return Response({"error": str(pe)}, status=status.HTTP_403_FORBIDDEN)
+    except Exception as e:
+        logger.exception("Meta OAuth login failed")
+        return Response({"error": f"Meta login failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def meta_oauth_callback_view(request):
+    """
+    Handles Meta OAuth browser redirect callback.
+    Supports both browser GET redirection (storing token and navigating to dashboard)
+    and programmatic JSON requests.
+    """
+    import json
+    import os
+    import urllib.parse
+    from django.http import HttpResponse, HttpResponseRedirect
+    from django.utils.html import escape
+    from .meta_auth import (
+        exchange_code_for_user_token,
+        fetch_meta_user_profile,
+        authenticate_or_register_meta_user
+    )
+
+    code = request.query_params.get('code') or request.data.get('code')
+    error = request.query_params.get('error') or request.query_params.get('error_description')
+    location = request.data.get('location', '')
+
+    frontend_url = (
+        os.environ.get('FRONTEND_URL')
+        or os.environ.get('NEXT_PUBLIC_SITE_URL')
+        or ('http://localhost:3000' if settings.DEBUG else 'https://adstradigital.com')
+    ).rstrip('/')
+
+    accept_header = request.headers.get('Accept', '')
+    wants_json = (
+        request.method == 'POST'
+        or request.query_params.get('format') == 'json'
+        or (accept_header.startswith('application/json') and 'text/html' not in accept_header)
+    )
+
+    if error:
+        if wants_json:
+            return Response({"error": f"Meta authorization denied: {error}"}, status=status.HTTP_400_BAD_REQUEST)
+        return HttpResponseRedirect(f"{frontend_url}/admin/login?error={urllib.parse.quote(str(error))}")
+
+    if not code:
+        if wants_json:
+            return Response({"error": "Missing authorization code from Meta."}, status=status.HTTP_400_BAD_REQUEST)
+        return HttpResponseRedirect(f"{frontend_url}/admin/login?error=missing_code")
+
+    try:
+        token_data = exchange_code_for_user_token(code)
+        access_token = token_data.get('access_token', '')
+        meta_profile = fetch_meta_user_profile(access_token)
+        user, jwt_token, checkin_status = authenticate_or_register_meta_user(
+            meta_profile, location=location, request=request
+        )
+        user_data = UserSerializer(user).data
+
+        if wants_json:
+            return Response({
+                "message": f"Login successful, {checkin_status}",
+                "token": jwt_token,
+                "user": user_data,
+                "meta_profile": meta_profile
+            }, status=status.HTTP_200_OK)
+
+        # HTML Bridge for browser redirect
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Adstra Digital - Authenticating with Meta</title>
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      color: #0f172a;
+    }}
+    .card {{
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+      padding: 36px 44px;
+      text-align: center;
+      max-width: 440px;
+    }}
+    .spinner {{
+      width: 44px;
+      height: 44px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #1877f2;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }}
+    @keyframes spin {{
+      to {{ transform: rotate(360deg); }}
+    }}
+    h2 {{ margin: 0 0 10px; font-size: 1.25rem; font-weight: 700; }}
+    p {{ margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.5; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <h2>Signed in with Meta</h2>
+    <p>Welcome back, <strong>{escape(user.fullname or user.username)}</strong>.<br>Redirecting you to the dashboard...</p>
+  </div>
+  <script>
+    const token = "{jwt_token}";
+    const user = {json.dumps(user_data)};
+    try {{
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+    }} catch(e) {{}}
+
+    if (window.opener) {{
+      window.opener.postMessage({{
+        type: 'META_AUTH_SUCCESS',
+        token: token,
+        user: user
+      }}, '*');
+      setTimeout(() => window.close(), 600);
+    }} else {{
+      setTimeout(() => {{
+        window.location.href = "{frontend_url}/admindashboard";
+      }}, 600);
+    }}
+  </script>
+</body>
+</html>"""
+        return HttpResponse(html_content, content_type="text/html")
+
+    except Exception as e:
+        logger.exception("Meta OAuth callback processing failed")
+        if wants_json:
+            return Response({"error": f"Authentication failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return HttpResponseRedirect(f"{frontend_url}/admin/login?error={urllib.parse.quote(str(e))}")

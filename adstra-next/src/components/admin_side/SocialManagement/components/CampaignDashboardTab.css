@@ -1,0 +1,558 @@
+/* ==========================================================================
+   Campaign Performance Dashboard Styles
+   Matches Image 1: Clean, spacious, premium SaaS blue-white visual aesthetic
+   ========================================================================== */
+
+.cd-root {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+}
+
+/* Header Area */
+.cd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 4px 0 8px 0;
+}
+
+.cd-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cd-title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.cd-subtitle {
+  font-size: 0.92rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* KPI Card Grid */
+
+/* KPI Card Grid */
+.cd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1380px) {
+  .cd-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .cd-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .cd-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Individual KPI Card */
+.cd-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cd-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  border-color: #cbd5e1;
+}
+
+.cd-kpi-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cd-kpi-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cd-kpi-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: -0.01em;
+}
+
+.cd-kpi-value {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.cd-kpi-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.cd-kpi-trend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.cd-kpi-trend.down {
+  color: #ef4444;
+}
+
+.cd-kpi-compare {
+  color: #94a3b8;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Main Dashboard Body: Left & Right Columns */
+.cd-main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.15fr;
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 1120px) {
+  .cd-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Generic Section Card */
+.cd-card {
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Performance Trend Card */
+.cd-trend-card {
+  min-height: 440px;
+}
+
+.cd-trend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.cd-card-title {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* Metric Switcher Pills */
+.cd-metric-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.cd-metric-pill {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.cd-metric-pill:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.cd-metric-pill.active {
+  background: #ffffff;
+  border-color: #3b82f6;
+  color: #2563eb;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.12);
+}
+
+/* Chart Canvas Container */
+.cd-chart-wrap {
+  width: 100%;
+  height: 320px;
+  position: relative;
+}
+
+/* Custom Chart Legend below chart */
+.cd-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 14px;
+  padding-top: 10px;
+}
+
+.cd-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.18s ease;
+}
+
+.cd-legend-item:hover {
+  opacity: 0.8;
+}
+
+.cd-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Custom Chart Tooltip */
+.cd-tooltip {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.8rem;
+  min-width: 160px;
+}
+
+.cd-tooltip-title {
+  font-weight: 700;
+  color: #0f172a;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+.cd-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cd-tooltip-platform {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.cd-tooltip-val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Right Column: Stacked Cards */
+.cd-side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Platform Performance Card */
+.cd-platform-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cd-platform-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .cd-platform-body {
+    flex-direction: column;
+  }
+}
+
+.cd-donut-wrap {
+  width: 170px;
+  height: 170px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cd-donut-center {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+
+.cd-donut-center-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.cd-donut-center-lbl {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+/* Platform Breakdown List */
+.cd-platform-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.cd-platform-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cd-platform-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cd-platform-icon-pill {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cd-platform-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.cd-platform-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cd-platform-amount {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cd-platform-share {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #64748b;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* Top Performing Campaign Card */
+.cd-top-campaign-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cd-top-campaign-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #edf2f7;
+  border-radius: 14px;
+  gap: 14px;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.cd-top-campaign-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.cd-top-campaign-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cd-top-campaign-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+}
+
+.cd-top-campaign-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cd-top-campaign-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cd-top-campaign-tag {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd-top-campaign-stats {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.cd-top-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.cd-top-stat-val {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cd-top-stat-lbl {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: capitalize;
+}
+
+.cd-top-campaign-arrow {
+  color: #94a3b8;
+  transition: transform 0.18s ease, color 0.18s ease;
+  flex-shrink: 0;
+}
+
+.cd-top-campaign-item:hover .cd-top-campaign-arrow {
+  transform: translateX(3px);
+  color: #2563eb;
+}
+
+/* Live Data Notice Banner (Subtle and sleek) */
+.cd-notice-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  color: #166534;
+}
+
+.cd-notice-banner.demo {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}

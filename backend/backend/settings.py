@@ -3,10 +3,10 @@ import os
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
-# Load environment variables
-load_dotenv(override=True)
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables
+load_dotenv(BASE_DIR / '.env', override=True)
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
@@ -170,3 +170,17 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Razorpay Configuration
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')
+
+# Meta / Facebook OAuth Configuration
+META_APP_ID = os.getenv('META_APP_ID', '').strip()
+META_APP_SECRET = os.getenv('META_APP_SECRET', '').strip()
+META_AD_ACCOUNT_ID = os.getenv('META_AD_ACCOUNT_ID', '').strip()
+META_ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '').strip()
+META_REDIRECT_URI = os.getenv(
+    'META_REDIRECT_URI',
+    'http://localhost:8000/api/social/platform-connections/meta/callback/'
+).strip()
+META_AUTH_REDIRECT_URI = os.getenv(
+    'META_AUTH_REDIRECT_URI',
+    'http://localhost:8000/api/user/auth/meta/callback/'
+).strip()

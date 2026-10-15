@@ -21,6 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { notify } from "./SocialFeedback";
 
 export default function SocialInboxTab({
   inboxMessages = [],
@@ -61,7 +62,7 @@ export default function SocialInboxTab({
       setReplyText("");
       onRefresh();
     } catch (err) {
-      alert("Error sending reply.");
+      notify("Error sending reply.");
     } finally {
       setSubmittingReply(false);
     }
@@ -90,7 +91,7 @@ export default function SocialInboxTab({
       setSelectedMsg(res.data.inbox_message);
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Error converting conversation into CRM lead.");
+      notify(err.response?.data?.error || "Error converting conversation into CRM lead.");
     } finally {
       setConverting(false);
     }

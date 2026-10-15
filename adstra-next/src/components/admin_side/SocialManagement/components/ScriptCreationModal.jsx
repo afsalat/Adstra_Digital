@@ -37,6 +37,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import ClientCompanySearchSelect from "./ClientCompanySearchSelect";
+import { notify } from "./SocialFeedback";
 
 export default function ScriptCreationModal({
   isOpen,
@@ -449,7 +450,7 @@ export default function ScriptCreationModal({
 
   const handleSubmit = async (targetStatus = "script") => {
     if (!title.trim() && !headline.trim() && !description.trim()) {
-      alert("Please provide at least a Title, Headline, or Description for the script.");
+      notify("Please provide at least a Title, Headline, or Description for the script.");
       return;
     }
 
@@ -582,6 +583,8 @@ export default function ScriptCreationModal({
           ? "image"
           : format === "carousel"
           ? "carousel"
+          : initialData?.post_type === "video"
+          ? "video"
           : "reel",
       primary_caption: description,
       hashtags,
@@ -593,7 +596,8 @@ export default function ScriptCreationModal({
       script_data: scriptData,
       status: targetStatus, // 'script' (Draft) or 'script_approval' (Review)
       priority,
-      platforms: ["instagram", "facebook", "linkedin"],
+      // Keep the channels a post already has (e.g. set by the content plan)
+      platforms: initialData?.platforms?.length ? initialData.platforms : ["instagram", "facebook", "linkedin"],
       actor_name: actorName,
       actor_role: actorRole,
       update_reason: reworkNotes.trim() || undefined,
@@ -613,7 +617,7 @@ export default function ScriptCreationModal({
       if (onSuccess) onSuccess(targetStatus);
       onClose();
     } catch (err) {
-      alert(err.response?.data?.error || "Error saving script. Please check all required fields.");
+      notify(err.response?.data?.error || "Error saving script. Please check all required fields.");
     } finally {
       setSubmitting(false);
     }

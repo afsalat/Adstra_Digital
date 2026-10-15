@@ -23,6 +23,7 @@ import {
   Folder,
   Check,
 } from "lucide-react";
+import { notify } from "./SocialFeedback";
 
 export default function ScriptViewModal({
   isOpen,
@@ -86,7 +87,7 @@ export default function ScriptViewModal({
       }
       onClose();
     } catch (err) {
-      alert("Failed to submit rejection.");
+      notify("Failed to submit rejection.");
     } finally {
       setSubmittingAction(false);
     }
@@ -100,7 +101,7 @@ export default function ScriptViewModal({
       }
       onClose();
     } catch (err) {
-      alert("Failed to approve script.");
+      notify("Failed to approve script.");
     } finally {
       setSubmittingAction(false);
     }
