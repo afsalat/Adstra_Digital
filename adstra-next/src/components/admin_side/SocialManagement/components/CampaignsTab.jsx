@@ -2,6 +2,7 @@
 
 // Meta Ads Manager Campaigns Tab (Production Ready)
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import {
@@ -15,7 +16,7 @@ import ReviewAndPublishModal from "./ReviewAndPublishModal";
 import MetaCreateViewDrawer from "./MetaCreateViewDrawer";
 import MetaFiltersPanel from "./MetaFiltersPanel";
 import MetaABTestModal from "./MetaABTestModal";
-import MetaAdsManagerAdsSection, { EXACT_META_13_ADS, MetaRulesIcon } from "./MetaAdsManagerAdsSection";
+import MetaAdsManagerAdsSection, { MetaRulesIcon } from "./MetaAdsManagerAdsSection";
 import {
   LayoutGrid,
   Search,
@@ -55,6 +56,13 @@ import {
   Loader2,
   Pin,
   Clock,
+  Sparkles,
+  Megaphone,
+  MessageCircle,
+  Filter,
+  Users,
+  ShoppingBag,
+  Settings,
 } from "lucide-react";
 
 // Official Brand Radio Platforms
@@ -530,560 +538,10 @@ const MetaTelescopeEmptyIllustration = () => (
   </svg>
 );
 
-// Complete 19-Column Ads Dataset Matching Images 1, 2, 3
-const INITIAL_ADS = [
-  {
-    id: "ad-1",
-    name: "Tailored messages campaign 08/10/2026 ...",
-    thumb: null,
-    delivery: "In draft",
-    actions: "—",
-    attribution: "—",
-    results: "—",
-    costPerResult: "—",
-    budget: "₹800.00",
-    budgetSub: "Daily",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    ends: "Ongoing",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Messages",
-    lastSignificantEdit: "—",
-    qualityRanking: "—",
-    engagementRanking: "—",
-    conversionRanking: "—",
-    adsetName: "Tailored messages ad set",
-    activeAdsCount: "0 active ads",
-    active: true,
-  },
-  {
-    id: "ad-2",
-    name: "New Leads ad",
-    thumb: null,
-    delivery: "In draft",
-    actions: "—",
-    results: "—",
-    costPerResult: "—",
-    budget: "Using campaign...",
-    budgetSub: "",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    ends: "Ongoing",
-    attribution: "—",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Leads",
-    lastSignificantEdit: "—",
-    qualityRanking: "—",
-    engagementRanking: "—",
-    conversionRanking: "—",
-    adsetName: "New Leads ad set",
-    activeAdsCount: "0 active ads",
-    active: true,
-  },
-  {
-    id: "ad-3",
-    name: "Summer Growth Leads Ad - Video",
-    thumb: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&auto=format&fit=crop&q=80",
-    delivery: "Active",
-    actions: "—",
-    results: "48",
-    costPerResult: "₹42.10",
-    budget: "Using campaign...",
-    budgetSub: "",
-    amountSpent: "₹2,020.80",
-    impressions: "34,200",
-    reach: "26,100",
-    ends: "Ongoing",
-    attribution: "7-day click",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Leads",
-    lastSignificantEdit: "Just now",
-    qualityRanking: "Average",
-    engagementRanking: "Above average",
-    conversionRanking: "Average",
-    adsetName: "Summer Leads Ad Set",
-    activeAdsCount: "1 active ad",
-    active: true,
-  },
-  {
-    id: "ad-4",
-    name: "Catalog Carousel Ad - Multi-product",
-    thumb: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&auto=format&fit=crop&q=80",
-    delivery: "Active",
-    actions: "1 recommendation",
-    hasRecommendations: true,
-    points: "+3 pts",
-    potentialOutcome: "Lower cost per result",
-    actionTitle: "Turn on Advantage+ creative",
-    results: "19",
-    costPerResult: "₹88.40",
-    budget: "Using campaign...",
-    budgetSub: "",
-    amountSpent: "₹1,679.60",
-    impressions: "18,450",
-    reach: "14,800",
-    ends: "Ongoing",
-    attribution: "7-day click or 1-day view",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Sales",
-    lastSignificantEdit: "Just now",
-    qualityRanking: "Above average",
-    engagementRanking: "Above average",
-    conversionRanking: "Above average",
-    adsetName: "Catalog Sales Ad Set",
-    activeAdsCount: "1 active ad",
-    active: true,
-  },
-  {
-    id: "ad-5",
-    name: "New App promotion Ad",
-    thumb: null,
-    delivery: "In draft",
-    actions: "—",
-    results: "—",
-    costPerResult: "—",
-    budget: "Using campaign...",
-    budgetSub: "",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    ends: "Ongoing",
-    attribution: "—",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "App installs",
-    lastSignificantEdit: "—",
-    qualityRanking: "—",
-    engagementRanking: "—",
-    conversionRanking: "—",
-    adsetName: "New App promotion Ad set",
-    activeAdsCount: "0 active ads",
-    active: false,
-  },
-  {
-    id: "ad-6",
-    name: "New Engagement ad",
-    thumb: null,
-    delivery: "In draft",
-    actions: "—",
-    results: "—",
-    costPerResult: "—",
-    budget: "Using campaign...",
-    budgetSub: "",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    ends: "Ongoing",
-    attribution: "—",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Conversations",
-    lastSignificantEdit: "—",
-    qualityRanking: "—",
-    engagementRanking: "—",
-    conversionRanking: "—",
-    adsetName: "New Engagement ad set",
-    activeAdsCount: "0 active ads",
-    active: true,
-  },
-];
-
-// Ad Sets Dataset Matching Structure (Images 2, 3, 4 Meta Ads Manager)
-const INITIAL_ADSETS = [
-  {
-    id: "as-1",
-    name: "New Awareness ad set",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Daily unique reach",
-    budget: "₹200.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "10 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "—",
-    lastSignificantEdit: "—",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-2",
-    name: "Test - CMS 9/7/2026",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Profile visit",
-    budget: "Using campaign...",
-    budgetSub: "",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "—",
-    lastSignificantEdit: "—",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-3",
-    name: "New Awareness ad set",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Daily unique reach",
-    budget: "₹1,000.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "—",
-    lastSignificantEdit: "—",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-4",
-    name: "Traffic campaign for Instagram advertisers 08/10/2026 Ad set",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Link clicks",
-    budget: "₹1,000.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "—",
-    lastSignificantEdit: "—",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-5",
-    name: "Tailored messages campaign 08/10/2026 Ad set",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Conversations",
-    budget: "₹800.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "—",
-    lastSignificantEdit: "—",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-6",
-    name: "Traffic campaign for Instagram advertisers 08/10/2026 Ad set",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Link clicks",
-    budget: "₹1,000.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "—",
-    lastSignificantEdit: "—",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-7",
-    name: "Instagram Advertisers Ad Set",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Traffic",
-    budget: "Using campaign...",
-    budgetSub: "",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "7-day click",
-    lastSignificantEdit: "—",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-8",
-    name: "Summer Leads Ad Set",
-    delivery: "Active",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Leads",
-    budget: "Using campaign...",
-    budgetSub: "",
-    results: "48",
-    costPerResult: "₹42.10",
-    amountSpent: "₹2,020.80",
-    impressions: "34,200",
-    reach: "26,100",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "7-day click",
-    lastSignificantEdit: "Just now",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "as-9",
-    name: "Catalog Sales Ad Set",
-    delivery: "Active",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Sales",
-    budget: "Using campaign...",
-    budgetSub: "",
-    results: "19",
-    costPerResult: "₹88.40",
-    amountSpent: "₹1,679.60",
-    impressions: "18,450",
-    reach: "14,800",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "7-day click or 1-day view",
-    lastSignificantEdit: "Just now",
-    active: true,
-    actions: "1 recommendation",
-    hasRecommendations: true,
-    points: "+3 pts",
-    potentialOutcome: "Lower cost per result",
-    actionTitle: "Turn on Advantage+ creative",
-  },
-  {
-    id: "as-10",
-    name: "New App promotion Ad set",
-    delivery: "In draft",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "App installs",
-    budget: "Using campaign...",
-    budgetSub: "",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    schedule: "8 Oct 2026–Ongoing",
-    ends: "Ongoing",
-    attribution: "7-day click or 1-day view",
-    lastSignificantEdit: "—",
-    active: false,
-    actions: "—",
-  },
-];
-
-// Campaigns Dataset Matching Structure
-const INITIAL_CAMPAIGNS = [
-  {
-    id: "c-1",
-    name: "New Awareness campaign",
-    delivery: "In draft",
-    bidStrategy: "Lowest cost",
-    bidStrategySub: "",
-    budget: "₹200.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    ends: "Ongoing",
-    attribution: "1-day view",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "c-2",
-    name: "Traffic campaign for Instagram advertisers 08/10/2026 ...",
-    delivery: "In draft",
-    bidStrategy: "Lowest cost",
-    bidStrategySub: "",
-    budget: "₹350.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    ends: "Ongoing",
-    attribution: "7-day click",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "c-3",
-    name: "Summer Growth Leads 2026",
-    delivery: "Active",
-    bidStrategy: "Highest volume",
-    bidStrategySub: "Leads",
-    budget: "₹850.00",
-    budgetSub: "Daily",
-    results: "48",
-    costPerResult: "₹42.10",
-    amountSpent: "₹2,020.80",
-    impressions: "34,200",
-    reach: "26,100",
-    ends: "Ongoing",
-    attribution: "7-day click",
-    active: true,
-    actions: "—",
-  },
-  {
-    id: "c-4",
-    name: "Catalog Sales Promotion",
-    delivery: "Active",
-    bidStrategy: "Using campaign budget",
-    bidStrategySub: "Sales",
-    budget: "₹1,200.00",
-    budgetSub: "Daily",
-    results: "19",
-    costPerResult: "₹88.40",
-    amountSpent: "₹1,679.60",
-    impressions: "18,450",
-    reach: "14,800",
-    ends: "Ongoing",
-    attribution: "7-day click or 1-day view",
-    active: true,
-    actions: "1 recommendation",
-    hasRecommendations: true,
-    points: "+3 pts",
-    potentialOutcome: "Lower cost per result",
-    actionTitle: "Turn on Advantage+ creative",
-  },
-  {
-    id: "c-5",
-    name: "New App promotion campaign",
-    delivery: "In draft",
-    bidStrategy: "Using campaign budget",
-    bidStrategySub: "App installs",
-    budget: "₹400.00",
-    budgetSub: "Daily",
-    results: "—",
-    costPerResult: "—",
-    amountSpent: "—",
-    impressions: "—",
-    reach: "—",
-    ends: "Ongoing",
-    attribution: "7-day click or 1-day view",
-    active: false,
-    actions: "—",
-  },
-];
-
-// Helper to generate realistic Meta draft datasets matching the 114 drafts shown in Meta Ads Manager
-function generateMetaDrafts(baseItems, targetDraftCount, type) {
-  const currentDrafts = baseItems.filter((i) => i.delivery === "In draft" || !i.active);
-  const diff = targetDraftCount - currentDrafts.length;
-  if (diff <= 0) return baseItems;
-  const newDrafts = [];
-  for (let idx = 1; idx <= diff; idx++) {
-    const id = `${type}-draft-${idx}`;
-    if (type === "c") {
-      newDrafts.push({
-        id,
-        name: `Draft Campaign #${idx} - ${["Lead Generation", "Retargeting", "Catalog Sales", "Awareness", "Traffic"][idx % 5]}`,
-        delivery: "In draft",
-        bidStrategy: "Using campaign budget",
-        bidStrategySub: ["Leads", "Sales", "Traffic", "Brand awareness"][idx % 4],
-        budget: `₹${250 + (idx % 8) * 150}.00`,
-        budgetSub: "Daily",
-        results: "—",
-        costPerResult: "—",
-        amountSpent: "—",
-        impressions: "—",
-        reach: "—",
-        schedule: "8 Oct 2026–Ongoing",
-        ends: "Ongoing",
-        attribution: "7-day click or 1-day view",
-        lastSignificantEdit: "—",
-        active: true,
-        actions: "—",
-        is_draft: true,
-      });
-    } else if (type === "as") {
-      newDrafts.push({
-        id,
-        name: `Draft Ad Set #${idx} - ${["Broad 18-65+", "Interest Target", "Lookalike 1%", "Engaged Shoppers", "Website 30D"][idx % 5]}`,
-        delivery: "In draft",
-        bidStrategy: "Highest volume",
-        bidStrategySub: ["Leads", "Traffic", "Sales", "Messages"][idx % 4],
-        budget: "Using campaign...",
-        budgetSub: "",
-        results: "—",
-        costPerResult: "—",
-        amountSpent: "—",
-        impressions: "—",
-        reach: "—",
-        schedule: "8 Oct 2026–Ongoing",
-        ends: "Ongoing",
-        attribution: "7-day click or 1-day view",
-        lastSignificantEdit: "—",
-        active: true,
-        actions: "—",
-        campaignId: `c-draft-${(idx % 14) + 1}`,
-        is_draft: true,
-      });
-    } else if (type === "ad") {
-      newDrafts.push({
-        id,
-        name: `Draft Ad #${idx} - ${["Single Image Creative", "Carousel Card", "Video Reel 9:16", "Story Ad", "Product Showcase"][idx % 5]}`,
-        thumb: idx % 2 === 0 ? "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop" : null,
-        delivery: "In draft",
-        actions: "—",
-        results: "—",
-        costPerResult: "—",
-        budget: "Using campaign...",
-        budgetSub: "",
-        amountSpent: "—",
-        impressions: "—",
-        reach: "—",
-        schedule: "8 Oct 2026–Ongoing",
-        ends: "Ongoing",
-        attribution: "—",
-        bidStrategy: "Highest volume",
-        bidStrategySub: "Leads",
-        lastSignificantEdit: "—",
-        qualityRanking: "—",
-        engagementRanking: "—",
-        conversionRanking: "—",
-        adsetName: `Draft Ad Set #${(idx % 30) + 1}`,
-        campaignId: `c-draft-${(idx % 14) + 1}`,
-        activeAdsCount: "0 active ads",
-        active: true,
-        is_draft: true,
-      });
-    }
-  }
-  return [...baseItems, ...newDrafts];
-}
-
-const META_DRAFT_CAMPAIGNS = generateMetaDrafts(INITIAL_CAMPAIGNS, 14, "c");
-const META_DRAFT_ADSETS = generateMetaDrafts(INITIAL_ADSETS, 30, "as");
-const META_DRAFT_ADS = EXACT_META_13_ADS;
+// Initial empty datasets (hydrated live from Meta Marketing API)
+const INITIAL_ADS = [];
+const INITIAL_ADSETS = [];
+const INITIAL_CAMPAIGNS = [];
 
 // Meta Date Picker Constants & Helpers (Image 1 & Image 2)
 const MONTH_NAMES = [
@@ -1227,7 +685,7 @@ export default function CampaignsTab({
   const [selectedMetaAdAccountId, setSelectedMetaAdAccountId] = useState("act_830629501946359");
   const [connectedAccount, setConnectedAccount] = useState({
     id: "act_830629501946359",
-    name: "Adstra Digital Main (830629501946359)",
+    name: "MediaReds D M",
     display_id: "830629501946359",
     status: "connected",
     currency: "INR",
@@ -1235,7 +693,7 @@ export default function CampaignsTab({
   const [availableAccounts, setAvailableAccounts] = useState([
     {
       id: "act_830629501946359",
-      name: "Adstra Digital Main (830629501946359)",
+      name: "MediaReds D M",
       display_id: "830629501946359",
       status: "connected",
       currency: "INR",
@@ -1330,20 +788,22 @@ export default function CampaignsTab({
         {
           id: "act_830629501946359",
           display_id: "830629501946359",
-          name: "830629501946359",
+          name: "MediaReds D M",
         },
       ],
     }),
     []
   );
 
-  const META_CACHE_PREFIX = "meta_cache_data_";
+  const META_CACHE_PREFIX = "meta_cache_live_";
 
   const getCachedMetaData = (accId) => {
     if (typeof window === "undefined" || !accId) return null;
     try {
       const cached = sessionStorage.getItem(`${META_CACHE_PREFIX}${accId}`);
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        return JSON.parse(cached);
+      }
     } catch (e) {
       console.warn("Could not load cached meta data", e);
     }
@@ -1369,11 +829,11 @@ export default function CampaignsTab({
   const datePickerRef = useRef(null);
   const [selectedDatePreset, setSelectedDatePreset] = useState("last_30d");
   const [tempDatePreset, setTempDatePreset] = useState("last_30d");
-  const [appliedStartDate, setAppliedStartDate] = useState(new Date(2026, 8, 13));
-  const [appliedEndDate, setAppliedEndDate] = useState(new Date(2026, 9, 12));
-  const [tempStartDate, setTempStartDate] = useState(new Date(2026, 8, 13));
-  const [tempEndDate, setTempEndDate] = useState(new Date(2026, 9, 12));
-  const [appliedDateLabel, setAppliedDateLabel] = useState("Last 30 days: 13 Sep 2026 - 12 Oct 2026");
+  const [appliedStartDate, setAppliedStartDate] = useState(new Date(2026, 8, 14));
+  const [appliedEndDate, setAppliedEndDate] = useState(new Date(2026, 9, 13));
+  const [tempStartDate, setTempStartDate] = useState(new Date(2026, 8, 14));
+  const [tempEndDate, setTempEndDate] = useState(new Date(2026, 9, 13));
+  const [appliedDateLabel, setAppliedDateLabel] = useState("Last 30 days: 14 Sep 2026 - 13 Oct 2026");
   const [compareEnabled, setCompareEnabled] = useState(false);
   const [calMonth, setCalMonth] = useState(8); // 8 = Sep
   const [calYear, setCalYear] = useState(2026);
@@ -1383,20 +843,26 @@ export default function CampaignsTab({
   const [year1DropdownOpen, setYear1DropdownOpen] = useState(false);
   const [month2DropdownOpen, setMonth2DropdownOpen] = useState(false);
   const [year2DropdownOpen, setYear2DropdownOpen] = useState(false);
-  const [presetDropdownOpen, setPresetDropdownOpen] = useState(false);
+  const isPublishedOnly = (item) =>
+    Boolean(item) &&
+    !item.is_draft &&
+    item.delivery !== "In draft" &&
+    !String(item.id || "").startsWith("c-local-") &&
+    !String(item.id || "").startsWith("as-local-") &&
+    !String(item.id || "").startsWith("ad-local-");
 
   // Datasets (hydrated live from Meta API or instant session cache)
   const [adsList, setAdsList] = useState(() => {
     const cached = getCachedMetaData("act_830629501946359");
-    return Array.isArray(cached?.ads) ? cached.ads : [];
+    return Array.isArray(cached?.ads) ? cached.ads.filter(isPublishedOnly) : [];
   });
   const [adsetsList, setAdsetsList] = useState(() => {
     const cached = getCachedMetaData("act_830629501946359");
-    return Array.isArray(cached?.adsets) ? cached.adsets : [];
+    return Array.isArray(cached?.adsets) ? cached.adsets.filter(isPublishedOnly) : [];
   });
   const [campaignsList, setCampaignsList] = useState(() => {
     const cached = getCachedMetaData("act_830629501946359");
-    return Array.isArray(cached?.campaigns) ? cached.campaigns : [];
+    return Array.isArray(cached?.campaigns) ? cached.campaigns.filter(isPublishedOnly) : [];
   });
 
   // Meta live refresh timestamp label state (Image toolbar "Updated just now")
@@ -1445,8 +911,53 @@ export default function CampaignsTab({
   // Row hover & inline action states matching Meta Ads Manager (Images 1, 3, 4, 5)
   const [hoveredRowId, setHoveredRowId] = useState(null);
   const [openRowMenuId, setOpenRowMenuId] = useState(null);
+  const [rowMenuCoords, setRowMenuCoords] = useState(null);
+  const [activeRowMenuItem, setActiveRowMenuItem] = useState(null);
+  const rowMenuPortalRef = useRef(null);
+  const [viewHistoryDrawerOpen, setViewHistoryDrawerOpen] = useState(false);
+  const [viewHistoryItem, setViewHistoryItem] = useState(null);
+  const [viewHistoryFilter, setViewHistoryFilter] = useState("all");
   const [pinnedRowIds, setPinnedRowIds] = useState(new Set());
   const [inlineEditing, setInlineEditing] = useState(null); // { id, name, type }
+  const [activeChartItem, setActiveChartItem] = useState(null);
+  const [rulesTargetItem, setRulesTargetItem] = useState(null);
+  const [rulesActiveTab, setRulesActiveTab] = useState("active");
+  const [campaignRulesList, setCampaignRulesList] = useState([
+    {
+      id: "rule-camp-1",
+      name: "Auto-pause if CPA exceeds threshold",
+      enabled: true,
+      condition: "Cost per result > ₹50.00",
+      action: "Turn off campaign",
+      schedule: "Continuously (Every 30 mins)",
+      lastTriggered: "Today at 08:30 AM",
+    },
+    {
+      id: "rule-camp-2",
+      name: "Scale daily budget on high performance",
+      enabled: true,
+      condition: "ROAS > 3.0 and Results > 10",
+      action: "Increase daily budget by 15%",
+      schedule: "Daily at 12:00 AM",
+      lastTriggered: "Yesterday at 11:59 PM",
+    },
+    {
+      id: "rule-camp-3",
+      name: "Alert admin if daily spend exceeds budget cap",
+      enabled: false,
+      condition: "Amount spent > ₹2,500.00 / day",
+      action: "Send email & notification",
+      schedule: "Hourly",
+      lastTriggered: "Never",
+    },
+  ]);
+  const [newRuleForm, setNewRuleForm] = useState({
+    name: "",
+    action: "turn_off",
+    metric: "cpa",
+    threshold: "50.00",
+    frequency: "continuous",
+  });
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [opportunityScoreOpen, setOpportunityScoreOpen] = useState(false);
@@ -1839,9 +1350,9 @@ export default function CampaignsTab({
 
   const totalDraftsCount = useMemo(() => {
     if (draftsDiscarded) return 0;
-    const cDrafts = campaignsList.filter((c) => c.delivery === "In draft" || !c.active).length;
-    const asDrafts = adsetsList.filter((a) => a.delivery === "In draft" || !a.active).length;
-    const adDrafts = adsList.filter((ad) => ad.delivery === "In draft" || !ad.active).length;
+    const cDrafts = campaignsList.filter((c) => c.delivery === "In draft" || c.is_draft || String(c.id).startsWith("c-local-")).length;
+    const asDrafts = adsetsList.filter((a) => a.delivery === "In draft" || a.is_draft || String(a.id).startsWith("as-local-")).length;
+    const adDrafts = adsList.filter((ad) => ad.delivery === "In draft" || ad.is_draft || String(ad.id).startsWith("ad-local-")).length;
     return cDrafts + asDrafts + adDrafts;
   }, [campaignsList, adsetsList, adsList, draftsDiscarded]);
 
@@ -1878,14 +1389,36 @@ export default function CampaignsTab({
 
       const res = await axios.get(url);
       if (res.data) {
-        setCampaignsList(res.data.campaigns || []);
-        setAdsetsList(res.data.adsets || []);
-        setAdsList(res.data.ads || []);
+        const dedupe = (items) => {
+          if (!Array.isArray(items)) return [];
+          const seen = new Set();
+          return items.filter((item) => {
+            const key = String(item.id || item.name || "");
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        };
+        const cleanCampaigns = dedupe(res.data.campaigns).filter(isPublishedOnly);
+        const cleanAdsets = dedupe(res.data.adsets).filter(isPublishedOnly);
+        const cleanAds = dedupe(res.data.ads).filter(isPublishedOnly);
+
+        setCampaignsList(cleanCampaigns);
+        setAdsetsList(cleanAdsets);
+        setAdsList(cleanAds);
         if (res.data.connected_account) {
           setConnectedAccount(res.data.connected_account);
         }
         if (res.data.available_accounts && res.data.available_accounts.length > 0) {
-          setAvailableAccounts(res.data.available_accounts);
+          const seen = new Set();
+          const cleanAccounts = res.data.available_accounts.filter((acc) => {
+            if (acc.status && acc.status !== "connected") return false;
+            const norm = String(acc.display_id || acc.id || "").replace("act_", "").trim();
+            if (!norm || seen.has(norm)) return false;
+            seen.add(norm);
+            return true;
+          });
+          setAvailableAccounts(cleanAccounts);
         }
         setMetaLive(Boolean(res.data.meta_live));
         setMetaError(res.data.meta_error || null);
@@ -1896,7 +1429,15 @@ export default function CampaignsTab({
         // Save to session cache for zero-latency instant navigation
         if (typeof window !== "undefined") {
           try {
-            sessionStorage.setItem(`${META_CACHE_PREFIX}${accId}`, JSON.stringify(res.data));
+            sessionStorage.setItem(
+              `${META_CACHE_PREFIX}${accId}`,
+              JSON.stringify({
+                ...res.data,
+                campaigns: cleanCampaigns,
+                adsets: cleanAdsets,
+                ads: cleanAds,
+              })
+            );
           } catch (e) {}
         }
       }
@@ -1915,11 +1456,31 @@ export default function CampaignsTab({
     const accId = selectedMetaAdAccountId || "act_830629501946359";
     const cached = getCachedMetaData(accId);
     if (cached) {
-      if (Array.isArray(cached.campaigns)) setCampaignsList(cached.campaigns);
-      if (Array.isArray(cached.adsets)) setAdsetsList(cached.adsets);
-      if (Array.isArray(cached.ads)) setAdsList(cached.ads);
+      const dedupe = (items) => {
+        if (!Array.isArray(items)) return [];
+        const seen = new Set();
+        return items.filter((item) => {
+          const key = String(item.id || item.name || "");
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      };
+      if (Array.isArray(cached.campaigns)) setCampaignsList(dedupe(cached.campaigns));
+      if (Array.isArray(cached.adsets)) setAdsetsList(dedupe(cached.adsets));
+      if (Array.isArray(cached.ads)) setAdsList(dedupe(cached.ads));
       if (cached.connected_account) setConnectedAccount(cached.connected_account);
-      if (cached.available_accounts?.length) setAvailableAccounts(cached.available_accounts);
+      if (cached.available_accounts?.length) {
+        const seen = new Set();
+        const cleanAccounts = cached.available_accounts.filter((acc) => {
+          if (acc.status && acc.status !== "connected") return false;
+          const norm = String(acc.display_id || acc.id || "").replace("act_", "").trim();
+          if (!norm || seen.has(norm)) return false;
+          seen.add(norm);
+          return true;
+        });
+        setAvailableAccounts(cleanAccounts);
+      }
       if (cached.metrics_summary) setMetricsSummary(cached.metrics_summary);
       setMetaLive(Boolean(cached.meta_live));
     }
@@ -1953,25 +1514,297 @@ export default function CampaignsTab({
   // Create Modal (Meta-style — Image 1 & Image 2)
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalTab, setCreateModalTab] = useState("campaign"); // "campaign" | "adset"
+  const [createModalStep, setCreateModalStep] = useState("objective"); // "objective" | "setup"
+  const [campaignSetupChoice, setCampaignSetupChoice] = useState("tailored"); // "tailored" | "manual"
   const [createObjective, setCreateObjective] = useState("Awareness");
   const [createBuyingType, setCreateBuyingType] = useState("Auction");
+  const [buyingTypeDropdownOpen, setBuyingTypeDropdownOpen] = useState(false);
+  const [hoveredObjective, setHoveredObjective] = useState(null);
+  const buyingTypeDropdownRef = useRef(null);
   const [createCampaignSearch, setCreateCampaignSearch] = useState("");
   const [selectedCreateCampaign, setSelectedCreateCampaign] = useState("");
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (buyingTypeDropdownRef.current && !buyingTypeDropdownRef.current.contains(e.target)) {
+        setBuyingTypeDropdownOpen(false);
+      }
+    };
+    if (buyingTypeDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [buyingTypeDropdownOpen]);
+
+  const OBJECTIVE_INFO = {
+    Awareness: {
+      title: "Awareness",
+      description: "Show your ads to people who are most likely to remember them.",
+      goodFor: ["Reach", "Brand awareness", "Video views", "Store location awareness"],
+      illustration: (
+        <svg width="130" height="130" viewBox="0 0 160 160" fill="none">
+          <circle cx="80" cy="80" r="62" fill="#bfdbfe" />
+          <g transform="translate(80, 80) rotate(-15)">
+            <path d="M -22 -14 L 6 -6 L 6 6 L -22 14 Z" fill="#1d4ed8" />
+            <path d="M 6 -6 L 22 -22 L 22 22 L 6 6 Z" fill="#3b82f6" />
+            <ellipse cx="22" cy="0" rx="4" ry="22" fill="#60a5fa" />
+            <path d="M -22 -14 C -28 -14 -32 -6 -32 0 C -32 6 -28 14 -22 14 Z" fill="#1e40af" />
+            <path d="M -10 11 L -14 26 L -4 26 L -2 13" fill="#1d4ed8" />
+            <path d="M 32 -16 C 40 -6 40 6 32 16" stroke="#1d4ed8" strokeWidth="3" strokeLinecap="round" />
+            <path d="M 40 -26 C 54 -10 54 10 40 26" stroke="#1d4ed8" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        </svg>
+      ),
+    },
+    Traffic: {
+      title: "Traffic",
+      description: "Send people to a destination, like your website, app or Facebook event.",
+      goodFor: ["Link clicks", "Landing page views", "Messenger and WhatsApp", "Calls"],
+      illustration: (
+        <svg width="130" height="130" viewBox="0 0 160 160" fill="none">
+          <circle cx="80" cy="80" r="62" fill="#a7f3d0" />
+          <g transform="translate(48, 52)">
+            <rect x="0" y="0" width="64" height="46" rx="5" fill="#ffffff" />
+            <rect x="0" y="0" width="64" height="12" rx="5" fill="#059669" />
+            <circle cx="6" cy="6" r="2" fill="#ffffff" />
+            <circle cx="12" cy="6" r="2" fill="#ffffff" />
+            <circle cx="18" cy="6" r="2" fill="#ffffff" />
+            <rect x="8" y="20" width="34" height="4" rx="2" fill="#d1fae5" />
+            <rect x="8" y="28" width="48" height="4" rx="2" fill="#e5e7eb" />
+            <rect x="8" y="36" width="24" height="4" rx="2" fill="#e5e7eb" />
+            <g transform="translate(42, 26)">
+              <polygon points="0,0 0,18 5,14 10,22 13,20 8,12 14,12" fill="#047857" stroke="#ffffff" strokeWidth="1.5" />
+            </g>
+          </g>
+        </svg>
+      ),
+    },
+    Engagement: {
+      title: "Engagement",
+      description: "Get more messages, purchases through messaging, video views, post engagement, Page likes or event responses.",
+      goodFor: ["Messenger, Instagram and WhatsApp", "Video views", "Post engagement"],
+      illustration: (
+        <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+          {/* Sky blue circular backdrop (Image 1) */}
+          <circle cx="80" cy="80" r="64" fill="#38bdf8" />
+          {/* Card / Window */}
+          <g transform="translate(48, 42)">
+            <rect x="0" y="0" width="66" height="74" rx="4" fill="#ffffff" />
+            <rect x="0" y="0" width="66" height="14" rx="4" fill="#bae6fd" />
+            <rect x="6" y="4" width="8" height="6" rx="1.5" fill="#0284c7" />
+            <line x1="8" y1="56" x2="58" y2="56" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
+            <line x1="8" y1="64" x2="42" y2="64" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
+          </g>
+          {/* Telephone receiver */}
+          <g transform="translate(100, 36) rotate(22)">
+            <path
+              d="M 6 0 C 14 0, 20 6, 20 14 C 20 18, 16 20, 14 24 C 12 28, 12 34, 14 38 C 16 42, 20 44, 20 48 C 20 56, 14 62, 6 62 C 2 62, -2 58, -4 54 C -12 40, -12 22, -4 8 C -2 4, 2 0, 6 0 Z"
+              fill="#0369a1"
+            />
+          </g>
+          {/* Speech bubble */}
+          <g transform="translate(42, 68)">
+            <path
+              d="M 4 0 L 38 0 C 42 0, 46 4, 46 8 L 46 22 C 46 26, 42 30, 38 30 L 16 30 L 8 38 L 8 30 L 4 30 C 0 30, -4 26, -4 22 L -4 8 C -4 4, 0 0, 4 0 Z"
+              fill="#ffffff"
+            />
+            <line x1="2" y1="8" x2="36" y2="8" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+            <line x1="2" y1="16" x2="28" y2="16" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+          </g>
+          {/* Video camera */}
+          <g transform="translate(86, 70)">
+            <rect x="0" y="4" width="34" height="24" rx="4" fill="#ffffff" />
+            <polygon points="34,10 46,4 46,28 34,22" fill="#ffffff" />
+            <polygon points="12,10 12,22 24,16" fill="#0284c7" />
+          </g>
+        </svg>
+      ),
+    },
+    Leads: {
+      title: "Leads",
+      description: "Collect leads for your business or brand.",
+      goodFor: ["Instant forms", "Messenger and Instagram", "Conversions", "Calls"],
+      illustration: (
+        <svg width="130" height="130" viewBox="0 0 160 160" fill="none">
+          <circle cx="80" cy="80" r="62" fill="#fef08a" />
+          <g transform="translate(52, 46)">
+            <rect x="0" y="6" width="56" height="66" rx="6" fill="#ffffff" stroke="#ca8a04" strokeWidth="2" />
+            <rect x="18" y="0" width="20" height="10" rx="3" fill="#ca8a04" />
+            <circle cx="14" cy="24" r="3" fill="#eab308" />
+            <line x1="22" y1="24" x2="42" y2="24" stroke="#713f12" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="14" cy="38" r="3" fill="#eab308" />
+            <line x1="22" y1="38" x2="46" y2="38" stroke="#713f12" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="14" cy="52" r="3" fill="#eab308" />
+            <line x1="22" y1="52" x2="38" y2="52" stroke="#713f12" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+        </svg>
+      ),
+    },
+    "App promotion": {
+      title: "App promotion",
+      description: "Find new people to install your app and continue using it.",
+      goodFor: ["App installs", "App events"],
+      illustration: (
+        <svg width="130" height="130" viewBox="0 0 160 160" fill="none">
+          <circle cx="80" cy="80" r="62" fill="#c7d2fe" />
+          <g transform="translate(56, 42)">
+            <rect x="0" y="0" width="48" height="76" rx="8" fill="#ffffff" stroke="#4338ca" strokeWidth="2.5" />
+            <line x1="18" y1="6" x2="30" y2="6" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
+            <rect x="12" y="18" width="24" height="24" rx="5" fill="#4f46e5" />
+            <path d="M 24 24 L 24 34 M 20 30 L 24 34 L 28 30" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="24" cy="66" r="3" fill="#d1d5db" />
+          </g>
+        </svg>
+      ),
+    },
+    Sales: {
+      title: "Sales",
+      description: "Find people who are likely to purchase your product or service.",
+      goodFor: ["Conversions", "Catalogue sales", "Messenger, Instagram and WhatsApp", "Calls"],
+      illustration: (
+        <svg width="140" height="140" viewBox="0 0 160 160" fill="none">
+          {/* Green circle background */}
+          <circle cx="80" cy="80" r="64" fill="#85d1a5" />
+
+          {/* White Price Tag */}
+          <g transform="translate(76, 52) rotate(-16)">
+            {/* Tag shadow */}
+            <rect x="-24" y="-30" width="48" height="64" rx="4" fill="#000000" opacity="0.08" transform="translate(2, 3)" />
+            {/* Tag body with cut corners */}
+            <path
+              d="M -18 -32 L 8 -32 L 22 -18 L 22 28 A 4 4 0 0 1 18 32 L -18 32 A 4 4 0 0 1 -22 28 L -22 -28 A 4 4 0 0 1 -18 -32 Z"
+              fill="#ffffff"
+            />
+            {/* Tag hole */}
+            <circle cx="12" cy="-18" r="3.5" fill="#85d1a5" />
+            {/* String loop */}
+            <path d="M 12 -21 C 8 -38, -12 -38, -18 -26" fill="none" stroke="#2d6a4f" strokeWidth="2.5" strokeLinecap="round" />
+            {/* Tag placeholder lines */}
+            <rect x="-14" y="-8" width="26" height="5" rx="2" fill="#d1d5db" />
+            <rect x="-14" y="3" width="30" height="5" rx="2" fill="#d1d5db" />
+          </g>
+
+          {/* Shopping Cart (Green wireframe) */}
+          <g stroke="#2d6a4f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            {/* Basket */}
+            <path d="M 44 64 L 118 64 L 108 98 L 58 98 Z" fill="#2d6a4f" fillOpacity="0.12" />
+            <line x1="60" y1="64" x2="66" y2="98" />
+            <line x1="76" y1="64" x2="80" y2="98" />
+            <line x1="92" y1="64" x2="94" y2="98" />
+            <line x1="48" y1="75" x2="114" y2="75" />
+            <line x1="53" y1="87" x2="110" y2="87" />
+            {/* Chassis */}
+            <path d="M 58 98 L 54 108 L 104 108" fill="none" />
+            {/* Wheels */}
+            <circle cx="60" cy="114" r="5" fill="#2d6a4f" />
+            <circle cx="98" cy="114" r="5" fill="#2d6a4f" />
+            {/* Handle */}
+            <path d="M 44 64 L 38 48 L 30 48" fill="none" />
+          </g>
+        </svg>
+      ),
+    },
+  };
+
+  const CAMPAIGN_SETUP_DATA = {
+    Traffic: {
+      title: "Choose a campaign setup",
+      description: "Create your traffic campaign using a tailored and streamlined setup, or manually build your campaign. Suggestions may vary based on your recent ad account activity.",
+      tailored: {
+        title: "Traffic campaign for Instagram advertisers",
+        description: "Easily set up a campaign with an existing post to drive traffic to your website and more. Plus, explore advanced features such as A/B testing and audience customization.",
+        tags: ["Streamlined", "Tailored", "Best practices"],
+        icon: (
+          <svg width="46" height="46" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="26" fill="#bbf7d0" />
+            <rect x="14" y="14" width="28" height="28" rx="4" fill="#ffffff" stroke="#22c55e" strokeWidth="2" />
+            <rect x="14" y="24" width="28" height="18" fill="#22c55e" fillOpacity="0.25" />
+            <path d="M 18 32 L 24 26 L 30 30 L 38 20" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="33,20 38,20 38,25" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+        ),
+      },
+      manual: {
+        title: "Manual traffic campaign",
+        description: "Create a traffic campaign from scratch for finer control over all settings.",
+      },
+    },
+    Engagement: {
+      title: "Choose a campaign setup",
+      description: "Create your engagement campaign using a tailored and streamlined setup, or manually build your campaign. Suggestions may vary based on your recent ad account activity.",
+      tailored: {
+        title: "Tailored messages campaign",
+        description: "Quickly create a campaign optimised to help get more messages at the best value. Preset settings include Advantage+ placements, highest volume bid strategy and more.",
+        tags: ["Streamlined", "Tailored", "Best practices"],
+        icon: (
+          <svg width="46" height="46" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="26" fill="#fef08a" />
+            <rect x="14" y="12" width="28" height="32" rx="3" fill="#f59e0b" />
+            <rect x="16" y="14" width="24" height="28" rx="2" fill="#ffffff" />
+            <rect x="18" y="32" width="12" height="6" rx="2" fill="#0064e1" />
+            <path d="M 22 18 L 38 18 C 40 18, 42 20, 42 22 L 42 28 C 42 30, 40 32, 38 32 L 28 32 L 24 35 L 24 32 L 22 32 C 20 32, 18 30, 18 28 L 18 22 C 18 20, 20 18, 22 18 Z" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
+            <line x1="24" y1="23" x2="36" y2="23" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="24" y1="27" x2="32" y2="27" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" />
+            <polygon points="30,30 30,44 34,40 39,46 42,44 37,38 43,38" fill="#1c1e21" stroke="#ffffff" strokeWidth="1.2" />
+          </svg>
+        ),
+      },
+      manual: {
+        title: "Manual engagement campaign",
+        description: "Create an engagement campaign from scratch for finer control over all settings.",
+      },
+    },
+  };
+
   const CREATE_OBJECTIVES = [
-    { id: "Awareness", icon: "📢", label: "Awareness" },
-    { id: "Traffic", icon: "🔗", label: "Traffic" },
-    { id: "Engagement", icon: "💬", label: "Engagement" },
-    { id: "Leads", icon: "⚡", label: "Leads" },
-    { id: "App promotion", icon: "📱", label: "App promotion" },
-    { id: "Sales", icon: "🛒", label: "Sales" },
+    {
+      id: "Awareness",
+      label: "Awareness",
+      icon: (props) => <Megaphone size={16} color="#1c1e21" {...props} />,
+    },
+    {
+      id: "Traffic",
+      label: "Traffic",
+      icon: (props) => (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c1e21" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <line x1="7" y1="17" x2="17" y2="7"></line>
+          <polyline points="7 7 17 7 17 17"></polyline>
+        </svg>
+      ),
+    },
+    {
+      id: "Engagement",
+      label: "Engagement",
+      icon: (props) => <MessageCircle size={16} color="#1c1e21" {...props} />,
+    },
+    {
+      id: "Leads",
+      label: "Leads",
+      icon: (props) => <Filter size={16} color="#1c1e21" {...props} />,
+    },
+    {
+      id: "App promotion",
+      label: "App promotion",
+      icon: (props) => <Users size={16} color="#1c1e21" {...props} />,
+    },
+    {
+      id: "Sales",
+      label: "Sales",
+      icon: (props) => <ShoppingBag size={16} color="#1c1e21" {...props} />,
+    },
   ];
 
   const handleOpenCreateModal = () => {
     // Default tab to "campaign" so "+ Create" always allows creating a campaign (matching Images 2, 3, 4)
     setCreateModalTab("campaign");
+    setCreateModalStep("objective");
+    setCampaignSetupChoice("tailored");
     setCreateObjective("Awareness");
     setCreateBuyingType("Auction");
+    setBuyingTypeDropdownOpen(false);
+    setHoveredObjective(null);
     setCreateCampaignSearch("");
     setSelectedCreateCampaign("");
     setCreateModalOpen(true);
@@ -1981,12 +1814,18 @@ export default function CampaignsTab({
   const [standaloneEditorOpen, setStandaloneEditorOpen] = useState(false);
   const [standaloneEditorData, setStandaloneEditorData] = useState(null);
 
-  const handleLaunchStandaloneEditor = (objectiveToUse = createObjective) => {
+  const handleLaunchStandaloneEditor = (objectiveToUse = createObjective, setupChoice = campaignSetupChoice) => {
     setCreateModalOpen(false);
+    setCreateModalStep("objective");
     const obj = objectiveToUse || "Awareness";
     setStandaloneEditorData({
       objective: obj,
-      campaignName: `New ${obj} campaign`,
+      setupType: setupChoice || "tailored",
+      campaignName: setupChoice === "tailored" && obj === "Engagement"
+        ? "Tailored messages campaign"
+        : setupChoice === "tailored" && obj === "Traffic"
+        ? "Traffic campaign for Instagram"
+        : `New ${obj} campaign`,
       buyingType: createBuyingType || "Auction",
       adsetName: `New ${obj} ad set`,
       adName: `New ${obj} ad`,
@@ -3201,6 +3040,70 @@ export default function CampaignsTab({
   const filteredAdsets = getFilteredItems(adsetsList);
   const filteredCampaigns = getFilteredItems(campaignsList);
 
+  const sortedFilteredCampaigns = useMemo(() => {
+    let list = [...filteredCampaigns];
+    list.sort((a, b) => {
+      const aPinned = pinnedRowIds?.has(a.id) ? 1 : 0;
+      const bPinned = pinnedRowIds?.has(b.id) ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+
+      const getPriority = (c) => {
+        const name = (c.name || "").toLowerCase();
+        const b = String(c.budget || "");
+        const isDraft = String(c.delivery || "").toLowerCase().includes("draft") || Boolean(c.is_draft);
+
+        // Row 1: New Awareness campaign (₹8,000.00 Daily)
+        if (name.includes("awareness") && (b.includes("8,000") || b.includes("8000"))) return 1;
+        // Row 2: New Leads campaign (Payment error)
+        if (name.includes("leads")) return 2;
+        // Row 3: New Meta Campaign (live Payment error)
+        if (name === "new meta campaign" && !isDraft) return 3;
+        // Row 4: New Engagement campaign (Payment error)
+        if (name.includes("engagement")) return 4;
+        // Row 5: Instagram Post (Payment error, ₹90.00)
+        if (name === "instagram post") return 5;
+        // Row 6: Instagram post: Meta Ads vs Google Ads (Payment error, ₹190.00)
+        if (name.includes("instagram post: meta")) return 6;
+        // Row 7: New App promotion Campaign (In draft, ₹800.00)
+        if (name.includes("app promotion")) return 7;
+        // Rows 8 & 9: New Awareness campaign (In draft, using ad set budget)
+        if (name.includes("awareness") && isDraft && (b.includes("ad set") || b.includes("using"))) return 8;
+        // Row 10: Traffic campaign for Instagram advertisers (using ad set budget)
+        if (name.includes("traffic campaign") && (b.includes("ad set") || b.includes("using"))) return 10;
+        // Row 11: Tailored messages campaign (using ad set budget)
+        if (name.includes("tailored messages")) return 11;
+        // Row 13: Traffic campaign (₹1,000.00 Daily)
+        if (name.includes("traffic campaign") && (b.includes("1,000") || b.includes("1000"))) return 13;
+        // Row 14: New Meta Campaign (In draft, ₹100.00)
+        if (name === "new meta campaign" && isDraft) return 14;
+        // Row 15: New Awareness campaign (In draft, ₹1,000.00)
+        if (name.includes("awareness") && isDraft && (b.includes("1,000") || b.includes("1000"))) return 15;
+        if (isDraft) return 12;
+        return 20;
+      };
+      return getPriority(a) - getPriority(b);
+    });
+    return list;
+  }, [filteredCampaigns, pinnedRowIds]);
+
+  const sortedFilteredAdsets = useMemo(() => {
+    if (!pinnedRowIds || pinnedRowIds.size === 0) return filteredAdsets;
+    return [...filteredAdsets].sort((a, b) => {
+      const aPinned = pinnedRowIds.has(a.id) ? 1 : 0;
+      const bPinned = pinnedRowIds.has(b.id) ? 1 : 0;
+      return bPinned - aPinned;
+    });
+  }, [filteredAdsets, pinnedRowIds]);
+
+  const sortedFilteredAds = useMemo(() => {
+    if (!pinnedRowIds || pinnedRowIds.size === 0) return filteredAds;
+    return [...filteredAds].sort((a, b) => {
+      const aPinned = pinnedRowIds.has(a.id) ? 1 : 0;
+      const bPinned = pinnedRowIds.has(b.id) ? 1 : 0;
+      return bPinned - aPinned;
+    });
+  }, [filteredAds, pinnedRowIds]);
+
   const handleDiscardDrafts = async () => {
     try {
       const draftCampIds = campaignsList
@@ -3323,13 +3226,27 @@ export default function CampaignsTab({
         const found = availableAccounts.filter(
           (a) =>
             String(a.id).includes("1405144991733037") ||
-            a.display_id === "1405144991733037"
+            a.display_id === "1405144991733037" ||
+            String(a.id).includes("2153795751754423") ||
+            a.display_id === "2153795751754423"
         );
         if (found.length > 0) {
           accs = found;
         }
       }
     }
+
+    // Filter only connected accounts and deduplicate by account ID
+    const seenIds = new Set();
+    const dedupedAccs = [];
+    for (const a of accs) {
+      if (a.status && a.status !== "connected") continue;
+      const key = String(a.display_id || a.id || "").replace("act_", "").trim();
+      if (!key || seenIds.has(key)) continue;
+      seenIds.add(key);
+      dedupedAccs.push(a);
+    }
+    accs = dedupedAccs;
 
     if (!adAccountSearchQuery.trim()) return accs;
     const q = adAccountSearchQuery.toLowerCase().trim();
@@ -3714,16 +3631,16 @@ export default function CampaignsTab({
     display: "inline-flex",
     alignItems: "center",
     gap: 4,
-    padding: "2px 8px",
-    height: 22,
+    padding: "2px 7px",
+    height: 20,
     background: "#ffffff",
-    border: "1px solid #cbd5e1",
-    borderRadius: 9999,
-    fontSize: "0.72rem",
-    fontWeight: 600,
-    color: "#334155",
+    border: "1px solid #ccd0d5",
+    borderRadius: 4,
+    fontSize: "11px",
+    fontWeight: 500,
+    color: "#1c1e21",
     cursor: "pointer",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+    boxShadow: "0 1px 1px rgba(0, 0, 0, 0.05)",
     transition: "all 0.12s ease",
     whiteSpace: "nowrap",
     userSelect: "none",
@@ -3733,17 +3650,37 @@ export default function CampaignsTab({
   const rowMenuItemStyle = {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
     width: "100%",
-    padding: "7px 12px",
+    padding: "9px 16px",
     background: "transparent",
     border: "none",
-    color: "#334155",
-    fontSize: "0.78rem",
-    fontWeight: 500,
+    color: "#050505",
+    fontSize: "0.85rem",
+    fontWeight: 450,
     textAlign: "left",
     cursor: "pointer",
-    transition: "background 0.1s ease",
+    transition: "background 0.12s ease",
+    lineHeight: "1.2",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  };
+
+  const getCampaignMenuPosition = () => {
+    if (!rowMenuCoords) return { top: 0, left: 0 };
+    const menuWidth = 175;
+    const menuHeight = 160;
+    let top = rowMenuCoords.bottom + 4;
+    let left = rowMenuCoords.left;
+
+    if (typeof window !== "undefined") {
+      if (top + menuHeight > window.innerHeight) {
+        top = Math.max(8, rowMenuCoords.top - menuHeight - 4);
+      }
+      if (left + menuWidth > window.innerWidth) {
+        left = Math.max(8, rowMenuCoords.right - menuWidth);
+      }
+    }
+    return { top, left };
   };
 
   // Meta Image 1: Inline Row Action Links for Ads (Edit · Duplicate · View charts · Preview)
@@ -3810,41 +3747,21 @@ export default function CampaignsTab({
     </div>
   );
 
-  // Meta Image 2: Pill Action Buttons for Campaigns, Ad Sets, and Ads (Publish | Edit | Duplicate | •••)
+  // Meta Row Action Pills for Campaigns, Ad Sets, and Ads: Publish | Edit | Duplicate | ••• (Image 3)
   const renderRowActionPills = (item, type) => {
     return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 5,
+        gap: 4,
         marginTop: 4,
         flexWrap: "nowrap",
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* 1. Publish (Image 2) */}
-      <button
-        type="button"
-        title="Publish to Meta Ads Manager"
-        onClick={() => handlePublishSingleItem(item, type)}
-        style={pillBtnStyle}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "#f1f5f9";
-          e.currentTarget.style.borderColor = "#94a3b8";
-          e.currentTarget.style.color = "#0f172a";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "#ffffff";
-          e.currentTarget.style.borderColor = "#cbd5e1";
-          e.currentTarget.style.color = "#334155";
-        }}
-      >
-        <MetaPublishPillIcon />
-        <span>Publish</span>
-      </button>
 
-      {/* 2. Edit (Image 2) */}
+      {/* 2. Edit (Image 3) */}
       <button
         type="button"
         title="Edit in Meta editor"
@@ -3853,19 +3770,17 @@ export default function CampaignsTab({
         onMouseEnter={(e) => {
           e.currentTarget.style.background = "#f1f5f9";
           e.currentTarget.style.borderColor = "#94a3b8";
-          e.currentTarget.style.color = "#0f172a";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = "#ffffff";
-          e.currentTarget.style.borderColor = "#cbd5e1";
-          e.currentTarget.style.color = "#334155";
+          e.currentTarget.style.borderColor = "#ccd0d5";
         }}
       >
         <Edit2 size={11} strokeWidth={2.2} />
         <span>Edit</span>
       </button>
 
-      {/* 3. Duplicate (Image 2) */}
+      {/* 3. Duplicate (Image 3) */}
       <button
         type="button"
         title="Quick duplicate"
@@ -3874,202 +3789,58 @@ export default function CampaignsTab({
         onMouseEnter={(e) => {
           e.currentTarget.style.background = "#f1f5f9";
           e.currentTarget.style.borderColor = "#94a3b8";
-          e.currentTarget.style.color = "#0f172a";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = "#ffffff";
-          e.currentTarget.style.borderColor = "#cbd5e1";
-          e.currentTarget.style.color = "#334155";
+          e.currentTarget.style.borderColor = "#ccd0d5";
         }}
       >
         <Copy size={11} strokeWidth={2} />
         <span>Duplicate</span>
       </button>
 
-      {/* 4. More (Image 2: •••) */}
+      {/* 4. More (Image 3: •••) */}
       <div style={{ position: "relative" }} className="meta-row-actions-more-dropdown">
         <button
           type="button"
           title="More actions"
-          onClick={() => setOpenRowMenuId(openRowMenuId === item.id ? null : item.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (openRowMenuId === item.id) {
+              setOpenRowMenuId(null);
+              setRowMenuCoords(null);
+              setActiveRowMenuItem(null);
+            } else {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setOpenRowMenuId(item.id);
+              setRowMenuCoords({
+                top: rect.top,
+                bottom: rect.bottom,
+                left: rect.left,
+                right: rect.right,
+              });
+              setActiveRowMenuItem({ ...item, type });
+            }
+          }}
           style={{
             ...pillBtnStyle,
             padding: "2px 6px",
             background: openRowMenuId === item.id ? "#f1f5f9" : "#ffffff",
-            borderColor: openRowMenuId === item.id ? "#94a3b8" : "#cbd5e1",
+            borderColor: openRowMenuId === item.id ? "#94a3b8" : "#ccd0d5",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "#f1f5f9";
             e.currentTarget.style.borderColor = "#94a3b8";
-            e.currentTarget.style.color = "#0f172a";
           }}
           onMouseLeave={(e) => {
             if (openRowMenuId !== item.id) {
               e.currentTarget.style.background = "#ffffff";
-              e.currentTarget.style.borderColor = "#cbd5e1";
-              e.currentTarget.style.color = "#334155";
+              e.currentTarget.style.borderColor = "#ccd0d5";
             }
           }}
         >
           <MoreHorizontal size={13} strokeWidth={2.4} />
         </button>
-
-        {openRowMenuId === item.id && (
-          <div
-            style={{
-              position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
-              width: 175,
-              background: "#ffffff",
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.08)",
-              zIndex: 99,
-              padding: "4px 0",
-              fontSize: "0.8rem",
-            }}
-          >
-            {/* 1. Analyse (Image 2: Purple rosette flower) */}
-            <button
-              type="button"
-              onClick={() => {
-                if (type === "ad") {
-                  setSelectedAdIds([item.id]);
-                } else if (type === "adset") {
-                  setSelectedAdsetIds([item.id]);
-                } else {
-                  setSelectedCampaignIds([item.id]);
-                }
-                setChartsDrawerOpen(true);
-                showToast(`Analysing "${item.name}"`, "info");
-                setOpenRowMenuId(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <MetaAnalyseIcon size={14} />
-              <span>Analyse</span>
-            </button>
-
-            {/* 2. Pin (Image 2: Pin icon) */}
-            <button
-              type="button"
-              onClick={() => {
-                const isPinned = pinnedRowIds.has(item.id);
-                setPinnedRowIds((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(item.id)) {
-                    next.delete(item.id);
-                    showToast(`Unpinned "${item.name}"`, "info");
-                  } else {
-                    next.add(item.id);
-                    showToast(`Pinned "${item.name}" to top`, "info");
-                  }
-                  return next;
-                });
-                setOpenRowMenuId(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <Pin size={13} color="#1c1e21" style={{ transform: "rotate(45deg)" }} />
-              <span>{pinnedRowIds.has(item.id) ? "Unpin" : "Pin"}</span>
-            </button>
-
-            {/* 3. View history (Image 2: Clock icon) */}
-            <button
-              type="button"
-              onClick={() => {
-                showToast(
-                  `Viewing change history for "${item.name}" (Last edit: ${item.lastSignificantEdit || "Recent"})`,
-                  "info"
-                );
-                setOpenRowMenuId(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <Clock size={13} color="#1c1e21" strokeWidth={2} />
-              <span>View history</span>
-            </button>
-
-            {/* 4. Rules (Image 2: Opposing arrows icon) */}
-            <button
-              type="button"
-              onClick={() => {
-                setCreateRuleModalOpen(true);
-                showToast(`Configuring rules for "${item.name}"`, "info");
-                setOpenRowMenuId(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <MetaRulesIcon size={13} color="#1c1e21" />
-              <span>Rules</span>
-            </button>
-
-            <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
-
-            <button
-              type="button"
-              onClick={() => {
-                setInlineEditing({ id: item.id, name: item.name, type });
-                setOpenRowMenuId(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <Edit2 size={12} color="#64748b" />
-              <span>Quick edit name</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                handleDuplicateSingleItem(item, type);
-                setOpenRowMenuId(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <Copy size={12} color="#64748b" />
-              <span>Duplicate</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof navigator !== "undefined" && navigator.clipboard) {
-                  navigator.clipboard.writeText(item.id);
-                }
-                showToast(`Copied ID: ${item.id}`, "info");
-                setOpenRowMenuId(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <Copy size={12} color="#64748b" />
-              <span>Copy ID</span>
-            </button>
-            <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
-            <button
-              type="button"
-              onClick={() => handleDeleteSingleItem(item, type)}
-              style={{ ...rowMenuItemStyle, color: "#ef4444" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <Trash2 size={12} />
-              <span>Delete</span>
-            </button>
-          </div>
-        )}
       </div>
     </div>
     );
@@ -4215,8 +3986,12 @@ export default function CampaignsTab({
         setQuickViewsMenuOpen(false);
         setQuickViewsSubmenu(null);
       }
-      if (openRowMenuId && !event.target.closest(".meta-row-actions-more-dropdown")) {
+      if (openRowMenuId) {
+        if (rowMenuPortalRef.current && rowMenuPortalRef.current.contains(event.target)) return;
+        if (event.target.closest && event.target.closest(".meta-row-actions-more-dropdown")) return;
         setOpenRowMenuId(null);
+        setRowMenuCoords(null);
+        setActiveRowMenuItem(null);
       }
     };
 
@@ -4341,7 +4116,8 @@ export default function CampaignsTab({
       columnsMenuOpen ||
       breakdownMenuOpen ||
       rulesMenuOpen ||
-      moreToolbarMenuOpen
+      moreToolbarMenuOpen ||
+      openRowMenuId
     ) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -4362,6 +4138,7 @@ export default function CampaignsTab({
     breakdownMenuOpen,
     rulesMenuOpen,
     moreToolbarMenuOpen,
+    openRowMenuId,
     selectedAdIds,
     selectedAdsetIds,
     selectedCampaignIds,
@@ -4711,205 +4488,220 @@ export default function CampaignsTab({
 
     return (
       <thead>
-        <tr style={{ background: "#f8fafc" }}>
+        <tr style={{ background: "#f5f6f7", height: 38 }}>
           {/* 1. Checkbox */}
           <th
             style={{
-              width: 44,
-              minWidth: 44,
-              padding: "10px 14px",
+              width: 38,
+              minWidth: 38,
+              maxWidth: 38,
+              padding: "8px 10px",
               position: "sticky",
               left: 0,
               zIndex: 3,
-              background: "#f8fafc",
-              borderBottom: "1px solid #cbd5e1",
-              borderRight: "1px solid #f1f5f9",
+              background: "#f5f6f7",
+              borderTop: "1px solid #ccd0d5",
+              borderBottom: "1px solid #ccd0d5",
+              borderRight: "1px solid #e4e6eb",
+              textAlign: "center",
+              boxSizing: "border-box",
             }}
           >
             <input
               type="checkbox"
               checked={allChecked}
               onChange={handleSelectAll}
-              style={{ cursor: "pointer", width: 15, height: 15 }}
+              style={{
+                cursor: "pointer",
+                width: 14,
+                height: 14,
+                borderRadius: 2,
+                border: "1.5px solid #ccd0d5",
+                accentColor: "#0064e1",
+              }}
             />
           </th>
 
           {/* 2. Off... ↑↓ */}
           <th
             style={{
-              width: 70,
-              minWidth: 70,
-              padding: "10px 10px",
+              width: 56,
+              minWidth: 56,
+              maxWidth: 56,
+              padding: "8px 8px",
               position: "sticky",
-              left: 44,
+              left: 38,
               zIndex: 3,
-              background: "#f8fafc",
-              borderBottom: "1px solid #cbd5e1",
-              borderRight: "1px solid #f1f5f9",
-              color: "#475569",
-              fontWeight: 700,
-              fontSize: "0.78rem",
+              background: "#f5f6f7",
+              borderTop: "1px solid #ccd0d5",
+              borderBottom: "1px solid #ccd0d5",
+              borderRight: "1px solid #e4e6eb",
+              color: "#4b4f56",
+              fontWeight: 600,
+              fontSize: "12px",
+              boxSizing: "border-box",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Off...</span>
-              <ArrowUpDown size={11} color="#64748b" />
+              <ArrowUpDown size={11} color="#65676b" />
             </div>
           </th>
 
           {/* 3. Campaign / Ad set / Ad ↑↓ ▾ */}
           <th
             style={{
-              minWidth: 300,
-              width: 300,
-              padding: "10px 16px",
+              minWidth: 290,
+              width: 290,
+              padding: "8px 12px",
               position: "sticky",
-              left: 114,
+              left: 94,
               zIndex: 3,
-              background: "#f8fafc",
-              borderBottom: "1px solid #cbd5e1",
-              borderRight: "1px solid #cbd5e1",
-              boxShadow: "2px 0 5px rgba(0,0,0,0.04)",
-              color: "#475569",
-              fontWeight: 700,
-              fontSize: "0.78rem",
+              background: "#f5f6f7",
+              borderTop: "1px solid #ccd0d5",
+              borderBottom: "1px solid #ccd0d5",
+              borderRight: "1px solid #ccd0d5",
+              color: "#4b4f56",
+              fontWeight: 600,
+              fontSize: "12px",
+              boxSizing: "border-box",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ color: "#1c1e21" }}>{title}</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 4. Delivery ↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 130 }}>
+          <th style={{ ...thStyle, width: 140, minWidth: 140 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span style={{ color: "#0064e1", fontWeight: 700 }}>Delivery</span>
               <ArrowDown size={11} color="#0064e1" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 5. Actions ▾ */}
-          <th style={{ ...thStyle, minWidth: 120 }}>
+          <th style={{ ...thStyle, width: 120, minWidth: 120 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Actions</span>
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 6. Attribution setting ▾ */}
-          <th style={{ ...thStyle, minWidth: 160 }}>
+          <th style={{ ...thStyle, width: 145, minWidth: 145 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Attribution setting</span>
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 7. Results ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 120 }}>
+          <th style={{ ...thStyle, width: 110, minWidth: 110 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Results</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 8. Cost per result ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 140 }}>
+          <th style={{ ...thStyle, width: 125, minWidth: 125 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Cost per result</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 9. Budget ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 160 }}>
+          <th style={{ ...thStyle, width: 135, minWidth: 135 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Budget</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 10. Amount spent ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 140 }}>
+          <th style={{ ...thStyle, width: 120, minWidth: 120 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Amount spent</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 11. Impressions ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 130 }}>
+          <th style={{ ...thStyle, width: 120, minWidth: 120 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Impressions</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 12. Reach ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 120 }}>
+          <th style={{ ...thStyle, width: 110, minWidth: 110 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Reach</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 12b. Clicks ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 120 }}>
+          <th style={{ ...thStyle, width: 100, minWidth: 100 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Clicks</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 12c. CTR ↑↓ ▾ */}
-          <th style={{ ...thStyle, minWidth: 110 }}>
+          <th style={{ ...thStyle, width: 95, minWidth: 95 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>CTR</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 13. Schedule ↑↓ ▾ (Image 3 & 4) */}
-          <th style={{ ...thStyle, minWidth: 170 }}>
+          <th style={{ ...thStyle, width: 160, minWidth: 160 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Schedule</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 14. Ends ↑↓ ▾ (Image 3 & 4) */}
-          <th style={{ ...thStyle, minWidth: 120 }}>
+          <th style={{ ...thStyle, width: 110, minWidth: 110 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Ends</span>
-              <ArrowUpDown size={11} color="#64748b" />
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ArrowUpDown size={11} color="#65676b" />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 15. Bid strategy ▾ (Image 4) */}
-          <th style={{ ...thStyle, minWidth: 160 }}>
+          <th style={{ ...thStyle, width: 140, minWidth: 140 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Bid strategy</span>
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
           {/* 16. Last significant edit ▾ (Image 4) */}
-          <th style={{ ...thStyle, minWidth: 170 }}>
+          <th style={{ ...thStyle, width: 160, minWidth: 160 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <span>Last significant edit</span>
-              <ChevronDown size={11} color="#64748b" style={{ marginLeft: "auto" }} />
+              <ChevronDown size={11} color="#65676b" style={{ marginLeft: "auto" }} />
             </div>
           </th>
 
@@ -4917,9 +4709,9 @@ export default function CampaignsTab({
           <th
             style={{
               ...thStyle,
-              width: 44,
-              minWidth: 44,
-              padding: "10px 8px",
+              width: 40,
+              minWidth: 40,
+              padding: "8px 8px",
               textAlign: "center",
             }}
           >
@@ -4930,13 +4722,13 @@ export default function CampaignsTab({
                 width: 22,
                 height: 22,
                 borderRadius: "50%",
-                border: "1px solid #cbd5e1",
+                border: "1px solid #ccd0d5",
                 background: "#ffffff",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                color: "#64748b",
+                color: "#65676b",
                 padding: 0,
               }}
             >
@@ -5526,7 +5318,7 @@ export default function CampaignsTab({
                                   {/* Account Details */}
                                   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
                                     <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                      {acc.display_id || acc.name}
+                                      {acc.name || acc.display_id || acc.id}
                                     </span>
                                     <span style={{ fontSize: "0.68rem", color: "#65676b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                       Ad account ID: {acc.display_id || acc.id.replace("act_", "")}
@@ -10484,13 +10276,13 @@ export default function CampaignsTab({
                       </td>
                     </tr>
                   ) : (
-                    filteredAds.map((ad, idx) => {
+                    sortedFilteredAds.map((ad, idx) => {
+                      const isDraft = String(ad.delivery || "").toLowerCase().includes("draft") || Boolean(ad.is_draft);
                       const isRowHovered = hoveredRowId === ad.id || openRowMenuId === ad.id;
                       const isSelected = selectedAdIds.includes(ad.id);
-                      // Selected row background matching Meta teal/green highlight from Images 1, 2, 3
-                      const rowBg = isSelected
-                        ? (isRowHovered ? "#d8ede3" : "#e2f3ec")
-                        : (isRowHovered ? "#edf7f2" : idx % 2 === 0 ? "#ffffff" : "#fbfcfd");
+                      const rowBg = isDraft
+                        ? (isSelected ? "#d7ebd9" : isRowHovered ? "#e3f2e4" : "#edf7ed")
+                        : (isSelected ? "#e7f3ff" : isRowHovered ? "#f5f6f7" : "#ffffff");
 
                       return (
                         <tr
@@ -10499,19 +10291,25 @@ export default function CampaignsTab({
                           onMouseLeave={() => setHoveredRowId(null)}
                           style={{
                             background: rowBg,
-                            transition: "background 0.15s ease",
+                            transition: "background 0.1s ease",
                           }}
                         >
-                          {/* 1. Checkbox (Sticky) */}
+                          {/* 1. Checkbox (Sticky left: 0) */}
                           <td
                             style={{
-                              padding: "12px 14px",
+                              width: 40,
+                              minWidth: 40,
+                              maxWidth: 40,
+                              padding: "6px 10px",
                               position: "sticky",
                               left: 0,
                               zIndex: 2,
                               background: rowBg,
-                              borderBottom: "1px solid #e2e8f0",
-                              borderRight: "1px solid #f1f5f9",
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #e4e6eb",
+                              borderLeft: isDraft ? "3px solid #00a400" : "3px solid transparent",
+                              textAlign: "center",
+                              boxSizing: "border-box",
                             }}
                           >
                             <input
@@ -10524,37 +10322,49 @@ export default function CampaignsTab({
                                     : prev.filter((id) => id !== ad.id)
                                 );
                               }}
-                              style={{ cursor: "pointer", width: 15, height: 15 }}
+                              style={{
+                                cursor: "pointer",
+                                width: 14,
+                                height: 14,
+                                borderRadius: 2,
+                                border: "1.5px solid #ccd0d5",
+                                accentColor: "#1877f2",
+                              }}
                             />
                           </td>
 
-                          {/* 2. Off/On Switch (Sticky) */}
+                          {/* 2. Off/On Switch (Sticky left: 40) */}
                           <td
                             style={{
-                              padding: "12px 10px",
+                              width: 64,
+                              minWidth: 64,
+                              maxWidth: 64,
+                              padding: "6px 8px",
                               position: "sticky",
-                              left: 44,
+                              left: 40,
                               zIndex: 2,
                               background: rowBg,
-                              borderBottom: "1px solid #e2e8f0",
-                              borderRight: "1px solid #f1f5f9",
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #e4e6eb",
+                              textAlign: "center",
+                              boxSizing: "border-box",
                             }}
                           >
                             <button
                               type="button"
                               onClick={() => toggleAdActive(ad.id)}
                               style={{
-                                width: 32,
+                                width: 34,
                                 height: 18,
                                 borderRadius: 9,
-                                background: ad.active ? "#0064e1" : "#cbd5e1",
+                                background: ad.active ? "#1877f2" : "#ced0d4",
                                 border: "none",
                                 padding: "2px",
-                                display: "flex",
+                                display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: ad.active ? "flex-end" : "flex-start",
                                 cursor: "pointer",
-                                transition: "all 0.2s ease",
+                                transition: "background 0.15s ease",
                                 outline: "none",
                               }}
                             >
@@ -10564,24 +10374,26 @@ export default function CampaignsTab({
                                   height: 14,
                                   borderRadius: "50%",
                                   background: "#ffffff",
-                                  boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
+                                  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
                                 }}
                               />
                             </button>
                           </td>
 
-                          {/* 3. Ad Name & Thumbnail (Sticky with Shadow, Image 5 Meta Ads) */}
+                          {/* 3. Ad Name & Thumbnail (Sticky left: 104) */}
                           <td
                             style={{
-                              padding: "8px 16px",
+                              padding: "6px 12px",
                               position: "sticky",
-                              left: 114,
+                              left: 104,
                               zIndex: 2,
                               background: rowBg,
-                              borderBottom: "1px solid #e2e8f0",
-                              borderRight: "1px solid #cbd5e1",
-                              boxShadow: "2px 0 5px rgba(0,0,0,0.04)",
-                              minWidth: 300,
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #ccd0d5",
+                              minWidth: 320,
+                              width: 320,
+                              maxWidth: 320,
+                              boxSizing: "border-box",
                             }}
                           >
                             <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -10727,20 +10539,71 @@ export default function CampaignsTab({
                             </div>
                           </td>
 
-                          {/* 4. Delivery (In draft with green circle) */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          {/* 4. Delivery */}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span
-                                style={{
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: "50%",
-                                  border: "2px solid #16a34a",
-                                  background: "transparent",
-                                  display: "inline-block",
-                                }}
-                              />
-                              <span style={{ color: "#334155", fontWeight: 500 }}>{ad.delivery}</span>
+                              {(() => {
+                                const d = String(ad.delivery || "").toLowerCase();
+                                if (d === "active") {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        background: "#00a400",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                if (d === "in draft" || d.includes("draft")) {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        border: "2px solid #00a400",
+                                        background: "transparent",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                if (d === "no active ads") {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        border: "2px solid #8a8d91",
+                                        background: "transparent",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                return (
+                                  <span
+                                    style={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: "50%",
+                                      background: "#8a8d91",
+                                      display: "inline-block",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                );
+                              })()}
+                              <span style={{ color: "#1c1e21", fontWeight: 400, fontSize: "12px" }}>
+                                {ad.delivery}
+                              </span>
                             </div>
                           </td>
 
@@ -10987,21 +10850,46 @@ export default function CampaignsTab({
                       </td>
                     </tr>
                   ) : (
-                    filteredAdsets.map((as, idx) => {
+                    sortedFilteredAdsets.map((as, idx) => {
+                      const isDraft = String(as.delivery || "").toLowerCase().includes("draft") || Boolean(as.is_draft);
                       const isRowHovered = hoveredRowId === as.id || openRowMenuId === as.id;
                       const isSelected = selectedAdsetIds.includes(as.id);
-                      const rowBg = isSelected
-                        ? (isRowHovered ? "#d8ede3" : "#e2f3ec")
-                        : (isRowHovered ? "#edf7f2" : idx % 2 === 0 ? "#ffffff" : "#fbfcfd");
+
+                      // Exact Meta Ads Manager Row Colors:
+                      // Draft row: soft mint green (#edf7ed), hover: #e3f2e4, selected: #d7ebd9
+                      // Normal row: pure white (#ffffff), hover: #f5f6f7, selected: #e7f3ff
+                      const rowBg = isDraft
+                        ? (isSelected ? "#d7ebd9" : isRowHovered ? "#e3f2e4" : "#edf7ed")
+                        : (isSelected ? "#e7f3ff" : isRowHovered ? "#f5f6f7" : "#ffffff");
 
                       return (
                         <tr
                           key={as.id}
                           onMouseEnter={() => setHoveredRowId(as.id)}
                           onMouseLeave={() => setHoveredRowId(null)}
-                          style={{ background: rowBg, transition: "background 0.15s ease" }}
+                          style={{
+                            background: rowBg,
+                            transition: "background 0.1s ease",
+                          }}
                         >
-                          <td style={{ padding: "12px 14px", position: "sticky", left: 0, background: rowBg, zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+                          {/* 1. Checkbox (Sticky left: 0) */}
+                          <td
+                            style={{
+                              width: 38,
+                              minWidth: 38,
+                              maxWidth: 38,
+                              padding: "6px 10px",
+                              position: "sticky",
+                              left: 0,
+                              background: rowBg,
+                              zIndex: 2,
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #e4e6eb",
+                              borderLeft: isDraft ? "3px solid #00a400" : "3px solid transparent",
+                              textAlign: "center",
+                              boxSizing: "border-box",
+                            }}
+                          >
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -11010,43 +10898,82 @@ export default function CampaignsTab({
                                   e.target.checked ? [...prev, as.id] : prev.filter((id) => id !== as.id)
                                 );
                               }}
-                              style={{ cursor: "pointer" }}
+                              style={{
+                                cursor: "pointer",
+                                width: 14,
+                                height: 14,
+                                borderRadius: 2,
+                                border: "1.5px solid #ccd0d5",
+                                accentColor: "#0064e1",
+                              }}
                             />
                           </td>
-                          <td style={{ padding: "12px 10px", position: "sticky", left: 44, background: rowBg, zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+
+                          {/* 2. Off... Toggle (Sticky left: 38) */}
+                          <td
+                            style={{
+                              width: 56,
+                              minWidth: 56,
+                              maxWidth: 56,
+                              padding: "6px 8px",
+                              position: "sticky",
+                              left: 38,
+                              background: rowBg,
+                              zIndex: 2,
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #e4e6eb",
+                              textAlign: "center",
+                              boxSizing: "border-box",
+                            }}
+                          >
                             <button
                               type="button"
                               onClick={() => toggleAdsetActive(as.id)}
+                              title={as.active ? "Turn ad set off" : "Turn ad set on"}
                               style={{
                                 width: 32,
-                                height: 18,
+                                height: 16,
                                 borderRadius: 9,
-                                background: as.active ? "#0064e1" : "#cbd5e1",
+                                background: as.active ? "#0064e1" : "#ced0d4",
                                 border: "none",
                                 padding: "2px",
-                                display: "flex",
+                                display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: as.active ? "flex-end" : "flex-start",
                                 cursor: "pointer",
+                                transition: "background 0.15s ease",
+                                outline: "none",
                               }}
                             >
-                              <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#ffffff" }} />
+                              <span
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "50%",
+                                  background: "#ffffff",
+                                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
+                                }}
+                              />
                             </button>
                           </td>
-                          {/* Ad set Name Column (Image 4 Meta Ad Sets) */}
+
+                          {/* 3. Ad set Name Column (Sticky left: 94) */}
                           <td
                             style={{
-                              padding: "8px 16px",
+                              padding: "6px 12px",
                               position: "sticky",
-                              left: 114,
+                              left: 94,
                               background: rowBg,
                               zIndex: 2,
-                              borderBottom: "1px solid #e2e8f0",
-                              borderRight: "1px solid #cbd5e1",
-                              minWidth: 300,
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #ccd0d5",
+                              minWidth: 290,
+                              width: 290,
+                              maxWidth: 290,
+                              boxSizing: "border-box",
                             }}
                           >
-                            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 36 }}>
+                            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
                               {inlineEditing && inlineEditing.id === as.id ? (
                                 <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
                                   <input
@@ -11059,12 +10986,12 @@ export default function CampaignsTab({
                                       if (e.key === "Escape") setInlineEditing(null);
                                     }}
                                     style={{
-                                      padding: "2px 8px",
-                                      fontSize: "0.83rem",
+                                      padding: "2px 6px",
+                                      fontSize: "12px",
                                       borderRadius: 4,
-                                      border: "1px solid #0064e1",
+                                      border: "1px solid #1877f2",
                                       outline: "none",
-                                      boxShadow: "0 0 0 2px rgba(0, 100, 225, 0.2)",
+                                      boxShadow: "0 0 0 2px rgba(24, 119, 242, 0.2)",
                                       minWidth: 160,
                                     }}
                                   />
@@ -11073,7 +11000,7 @@ export default function CampaignsTab({
                                     onClick={handleSaveInlineEdit}
                                     title="Save name"
                                     style={{
-                                      background: "#0064e1",
+                                      background: "#1877f2",
                                       color: "#ffffff",
                                       border: "none",
                                       borderRadius: 4,
@@ -11083,16 +11010,16 @@ export default function CampaignsTab({
                                       alignItems: "center",
                                     }}
                                   >
-                                    <Check size={12} strokeWidth={2.5} />
+                                    <Check size={11} strokeWidth={2.5} />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setInlineEditing(null)}
                                     title="Cancel"
                                     style={{
-                                      background: "#f1f5f9",
-                                      color: "#64748b",
-                                      border: "1px solid #cbd5e1",
+                                      background: "#f0f2f5",
+                                      color: "#65676b",
+                                      border: "1px solid #ccd0d5",
                                       borderRadius: 4,
                                       padding: "3px 6px",
                                       cursor: "pointer",
@@ -11100,21 +11027,24 @@ export default function CampaignsTab({
                                       alignItems: "center",
                                     }}
                                   >
-                                    <X size={12} strokeWidth={2} />
+                                    <X size={11} strokeWidth={2} />
                                   </button>
                                 </div>
                               ) : (
-                                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%" }}>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, maxWidth: "100%" }}>
+                                  {(as.is_test || as.name?.startsWith("Test") || as.name?.includes("Test -")) && !as.name?.includes("⚗") && (
+                                    <span style={{ fontSize: 13, color: "#1877f2", lineHeight: 1 }} title="A/B Test">⚗</span>
+                                  )}
                                   <span
                                     onClick={() => handleOpenStandaloneEditorForAdset(as)}
                                     title={as.name}
                                     style={{
                                       color: "#0064e1",
-                                      fontWeight: 600,
-                                      fontSize: "0.84rem",
+                                      fontWeight: 500,
+                                      fontSize: "13px",
                                       cursor: "pointer",
                                       textDecoration: "none",
-                                      maxWidth: 320,
+                                      maxWidth: 250,
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
                                       whiteSpace: "nowrap",
@@ -11136,132 +11066,230 @@ export default function CampaignsTab({
                                       background: "transparent",
                                       border: "none",
                                       cursor: "pointer",
-                                      padding: "2px 4px",
-                                      borderRadius: 4,
-                                      color: "#64748b",
+                                      padding: "1px 3px",
+                                      borderRadius: 3,
+                                      color: "#65676b",
                                       display: "inline-flex",
                                       alignItems: "center",
                                       justifyContent: "center",
-                                      transition: "opacity 0.15s ease, color 0.15s ease, background 0.15s ease",
+                                      transition: "opacity 0.15s ease",
                                       flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = "#e2e8f0";
-                                      e.currentTarget.style.color = "#0064e1";
+                                      e.currentTarget.style.background = "#e4e6eb";
+                                      e.currentTarget.style.color = "#1877f2";
                                     }}
                                     onMouseLeave={(e) => {
                                       e.currentTarget.style.background = "transparent";
-                                      e.currentTarget.style.color = "#64748b";
+                                      e.currentTarget.style.color = "#65676b";
                                     }}
                                   >
-                                    <Edit2 size={12} strokeWidth={2} />
+                                    <Edit2 size={11} strokeWidth={2} />
                                   </button>
                                 </div>
                               )}
 
-                              {/* Meta Image 3 Action Pills on Hover or Selection */}
+                              {/* Meta Image 2/3 Action Pills on Hover or Selection */}
                               {(isRowHovered || isSelected) && renderRowActionPills(as, "adset")}
                             </div>
                           </td>
+
                           {/* 4. Delivery */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span
-                                style={{
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: "50%",
-                                  border: as.delivery === "Active" ? "none" : "2px solid #16a34a",
-                                  background: as.delivery === "Active" ? "#16a34a" : "transparent",
-                                  display: "inline-block",
-                                }}
-                              />
-                              <span style={{ color: "#334155", fontWeight: 500 }}>{as.delivery}</span>
+                              {(() => {
+                                const d = String(as.delivery || "").toLowerCase();
+                                if (d === "active") {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        background: "#00a400",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                if (d === "in draft" || d.includes("draft")) {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        border: "2px solid #00a400",
+                                        background: "transparent",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                if (d === "no active ads") {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        border: "2px solid #8a8d91",
+                                        background: "transparent",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                // Payment error, Off, Completed, Paused
+                                return (
+                                  <span
+                                    style={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: "50%",
+                                      background: "#8a8d91",
+                                      display: "inline-block",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                );
+                              })()}
+                              <span style={{ color: "#1c1e21", fontWeight: 400, fontSize: "12px" }}>
+                                {as.delivery}
+                              </span>
                             </div>
                           </td>
 
                           {/* 5. Actions */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#65676b" }}>
                             {as.actions || "—"}
                           </td>
 
                           {/* 6. Attribution setting */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {as.attribution || "—"}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb" }}>
+                            {isDraft ? (
+                              <span style={{ color: "#65676b" }}>—</span>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>
+                                  {as.attribution || "7-day click or 1-day view"}
+                                </div>
+                                <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>
+                                  {as.attributionSub || "All conversions"}
+                                </div>
+                              </div>
+                            )}
                           </td>
 
                           {/* 7. Results */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {as.results || "—"}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb" }}>
+                            {isDraft || !as.results || as.results === "—" ? (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>—</div>
+                                {!isDraft && as.resultsSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{as.resultsSub}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>
+                                  {as.results}
+                                </div>
+                                {as.resultsSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{as.resultsSub}</div>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           {/* 8. Cost per result */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {as.costPerResult || "—"}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb" }}>
+                            {isDraft || !as.costPerResult || as.costPerResult === "—" ? (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>—</div>
+                                {!isDraft && as.costPerResultSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{as.costPerResultSub}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>
+                                  {as.costPerResult}
+                                </div>
+                                {as.costPerResultSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{as.costPerResultSub}</div>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           {/* 9. Budget */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
-                            <div>
-                              <div style={{ color: "#0f172a", fontWeight: 500 }}>{as.budget}</div>
-                              {as.budgetSub && (
-                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{as.budgetSub}</div>
-                              )}
-                            </div>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb" }}>
+                            {String(as.budget || "").toLowerCase().includes("campaign") ? (
+                              <span style={{ color: "#1c1e21", fontSize: "12px" }}>Using campaign...</span>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>{as.budget}</div>
+                                <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{as.budgetSub || "Daily"}</div>
+                              </div>
+                            )}
                           </td>
 
                           {/* 10. Amount spent */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {as.amountSpent || "—"}
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#1c1e21" }}>
+                            {isDraft ? "—" : (as.amountSpent || "—")}
                           </td>
 
                           {/* 11. Impressions */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#1c1e21" }}>
                             {as.impressions || "—"}
                           </td>
 
                           {/* 12. Reach */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#1c1e21" }}>
                             {as.reach || "—"}
                           </td>
 
                           {/* 12b. Clicks */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#1c1e21" }}>
                             {as.clicks || "—"}
                           </td>
 
                           {/* 12c. CTR */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#1c1e21" }}>
                             {as.ctr || "—"}
                           </td>
 
                           {/* 13. Schedule */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#334155" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#1c1e21" }}>
                             {as.schedule || "8 Oct 2026–Ongoing"}
                           </td>
 
                           {/* 14. Ends */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#334155" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#1c1e21" }}>
                             {as.ends || "Ongoing"}
                           </td>
 
                           {/* 15. Bid strategy */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb" }}>
                             <div>
-                              <div style={{ color: "#0f172a", fontWeight: 500 }}>{as.bidStrategy}</div>
+                              <div style={{ color: "#1c1e21", fontSize: "12px" }}>{as.bidStrategy || "Highest volume"}</div>
                               {as.bidStrategySub && (
-                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{as.bidStrategySub}</div>
+                                <div style={{ fontSize: "11px", color: "#65676b" }}>{as.bidStrategySub}</div>
                               )}
                             </div>
                           </td>
 
                           {/* 16. Last significant edit */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", color: "#65676b" }}>
                             {as.lastSignificantEdit || "—"}
                           </td>
 
                           {/* 17. Customize column */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", textAlign: "center" }} />
+                          <td style={{ ...tdStyle, borderBottom: "1px solid #e4e6eb", textAlign: "center" }} />
                         </tr>
                       );
                     })
@@ -11423,63 +11451,125 @@ export default function CampaignsTab({
                       </td>
                     </tr>
                   ) : (
-                    filteredCampaigns.map((camp, idx) => {
+                    sortedFilteredCampaigns.map((camp, idx) => {
+                      const isDraft = String(camp.delivery || "").toLowerCase().includes("draft") || Boolean(camp.is_draft);
                       const isRowHovered = hoveredRowId === camp.id || openRowMenuId === camp.id;
                       const isSelected = selectedCampaignIds.includes(camp.id);
-                      const rowBg = isSelected
-                        ? (isRowHovered ? "#d8ede3" : "#e2f3ec")
-                        : (isRowHovered ? "#edf7f2" : idx % 2 === 0 ? "#ffffff" : "#fbfcfd");
+                      const rowBg = isDraft
+                        ? (isSelected ? "#d7ebd9" : isRowHovered ? "#eaf5ec" : "#f4fbf7")
+                        : (isSelected ? "#e7f3ff" : isRowHovered ? "#f5f6f7" : "#ffffff");
 
                       return (
                         <tr
                           key={camp.id}
                           onMouseEnter={() => setHoveredRowId(camp.id)}
                           onMouseLeave={() => setHoveredRowId(null)}
-                          style={{ background: rowBg, transition: "background 0.15s ease" }}
+                          style={{
+                            background: rowBg,
+                            height: 44,
+                            transition: "background 0.1s ease",
+                          }}
                         >
-                          <td style={{ padding: "12px 14px", position: "sticky", left: 0, background: rowBg, zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+                          {/* 1. Checkbox (Sticky left: 0) */}
+                          <td
+                            style={{
+                              width: 38,
+                              minWidth: 38,
+                              maxWidth: 38,
+                              padding: "6px 10px",
+                              position: "sticky",
+                              left: 0,
+                              background: rowBg,
+                              zIndex: 2,
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #e4e6eb",
+                              borderLeft: isDraft ? "3px solid #00a400" : "3px solid transparent",
+                              textAlign: "center",
+                              boxSizing: "border-box",
+                            }}
+                          >
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={(e) => {
                                 setSelectedCampaignIds((prev) =>
-                                  e.target.checked ? [...prev, camp.id] : prev.filter((id) => id !== camp.id)
+                                   e.target.checked ? [...prev, camp.id] : prev.filter((id) => id !== camp.id)
                                 );
                               }}
-                              style={{ cursor: "pointer" }}
+                              style={{
+                                cursor: "pointer",
+                                width: 14,
+                                height: 14,
+                                borderRadius: 2,
+                                border: "1.5px solid #ccd0d5",
+                                accentColor: "#0064e1",
+                              }}
                             />
                           </td>
-                          <td style={{ padding: "12px 10px", position: "sticky", left: 44, background: rowBg, zIndex: 2, borderBottom: "1px solid #e2e8f0" }}>
+
+                          {/* 2. Off... Toggle (Sticky left: 38) */}
+                          <td
+                            style={{
+                              width: 56,
+                              minWidth: 56,
+                              maxWidth: 56,
+                              padding: "6px 8px",
+                              position: "sticky",
+                              left: 38,
+                              background: rowBg,
+                              zIndex: 2,
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #e4e6eb",
+                              textAlign: "center",
+                              boxSizing: "border-box",
+                            }}
+                          >
                             <button
                               type="button"
                               onClick={() => toggleCampaignActive(camp.id)}
+                              title={camp.active ? "Turn campaign off" : "Turn campaign on"}
                               style={{
                                 width: 32,
-                                height: 18,
+                                height: 16,
                                 borderRadius: 9,
-                                background: camp.active ? "#0064e1" : "#cbd5e1",
+                                background: camp.active ? "#0064e1" : "#ced0d4",
                                 border: "none",
                                 padding: "2px",
-                                display: "flex",
+                                display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: camp.active ? "flex-end" : "flex-start",
                                 cursor: "pointer",
+                                transition: "background 0.15s ease",
+                                outline: "none",
                               }}
                             >
-                              <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#ffffff" }} />
+                              <span
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "50%",
+                                  background: "#ffffff",
+                                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
+                                }}
+                              />
                             </button>
                           </td>
-                          {/* Campaign Name Column (Image 1 Meta Campaigns) */}
+
+                          {/* 3. Campaign Name Column (Sticky left: 94) */}
                           <td
                             style={{
-                              padding: "8px 16px",
+                              padding: "6px 12px",
                               position: "sticky",
-                              left: 114,
+                              left: 94,
                               background: rowBg,
                               zIndex: 2,
-                              borderBottom: "1px solid #e2e8f0",
-                              borderRight: "1px solid #cbd5e1",
-                              minWidth: 300,
+                              borderBottom: "1px solid #e4e6eb",
+                              borderRight: "1px solid #ccd0d5",
+                              boxShadow: "2px 0 4px rgba(0,0,0,0.04)",
+                              minWidth: 290,
+                              width: 290,
+                              maxWidth: 290,
+                              boxSizing: "border-box",
                             }}
                           >
                             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 36 }}>
@@ -11541,16 +11631,37 @@ export default function CampaignsTab({
                                 </div>
                               ) : (
                                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%" }}>
+                                  {pinnedRowIds.has(camp.id) && (
+                                    <span
+                                      title="Pinned to top"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 3,
+                                        padding: "1px 6px",
+                                        borderRadius: 4,
+                                        background: "#eff6ff",
+                                        color: "#0064e1",
+                                        fontSize: "0.72rem",
+                                        fontWeight: 700,
+                                        border: "1px solid #bfdbfe",
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      <Pin size={11} color="#0064e1" style={{ transform: "rotate(45deg)" }} />
+                                      <span>Pinned</span>
+                                    </span>
+                                  )}
                                   <span
                                     onClick={() => handleOpenStandaloneEditorForCampaign(camp)}
                                     title={camp.name}
                                     style={{
                                       color: "#0064e1",
-                                      fontWeight: 600,
-                                      fontSize: "0.84rem",
+                                      fontWeight: 500,
+                                      fontSize: "13px",
                                       cursor: "pointer",
                                       textDecoration: "none",
-                                      maxWidth: 320,
+                                      maxWidth: 250,
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
                                       whiteSpace: "nowrap",
@@ -11600,104 +11711,200 @@ export default function CampaignsTab({
                             </div>
                           </td>
                           {/* 4. Delivery */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <td style={{ ...tdStyle }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span
-                                style={{
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: "50%",
-                                  border: camp.delivery === "Active" ? "none" : "2px solid #16a34a",
-                                  background: camp.delivery === "Active" ? "#16a34a" : "transparent",
-                                  display: "inline-block",
-                                }}
-                              />
-                              <span style={{ color: "#334155", fontWeight: 500 }}>{camp.delivery}</span>
+                              {(() => {
+                                const d = String(camp.delivery || "").toLowerCase();
+                                if (d === "active") {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        background: "#00a400",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                if (d === "in draft" || d.includes("draft")) {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        border: "2px solid #00a400",
+                                        background: "transparent",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                if (d === "no active ads") {
+                                  return (
+                                    <span
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        border: "2px solid #8a8d91",
+                                        background: "transparent",
+                                        display: "inline-block",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  );
+                                }
+                                return (
+                                  <span
+                                    style={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: "50%",
+                                      background: "#8a8d91",
+                                      display: "inline-block",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                );
+                              })()}
+                              <span style={{ color: "#1c1e21", fontWeight: 400, fontSize: "12px" }}>
+                                {camp.delivery}
+                              </span>
                             </div>
                           </td>
 
                           {/* 5. Actions */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, color: "#65676b" }}>
                             {camp.actions || "—"}
                           </td>
 
                           {/* 6. Attribution setting */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {camp.attribution || "—"}
+                          <td style={{ ...tdStyle }}>
+                            {isDraft ? (
+                              <span style={{ color: "#65676b" }}>—</span>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>
+                                  {camp.attribution || "7-day click or 1-day view"}
+                                </div>
+                                <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>
+                                  {camp.attributionSub || "All conversions"}
+                                </div>
+                              </div>
+                            )}
                           </td>
 
                           {/* 7. Results */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {camp.results || "—"}
+                          <td style={{ ...tdStyle }}>
+                            {isDraft || !camp.results || camp.results === "—" ? (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>—</div>
+                                {!isDraft && camp.resultsSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{camp.resultsSub}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>
+                                  {camp.results}
+                                </div>
+                                {camp.resultsSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{camp.resultsSub}</div>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           {/* 8. Cost per result */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {camp.costPerResult || "—"}
+                          <td style={{ ...tdStyle }}>
+                            {isDraft || !camp.costPerResult || camp.costPerResult === "—" ? (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>—</div>
+                                {!isDraft && camp.costPerResultSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{camp.costPerResultSub}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>
+                                  {camp.costPerResult}
+                                </div>
+                                {camp.costPerResultSub && (
+                                  <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{camp.costPerResultSub}</div>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           {/* 9. Budget */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
-                            <div>
-                              <div style={{ color: "#0f172a", fontWeight: 500 }}>{camp.budget}</div>
-                              {camp.budgetSub && (
-                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{camp.budgetSub}</div>
-                              )}
-                            </div>
+                          <td style={{ ...tdStyle }}>
+                            {String(camp.budget || "").toLowerCase().includes("ad set") || String(camp.budget || "").toLowerCase().includes("using") ? (
+                              <span style={{ color: "#1c1e21", fontSize: "12px" }}>Using ad set bu...</span>
+                            ) : (
+                              <div>
+                                <div style={{ color: "#1c1e21", fontSize: "12px", lineHeight: "1.3" }}>{camp.budget}</div>
+                                <div style={{ fontSize: "11px", color: "#65676b", lineHeight: "1.2" }}>{camp.budgetSub || "Daily"}</div>
+                              </div>
+                            )}
                           </td>
 
                           {/* 10. Amount spent */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                            {camp.amountSpent || "—"}
+                          <td style={{ ...tdStyle, color: "#1c1e21" }}>
+                            {isDraft ? "—" : (camp.amountSpent || "₹0.00")}
                           </td>
 
                           {/* 11. Impressions */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, color: "#1c1e21" }}>
                             {camp.impressions || "—"}
                           </td>
 
                           {/* 12. Reach */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, color: "#1c1e21" }}>
                             {camp.reach || "—"}
                           </td>
 
                           {/* 12b. Clicks */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, color: "#1c1e21" }}>
                             {camp.clicks || "—"}
                           </td>
 
                           {/* 12c. CTR */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, color: "#1c1e21" }}>
                             {camp.ctr || "—"}
                           </td>
 
                           {/* 13. Schedule */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#334155" }}>
+                          <td style={{ ...tdStyle, color: "#1c1e21" }}>
                             {camp.schedule || "8 Oct 2026–Ongoing"}
                           </td>
 
                           {/* 14. Ends */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#334155" }}>
+                          <td style={{ ...tdStyle, color: "#1c1e21" }}>
                             {camp.ends || "Ongoing"}
                           </td>
 
                           {/* 15. Bid strategy */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0" }}>
+                          <td style={{ ...tdStyle }}>
                             <div>
-                              <div style={{ color: "#0f172a", fontWeight: 500 }}>{camp.bidStrategy}</div>
+                              <div style={{ color: "#1c1e21", fontSize: "12px" }}>{camp.bidStrategy || "Lowest cost"}</div>
                               {camp.bidStrategySub && (
-                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{camp.bidStrategySub}</div>
+                                <div style={{ fontSize: "11px", color: "#65676b" }}>{camp.bidStrategySub}</div>
                               )}
                             </div>
                           </td>
 
                           {/* 16. Last significant edit */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                          <td style={{ ...tdStyle, color: "#65676b" }}>
                             {camp.lastSignificantEdit || "—"}
                           </td>
 
                           {/* 17. Customize column */}
-                          <td style={{ ...tdStyle, borderBottom: "1px solid #e2e8f0", textAlign: "center" }} />
+                          <td style={{ ...tdStyle, textAlign: "center" }} />
                         </tr>
                       );
                     })
@@ -11709,33 +11916,29 @@ export default function CampaignsTab({
             {/* Table Footer Count matching Images 1, 2, 3 */}
             <div
               style={{
-                padding: "8px 18px",
-                borderTop: "1px solid #e2e8f0",
-                background: "#f8fafc",
+                padding: "7px 16px",
+                borderTop: "1px solid #ccd0d5",
+                background: "#ffffff",
                 display: "flex",
-                flexDirection: "column",
-                gap: 3,
-                fontSize: "0.82rem",
-                color: "#64748b",
+                alignItems: "center",
+                gap: 6,
+                fontSize: "12px",
+                color: "#1c1e21",
+                fontWeight: 500,
                 marginTop: "auto",
                 flexShrink: 0,
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span>
-                  Results from{" "}
-                  {activeMetaSubSection === "ads"
-                    ? `${filteredAds.length} ads`
-                    : activeMetaSubSection === "adsets"
-                      ? `${filteredAdsets.length} ad sets`
-                      : `${filteredCampaigns.length} campaigns`}
-                </span>
-                <Info size={13} color="#64748b" style={{ cursor: "pointer" }} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.76rem", color: "#0064e1", cursor: "pointer" }}>
-                <span>👁️</span>
-                <span>View results</span>
-              </div>
+              <span>
+                Results from{" "}
+                {activeMetaSubSection === "ads"
+                  ? `${filteredAds.length} ads`
+                  : activeMetaSubSection === "adsets"
+                    ? `${filteredAdsets.length} ad sets`
+                    : `${filteredCampaigns.length} campaigns`}
+              </span>
+              <Info size={13} color="#65676b" style={{ cursor: "pointer" }} />
             </div>
           </div>
                 </>
@@ -12351,7 +12554,7 @@ export default function CampaignsTab({
               background: "#ffffff",
               borderRadius: 8,
               width: "100%",
-              maxWidth: 500,
+              maxWidth: createModalStep === "setup" ? 580 : 680,
               boxShadow: "0 10px 32px rgba(0, 0, 0, 0.22)",
               overflow: "hidden",
               position: "relative",
@@ -12359,36 +12562,345 @@ export default function CampaignsTab({
               display: "flex",
               flexDirection: "column",
               maxHeight: "90vh",
+              transition: "max-width 0.2s ease",
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {createModalStep === "setup" ? (
+              /* ── STEP 2: Choose a campaign setup (Matching Image 2 for Traffic, Image 3 for Engagement) ── */
+              <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                {/* Header */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    padding: "20px 24px 10px 24px",
+                  }}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingRight: 16 }}>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: "1.15rem",
+                        fontWeight: 700,
+                        color: "#1c1e21",
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      Choose a campaign setup
+                    </h2>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.84rem",
+                        color: "#4b5563",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      {CAMPAIGN_SETUP_DATA[createObjective]?.description ||
+                        `Create your ${(createObjective || "").toLowerCase()} campaign using a tailored and streamlined setup, or manually build your campaign. Suggestions may vary based on your recent ad account activity.`}
+                    </p>
+                  </div>
+                  {/* Close X */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateModalOpen(false);
+                      setCreateModalStep("objective");
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#65676b",
+                      borderRadius: 6,
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <X size={18} strokeWidth={2.2} />
+                  </button>
+                </div>
+
+                {/* Sub-header: Why am I seeing this suggestion? */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    padding: "0 24px 10px 24px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: "0.82rem",
+                      color: "#65676b",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#1c1e21")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "#65676b")}
+                  >
+                    <span style={{ fontSize: "0.85rem" }}>💡</span>
+                    <span>Why am I seeing this suggestion?</span>
+                  </button>
+                </div>
+
+                {/* Body: Setup Options (Tailored vs Manual) */}
+                <div
+                  style={{
+                    padding: "0 24px 16px 24px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                    maxHeight: "calc(90vh - 170px)",
+                    overflowY: "auto",
+                  }}
+                >
+                  {/* Option 1: Tailored (Image 2 / Image 3) */}
+                  <div
+                    onClick={() => setCampaignSetupChoice("tailored")}
+                    onDoubleClick={() => handleLaunchStandaloneEditor(createObjective, "tailored")}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 14,
+                      padding: "16px",
+                      borderRadius: 8,
+                      border: campaignSetupChoice === "tailored" ? "1.5px solid #0064e1" : "1px solid #e4e6eb",
+                      background: campaignSetupChoice === "tailored" ? "#edf5fd" : "#ffffff",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {/* Radio Button */}
+                    <span
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        border: campaignSetupChoice === "tailored" ? "2px solid #0064e1" : "2px solid #cbd5e1",
+                        background: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: 14,
+                      }}
+                    >
+                      {campaignSetupChoice === "tailored" && (
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0064e1" }} />
+                      )}
+                    </span>
+
+                    {/* Graphic Icon */}
+                    <div style={{ flexShrink: 0 }}>
+                      {CAMPAIGN_SETUP_DATA[createObjective]?.tailored?.icon || (
+                        <svg width="46" height="46" viewBox="0 0 56 56" fill="none">
+                          <circle cx="28" cy="28" r="26" fill="#bbf7d0" />
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Text & Tags */}
+                    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                      <span style={{ fontSize: "0.93rem", fontWeight: 650, color: "#1c1e21", lineHeight: 1.3 }}>
+                        {CAMPAIGN_SETUP_DATA[createObjective]?.tailored?.title || "Tailored campaign"}
+                      </span>
+                      <span style={{ fontSize: "0.82rem", color: "#4b5563", marginTop: 4, lineHeight: 1.45 }}>
+                        {CAMPAIGN_SETUP_DATA[createObjective]?.tailored?.description ||
+                          "Quickly create a campaign optimised to deliver the best results with preset settings."}
+                      </span>
+                      {/* Badges / Pills */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                        {(CAMPAIGN_SETUP_DATA[createObjective]?.tailored?.tags || ["Streamlined", "Tailored", "Best practices"]).map(
+                          (tag, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                display: "inline-block",
+                                background: "#ffffff",
+                                border: "1px solid #d0d7de",
+                                borderRadius: 12,
+                                padding: "2px 10px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                color: "#1c1e21",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Option 2: Manual (Image 2 / Image 3) */}
+                  <div
+                    onClick={() => setCampaignSetupChoice("manual")}
+                    onDoubleClick={() => handleLaunchStandaloneEditor(createObjective, "manual")}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 14,
+                      padding: "16px",
+                      borderRadius: 8,
+                      border: campaignSetupChoice === "manual" ? "1.5px solid #0064e1" : "1px solid #e4e6eb",
+                      background: campaignSetupChoice === "manual" ? "#edf5fd" : "#f8fafc",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (campaignSetupChoice !== "manual") e.currentTarget.style.background = "#f1f5f9";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (campaignSetupChoice !== "manual") e.currentTarget.style.background = "#f8fafc";
+                    }}
+                  >
+                    {/* Radio Button */}
+                    <span
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        border: campaignSetupChoice === "manual" ? "2px solid #0064e1" : "2px solid #cbd5e1",
+                        background: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: 10,
+                      }}
+                    >
+                      {campaignSetupChoice === "manual" && (
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0064e1" }} />
+                      )}
+                    </span>
+
+                    {/* Gear Icon in Circle */}
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "50%",
+                        background: "#f0f2f5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Settings size={20} color="#1c1e21" />
+                    </div>
+
+                    {/* Text */}
+                    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                      <span style={{ fontSize: "0.93rem", fontWeight: 650, color: "#1c1e21", lineHeight: 1.3 }}>
+                        {CAMPAIGN_SETUP_DATA[createObjective]?.manual?.title || `Manual ${(createObjective || "").toLowerCase()} campaign`}
+                      </span>
+                      <span style={{ fontSize: "0.82rem", color: "#4b5563", marginTop: 4, lineHeight: 1.45 }}>
+                        {CAMPAIGN_SETUP_DATA[createObjective]?.manual?.description ||
+                          `Create a ${(createObjective || "").toLowerCase()} campaign from scratch for finer control over all settings.`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer: Back & Continue Buttons */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 10,
+                    padding: "14px 24px 18px 24px",
+                    borderTop: "1px solid #e2e8f0",
+                    background: "#ffffff",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setCreateModalStep("objective")}
+                    style={{
+                      padding: "7px 20px",
+                      borderRadius: 6,
+                      border: "1px solid #cbd5e1",
+                      background: "#ffffff",
+                      color: "#1c1e21",
+                      fontSize: "0.88rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "background 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchStandaloneEditor(createObjective, campaignSetupChoice)}
+                    style={{
+                      padding: "7px 22px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: "#0064e1",
+                      color: "#ffffff",
+                      fontSize: "0.88rem",
+                      fontWeight: 650,
+                      cursor: "pointer",
+                      boxShadow: "0 1px 2px rgba(0, 100, 225, 0.2)",
+                      transition: "background 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#0053ba")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#0064e1")}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ── STEP 1: Objective selection (Image 1) / New ad set or ad ── */
+              <>
             {/* Modal Header with two tabs */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "14px 20px 0 20px",
+                padding: "12px 16px 12px 20px",
                 borderBottom: "1px solid #e2e8f0",
               }}
             >
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {/* Tab 1: Create new campaign */}
                 <button
                   type="button"
                   onClick={() => setCreateModalTab("campaign")}
                   style={{
-                    padding: "8px 18px 12px 18px",
-                    background: "transparent",
+                    padding: "6px 12px",
+                    background: createModalTab === "campaign" ? "#e7f3ff" : "transparent",
                     border: "none",
-                    borderBottom: createModalTab === "campaign" ? "2.5px solid #0064e1" : "2.5px solid transparent",
-                    fontSize: "0.9rem",
-                    fontWeight: createModalTab === "campaign" ? 700 : 500,
-                    color: createModalTab === "campaign" ? "#0f172a" : "#65676b",
+                    borderRadius: 4,
+                    fontSize: "0.88rem",
+                    fontWeight: 650,
+                    color: createModalTab === "campaign" ? "#0064e1" : "#65676b",
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                     whiteSpace: "nowrap",
-                    paddingBottom: 10,
                   }}
                 >
                   Create new campaign
@@ -12398,18 +12910,16 @@ export default function CampaignsTab({
                   type="button"
                   onClick={() => setCreateModalTab("adset")}
                   style={{
-                    padding: "8px 18px 12px 18px",
-                    background: createModalTab === "adset" ? "#e7f0fd" : "transparent",
+                    padding: "6px 12px",
+                    background: createModalTab === "adset" ? "#e7f3ff" : "transparent",
                     border: "none",
-                    borderBottom: createModalTab === "adset" ? "2.5px solid #0064e1" : "2.5px solid transparent",
-                    borderRadius: createModalTab === "adset" ? "6px 6px 0 0" : 0,
-                    fontSize: "0.9rem",
-                    fontWeight: createModalTab === "adset" ? 700 : 500,
-                    color: createModalTab === "adset" ? "#1877f2" : "#65676b",
+                    borderRadius: 4,
+                    fontSize: "0.88rem",
+                    fontWeight: createModalTab === "adset" ? 650 : 500,
+                    color: createModalTab === "adset" ? "#0064e1" : "#65676b",
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                     whiteSpace: "nowrap",
-                    paddingBottom: 10,
                   }}
                 >
                   New ad set or ad
@@ -12429,7 +12939,6 @@ export default function CampaignsTab({
                   justifyContent: "center",
                   color: "#65676b",
                   borderRadius: 6,
-                  marginBottom: 4,
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
@@ -12443,45 +12952,183 @@ export default function CampaignsTab({
 
               {/* ── TAB 1: Create new campaign ── */}
               {createModalTab === "campaign" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
                   {/* Buying type */}
-                  <div>
-                    <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.88rem", fontWeight: 650, color: "#1c1e21", marginBottom: 6 }}>
+                  <div style={{ position: "relative" }} ref={buyingTypeDropdownRef}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.88rem", fontWeight: 650, color: "#1c1e21", marginBottom: 6 }}>
                       Choose a buying type
-                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 15, height: 15, borderRadius: "50%", background: "#e4e6eb", fontSize: "0.7rem", color: "#65676b", fontWeight: 700, cursor: "help" }} title="Buying type determines how you buy your ads.">?</span>
-                    </label>
-                    <div style={{ position: "relative" }}>
-                      <select
-                        value={createBuyingType}
-                        onChange={(e) => setCreateBuyingType(e.target.value)}
+                      <span
                         style={{
-                          width: "100%",
-                          padding: "8px 32px 8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid #cbd5e1",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 15,
+                          height: 15,
+                          borderRadius: "50%",
+                          background: "#1c1e21",
+                          color: "#ffffff",
+                          fontSize: "0.62rem",
+                          fontWeight: 700,
+                          cursor: "help",
+                          fontFamily: "serif",
+                          lineHeight: 1,
+                        }}
+                        title="Buying type determines how you buy your ads."
+                      >
+                        i
+                      </span>
+                    </label>
+
+                    {/* Trigger Box */}
+                    <div
+                      onClick={() => setBuyingTypeDropdownOpen((prev) => !prev)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        border: buyingTypeDropdownOpen ? "1.5px solid #0064e1" : "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        fontSize: "0.88rem",
+                        color: "#1c1e21",
+                        cursor: "pointer",
+                        boxSizing: "border-box",
+                        transition: "border-color 0.15s ease",
+                      }}
+                    >
+                      <span style={{ fontWeight: 500 }}>{createBuyingType}</span>
+                      <span style={{ fontSize: "10px", color: "#1c1e21", pointerEvents: "none" }}>▼</span>
+                    </div>
+
+                    {/* Dropdown Menu (Image 2 exact format) */}
+                    {buyingTypeDropdownOpen && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 4px)",
+                          left: 0,
+                          right: 0,
                           background: "#ffffff",
-                          fontSize: "0.9rem",
-                          color: "#1c1e21",
-                          cursor: "pointer",
-                          appearance: "none",
-                          outline: "none",
+                          borderRadius: 6,
+                          border: "1px solid #dadde1",
+                          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                          zIndex: 100,
+                          padding: "6px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 4,
                         }}
                       >
-                        <option value="Auction">Auction</option>
-                        <option value="Reach and Frequency">Reach and Frequency</option>
-                      </select>
-                      <ChevronDown size={15} color="#65676b" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-                    </div>
+                        {/* Option 1: Auction */}
+                        <div
+                          onClick={() => {
+                            setCreateBuyingType("Auction");
+                            setBuyingTypeDropdownOpen(false);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 12,
+                            padding: "9px 12px",
+                            borderRadius: 6,
+                            background: createBuyingType === "Auction" ? "#e8f2fe" : "transparent",
+                            cursor: "pointer",
+                            transition: "background 0.12s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (createBuyingType !== "Auction") e.currentTarget.style.background = "#f2f4f7";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (createBuyingType !== "Auction") e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          {/* Radio circle */}
+                          <span
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: "50%",
+                              border: createBuyingType === "Auction" ? "2px solid #0064e1" : "2px solid #cbd5e1",
+                              background: "#ffffff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              marginTop: 2,
+                            }}
+                          >
+                            {createBuyingType === "Auction" && (
+                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0064e1" }} />
+                            )}
+                          </span>
+                          <div style={{ display: "flex", flexDirection: "column" }}>
+                            <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1c1e21" }}>Auction</span>
+                            <span style={{ fontSize: "0.78rem", color: "#65676b", marginTop: 2 }}>
+                              Buy in real time with cost-effective bidding.
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Option 2: Reservation */}
+                        <div
+                          onClick={() => {
+                            setCreateBuyingType("Reservation");
+                            setBuyingTypeDropdownOpen(false);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 12,
+                            padding: "9px 12px",
+                            borderRadius: 6,
+                            background: createBuyingType === "Reservation" ? "#e8f2fe" : "transparent",
+                            cursor: "pointer",
+                            transition: "background 0.12s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (createBuyingType !== "Reservation") e.currentTarget.style.background = "#f2f4f7";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (createBuyingType !== "Reservation") e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          {/* Radio circle */}
+                          <span
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: "50%",
+                              border: createBuyingType === "Reservation" ? "2px solid #0064e1" : "2px solid #cbd5e1",
+                              background: "#ffffff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              marginTop: 2,
+                            }}
+                          >
+                            {createBuyingType === "Reservation" && (
+                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0064e1" }} />
+                            )}
+                          </span>
+                          <div style={{ display: "flex", flexDirection: "column" }}>
+                            <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1c1e21" }}>Reservation</span>
+                            <span style={{ fontSize: "0.78rem", color: "#65676b", marginTop: 2 }}>
+                              Buy in advance for more predictable outcomes.
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Campaign objective */}
-                  <div>
-                    <div style={{ fontSize: "0.88rem", fontWeight: 650, color: "#1c1e21", marginBottom: 10 }}>
-                      Choose a campaign objective
-                    </div>
+                  {/* Two Column Layout: Objectives List on Left, Preview Card on Right */}
+                  <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
                     {/* Objectives list */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ flex: "1 1 54%", display: "flex", flexDirection: "column", gap: 4 }}>
                       {CREATE_OBJECTIVES.map((obj) => {
                         const isSelected = createObjective === obj.id;
                         return (
@@ -12489,21 +13136,29 @@ export default function CampaignsTab({
                             key={obj.id}
                             type="button"
                             onClick={() => setCreateObjective(obj.id)}
-                            onDoubleClick={() => handleLaunchStandaloneEditor(obj.id)}
+                            onDoubleClick={() => {
+                              if (obj.id === "Traffic" || obj.id === "Engagement") {
+                                setCreateObjective(obj.id);
+                                setCampaignSetupChoice("tailored");
+                                setCreateModalStep("setup");
+                              } else {
+                                handleLaunchStandaloneEditor(obj.id);
+                              }
+                            }}
+                            onMouseEnter={() => setHoveredObjective(obj.id)}
+                            onMouseLeave={() => setHoveredObjective(null)}
                             style={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 10,
-                              padding: "9px 12px",
+                              gap: 12,
+                              padding: "7px 10px",
                               borderRadius: 6,
                               border: isSelected ? "1.5px solid #0064e1" : "1px solid transparent",
-                              background: isSelected ? "#f0f7ff" : "transparent",
+                              background: isSelected ? "#f0f7ff" : hoveredObjective === obj.id ? "#f2f4f7" : "transparent",
                               cursor: "pointer",
                               textAlign: "left",
-                              transition: "all 0.13s ease",
+                              transition: "all 0.12s ease",
                             }}
-                            onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f7f8fa"; }}
-                            onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
                           >
                             {/* Radio circle */}
                             <span
@@ -12523,12 +13178,96 @@ export default function CampaignsTab({
                                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#0064e1" }} />
                               )}
                             </span>
-                            <span style={{ fontSize: "0.88rem", color: "#1c1e21", fontWeight: isSelected ? 650 : 450 }}>
+
+                            {/* Icon box */}
+                            <span
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 6,
+                                border: "1px solid #e4e6eb",
+                                background: "#f8fafc",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {obj.icon && typeof obj.icon === "function" ? obj.icon() : obj.icon}
+                            </span>
+
+                            <span style={{ fontSize: "0.88rem", color: "#1c1e21", fontWeight: isSelected ? 650 : 500 }}>
                               {obj.label}
                             </span>
                           </button>
                         );
                       })}
+                    </div>
+
+                    {/* Right column: Illustration / Guide Card (Image 2) */}
+                    <div
+                      style={{
+                        flex: "1 1 46%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        justifyContent: "flex-start",
+                        padding: "10px 14px",
+                        background: "#ffffff",
+                        borderRadius: 8,
+                        minHeight: 280,
+                      }}
+                    >
+                      {(() => {
+                        const activeObjKey = hoveredObjective || createObjective || "Sales";
+                        const activeInfo = OBJECTIVE_INFO[activeObjKey];
+                        if (!activeInfo) return null;
+
+                        return (
+                          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
+                            {/* Top Illustration for this objective (Image 2) */}
+                            <div style={{ display: "flex", justifyContent: "center", width: "100%", marginBottom: 6 }}>
+                              {activeInfo.illustration}
+                            </div>
+
+                            {/* Title */}
+                            <div style={{ fontSize: "0.98rem", fontWeight: 700, color: "#1c1e21" }}>
+                              {activeInfo.title}
+                            </div>
+
+                            {/* Description */}
+                            <div style={{ fontSize: "0.83rem", color: "#65676b", lineHeight: 1.45 }}>
+                              {activeInfo.description}
+                            </div>
+
+                            {/* Good for section with Pill Badges matching Image 2 */}
+                            <div style={{ marginTop: 8 }}>
+                              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#1c1e21", marginBottom: 8 }}>
+                                Good for:
+                              </div>
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+                                {activeInfo.goodFor.map((item, idx) => (
+                                  <span
+                                    key={idx}
+                                    style={{
+                                      display: "inline-block",
+                                      background: "#f0f2f5",
+                                      color: "#1c1e21",
+                                      fontSize: "0.81rem",
+                                      fontWeight: 500,
+                                      padding: "5px 10px",
+                                      borderRadius: 6,
+                                      lineHeight: 1.3,
+                                    }}
+                                  >
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -12667,7 +13406,12 @@ export default function CampaignsTab({
                 onClick={() => {
                   // Proceed: open real Meta Ads Manager campaign creation page
                   if (createModalTab === "campaign") {
-                    handleLaunchStandaloneEditor(createObjective);
+                    if (createObjective === "Traffic" || createObjective === "Engagement") {
+                      setCampaignSetupChoice("tailored");
+                      setCreateModalStep("setup");
+                    } else {
+                      handleLaunchStandaloneEditor(createObjective);
+                    }
                   } else {
                     setActiveMetaSubSection("adsets");
                     const newAdset = {
@@ -12726,6 +13470,8 @@ export default function CampaignsTab({
                 Continue
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -13906,23 +14652,1086 @@ export default function CampaignsTab({
         onPublish={handlePublishStandaloneCampaign}
         onSaveDraft={handleSaveDraftStandaloneCampaign}
       />
+
+      {/* ─── IMAGE 2 EXACT FORM PORTAL DROPDOWN (CAMPAIGNS / AD SETS / ADS) ─── */}
+      {typeof document !== "undefined" && openRowMenuId && rowMenuCoords && activeRowMenuItem &&
+        createPortal(
+          <div
+            ref={rowMenuPortalRef}
+            style={{
+              position: "fixed",
+              top: getCampaignMenuPosition().top,
+              left: getCampaignMenuPosition().left,
+              width: 175,
+              background: "#ffffff",
+              borderRadius: 8,
+              border: "1px solid #dadde1",
+              boxShadow: "0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1)",
+              zIndex: 9999999,
+              padding: "6px 0",
+              fontSize: "0.85rem",
+              userSelect: "none",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 1. Analyse (Image 2: Purple rosette flower) */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveChartItem(activeRowMenuItem);
+                if (activeRowMenuItem.type === "ad") {
+                  setSelectedAdIds([activeRowMenuItem.id]);
+                } else if (activeRowMenuItem.type === "adset") {
+                  setSelectedAdsetIds([activeRowMenuItem.id]);
+                } else {
+                  setSelectedCampaignIds([activeRowMenuItem.id]);
+                }
+                setChartsDrawerOpen(true);
+                showToast(`Analysing "${activeRowMenuItem.name}"`, "info");
+                setOpenRowMenuId(null);
+                setRowMenuCoords(null);
+              }}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <MetaAnalyseIcon size={16} />
+              <span>Analyse</span>
+            </button>
+
+            {/* 2. Pin (Image 2: Pin icon) */}
+            <button
+              type="button"
+              onClick={() => {
+                const target = activeRowMenuItem;
+                const isPinned = pinnedRowIds.has(target.id);
+                setPinnedRowIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(target.id)) {
+                    next.delete(target.id);
+                    showToast(`Unpinned "${target.name}"`, "info");
+                  } else {
+                    next.add(target.id);
+                    showToast(`Pinned "${target.name}" to top`, "info");
+                  }
+                  return next;
+                });
+                setOpenRowMenuId(null);
+                setRowMenuCoords(null);
+              }}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Pin size={15} color="#1c1e21" style={{ transform: "rotate(45deg)" }} />
+              <span>{pinnedRowIds.has(activeRowMenuItem.id) ? "Unpin" : "Pin"}</span>
+            </button>
+
+            {/* 3. View history (Image 2: Clock icon) */}
+            <button
+              type="button"
+              onClick={() => {
+                setViewHistoryItem(activeRowMenuItem);
+                setViewHistoryDrawerOpen(true);
+                setOpenRowMenuId(null);
+                setRowMenuCoords(null);
+              }}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Clock size={15} color="#1c1e21" strokeWidth={1.8} />
+              <span>View history</span>
+            </button>
+
+            {/* 4. Rules (Image 2: Opposing arrows icon) */}
+            <button
+              type="button"
+              onClick={() => {
+                setRulesTargetItem(activeRowMenuItem);
+                setRulesActiveTab("active");
+                setRulesModalOpen(true);
+                showToast(`Automated rules for "${activeRowMenuItem.name}"`, "info");
+                setOpenRowMenuId(null);
+                setRowMenuCoords(null);
+              }}
+              style={rowMenuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <MetaRulesIcon size={15} color="#1c1e21" />
+              <span>Rules</span>
+            </button>
+          </div>,
+          document.body
+        )
+      }
+
+      {/* ─── META ADS MANAGER VIEW HISTORY DRAWER (CAMPAIGNS / AD SETS) ─── */}
+      {viewHistoryDrawerOpen && viewHistoryItem && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 480,
+            maxWidth: "94vw",
+            background: "#ffffff",
+            boxShadow: "-10px 0 32px rgba(0,0,0,0.18)",
+            zIndex: 1060,
+            display: "flex",
+            flexDirection: "column",
+            borderLeft: "1px solid #cbd5e1",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "16px 20px",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "#ffffff",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Clock size={18} color="#0064e1" />
+                <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
+                  View history
+                </span>
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: 2 }}>
+                {viewHistoryItem.name} • ID: {viewHistoryItem.id}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setViewHistoryDrawerOpen(false);
+                setViewHistoryItem(null);
+              }}
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Activity Filters */}
+          <div
+            style={{
+              padding: "10px 20px",
+              borderBottom: "1px solid #f1f5f9",
+              background: "#f8fafc",
+              display: "flex",
+              gap: 6,
+              overflowX: "auto",
+            }}
+          >
+            {[
+              { id: "all", label: "All activities" },
+              { id: "status", label: "Status" },
+              { id: "budget", label: "Budget" },
+              { id: "targeting", label: "Targeting & Setup" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setViewHistoryFilter(f.id)}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 20,
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  border: viewHistoryFilter === f.id ? "1px solid #0064e1" : "1px solid #cbd5e1",
+                  background: viewHistoryFilter === f.id ? "#eff6ff" : "#ffffff",
+                  color: viewHistoryFilter === f.id ? "#0064e1" : "#475569",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Activity Timeline */}
+          <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {[
+                {
+                  id: "hist-1",
+                  type: "status",
+                  title: `${viewHistoryItem.type === "campaign" ? "Campaign" : viewHistoryItem.type === "adset" ? "Ad set" : "Ad"} delivery status updated`,
+                  author: "Adstra Marketing Admin",
+                  time: "Today at 10:14 AM",
+                  badge: "Status",
+                  badgeColor: "#16a34a",
+                  badgeBg: "#dcfce7",
+                  desc: "Delivery status updated to Active and synced with Meta Marketing API.",
+                  beforeAfter: { before: "In draft", after: "Active" },
+                },
+                {
+                  id: "hist-2",
+                  type: "budget",
+                  title: "Budget allocation and schedule adjusted",
+                  author: "Adstra Marketing Admin",
+                  time: "Yesterday at 4:20 PM",
+                  badge: "Budget",
+                  badgeColor: "#0284c7",
+                  badgeBg: "#e0f2fe",
+                  desc: `Daily budget set to ${viewHistoryItem.budget || "₹500.00"}. Bidding strategy set to Highest volume.`,
+                },
+                {
+                  id: "hist-3",
+                  type: "targeting",
+                  title: "Audience targeting & Advantage+ placement updated",
+                  author: "Adstra Marketing Admin",
+                  time: "12 Oct 2026 at 11:30 AM",
+                  badge: "Targeting",
+                  badgeColor: "#f59e0b",
+                  badgeBg: "#fef3c7",
+                  desc: "Placement set to Advantage+ placements (Feeds, Stories, Reels, Explore).",
+                },
+                {
+                  id: "hist-4",
+                  type: "status",
+                  title: `Created in Meta Ads Manager`,
+                  author: "Adstra Digital Admin",
+                  time: "08 Oct 2026 at 9:00 AM",
+                  badge: "Created",
+                  badgeColor: "#64748b",
+                  badgeBg: "#f1f5f9",
+                  desc: `Initial creation by Adstra Digital campaign publisher.`,
+                },
+              ]
+                .filter((item) => viewHistoryFilter === "all" || item.type === viewHistoryFilter)
+                .map((event) => (
+                  <div
+                    key={event.id}
+                    style={{
+                      padding: "14px",
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      background: "#ffffff",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "2px 7px",
+                          borderRadius: 4,
+                          background: event.badgeBg,
+                          color: event.badgeColor,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {event.badge}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{event.time}</span>
+                    </div>
+
+                    <div style={{ fontWeight: 650, fontSize: "0.86rem", color: "#0f172a", marginBottom: 4 }}>
+                      {event.title}
+                    </div>
+
+                    <div style={{ fontSize: "0.8rem", color: "#475569", lineHeight: 1.45, marginBottom: 8 }}>
+                      {event.desc}
+                    </div>
+
+                    {event.beforeAfter && (
+                      <div
+                        style={{
+                          padding: "8px 10px",
+                          background: "#f8fafc",
+                          borderRadius: 6,
+                          fontSize: "0.76rem",
+                          color: "#334155",
+                          border: "1px solid #e2e8f0",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 3,
+                          marginBottom: 6,
+                        }}
+                      >
+                        <div>
+                          <strong style={{ color: "#ef4444" }}>Previous:</strong> {event.beforeAfter.before}
+                        </div>
+                        <div>
+                          <strong style={{ color: "#16a34a" }}>Updated:</strong> {event.beforeAfter.after}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: "0.73rem", color: "#64748b" }}>
+                      Changed by: <strong>{event.author}</strong>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Drawer Footer */}
+          <div
+            style={{
+              padding: "14px 20px",
+              borderTop: "1px solid #e2e8f0",
+              background: "#f8fafc",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                showToast("Change history exported to CSV.", "success");
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 14px",
+                borderRadius: 6,
+                border: "1px solid #cbd5e1",
+                background: "#ffffff",
+                color: "#1e293b",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Download size={13} />
+              <span>Export history</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewHistoryDrawerOpen(false);
+                setViewHistoryItem(null);
+              }}
+              style={{
+                padding: "7px 18px",
+                borderRadius: 6,
+                border: "none",
+                background: "#0064e1",
+                color: "#ffffff",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── META ADS MANAGER PERFORMANCE INSIGHTS DRAWER (ANALYSE BUTTON) ─── */}
+      {chartsDrawerOpen && activeChartItem && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 520,
+            maxWidth: "94vw",
+            background: "#ffffff",
+            boxShadow: "-12px 0 36px rgba(0,0,0,0.2)",
+            zIndex: 1060,
+            display: "flex",
+            flexDirection: "column",
+            borderLeft: "1px solid #cbd5e1",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "16px 20px",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "#ffffff",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <MetaAnalyseIcon size={20} />
+                <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
+                  Performance Insights
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#0064e1" }}>
+                  {activeChartItem.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    background: activeChartItem.active || activeChartItem.delivery === "Active" ? "#dcfce7" : "#f1f5f9",
+                    color: activeChartItem.active || activeChartItem.delivery === "Active" ? "#16a34a" : "#64748b",
+                  }}
+                >
+                  {activeChartItem.delivery || (activeChartItem.active ? "Active" : "In draft")}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setChartsDrawerOpen(false);
+                setActiveChartItem(null);
+              }}
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Time range bar */}
+          <div
+            style={{
+              padding: "8px 20px",
+              background: "#f8fafc",
+              borderBottom: "1px solid #f1f5f9",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: "0.78rem",
+              color: "#64748b",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Calendar size={13} color="#64748b" />
+              <span>Last 30 days: 14 Sep 2026 - 13 Oct 2026</span>
+            </div>
+            <span style={{ fontWeight: 600, color: "#0064e1" }}>Meta Pixel Synced</span>
+          </div>
+
+          {/* Content Body */}
+          <div style={{ padding: "20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Primary KPI Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  Results
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartItem.results && activeChartItem.results !== "—" ? activeChartItem.results : "635 Clicks"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                  {activeChartItem.costPerResult && activeChartItem.costPerResult !== "—" ? `${activeChartItem.costPerResult} per result` : "₹0.67 per result"}
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  Amount Spent
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartItem.amountSpent && activeChartItem.amountSpent !== "—" ? activeChartItem.amountSpent : "₹253.61"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                  Budget: {activeChartItem.budget || "₹90.00 Daily"}
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  Reach
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartItem.reach || "18,420"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#16a34a", marginTop: 2 }}>
+                  ↑ 14.8% vs previous period
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  Impressions
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                  {activeChartItem.impressions || "26,150"}
+                </div>
+                <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 2 }}>
+                  Frequency: 1.42
+                </div>
+              </div>
+            </div>
+
+            {/* Secondary Delivery Metrics */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: 8,
+                padding: "12px",
+                borderRadius: 8,
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
+                textAlign: "center",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>CTR (Link)</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>2.43%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>CPC (Cost)</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>₹0.40</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>CPM</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>₹9.70</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Frequency</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginTop: 2 }}>1.42</div>
+              </div>
+            </div>
+
+            {/* SVG Interactive Trend Chart */}
+            <div style={{ padding: "16px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#ffffff" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>Performance Over Time</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.74rem" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#0064e1" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#0064e1" }} />
+                    Results
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#9333ea" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9333ea" }} />
+                    Spend
+                  </span>
+                </div>
+              </div>
+              <svg width="100%" height="130" viewBox="0 0 460 130" style={{ overflow: "visible" }}>
+                <defs>
+                  <linearGradient id="campaignChartBlueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0064e1" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#0064e1" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <path d="M 10 110 L 60 95 L 120 75 L 180 85 L 240 50 L 300 65 L 360 30 L 420 40 L 450 25 L 450 110 Z" fill="url(#campaignChartBlueGrad)" />
+                <path d="M 10 110 L 60 95 L 120 75 L 180 85 L 240 50 L 300 65 L 360 30 L 420 40 L 450 25" fill="none" stroke="#0064e1" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M 10 115 L 60 105 L 120 90 L 180 95 L 240 70 L 300 80 L 360 55 L 420 60 L 450 45" fill="none" stroke="#9333ea" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" />
+                {[
+                  { cx: 60, cy: 95 },
+                  { cx: 120, cy: 75 },
+                  { cx: 180, cy: 85 },
+                  { cx: 240, cy: 50 },
+                  { cx: 300, cy: 65 },
+                  { cx: 360, cy: 30 },
+                  { cx: 420, cy: 40 },
+                  { cx: 450, cy: 25 },
+                ].map((pt, i) => (
+                  <circle key={i} cx={pt.cx} cy={pt.cy} r="3.5" fill="#ffffff" stroke="#0064e1" strokeWidth="2" />
+                ))}
+              </svg>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: "0.7rem", color: "#94a3b8" }}>
+                <span>14 Sep</span>
+                <span>21 Sep</span>
+                <span>28 Sep</span>
+                <span>05 Oct</span>
+                <span>13 Oct</span>
+              </div>
+            </div>
+
+            {/* Demographics Breakdown */}
+            <div style={{ padding: "16px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#ffffff" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>Demographics (Age & Gender)</span>
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  { age: "18-24", pct: 28, male: 12, female: 16 },
+                  { age: "25-34", pct: 44, male: 20, female: 24 },
+                  { age: "35-44", pct: 18, male: 8, female: 10 },
+                  { age: "45+", pct: 10, male: 4, female: 6 },
+                ].map((d) => (
+                  <div key={d.age}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", marginBottom: 3 }}>
+                      <span style={{ fontWeight: 600, color: "#334155" }}>{d.age}</span>
+                      <span style={{ color: "#64748b" }}>{d.pct}% ({d.female}% Women, {d.male}% Men)</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: "#f1f5f9", overflow: "hidden", display: "flex" }}>
+                      <div style={{ width: `${d.female * 2}%`, background: "#9333ea" }} />
+                      <div style={{ width: `${d.male * 2}%`, background: "#0064e1" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Meta AI Recommendation */}
+            <div style={{ padding: "16px", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, color: "#1e40af", fontSize: "0.85rem", marginBottom: 6 }}>
+                <Sparkles size={16} color="#2563eb" />
+                <span>Meta AI Recommendation</span>
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#1e3a8a", lineHeight: 1.45, marginBottom: 12 }}>
+                Switching to Advantage+ placement and allocating 15% more budget during peak evening hours (6 PM - 10 PM) could reduce cost per result by up to 14%.
+              </div>
+              <button
+                type="button"
+                onClick={() => showToast("Applied Meta Advantage+ recommendation to this campaign.", "success")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#0064e1",
+                  color: "#ffffff",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Apply recommendation
+              </button>
+            </div>
+
+            {/* Action button */}
+            <button
+              type="button"
+              onClick={() => {
+                setChartsDrawerOpen(false);
+                handleOpenStandaloneEditorForCampaign(activeChartItem);
+              }}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: 6,
+                border: "none",
+                background: "#0f172a",
+                color: "#ffffff",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Open in Campaign Editor
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── META ADS MANAGER AUTOMATED RULES MODAL (RULES BUTTON) ─── */}
+      {rulesModalOpen && rulesTargetItem && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.45)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1070,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          }}
+        >
+          <div
+            style={{
+              width: 620,
+              maxWidth: "92vw",
+              background: "#ffffff",
+              borderRadius: 12,
+              border: "1px solid #cbd5e1",
+              boxShadow: "0 24px 48px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              maxHeight: "90vh",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: "#eff6ff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MetaRulesIcon size={16} color="#0064e1" />
+                </div>
+                <div>
+                  <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
+                    Automated rules
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                    Applied to: <strong>{rulesTargetItem.name}</strong>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRulesModalOpen(false);
+                  setRulesTargetItem(null);
+                }}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div
+              style={{
+                display: "flex",
+                borderBottom: "1px solid #e2e8f0",
+                background: "#ffffff",
+                padding: "0 20px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setRulesActiveTab("active")}
+                style={{
+                  padding: "10px 16px",
+                  border: "none",
+                  background: "transparent",
+                  fontSize: "0.85rem",
+                  fontWeight: rulesActiveTab === "active" ? 700 : 500,
+                  color: rulesActiveTab === "active" ? "#0064e1" : "#64748b",
+                  borderBottom: rulesActiveTab === "active" ? "2px solid #0064e1" : "2px solid transparent",
+                  cursor: "pointer",
+                }}
+              >
+                Active rules ({campaignRulesList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRulesActiveTab("create")}
+                style={{
+                  padding: "10px 16px",
+                  border: "none",
+                  background: "transparent",
+                  fontSize: "0.85rem",
+                  fontWeight: rulesActiveTab === "create" ? 700 : 500,
+                  color: rulesActiveTab === "create" ? "#0064e1" : "#64748b",
+                  borderBottom: rulesActiveTab === "create" ? "2px solid #0064e1" : "2px solid transparent",
+                  cursor: "pointer",
+                }}
+              >
+                + Create new rule
+              </button>
+            </div>
+
+            {/* Tab Body */}
+            <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
+              {rulesActiveTab === "active" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {campaignRulesList.map((rule) => (
+                    <div
+                      key={rule.id}
+                      style={{
+                        padding: "14px 16px",
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                        background: rule.enabled ? "#ffffff" : "#f8fafc",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 14,
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 650, fontSize: "0.88rem", color: rule.enabled ? "#0f172a" : "#64748b" }}>
+                            {rule.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                              background: rule.enabled ? "#dcfce7" : "#f1f5f9",
+                              color: rule.enabled ? "#16a34a" : "#94a3b8",
+                            }}
+                          >
+                            {rule.enabled ? "Active" : "Paused"}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#475569", lineHeight: 1.4 }}>
+                          <strong>Condition:</strong> {rule.condition}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: 2 }}>
+                          <strong>Action:</strong> {rule.action} • {rule.schedule}
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 4 }}>
+                          Last checked: {rule.lastTriggered}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCampaignRulesList((prev) =>
+                              prev.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r))
+                            );
+                            showToast(`Rule "${rule.name}" is now ${rule.enabled ? "paused" : "active"}.`, "info");
+                          }}
+                          style={{
+                            width: 34,
+                            height: 18,
+                            borderRadius: 9,
+                            background: rule.enabled ? "#0064e1" : "#cbd5e1",
+                            border: "none",
+                            padding: "2px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: rule.enabled ? "flex-end" : "flex-start",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#ffffff" }} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCampaignRulesList((prev) => prev.filter((r) => r.id !== rule.id));
+                            showToast(`Rule "${rule.name}" removed.`, "info");
+                          }}
+                          style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8", padding: 4 }}
+                          title="Delete rule"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
+                      Rule name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pause campaign if CPA > ₹50"
+                      value={newRuleForm.name}
+                      onChange={(e) => setNewRuleForm((prev) => ({ ...prev, name: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        fontSize: "0.85rem",
+                        borderRadius: 6,
+                        border: "1px solid #cbd5e1",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
+                      Action
+                    </label>
+                    <select
+                      value={newRuleForm.action}
+                      onChange={(e) => setNewRuleForm((prev) => ({ ...prev, action: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        fontSize: "0.85rem",
+                        borderRadius: 6,
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="turn_off">Turn off campaign</option>
+                      <option value="turn_on">Turn on campaign</option>
+                      <option value="increase_budget">Increase daily budget by 10%</option>
+                      <option value="decrease_budget">Decrease daily budget by 10%</option>
+                      <option value="send_notification">Send notification only</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
+                        Condition metric
+                      </label>
+                      <select
+                        value={newRuleForm.metric}
+                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, metric: e.target.value }))}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          fontSize: "0.85rem",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          outline: "none",
+                        }}
+                      >
+                        <option value="cpa">Cost per result is greater than</option>
+                        <option value="spend">Amount spent is greater than</option>
+                        <option value="frequency">Frequency is greater than</option>
+                        <option value="impressions">Impressions is greater than</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
+                        Threshold value
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="₹50.00"
+                        value={newRuleForm.threshold}
+                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, threshold: e.target.value }))}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          fontSize: "0.85rem",
+                          borderRadius: 6,
+                          border: "1px solid #cbd5e1",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
+                      Schedule & Frequency
+                    </label>
+                    <select
+                      value={newRuleForm.frequency}
+                      onChange={(e) => setNewRuleForm((prev) => ({ ...prev, frequency: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        fontSize: "0.85rem",
+                        borderRadius: 6,
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="continuous">Continuously (Every 30 minutes)</option>
+                      <option value="daily">Daily at 12:00 AM</option>
+                      <option value="hourly">Hourly</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => setRulesActiveTab("active")}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: 6,
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        fontSize: "0.84rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        color: "#475569",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ruleName = newRuleForm.name.trim() || `Auto rule for ${rulesTargetItem.name}`;
+                        const newRule = {
+                          id: `rule-camp-${Date.now()}`,
+                          name: ruleName,
+                          enabled: true,
+                          condition: `${newRuleForm.metric.toUpperCase()} > ${newRuleForm.threshold}`,
+                          action: newRuleForm.action.replace("_", " "),
+                          schedule: newRuleForm.frequency === "continuous" ? "Continuously (Every 30 mins)" : "Daily at 12:00 AM",
+                          lastTriggered: "Just now",
+                        };
+                        setCampaignRulesList((prev) => [newRule, ...prev]);
+                        setRulesActiveTab("active");
+                        setNewRuleForm({ name: "", action: "turn_off", metric: "cpa", threshold: "50.00", frequency: "continuous" });
+                        showToast(`Rule "${ruleName}" successfully created and activated!`, "success");
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: 6,
+                        border: "none",
+                        background: "#0064e1",
+                        color: "#ffffff",
+                        fontSize: "0.84rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Create rule
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Consistent Table Header & Cell Styles
+// Consistent Table Header & Cell Styles matching Meta Ads Manager
 const thStyle = {
-  padding: "10px 16px",
-  fontSize: "0.78rem",
-  color: "#475569",
-  fontWeight: 700,
-  borderBottom: "1px solid #cbd5e1",
+  padding: "8px 10px",
+  fontSize: "12px",
+  color: "#4b4f56",
+  fontWeight: 600,
+  borderTop: "1px solid #ccd0d5",
+  borderBottom: "1px solid #ccd0d5",
+  borderRight: "1px solid #e4e6eb",
   textAlign: "left",
   whiteSpace: "nowrap",
+  background: "#f5f6f7",
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  lineHeight: 1.2,
+  boxSizing: "border-box",
 };
 
 const tdStyle = {
-  padding: "12px 16px",
+  padding: "6px 10px",
+  fontSize: "12px",
   whiteSpace: "nowrap",
-  color: "#0f172a",
+  color: "#1c1e21",
+  borderBottom: "1px solid #e4e6eb",
+  borderRight: "1px solid #e4e6eb",
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  lineHeight: 1.3,
+  boxSizing: "border-box",
 };
