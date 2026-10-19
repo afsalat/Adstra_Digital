@@ -145,7 +145,7 @@ export default function FullOverviewDashboardTab({
       { id:2,client_name:"Kotak M",           title:"Festival Campaign",    due:"5h" },
       { id:3,client_name:"Vorion Nexus",      title:"Reel Video",           due:"5h" },
       { id:4,client_name:"Kitchen & Home",    title:"Product Image",        due:"1d" },
-      { id:5,client_name:"LIORAA LONDON LTD", title:"Carousel Post",        due:"1d" },
+      { id:5,client_name:"ABC Technologies",  title:"Carousel Post",        due:"1d" },
     ];
   }, [recentPosts]);
 

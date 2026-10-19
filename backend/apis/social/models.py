@@ -262,6 +262,12 @@ class PlatformConnection(models.Model):
     # Google: {customer_id, manager_id, login_customer_id}
     metadata = models.JSONField(default=dict, blank=True)
 
+    # App credentials and OAuth redirect URIs (if configured on this connection)
+    app_id = models.CharField(max_length=100, blank=True, default='')
+    app_secret = models.CharField(max_length=200, blank=True, default='')
+    redirect_uri = models.CharField(max_length=500, blank=True, default='')
+    auth_redirect_uri = models.CharField(max_length=500, blank=True, default='')
+
     last_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -271,6 +277,32 @@ class PlatformConnection(models.Model):
 
     def __str__(self):
         return f'{self.get_platform_display()} - {self.account_name or self.account_id}'
+
+
+class MetaAppCredentials(models.Model):
+    """Stores official Meta Developer App credentials and redirect URIs in database."""
+    app_id = models.CharField(max_length=100, default='2481850072305515')
+    app_secret = models.CharField(max_length=200, default='b73f2db3c42f891f3feeb86c3c083b8d')
+    ad_account_id = models.CharField(max_length=100, default='act_830629501946359')
+    access_token = models.TextField(blank=True, default='')
+    redirect_uri = models.CharField(
+        max_length=500,
+        default='http://localhost:8000/api/social/platform-connections/meta/callback/'
+    )
+    auth_redirect_uri = models.CharField(
+        max_length=500,
+        default='http://localhost:8000/api/user/auth/meta/callback/'
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Meta App Credentials'
+        verbose_name_plural = 'Meta App Credentials'
+
+    def __str__(self):
+        return f'Meta App {self.app_id} ({self.ad_account_id})'
 
 
 class CampaignPlatform(models.Model):

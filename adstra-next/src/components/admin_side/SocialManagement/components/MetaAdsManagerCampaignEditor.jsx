@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
+  Calendar,
   Folder,
   LayoutGrid,
   FileText,
@@ -23,6 +24,7 @@ import {
   Share2,
   ThumbsUp,
   MessageCircle,
+  MessageSquare,
   MoreHorizontal,
   ArrowRight,
   ArrowLeft,
@@ -467,13 +469,13 @@ export default function MetaAdsManagerCampaignEditor({
   );
   const [partnershipAdEnabled, setPartnershipAdEnabled] = useState(false);
   const [facebookPageConnected, setFacebookPageConnected] = useState(true);
-  const [facebookPage, setFacebookPage] = useState(initialData?.facebookPage || "Lioraa London");
-  const [instagramAccount, setInstagramAccount] = useState(initialData?.instagramAccount || "lioraalondon");
+  const [facebookPage, setFacebookPage] = useState(initialData?.facebookPage || initialData?.account_name || "Adstra Business");
+  const [instagramAccount, setInstagramAccount] = useState(initialData?.instagramAccount || "adstradigital");
   const [threadsProfile, setThreadsProfile] = useState(initialData?.threadsProfile || "");
   const [whatsappNumber, setWhatsappNumber] = useState(initialData?.whatsappNumber || "");
   const [facebookPageModalOpen, setFacebookPageModalOpen] = useState(false);
-  const [newPageName, setNewPageName] = useState("Lioraa London");
-  const [newPageCategory, setNewPageCategory] = useState("Clothing (Brand)");
+  const [newPageName, setNewPageName] = useState(initialData?.account_name || "Adstra Business");
+  const [newPageCategory, setNewPageCategory] = useState("Agency (Brand)");
   const [leadInstantForm, setLeadInstantForm] = useState("Lead Generation Form - High Intent (Recommended)");
   const [previewPlacement, setPreviewPlacement] = useState("fb_feed");
   const [createFormModalOpen, setCreateFormModalOpen] = useState(false);
@@ -484,7 +486,7 @@ export default function MetaAdsManagerCampaignEditor({
   const [multiAdvertiserAds, setMultiAdvertiserAds] = useState(true);
   const [selectedPostId, setSelectedPostId] = useState("122207744828933412");
   const [selectedPostDate, setSelectedPostDate] = useState("11 Oct 2026");
-  const [selectedPostTitle, setSelectedPostTitle] = useState("Your Navratri saree might be...");
+  const [selectedPostTitle, setSelectedPostTitle] = useState("Scale your brand with performance marketing...");
   const [aiTransparency, setAiTransparency] = useState(false);
   const [addDestination, setAddDestination] = useState(false);
   const [previewPlacementFilter, setPreviewPlacementFilter] = useState("all");
@@ -492,14 +494,14 @@ export default function MetaAdsManagerCampaignEditor({
   const [adFormat, setAdFormat] = useState("single");
   const [primaryText, setPrimaryText] = useState(
     initialData?.primaryText ||
-      `Your Navratri saree might be right here ❤️\nNine days of devotion, colour, and beautiful traditions.\n\n🥻 UP TO 20% OFF Traditional Wear\nBUY A SAREE & GET 35% OFF ON READYMADE BLOUSE\nFREE UK DELIVERY\n\n🛍 Shop the Collection:\nhttps://lioraalondon.uk/collections/woman\n\n📞 +44 7766 010701`
+      `Scale your brand with high-performing Meta Ad campaigns.\n\nBoost conversions, acquire high-intent leads, and engage target audiences with ROI-driven ad creative.\n\nLearn more: https://adstradigital.com`
   );
-  const [headline, setHeadline] = useState(initialData?.headline || "Your Navratri saree might be right here ❤️");
-  const [descriptionText, setDescriptionText] = useState("Free UK delivery on all orders.");
+  const [headline, setHeadline] = useState(initialData?.headline || "Scale Your Business with Meta Ads");
+  const [descriptionText, setDescriptionText] = useState("Official Meta Marketing Solutions.");
   const [callToAction, setCallToAction] = useState(initialData?.callToAction || "Learn more");
-  const [websiteUrl, setWebsiteUrl] = useState(initialData?.websiteUrl || "https://lioraalondon.uk/collections/woman");
+  const [websiteUrl, setWebsiteUrl] = useState(initialData?.websiteUrl || "https://adstradigital.com");
   const [selectedCreativeUrl, setSelectedCreativeUrl] = useState(
-    initialData?.selectedCreativeUrl || "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=700&auto=format&fit=crop&q=80"
+    initialData?.selectedCreativeUrl || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=700&auto=format&fit=crop&q=80"
   );
   const [adPreviewEnabled, setAdPreviewEnabled] = useState(true);
   const [adPreviewMode, setAdPreviewMode] = useState("live");
@@ -4556,7 +4558,6 @@ export default function MetaAdsManagerCampaignEditor({
                             }}
                           >
                             <option value="">Select a Threads profile</option>
-                            <option value="@lioraalondon">@lioraalondon</option>
                             <option value="@adstradigital">@adstradigital</option>
                           </select>
                           <ChevronDown
@@ -4619,7 +4620,6 @@ export default function MetaAdsManagerCampaignEditor({
                           }}
                         >
                           <option value="">Select a WhatsApp number</option>
-                          <option value="+44 7766 010701">+44 7766 010701 (Lioraa London)</option>
                           <option value="+91 98765 43210">+91 98765 43210 (Adstra Business)</option>
                         </select>
                         <ChevronDown

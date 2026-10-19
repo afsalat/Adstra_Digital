@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
 import API_BASE_URL from "@/utils/apiBase";
 import {
@@ -12,6 +12,7 @@ import {
   Bell,
   CheckCircle2,
   AlertTriangle,
+  ChevronDown,
   RefreshCw,
   Eye,
   EyeOff,
@@ -36,6 +37,7 @@ import {
   Key,
   Flame,
   Check,
+  Copy,
   Instagram,
   Facebook,
   Linkedin,
@@ -44,8 +46,9 @@ import {
   MapPin,
   Briefcase,
   FileText,
-  Copy,
   ArrowRight,
+  Layers,
+  Info,
 } from "lucide-react";
 import { XIcon, GoogleIcon, TikTokIcon, renderPlatformIcon, MetaLogoIcon } from "./PlatformIcons";
 import { notify, askConfirm } from "./SocialFeedback";
@@ -89,6 +92,23 @@ export default function SocialSettingsTab({
   const [adNotification, setAdNotification] = useState(null);
   const [copiedId, setCopiedId] = useState(false);
 
+  // Meta Configuration & Manual Connect Modals
+  const [metaOptionsModal, setMetaOptionsModal] = useState(false);
+  const [metaConfigModal, setMetaConfigModal] = useState(false);
+  const [metaAppId, setMetaAppId] = useState("");
+  const [metaAppSecret, setMetaAppSecret] = useState("");
+  const [metaRedirectUri, setMetaRedirectUri] = useState("http://localhost:8000/api/social/platform-connections/meta/callback/");
+  const [metaSaving, setMetaSaving] = useState(false);
+  const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
+
+  const [metaDirectTokenModal, setMetaDirectTokenModal] = useState(false);
+  const [directAccountId, setDirectAccountId] = useState("");
+  const [directAccountName, setDirectAccountName] = useState("");
+  const [directAccessToken, setDirectAccessToken] = useState("");
+  const [directPageId, setDirectPageId] = useState("");
+  const [directPageName, setDirectPageName] = useState("");
+  const [directSaving, setDirectSaving] = useState(false);
+
   // Client Profile Edit State
   const [editingClient, setEditingClient] = useState(null);
   const [brandSettingsTab, setBrandSettingsTab] = useState("general"); // 'general' | 'company' | 'strategy' | 'social'
@@ -96,6 +116,12 @@ export default function SocialSettingsTab({
   const [creatingClientModal, setCreatingClientModal] = useState(false);
   const [clientStatusFilter, setClientStatusFilter] = useState("all"); // 'all' | 'active' | 'inactive'
   const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [companyOptions, setCompanyOptions] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
+  const companyDropdownRef = useRef(null);
   const [newClientData, setNewClientData] = useState({
     name: "",
     slug: "",
@@ -108,6 +134,78 @@ export default function SocialSettingsTab({
     brand_tagline: "",
     is_active: true,
   });
+
+  const fetchCompanyOptions = useCallback(async () => {
+    try {
+      setLoadingCompanies(true);
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      let list = [];
+      try {
+        const res = await axios.get(`${API_BASE_URL}/social/clients/company-options/`, { headers });
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          list = res.data;
+        }
+      } catch (e) {
+        // fallback to proposal/clients
+      }
+
+      if (list.length === 0) {
+        try {
+          const res = await axios.get(`${API_BASE_URL}/proposal/clients/?t=${Date.now()}`, { headers });
+          if (Array.isArray(res.data)) {
+            list = res.data.map((c) => ({
+              id: c.id,
+              company_name: (c.company_name || c.name || `Client #${c.id}`).trim(),
+              contact_name: (c.name || "").trim(),
+              email: c.email || "",
+              contact: c.contact || "",
+              address: c.address || "",
+            }));
+          }
+        } catch (e) {
+          console.warn("Could not load proposal clients fallback", e);
+        }
+      }
+
+      setCompanyOptions(list);
+    } catch (err) {
+      console.warn("Error fetching company options", err);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCompanyOptions();
+  }, [fetchCompanyOptions]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (companyDropdownRef.current && !companyDropdownRef.current.contains(event.target)) {
+        setIsCompanyDropdownOpen(false);
+      }
+    };
+    if (isCompanyDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isCompanyDropdownOpen]);
+
+  const filteredCompanyOptions = useMemo(() => {
+    if (!companySearch.trim()) return companyOptions;
+    const q = companySearch.toLowerCase().trim();
+    return companyOptions.filter((comp) => {
+      const name = (comp.company_name || comp.name || "").toLowerCase();
+      const contact = (comp.contact_name || "").toLowerCase();
+      const phone = (comp.contact || "").toLowerCase();
+      const email = (comp.email || "").toLowerCase();
+      return name.includes(q) || contact.includes(q) || phone.includes(q) || email.includes(q);
+    });
+  }, [companyOptions, companySearch]);
 
   const activeCount = useMemo(() => clients.filter((c) => c.is_active !== false).length, [clients]);
   const inactiveCount = useMemo(() => clients.filter((c) => c.is_active === false).length, [clients]);
@@ -292,7 +390,11 @@ export default function SocialSettingsTab({
         try { popup.close(); } catch (_) {}
       }
       const errData = err?.response?.data;
-      showAdToast(errData?.error || `OAuth error: ${err.message}`, "error");
+      const errMsg = errData?.error || `OAuth error: ${err.message}`;
+      showAdToast(errMsg, "error");
+      if (typeof errMsg === "string" && (errMsg.includes("META_APP_ID") || errMsg.includes("Meta App ID"))) {
+        setMetaOptionsModal(true);
+      }
     } finally {
       setTimeout(() => setAdActionLoading(null), 1500);
     }
@@ -353,6 +455,84 @@ export default function SocialSettingsTab({
     navigator.clipboard.writeText(id);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleConnectSandbox = async () => {
+    try {
+      setAdActionLoading("sandbox");
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/sandbox-connect/`, {
+        platform: "meta",
+        client_id: selectedClientId === "all" ? (clients[0]?.id || null) : selectedClientId,
+      });
+      showAdToast(res.data?.message || "Connected Meta in sandbox mode!", "success");
+      setAdNotification(null);
+      await fetchPlatformConnections();
+    } catch (err) {
+      showAdToast(`Sandbox connection failed: ${err.message}`, "error");
+    } finally {
+      setAdActionLoading(null);
+    }
+  };
+
+  const handleSaveMetaCredentials = async (e) => {
+    e.preventDefault();
+    if (!metaAppId.trim()) {
+      showAdToast("Please enter Meta App ID.", "error");
+      return;
+    }
+    try {
+      setMetaSaving(true);
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/meta/configure-credentials/`, {
+        app_id: metaAppId.trim(),
+        app_secret: metaAppSecret.trim(),
+        redirect_uri: metaRedirectUri.trim(),
+      });
+      if (res.data?.success) {
+        showAdToast("Meta App ID & Secret saved to backend/.env!", "success");
+        setMetaConfigModal(false);
+        setAdNotification(null);
+      } else {
+        showAdToast("Failed to save credentials.", "error");
+      }
+    } catch (err) {
+      showAdToast(err?.response?.data?.error || `Error saving credentials: ${err.message}`, "error");
+    } finally {
+      setMetaSaving(false);
+    }
+  };
+
+  const handleSaveDirectToken = async (e) => {
+    e.preventDefault();
+    if (!directAccountId.trim() || !directAccessToken.trim()) {
+      showAdToast("Please provide Meta Ad Account ID and Access Token.", "error");
+      return;
+    }
+    try {
+      setDirectSaving(true);
+      await axios.post(`${API_BASE_URL}/social/platform-connections/`, {
+        platform: "meta",
+        account_name: directAccountName.trim() || `Meta Ad Account (${directAccountId.trim()})`,
+        account_id: directAccountId.trim(),
+        access_token: directAccessToken.trim(),
+        client_profile: selectedClientId === "all" ? (clients[0]?.id || null) : selectedClientId,
+        currency: "INR",
+        metadata: {
+          page_id: directPageId.trim() || undefined,
+          page_name: directPageName.trim() || undefined,
+        },
+      });
+      showAdToast("Meta account connected successfully via direct token!", "success");
+      setMetaDirectTokenModal(false);
+      setDirectAccountId("");
+      setDirectAccessToken("");
+      setDirectAccountName("");
+      setAdNotification(null);
+      await fetchPlatformConnections();
+    } catch (err) {
+      showAdToast(err?.response?.data?.error || `Direct connect error: ${err.message}`, "error");
+    } finally {
+      setDirectSaving(false);
+    }
   };
 
   const handleDisconnectAdPlatform = async (connId, platformLabel) => {
@@ -563,7 +743,7 @@ export default function SocialSettingsTab({
   const handleCreateClient = async (e) => {
     e.preventDefault();
     if (!newClientData.name.trim()) {
-      notify("Please enter a client brand name.");
+      notify("Please select a company or enter a client brand name.");
       return;
     }
 
@@ -583,6 +763,9 @@ export default function SocialSettingsTab({
         slug: generatedSlug,
       });
       setCreatingClientModal(false);
+      setSelectedCompanyId("");
+      setIsCompanyDropdownOpen(false);
+      setCompanySearch("");
       setNewClientData({
         name: "",
         slug: "",
@@ -593,6 +776,7 @@ export default function SocialSettingsTab({
         client_email: "",
         client_contact: "",
         brand_tagline: "",
+        is_active: true,
       });
       if (onRefresh) onRefresh();
     } catch (err) {
@@ -663,7 +847,7 @@ export default function SocialSettingsTab({
         >
           {[
             { id: "accounts", label: "Connected Channels", icon: Share2, count: filteredAccounts.length },
-            { id: "integrations", label: "Integrations", icon: Target, count: platformConnections.filter((c) => c.platform === "meta" && c.status === "connected").length },
+            { id: "integrations", label: "Integrations", icon: Target, count: new Set(platformConnections.filter((c) => c.platform === "meta" && c.status === "connected").map((c) => c.platform)).size },
             { id: "clients", label: "Client Brands & Retainers", icon: Building2, count: clients.length },
             { id: "workflow", label: "Workflow & Priority Rules", icon: Sliders },
             { id: "ai", label: "AI Content Engine", icon: Sparkles },
@@ -761,7 +945,7 @@ export default function SocialSettingsTab({
                       if (isMetaConnected) {
                         setActiveSubTab("integrations");
                       } else {
-                        handleConnectOAuth("meta");
+                        setMetaOptionsModal(true);
                       }
                     }}
                     disabled={adActionLoading === "meta"}
@@ -822,26 +1006,68 @@ export default function SocialSettingsTab({
 
           {/* Accounts Listing Table */}
           {filteredAccounts.length === 0 ? (
-            <div style={{ padding: "60px 20px", textAlign: "center", color: "#64748b" }}>
-              <Share2 size={36} color="#cbd5e1" style={{ marginBottom: 12 }} />
-              <h4 style={{ margin: 0, color: "#0f172a" }}>No Social Channels Connected Yet</h4>
-              <p style={{ margin: "6px 0 16px", fontSize: "0.85rem" }}>
-                Connect your client's Instagram, Facebook, LinkedIn, YouTube, or X profiles to enable one-click publishing.
-              </p>
-              <button
-                onClick={() => setConnectingModal(true)}
+            <div
+              style={{
+                padding: "60px 20px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                color: "#64748b",
+              }}
+            >
+              <div
                 style={{
-                  background: "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  fontSize: "0.82rem",
-                  cursor: "pointer",
+                  width: 60,
+                  height: 60,
+                  borderRadius: 16,
+                  background: "#f1f5f9",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 16,
                 }}
               >
-                <Plus size={14} style={{ marginRight: 4 }} /> Connect First Channel
+                <Share2 size={28} color="#94a3b8" />
+              </div>
+              <h4 style={{ margin: 0, color: "#0f172a", fontSize: "1.1rem", fontWeight: 700 }}>
+                No Social Channels Connected Yet
+              </h4>
+              <p
+                style={{
+                  margin: "8px 0 20px",
+                  fontSize: "0.86rem",
+                  color: "#64748b",
+                  maxWidth: 480,
+                  lineHeight: 1.5,
+                }}
+              >
+                Connect your client&apos;s Instagram, Facebook, LinkedIn, YouTube, or X profiles to enable one-click publishing.
+              </p>
+              <button
+                type="button"
+                onClick={() => setConnectingModal(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  background: "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px 22px",
+                  borderRadius: 9,
+                  fontWeight: 700,
+                  fontSize: "0.84rem",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.25)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Plus size={16} />
+                <span>Connect First Channel</span>
               </button>
             </div>
           ) : (
@@ -1050,13 +1276,56 @@ export default function SocialSettingsTab({
                 }`,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 {adNotification.type === "error" ? (
                   <AlertTriangle size={18} />
                 ) : (
                   <CheckCircle2 size={18} />
                 )}
                 <span>{adNotification.msg}</span>
+                {typeof adNotification.msg === "string" && (adNotification.msg.includes("META_APP_ID") || adNotification.msg.includes("Meta App ID")) && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginLeft: 6, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={handleConnectSandbox}
+                      disabled={adActionLoading === "sandbox"}
+                      style={{
+                        background: "#15803d",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "5px 12px",
+                        borderRadius: 6,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <Sparkles size={13} /> 1-Click Sandbox Mode
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMetaOptionsModal(true)}
+                      style={{
+                        background: "#b91c1c",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "5px 12px",
+                        borderRadius: 6,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <Layers size={13} /> View Connection Options
+                    </button>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -1274,11 +1543,11 @@ export default function SocialSettingsTab({
                               color: "#0f172a",
                             }}
                           >
-                            {metaConn.account_id || "act_830629501946359"}
+                            {metaConn.account_id || "Not Configured"}
                           </code>
                           <button
                             type="button"
-                            onClick={() => handleCopyAccountId(metaConn.account_id || "act_830629501946359")}
+                            onClick={() => handleCopyAccountId(metaConn.account_id)}
                             style={{
                               background: "none",
                               border: "none",
@@ -1366,7 +1635,90 @@ export default function SocialSettingsTab({
                   </div>
                 ) : (
                   /* Body: Not Connected State */
-                  <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {/* Guidance / Options Notice Banner */}
+                    <div
+                      style={{
+                        background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: 12,
+                        padding: "16px 20px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 14,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, maxWidth: 660 }}>
+                        <div
+                          style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 10,
+                            background: "#dcfce7",
+                            border: "1px solid #86efac",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        >
+                          <Sparkles size={18} color="#16a34a" />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#166534" }}>
+                            Don&apos;t have a Meta Developer App ID? Choose an option:
+                          </div>
+                          <div style={{ fontSize: "0.8rem", color: "#15803d", marginTop: 4, lineHeight: 1.5 }}>
+                            You can connect immediately using <strong>1-Click Sandbox Mode</strong> with simulated live ad accounts &amp; analytics, configure your Meta App credentials, or connect via a direct Graph API token.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={handleConnectSandbox}
+                          disabled={adActionLoading === "sandbox"}
+                          style={{
+                            background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                            color: "#ffffff",
+                            border: "none",
+                            padding: "9px 18px",
+                            borderRadius: 9,
+                            fontSize: "0.82rem",
+                            fontWeight: 800,
+                            cursor: adActionLoading === "sandbox" ? "wait" : "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            boxShadow: "0 3px 10px rgba(22, 163, 74, 0.25)",
+                          }}
+                        >
+                          <Sparkles size={14} />
+                          <span>{adActionLoading === "sandbox" ? "Connecting Sandbox…" : "1-Click Sandbox Mode"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMetaOptionsModal(true)}
+                          style={{
+                            background: "#ffffff",
+                            color: "#166534",
+                            border: "1px solid #86efac",
+                            padding: "9px 16px",
+                            borderRadius: 9,
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          View All Options
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Primary Connect Button Row */}
                     <div
                       style={{
@@ -1381,7 +1733,7 @@ export default function SocialSettingsTab({
                         gap: 14,
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <button
                           type="button"
                           id="meta-oauth-connect-btn"
@@ -1391,7 +1743,7 @@ export default function SocialSettingsTab({
                             display: "inline-flex",
                             alignItems: "center",
                             gap: 10,
-                            padding: "12px 24px",
+                            padding: "11px 22px",
                             borderRadius: 10,
                             border: "none",
                             background: "linear-gradient(135deg, #0064e0 0%, #0081fb 50%, #0064e0 100%)",
@@ -1406,6 +1758,72 @@ export default function SocialSettingsTab({
                           <MetaLogoIcon size={20} />
                           <span>{adActionLoading === "meta" ? "Connecting to Meta…" : "Connect with Meta"}</span>
                           <ArrowRight size={17} strokeWidth={2.4} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setMetaConfigModal(true)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "10px 15px",
+                            borderRadius: 10,
+                            border: "1px solid #cbd5e1",
+                            background: "#ffffff",
+                            color: "#334155",
+                            fontSize: "0.84rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <Key size={15} color="#4f46e5" />
+                          <span>Configure App ID & Secret</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setMetaDirectTokenModal(true)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "10px 15px",
+                            borderRadius: 10,
+                            border: "1px solid #cbd5e1",
+                            background: "#ffffff",
+                            color: "#334155",
+                            fontSize: "0.84rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <ShieldCheck size={15} color="#059669" />
+                          <span>Direct Token Connect</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleConnectSandbox}
+                          disabled={adActionLoading === "sandbox"}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "10px 15px",
+                            borderRadius: 10,
+                            border: "1px dashed #93c5fd",
+                            background: "#eff6ff",
+                            color: "#1d4ed8",
+                            fontSize: "0.84rem",
+                            fontWeight: 700,
+                            cursor: adActionLoading === "sandbox" ? "wait" : "pointer",
+                          }}
+                        >
+                          <Sparkles size={15} />
+                          <span>{adActionLoading === "sandbox" ? "Connecting Sandbox…" : "Sandbox / Test Mode"}</span>
                         </button>
                       </div>
 
@@ -1514,7 +1932,13 @@ export default function SocialSettingsTab({
               </div>
 
               <button
-                onClick={() => setCreatingClientModal(true)}
+                onClick={() => {
+                  setSelectedCompanyId("");
+                  setIsCompanyDropdownOpen(false);
+                  setCompanySearch("");
+                  fetchCompanyOptions();
+                  setCreatingClientModal(true);
+                }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -3215,7 +3639,15 @@ export default function SocialSettingsTab({
       {/* CREATE NEW CLIENT BRAND MODAL */}
       {/* ======================================================== */}
       {creatingClientModal && (
-        <div className="social-modal-overlay" onClick={() => setCreatingClientModal(false)}>
+        <div
+          className="social-modal-overlay"
+          onClick={() => {
+            setCreatingClientModal(false);
+            setSelectedCompanyId("");
+            setIsCompanyDropdownOpen(false);
+            setCompanySearch("");
+          }}
+        >
           <div
             className="social-modal-content"
             style={{ maxWidth: 580 }}
@@ -3227,7 +3659,12 @@ export default function SocialSettingsTab({
                 <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Add New Client Brand Profile</h3>
               </div>
               <button
-                onClick={() => setCreatingClientModal(false)}
+                onClick={() => {
+                  setCreatingClientModal(false);
+                  setSelectedCompanyId("");
+                  setIsCompanyDropdownOpen(false);
+                  setCompanySearch("");
+                }}
                 style={{ background: "none", border: "none", cursor: "pointer" }}
               >
                 <X size={20} />
@@ -3235,6 +3672,283 @@ export default function SocialSettingsTab({
             </div>
 
             <form onSubmit={handleCreateClient} className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Searchable Client Company Selector */}
+              <div ref={companyDropdownRef} style={{ position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569" }}>
+                    Select Client Company *
+                  </label>
+                  {selectedCompanyId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCompanyId("");
+                        setCompanySearch("");
+                        setIsCompanyDropdownOpen(false);
+                        setNewClientData({
+                          ...newClientData,
+                          name: "",
+                          client_email: "",
+                          client_contact: "",
+                          client: null,
+                        });
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#4f46e5",
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      Clear Selection
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown Trigger Box */}
+                <div
+                  onClick={() => setIsCompanyDropdownOpen(!isCompanyDropdownOpen)}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    border: isCompanyDropdownOpen ? "1.5px solid #4f46e5" : "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    boxShadow: isCompanyDropdownOpen ? "0 0 0 3px rgba(79, 70, 229, 0.1)" : "none",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
+                    <Building2 size={16} color={selectedCompanyId ? "#4f46e5" : "#94a3b8"} style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        color: selectedCompanyId ? "#0f172a" : "#64748b",
+                        fontWeight: selectedCompanyId && selectedCompanyId !== "__custom__" ? 600 : 400,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {selectedCompanyId === "__custom__"
+                        ? "+ Custom / Manual Entry"
+                        : selectedCompanyId
+                        ? (() => {
+                            const found = companyOptions.find((c) => String(c.id) === String(selectedCompanyId));
+                            return found ? (found.company_name || found.name) : "Select from Client Companies";
+                          })()
+                        : loadingCompanies
+                        ? "Loading client companies..."
+                        : "-- Search & Select from Client Companies --"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    {selectedCompanyId && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCompanyId("");
+                          setCompanySearch("");
+                          setNewClientData({
+                            ...newClientData,
+                            name: "",
+                            client_email: "",
+                            client_contact: "",
+                            client: null,
+                          });
+                        }}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          background: "#f1f5f9",
+                          color: "#64748b",
+                        }}
+                        title="Clear selection"
+                      >
+                        <X size={12} />
+                      </span>
+                    )}
+                    <ChevronDown
+                      size={16}
+                      color="#64748b"
+                      style={{
+                        transform: isCompanyDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.15s ease",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Dropdown Menu Popover with Search Filter */}
+                {isCompanyDropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 4px)",
+                      left: 0,
+                      right: 0,
+                      background: "#ffffff",
+                      borderRadius: 10,
+                      border: "1px solid #cbd5e1",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                      zIndex: 100,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* Search Input Box */}
+                    <div style={{ padding: "8px 10px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc" }}>
+                      <div style={{ position: "relative" }}>
+                        <Search
+                          size={14}
+                          color="#94a3b8"
+                          style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
+                        />
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Search company by name, contact or phone..."
+                          value={companySearch}
+                          onChange={(e) => setCompanySearch(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "7px 10px 7px 30px",
+                            borderRadius: 6,
+                            border: "1px solid #cbd5e1",
+                            fontSize: "0.82rem",
+                            outline: "none",
+                            background: "#ffffff",
+                          }}
+                        />
+                        {companySearch && (
+                          <button
+                            type="button"
+                            onClick={() => setCompanySearch("")}
+                            style={{
+                              position: "absolute",
+                              right: 8,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              background: "none",
+                              border: "none",
+                              color: "#94a3b8",
+                              cursor: "pointer",
+                              padding: 2,
+                            }}
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scrollable List of Companies */}
+                    <div style={{ maxHeight: 210, overflowY: "auto", padding: "4px 0" }}>
+                      {/* Manual / Custom option */}
+                      <div
+                        onClick={() => {
+                          setSelectedCompanyId("__custom__");
+                          setIsCompanyDropdownOpen(false);
+                          setCompanySearch("");
+                          setNewClientData({
+                            ...newClientData,
+                            client: null,
+                            name: "",
+                            client_email: "",
+                            client_contact: "",
+                          });
+                        }}
+                        style={{
+                          padding: "8px 14px",
+                          fontSize: "0.82rem",
+                          color: "#4f46e5",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          borderBottom: "1px solid #f1f5f9",
+                          background: selectedCompanyId === "__custom__" ? "#eff6ff" : "transparent",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = selectedCompanyId === "__custom__" ? "#eff6ff" : "transparent")}
+                      >
+                        <Plus size={14} /> + Enter Custom Brand / New Name
+                      </div>
+
+                      {filteredCompanyOptions.length === 0 ? (
+                        <div style={{ padding: "16px 14px", textAlign: "center", color: "#64748b", fontSize: "0.8rem" }}>
+                          No companies found matching "{companySearch}"
+                        </div>
+                      ) : (
+                        filteredCompanyOptions.map((comp) => {
+                          const isSelected = String(selectedCompanyId) === String(comp.id);
+                          const displayName = comp.company_name || comp.name;
+
+                          return (
+                            <div
+                              key={comp.id}
+                              onClick={() => {
+                                setSelectedCompanyId(comp.id);
+                                setIsCompanyDropdownOpen(false);
+                                setCompanySearch("");
+                                const compName = (comp.company_name || comp.name || "").trim();
+                                setNewClientData({
+                                  ...newClientData,
+                                  client: comp.id,
+                                  name: compName,
+                                  client_email: comp.email || "",
+                                  client_contact: comp.contact || "",
+                                });
+                              }}
+                              style={{
+                                padding: "8px 14px",
+                                cursor: "pointer",
+                                borderBottom: "1px solid #f8fafc",
+                                background: isSelected ? "#f0f4ff" : "transparent",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                transition: "background 0.12s ease",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = isSelected ? "#e0e7ff" : "#f8fafc")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = isSelected ? "#f0f4ff" : "transparent")}
+                            >
+                              <div>
+                                <div style={{ fontSize: "0.84rem", fontWeight: isSelected ? 700 : 600, color: isSelected ? "#4f46e5" : "#0f172a" }}>
+                                  {displayName}
+                                </div>
+                                {(comp.contact_name || comp.contact || comp.address) && (
+                                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>
+                                    {[comp.contact_name, comp.contact, comp.address].filter(Boolean).join(" • ")}
+                                  </div>
+                                )}
+                              </div>
+                              {isSelected && <Check size={16} color="#4f46e5" style={{ flexShrink: 0, marginLeft: 8 }} />}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 4 }}>
+                  Search and select from your registered client companies to auto-fill brand details.
+                </div>
+              </div>
+
               <div>
                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#475569", marginBottom: 4 }}>
                   Client Brand Name *
@@ -3245,7 +3959,14 @@ export default function SocialSettingsTab({
                   placeholder="e.g. Apex Global Solutions"
                   value={newClientData.name}
                   onChange={(e) => setNewClientData({ ...newClientData, name: e.target.value })}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.85rem",
+                    backgroundColor: selectedCompanyId && selectedCompanyId !== "__custom__" ? "#f8fafc" : "#ffffff",
+                  }}
                 />
               </div>
 
@@ -3304,7 +4025,12 @@ export default function SocialSettingsTab({
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
                 <button
                   type="button"
-                  onClick={() => setCreatingClientModal(false)}
+                  onClick={() => {
+                    setCreatingClientModal(false);
+                    setSelectedCompanyId("");
+                    setIsCompanyDropdownOpen(false);
+                    setCompanySearch("");
+                  }}
                   style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}
                 >
                   Cancel
@@ -3480,6 +4206,565 @@ export default function SocialSettingsTab({
                 >
                   {adActionLoading === "saving_account" ? "Saving..." : "Save Meta Account Selection"}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* CONFIGURE META APP CREDENTIALS MODAL                     */}
+      {/* ======================================================== */}
+      {metaConfigModal && (
+        <div className="social-modal-overlay" onClick={() => setMetaConfigModal(false)}>
+          <div
+            className="social-modal-content"
+            style={{ maxWidth: 540 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="social-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Key size={20} color="#4f46e5" />
+                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Configure Meta App Credentials</h3>
+              </div>
+              <button
+                onClick={() => setMetaConfigModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMetaCredentials} className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5, background: "#f8fafc", padding: "10px 14px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                Obtain your <strong>App ID</strong> and <strong>App Secret</strong> from the{" "}
+                <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer" style={{ color: "#2563eb", fontWeight: 700, textDecoration: "underline" }}>
+                  Meta for Developers Portal <ExternalLink size={12} style={{ display: "inline" }} />
+                </a>.
+                Saving will configure them directly into your <code>backend/.env</code>.
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                  Meta App ID *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 1029384756281920"
+                  value={metaAppId}
+                  onChange={(e) => setMetaAppId(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                  Meta App Secret *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="e.g. 9f8e7d6c5b4a3120..."
+                  value={metaAppSecret}
+                  onChange={(e) => setMetaAppSecret(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#334155" }}>
+                    Valid OAuth Redirect URI
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(metaRedirectUri);
+                      setCopiedRedirectUri(true);
+                      setTimeout(() => setCopiedRedirectUri(false), 2000);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: copiedRedirectUri ? "#16a34a" : "#2563eb",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Copy size={12} /> {copiedRedirectUri ? "Copied!" : "Copy URI"}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={metaRedirectUri}
+                  onChange={(e) => setMetaRedirectUri(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.8rem", background: "#f8fafc", color: "#475569" }}
+                />
+                <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 4 }}>
+                  Paste this exact URI under: <em>Meta App → Facebook Login for Business → Settings → Valid OAuth Redirect URIs</em>.
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setMetaConfigModal(false)}
+                  style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", fontSize: "0.82rem" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={metaSaving}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 8,
+                    background: "#0064e0",
+                    color: "#fff",
+                    border: "none",
+                    fontWeight: 700,
+                    cursor: metaSaving ? "wait" : "pointer",
+                    fontSize: "0.84rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Save size={14} /> {metaSaving ? "Saving..." : "Save Meta Credentials"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* DIRECT META TOKEN / SYSTEM USER CONNECTION MODAL        */}
+      {/* ======================================================== */}
+      {metaDirectTokenModal && (
+        <div className="social-modal-overlay" onClick={() => setMetaDirectTokenModal(false)}>
+          <div
+            className="social-modal-content"
+            style={{ maxWidth: 540 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="social-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <ShieldCheck size={20} color="#059669" />
+                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Direct Meta Token Connection</h3>
+              </div>
+              <button
+                onClick={() => setMetaDirectTokenModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDirectToken} className="social-modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5, background: "#f0fdf4", padding: "10px 14px", borderRadius: 8, border: "1px solid #bbf7d0" }}>
+                Connect directly using a <strong>Meta System User Token</strong> or <strong>Permanent Graph API Token</strong> from Meta Business Manager. No App Login dialog required.
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                  Meta Ad Account ID *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. act_1234567890"
+                  value={directAccountId}
+                  onChange={(e) => setDirectAccountId(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                  Ad Account Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Adstra Digital Main Ads"
+                  value={directAccountName}
+                  onChange={(e) => setDirectAccountName(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                  System User / Access Token *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="e.g. EAAB..."
+                  value={directAccessToken}
+                  onChange={(e) => setDirectAccessToken(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.82rem", resize: "vertical" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                    Linked Page ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1029384756"
+                    value={directPageId}
+                    onChange={(e) => setDirectPageId(e.target.value)}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                    Linked Page Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Adstra Digital"
+                    value={directPageName}
+                    onChange={(e) => setDirectPageName(e.target.value)}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setMetaDirectTokenModal(false)}
+                  style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", fontSize: "0.82rem" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={directSaving}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 8,
+                    background: "#059669",
+                    color: "#fff",
+                    border: "none",
+                    fontWeight: 700,
+                    cursor: directSaving ? "wait" : "pointer",
+                    fontSize: "0.84rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Check size={14} /> {directSaving ? "Connecting..." : "Connect Ad Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ======================================================== */}
+      {/* META CONNECTION OPTIONS MODAL (When App ID not ready)    */}
+      {/* ======================================================== */}
+      {metaOptionsModal && (
+        <div className="social-modal-overlay" onClick={() => setMetaOptionsModal(false)}>
+          <div
+            className="social-modal-content"
+            style={{ maxWidth: 660, padding: 0, overflow: "hidden", borderRadius: 16 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #0064e0 0%, #0081fb 100%)",
+                padding: "22px 26px",
+                color: "#ffffff",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    background: "rgba(255, 255, 255, 0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MetaLogoIcon size={24} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#fff" }}>
+                    Connect Meta Advertising &amp; Pages
+                  </h3>
+                  <p style={{ margin: "3px 0 0", fontSize: "0.82rem", opacity: 0.9 }}>
+                    Choose the best connection option for your current setup:
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMetaOptionsModal(false)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.2)",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
+                  color: "#fff",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: "24px 26px", display: "flex", flexDirection: "column", gap: 16, background: "#f8fafc" }}>
+              {/* Option 1: 1-Click Sandbox Mode (Highlighted) */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "2px solid #22c55e",
+                  borderRadius: 14,
+                  padding: "18px 20px",
+                  boxShadow: "0 4px 14px rgba(34, 197, 94, 0.12)",
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -11,
+                    right: 18,
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    fontSize: "0.68rem",
+                    fontWeight: 800,
+                    padding: "2px 10px",
+                    borderRadius: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Recommended · Instant (No Setup)
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: "#dcfce7",
+                      border: "1px solid #86efac",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Sparkles size={22} color="#16a34a" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: "1rem", color: "#0f172a", fontWeight: 800 }}>
+                      1-Click Sandbox / Test Mode
+                    </h4>
+                    <p style={{ margin: "5px 0 14px", fontSize: "0.82rem", color: "#64748b", lineHeight: 1.5 }}>
+                      No Meta Developer account, App ID, or Meta business verification required! Immediately activates a simulated live Meta Ad Account (<code>act_SANDBOX_123</code> - Sandbox Meta Account) and Facebook Page. All ad campaigns, metrics, lead sync, and retainer features work right away.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMetaOptionsModal(false);
+                        handleConnectSandbox();
+                      }}
+                      disabled={adActionLoading === "sandbox"}
+                      style={{
+                        background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                        color: "#ffffff",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: 9,
+                        fontSize: "0.86rem",
+                        fontWeight: 800,
+                        cursor: adActionLoading === "sandbox" ? "wait" : "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        boxShadow: "0 3px 10px rgba(22, 163, 74, 0.3)",
+                      }}
+                    >
+                      <Sparkles size={16} />
+                      <span>{adActionLoading === "sandbox" ? "Activating Sandbox…" : "Connect in Sandbox Mode Now"}</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option 2: Configure Meta App ID & Secret */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 14,
+                  padding: "18px 20px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Key size={22} color="#2563eb" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0f172a", fontWeight: 800 }}>
+                        Configure Meta App ID &amp; App Secret
+                      </h4>
+                      <span style={{ fontSize: "0.72rem", background: "#f1f5f9", padding: "3px 8px", borderRadius: 6, color: "#475569", fontWeight: 700 }}>
+                        For Production OAuth
+                      </span>
+                    </div>
+                    <p style={{ margin: "5px 0 14px", fontSize: "0.82rem", color: "#64748b", lineHeight: 1.5 }}>
+                      If you have created a Meta App on <strong>developers.facebook.com</strong>, enter your App ID and Secret here. This writes directly to <code>backend/.env</code> and configures live OAuth login.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMetaOptionsModal(false);
+                        setMetaConfigModal(true);
+                      }}
+                      style={{
+                        background: "#ffffff",
+                        color: "#1e293b",
+                        border: "1px solid #cbd5e1",
+                        padding: "9px 18px",
+                        borderRadius: 8,
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Key size={14} color="#4f46e5" />
+                      <span>Configure App ID &amp; Secret Dialog</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option 3: Direct Token Connect */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 14,
+                  padding: "18px 20px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: "#f0fdf4",
+                      border: "1px solid #bbf7d0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ShieldCheck size={22} color="#059669" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#0f172a", fontWeight: 800 }}>
+                        Connect via Direct Access Token
+                      </h4>
+                      <span style={{ fontSize: "0.72rem", background: "#f1f5f9", padding: "3px 8px", borderRadius: 6, color: "#475569", fontWeight: 700 }}>
+                        Meta Business Manager
+                      </span>
+                    </div>
+                    <p style={{ margin: "5px 0 14px", fontSize: "0.82rem", color: "#64748b", lineHeight: 1.5 }}>
+                      Connect directly using a Meta System User Token or Graph API Explorer Token. Useful for media buyers and agencies who manage ad accounts directly without creating an OAuth app.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMetaOptionsModal(false);
+                        setMetaDirectTokenModal(true);
+                      }}
+                      style={{
+                        background: "#ffffff",
+                        color: "#1e293b",
+                        border: "1px solid #cbd5e1",
+                        padding: "9px 18px",
+                        borderRadius: 8,
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <ShieldCheck size={14} color="#059669" />
+                      <span>Enter Direct Token &amp; Account ID</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step-by-step developer guide hint */}
+              <div
+                style={{
+                  background: "#eff6ff",
+                  borderRadius: 10,
+                  border: "1px solid #bfdbfe",
+                  padding: "12px 16px",
+                  fontSize: "0.78rem",
+                  color: "#1e40af",
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong>💡 How to create a free Meta Developer App in 2 minutes:</strong>
+                <ol style={{ margin: "6px 0 0", paddingLeft: 18, color: "#1e3a8a" }}>
+                  <li>Go to <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", fontWeight: 700 }}>developers.facebook.com/apps</a> and click <strong>Create App</strong>.</li>
+                  <li>Select <strong>Other</strong> &rarr; <strong>Business</strong>, give it an app name.</li>
+                  <li>In <em>App Settings &rarr; Basic</em>, copy your <strong>App ID</strong> and <strong>App Secret</strong>.</li>
+                  <li>Add <em>Facebook Login for Business</em> product and set redirect URI to <code>http://localhost:8000/api/social/platform-connections/meta/callback/</code>.</li>
+                </ol>
               </div>
             </div>
           </div>

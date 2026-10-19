@@ -255,6 +255,7 @@ class SocialDailyAnalyticsSerializer(serializers.ModelSerializer):
 
 from apis.social.models import (
     PlatformConnection,
+    MetaAppCredentials,
     CampaignPlatform,
     CampaignMetricSnapshot,
     CampaignActivity,
@@ -327,4 +328,10 @@ class CampaignMetricSnapshotSerializer(serializers.ModelSerializer):
 class CampaignActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = CampaignActivity
+        fields = '__all__'
+
+
+class MetaAppCredentialsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MetaAppCredentials
         fields = '__all__'

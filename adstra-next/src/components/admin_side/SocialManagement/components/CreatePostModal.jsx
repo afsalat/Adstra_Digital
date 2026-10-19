@@ -1470,12 +1470,6 @@ export default function CreatePostModal({
               <span>{showPreview ? "Hide Preview" : "Show Preview"}</span>
             </button>
 
-            <button
-              onClick={onOpenAiStudio}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg, #8b5cf6, #6366f1)", color: "#fff", border: "none", padding: "7px 14px", borderRadius: 10, fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}
-            >
-              <Sparkles size={15} /> AI Content Studio
-            </button>
             <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#64748b", cursor: "pointer" }}>
               <X size={20} />
             </button>

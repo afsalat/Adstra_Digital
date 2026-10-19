@@ -284,9 +284,10 @@ def publish_campaign(connection, campaign, campaign_platform, desired_status: st
     Raises on failure with detailed error context.
     """
     token = get_valid_access_token(connection)
-    ad_account_id = campaign_platform.platform_account_id or connection.account_id
-    if not ad_account_id:
+    raw_acc_id = str(campaign_platform.platform_account_id or connection.account_id or '').replace('act_', '').strip()
+    if not raw_acc_id:
         raise ValueError("No Meta Ad Account ID configured on connection. Select an ad account in Social Settings.")
+    ad_account_id = f"act_{raw_acc_id}"
 
     desired_status = (desired_status or 'ACTIVE').upper()
     if desired_status not in ('ACTIVE', 'PAUSED'):
@@ -315,8 +316,10 @@ def publish_campaign(connection, campaign, campaign_platform, desired_status: st
     page_access_token = None
     pages = get_facebook_pages(connection)
     if pages:
-        page_id = pages[0].get('id')
-        page_access_token = pages[0].get('access_token')
+        adstra_page = next((p for p in pages if 'adstra' in (p.get('name') or '').lower()), None)
+        chosen_page = adstra_page or pages[0]
+        page_id = chosen_page.get('id')
+        page_access_token = chosen_page.get('access_token')
     if not page_id:
         try:
             acc_details = _graph('get', ad_account_id, token, params={'fields': 'promote_pages'})
@@ -338,7 +341,7 @@ def publish_campaign(connection, campaign, campaign_platform, desired_status: st
             'objective': objective,
             'status': desired_status,
             'special_ad_categories': '[]',
-            'is_adset_budget_sharing_enabled': 'false',
+            'is_adset_budget_sharing_enabled': False,
         })
         result['meta_campaign_id'] = camp_data.get('id', '')
         meta.meta_campaign_id = result['meta_campaign_id']
@@ -437,6 +440,12 @@ def publish_campaign(connection, campaign, campaign_platform, desired_status: st
             logger.warning("object_story_spec creation failed (%s), attempting fallback to page post...", err_msg)
             # 2. Fallback to existing page post if App is in Development mode (error 1885183) or restricted
             fallback_post_id = _get_fallback_page_post_id(connection, page_id, page_access_token)
+            if not fallback_post_id and pages:
+                for other_p in pages:
+                    fallback_post_id = _get_fallback_page_post_id(connection, other_p.get('id'), other_p.get('access_token'))
+                    if fallback_post_id:
+                        page_id = other_p.get('id')
+                        break
             if fallback_post_id:
                 try:
                     fb_data = _graph('post', f'{ad_account_id}/adcreatives', token, data={
@@ -677,9 +686,10 @@ def fetch_all_account_campaigns(connection) -> list:
     reach, impressions, clicks, leads, CTR, CPM, and ad set / ad counts.
     """
     token = get_valid_access_token(connection)
-    ad_account_id = connection.account_id
-    if not ad_account_id:
+    raw_acc_id = str(connection.account_id or '').replace('act_', '').strip()
+    if not raw_acc_id:
         return []
+    ad_account_id = f"act_{raw_acc_id}"
 
     # 1. Fetch all campaigns for this account
     camp_data = _graph('get', f'{ad_account_id}/campaigns', token, params={
@@ -1088,7 +1098,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
         currency_code = 'INR'
         curr_sym = '₹'
         try:
-            acc_info = _graph('get', ad_account_id, token, params={'fields': 'id,name,account_status,disable_reason,funding_source_details,balance,amount_spent,currency'})
+            acc_info = _graph('get', ad_account_id, token, params={'fields': 'id,name,account_status,disable_reason,funding_source_details,balance,amount_spent,spend_cap,currency'})
             currency_code = (acc_info.get('currency') or 'INR').upper()
             CURRENCY_SYMBOLS = {
                 'INR': '₹',
@@ -1105,10 +1115,15 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
 
             funding = acc_info.get('funding_source_details') or {}
             balance_val = float(acc_info.get('balance', 0) or 0)
+            spend_cap_val = float(acc_info.get('spend_cap') or 0)
+            amount_spent_val = float(acc_info.get('amount_spent') or 0)
+
             if funding.get('type') == 20: # Indian prepaid balance
                 disp = str(funding.get('display_string', ''))
                 if balance_val <= 0 or '₹0.00' in disp or '0.00' in disp:
                     has_payment_error = True
+            if spend_cap_val > 0 and amount_spent_val >= spend_cap_val:
+                has_payment_error = True
             elif acc_info.get('account_status') in (2, 3, 7, 8, 9, 101, 102):
                 has_payment_error = True
         except Exception as e:
@@ -1119,7 +1134,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
             'fields': (
                 'id,name,status,effective_status,objective,buying_type,'
                 'daily_budget,lifetime_budget,budget_remaining,'
-                'start_time,stop_time,created_time,updated_time'
+                'start_time,stop_time,created_time,updated_time,issues_info'
             ),
             'limit': 150,
         }
@@ -1131,7 +1146,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 'id,name,status,effective_status,campaign_id,'
                 'daily_budget,lifetime_budget,bid_strategy,'
                 'billing_event,optimization_goal,targeting,'
-                'start_time,end_time,created_time,updated_time'
+                'start_time,end_time,created_time,updated_time,issues_info'
             ),
             'limit': 150,
         }
@@ -1142,7 +1157,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
             'fields': (
                 'id,name,status,effective_status,adset_id,campaign_id,'
                 'creative{id,name,title,body,image_url,thumbnail_url},'
-                'created_time,updated_time'
+                'created_time,updated_time,issues_info'
             ),
             'limit': 150,
         }
@@ -1215,7 +1230,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 is_ad_active = (ad.get('status', '').upper() == 'ACTIVE')
                 adset_active_ads[asid] = adset_active_ads.get(asid, 0) + (1 if is_ad_active else 0)
 
-        def _format_delivery(status_str, effective_str='', has_payment_error=False, is_ended=False, is_draft=False, parent_paused=False, active_ads_count=None, level='ad'):
+        def _format_delivery(status_str, effective_str='', has_payment_error=False, is_ended=False, is_draft=False, parent_paused=False, active_ads_count=None, level='ad', issues_info=None):
             eff = (effective_str or '').upper()
             st = (status_str or '').upper()
 
@@ -1234,7 +1249,9 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 return 'Campaign off'
 
             # 4. Payment error / issues / rejected (Meta Ads Manager prioritizes payment error on all active entities)
-            if 'ERROR' in eff or 'ISSUE' in eff or 'REJECTED' in eff:
+            if 'ERROR' in eff or 'ISSUE' in eff or 'REJECTED' in eff or 'DISAPPROVED' in eff:
+                return 'Payment error'
+            if issues_info and any(isinstance(issue, dict) and issue.get('level') == 'ERROR' for issue in issues_info):
                 return 'Payment error'
             if has_payment_error and (st == 'ACTIVE' or eff == 'ACTIVE'):
                 return 'Payment error'
@@ -1248,7 +1265,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 return 'No active ads'
 
             # 7. In review
-            if 'REVIEW' in eff or 'PROCESS' in eff:
+            if 'REVIEW' in eff or 'PROCESS' in eff or eff == 'PENDING_REVIEW':
                 return 'In review'
 
             # 8. Active
@@ -1414,7 +1431,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                     ends_formatted = c.get('stop_time', '')[:10]
 
             eff_status = c.get('effective_status') or c.get('status') or 'ACTIVE'
-            delivery = _format_delivery(c.get('status'), eff_status, has_payment_error=has_payment_error, is_ended=is_ended, level='campaign')
+            delivery = _format_delivery(c.get('status'), eff_status, has_payment_error=has_payment_error, is_ended=is_ended, level='campaign', issues_info=c.get('issues_info'))
             is_active = (c.get('status', '').upper() == 'ACTIVE')
 
             metrics_summary['spend'] += m['raw_spend']
@@ -1475,7 +1492,7 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
 
             eff_status = a.get('effective_status') or a.get('status') or 'ACTIVE'
             act_count = adset_active_ads.get(aid, 0)
-            delivery = _format_delivery(a.get('status'), eff_status, has_payment_error=has_payment_error, is_ended=is_ended, active_ads_count=act_count, level='adset')
+            delivery = _format_delivery(a.get('status'), eff_status, has_payment_error=has_payment_error, is_ended=is_ended, active_ads_count=act_count, level='adset', issues_info=a.get('issues_info'))
             is_active = (a.get('status', '').upper() == 'ACTIVE')
 
             adsets.append({
@@ -1539,7 +1556,8 @@ def fetch_all_meta_account_data(connection, date_preset: str = 'last_30d', time_
                 has_payment_error=has_payment_error,
                 is_ended=is_ended,
                 parent_paused=parent_paused,
-                level='ad'
+                level='ad',
+                issues_info=ad.get('issues_info')
             )
 
             # Inherit budget from parent ad set if set, otherwise "Using campaign..."

@@ -29,8 +29,8 @@ export default function ReviewAndPublishModal({
   campaigns = [],
   adsets = [],
   ads = [],
-  selectedAdAccountId = "act_830629501946359",
-  selectedAdAccountName = "MediaReds D M",
+  selectedAdAccountId = "",
+  selectedAdAccountName = "",
   selectedCampaignIds = [],
   onPublishSuccess,
   showToast,
@@ -68,7 +68,7 @@ export default function ReviewAndPublishModal({
 
   // Clean Account Name for header pill
   const cleanAccountName = useMemo(() => {
-    if (!selectedAdAccountName) return "MediaReds D M";
+    if (!selectedAdAccountName) return "Meta Ad Account";
     return selectedAdAccountName.replace(/\s*\(Adstra Meta Ads\)/i, "").trim();
   }, [selectedAdAccountName]);
 
@@ -208,7 +208,7 @@ export default function ReviewAndPublishModal({
         ? selectedAdAccountId.startsWith("act_")
           ? selectedAdAccountId
           : `act_${selectedAdAccountId}`
-        : "act_830629501946359";
+        : "";
 
       const response = await axios.post(`${API_BASE_URL}/social/ad/publish-drafts/`, {
         account_id: cleanAccId,

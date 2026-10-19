@@ -31,7 +31,6 @@ import AnalyticsReportsTab from "./components/AnalyticsReportsTab";
 import TeamDesignationTreeTab from "./components/TeamDesignationTreeTab";
 import SocialSettingsTab from "./components/SocialSettingsTab";
 import CreatePostModal from "./components/CreatePostModal";
-import AIAssistantModal from "./components/AIAssistantModal";
 import ClientCompanySearchSelect from "./components/ClientCompanySearchSelect";
 import MentionsBell from "./components/MentionsBell";
 import ClientQuickRail from "./components/ClientQuickRail";
@@ -64,7 +63,6 @@ function SocialManagementInner() {
 
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [prefilledPostData, setPrefilledPostData] = useState(null);
 
   // Request to open a post's drawer (e.g. clicking an @mention): { postId, tab, nonce }
@@ -174,16 +172,9 @@ function SocialManagementInner() {
     setFocusRequest({ postId: mention.post_id, tab: "comments", nonce: Date.now() });
   };
 
-  const handleApplyAiContent = ({ caption, hashtags }) => {
-    setPrefilledPostData({
-      primary_caption: caption,
-      hashtags,
-    });
-    setCreateModalOpen(true);
-  };
 
   return (
-    <div className="social-mgmt-container">
+    <div className="social-mgmt-container" suppressHydrationWarning={true}>
 
       {/* Top Header Bar */}
       <header className="social-header-bar no-print">
@@ -216,13 +207,6 @@ function SocialManagementInner() {
             variant="header"
           />
 
-          {/* AI Content Studio button */}
-          <button
-            onClick={() => setAiModalOpen(true)}
-            className="social-ai-btn"
-          >
-            <Sparkles size={16} /> AI Studio (ML/EN)
-          </button>
 
           {/* Quick Create Post */}
           <button
@@ -332,7 +316,6 @@ function SocialManagementInner() {
               setCreateModalOpen(true);
             }}
             onOpenCreateWithAsset={handleOpenCreateWithAsset}
-            onOpenAiStudio={() => setAiModalOpen(true)}
             focusRequest={focusRequest}
           />
         )}
@@ -452,16 +435,6 @@ function SocialManagementInner() {
           selectedClientId={selectedClientId}
           initialData={prefilledPostData}
           onSuccess={fetchData}
-          onOpenAiStudio={() => setAiModalOpen(true)}
-        />
-      )}
-
-      {/* AI Studio Modal */}
-      {aiModalOpen && (
-        <AIAssistantModal
-          isOpen={aiModalOpen}
-          onClose={() => setAiModalOpen(false)}
-          onApplyContent={handleApplyAiContent}
         />
       )}
 

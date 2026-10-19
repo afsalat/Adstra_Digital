@@ -62,6 +62,27 @@ def _read_env_key(key: str) -> str:
     except Exception:
         pass
 
+    # 5. Check database MetaAppCredentials model
+    try:
+        from apis.social.models import MetaAppCredentials
+        db_cfg = MetaAppCredentials.objects.filter(is_active=True).first()
+        if db_cfg:
+            attr_map = {
+                'META_APP_ID': 'app_id',
+                'META_APP_SECRET': 'app_secret',
+                'META_AD_ACCOUNT_ID': 'ad_account_id',
+                'META_ACCESS_TOKEN': 'access_token',
+                'META_REDIRECT_URI': 'redirect_uri',
+                'META_AUTH_REDIRECT_URI': 'auth_redirect_uri',
+            }
+            attr = attr_map.get(key)
+            if attr and hasattr(db_cfg, attr):
+                db_val = getattr(db_cfg, attr, '')
+                if db_val and db_val != f'YOUR_{key}':
+                    return str(db_val).strip()
+    except Exception:
+        pass
+
     return ''
 
 def get_meta_app_id() -> str:

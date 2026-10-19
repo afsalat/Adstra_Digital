@@ -15,8 +15,7 @@ import GoogleAdsCampaignCreator from "./GoogleAdsCampaignCreator";
 import ReviewAndPublishModal from "./ReviewAndPublishModal";
 import MetaCreateViewDrawer from "./MetaCreateViewDrawer";
 import MetaFiltersPanel from "./MetaFiltersPanel";
-import MetaABTestModal from "./MetaABTestModal";
-import MetaAdsManagerAdsSection, { MetaRulesIcon } from "./MetaAdsManagerAdsSection";
+import MetaAdsManagerAdsSection from "./MetaAdsManagerAdsSection";
 import {
   LayoutGrid,
   Search,
@@ -467,22 +466,6 @@ const MetaBreakdownIcon = ({ size = 13, color = "#1e293b" }) => (
   </svg>
 );
 
-// Meta Reports Icon (Stacked sheets with text lines matching Image 2)
-const MetaReportsIcon = ({ size = 13, color = "#1c1e21" }) => (
-  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-    <path
-      d="M6 3.5h6.5a1.5 1.5 0 0 1 1.5 1.5v7.5a1.5 1.5 0 0 1-1.5 1.5H6"
-      stroke={color}
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-    <rect x="2" y="2" width="8.5" height="11" rx="1.5" fill="#ffffff" stroke={color} strokeWidth="1.5" />
-    <line x1="4" y1="5" x2="8.5" y2="5" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
-    <line x1="4" y1="7.5" x2="8.5" y2="7.5" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
-    <line x1="4" y1="10" x2="7" y2="10" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
-  </svg>
-);
-
 // Meta Download Tray Icon (Downward arrow into tray matching Image 2)
 const MetaDownloadTrayIcon = ({ size = 13, color = "#1c1e21" }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -682,70 +665,23 @@ export default function CampaignsTab({
   const [activeMetaSubSection, setActiveMetaSubSection] = useState("campaigns"); // "campaigns" | "adsets" | "ads"
 
   // Live Meta Marketing API Connection & Account State
-  const [selectedMetaAdAccountId, setSelectedMetaAdAccountId] = useState("act_830629501946359");
-  const [connectedAccount, setConnectedAccount] = useState({
-    id: "act_830629501946359",
-    name: "MediaReds D M",
-    display_id: "830629501946359",
-    status: "connected",
-    currency: "INR",
-  });
-  const [availableAccounts, setAvailableAccounts] = useState([
-    {
-      id: "act_830629501946359",
-      name: "MediaReds D M",
-      display_id: "830629501946359",
-      status: "connected",
-      currency: "INR",
-    },
-    {
-      id: "act_1405144991733037",
-      name: "Adstra Secondary Growth (1405144991733037)",
-      display_id: "1405144991733037",
-      status: "connected",
-      currency: "INR",
-    },
-  ]);
+  const [selectedMetaAdAccountId, setSelectedMetaAdAccountId] = useState(null);
+  const [connectedAccount, setConnectedAccount] = useState(null);
+  const [availableAccounts, setAvailableAccounts] = useState([]);
 
-  // Business Portfolios & Accounts matching Image 1
-  const [selectedPortfolioId, setSelectedPortfolioId] = useState("mediareds");
+  // Business Portfolios & Accounts
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState("your_account");
+  const [businessPortfolios, setBusinessPortfolios] = useState([]);
 
-  const [businessPortfolios, setBusinessPortfolios] = useState([
-    {
-      id: "adstradigital",
-      name: "Adstradigital",
-      accountCount: 0,
-      iconType: "diamond",
-      accounts: [],
-    },
-    {
-      id: "lioraa",
-      name: "Lioraa London Ltd",
-      accountCount: 1,
-      iconType: "orange_l",
-      accounts: [
-        {
-          id: "act_1405144991733037",
-          display_id: "1405144991733037",
-          name: "1405144991733037",
-        },
-      ],
-    },
-    {
-      id: "minglemuze",
-      name: "Minglemuze",
-      accountCount: 0,
-      iconType: "purple_m",
-      accounts: [],
-    },
-    {
-      id: "santhosh",
-      name: "Santhosh George",
-      accountCount: 0,
-      iconType: "green_s",
-      accounts: [],
-    },
-  ]);
+  // Connect Meta Account Modal State
+  const [connectMetaModalOpen, setConnectMetaModalOpen] = useState(false);
+  const [connectMetaLoading, setConnectMetaLoading] = useState(false);
+  const [connectTab, setConnectTab] = useState("real"); // "real" | "oauth" | "token" | "config" | "sandbox"
+  const [directAccountId, setDirectAccountId] = useState("act_830629501946359");
+  const [directAccessToken, setDirectAccessToken] = useState("");
+  const [directAccountName, setDirectAccountName] = useState("Primary Agency Meta Account");
+  const [metaAppId, setMetaAppId] = useState("2481850072305515");
+  const [metaAppSecret, setMetaAppSecret] = useState("b73f2db3c42f891f3feeb86c3c083b8d");
 
   // Create a business portfolio modal state (matching Image 1)
   const [createPortfolioModalOpen, setCreatePortfolioModalOpen] = useState(false);
@@ -778,24 +714,250 @@ export default function CampaignsTab({
     showToast(`Business portfolio "${createdPortfolio.name}" created!`, "success");
   };
 
-  const yourAccount = useMemo(
-    () => ({
-      id: "mediareds",
-      name: "MediaReds D M",
-      accountCount: 1,
-      iconType: "leaf",
-      accounts: [
-        {
-          id: "act_830629501946359",
-          display_id: "830629501946359",
-          name: "MediaReds D M",
-        },
-      ],
-    }),
-    []
-  );
+  const yourAccount = useMemo(() => {
+    const realAccs = (availableAccounts || []).filter((a) => a.is_real || (!a.is_sandbox && a.display_id !== "123456789"));
+    const allAccs = realAccs.length > 0 ? realAccs : (availableAccounts?.length > 0 ? availableAccounts : (connectedAccount ? [connectedAccount] : []));
+    return {
+      id: "your_account",
+      name: "Primary Agency Account",
+      accountCount: allAccs.length,
+      accounts: allAccs,
+    };
+  }, [connectedAccount, availableAccounts]);
 
-  const META_CACHE_PREFIX = "meta_cache_live_";
+  // Sync portfolios dynamically from clients and available accounts
+  useEffect(() => {
+    if (!clients || clients.length === 0) return;
+    const realAgencyAccounts = (availableAccounts || []).filter((a) => a.is_real || (!a.is_sandbox && a.display_id !== "123456789"));
+    const portfolios = clients.map((c) => {
+      let clientAccounts = (availableAccounts || []).filter(
+        (a) =>
+          String(a.client_id || a.client_profile || a.client_profile_id || "") === String(c.id) ||
+          (a.name && c.name && a.name.toLowerCase().includes(c.name.toLowerCase()))
+      );
+      // If client doesn't have a separate dedicated connection, make the real agency ad account available to manage!
+      if (clientAccounts.length === 0 && realAgencyAccounts.length > 0) {
+        clientAccounts = realAgencyAccounts;
+      }
+      return {
+        id: `client_${c.id}`,
+        clientId: c.id,
+        name: c.name,
+        accountCount: clientAccounts.length,
+        iconType: "client",
+        accounts: clientAccounts,
+      };
+    });
+    setBusinessPortfolios(portfolios);
+  }, [clients, availableAccounts]);
+
+  // Dynamic Avatar Helper for Portfolios & Accounts
+  const getPortfolioAvatar = (name = "", size = 22) => {
+    const clean = (name || "").trim();
+    if (clean.toLowerCase().includes("adstra")) {
+      return <AdstraDiamondIcon size={size} />;
+    }
+    const letter = clean ? clean[0].toUpperCase() : "A";
+    const colors = ["#0866ff", "#0ea5e9", "#6366f1", "#8b5cf6", "#ec4899", "#f97316", "#10b981", "#14b8a6"];
+    let code = 0;
+    for (let i = 0; i < clean.length; i++) code += clean.charCodeAt(i);
+    const bg = colors[code % colors.length];
+
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 4,
+          background: bg,
+          color: "#ffffff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: 800,
+          fontSize: size <= 20 ? "0.72rem" : "0.78rem",
+          flexShrink: 0,
+        }}
+      >
+        {letter}
+      </div>
+    );
+  };
+
+  // Connection handlers for Connect Meta Modal
+  const handleConnectSandboxMode = async () => {
+    try {
+      setConnectMetaLoading(true);
+      const targetClientId = selectedClientId === "all" ? (clients[0]?.id || null) : selectedClientId;
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/sandbox-connect/`, {
+        platform: "meta",
+        client_id: targetClientId,
+      });
+      showToast(res.data?.message || "Connected Meta in sandbox mode!", "success");
+      setConnectMetaModalOpen(false);
+      await fetchMetaAccountData(true);
+    } catch (err) {
+      showToast(`Sandbox connection failed: ${err?.response?.data?.error || err.message}`, "error");
+    } finally {
+      setConnectMetaLoading(false);
+    }
+  };
+
+  const handleConnectMetaOAuth = async () => {
+    try {
+      setConnectMetaLoading(true);
+      const targetClientId = selectedClientId === "all" ? (clients[0]?.id || null) : selectedClientId;
+      const res = await axios.get(`${API_BASE_URL}/social/platform-connections/meta/oauth-url/`, {
+        params: { client_id: targetClientId },
+      });
+      const url = res.data?.url || res.data?.oauth_url;
+      if (!url) {
+        throw new Error("No authorization URL returned from server.");
+      }
+      const popup = window.open(url, "meta_oauth", "width=600,height=750,scrollbars=yes");
+      if (popup) {
+        const timer = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(timer);
+            setConnectMetaLoading(false);
+            setConnectMetaModalOpen(false);
+            fetchMetaAccountData(true);
+          }
+        }, 1000);
+      }
+    } catch (err) {
+      const errMsg = err?.response?.data?.error || err.message;
+      showToast(errMsg, "error");
+      if (typeof errMsg === "string" && errMsg.includes("META_APP_ID")) {
+        setConnectTab("config");
+      }
+      setConnectMetaLoading(false);
+    }
+  };
+
+  const handleSaveDirectToken = async (e) => {
+    if (e) e.preventDefault();
+    if (!directAccountId.trim() || !directAccessToken.trim()) {
+      showToast("Please provide Meta Ad Account ID and Access Token.", "warning");
+      return;
+    }
+    try {
+      setConnectMetaLoading(true);
+      const cleanId = directAccountId.trim().replace("act_", "");
+      const targetClientId = selectedClientId === "all" ? (clients[0]?.id || null) : selectedClientId;
+      await axios.post(`${API_BASE_URL}/social/platform-connections/`, {
+        platform: "meta",
+        account_name: directAccountName.trim() || `Meta Ad Account (${cleanId})`,
+        account_id: cleanId,
+        access_token: directAccessToken.trim(),
+        client_profile: targetClientId,
+        currency: "INR",
+      });
+      showToast("Meta account connected successfully via direct token!", "success");
+      setConnectMetaModalOpen(false);
+      setDirectAccountId("");
+      setDirectAccessToken("");
+      setDirectAccountName("");
+      await fetchMetaAccountData(true);
+    } catch (err) {
+      showToast(err?.response?.data?.error || `Direct connect error: ${err.message}`, "error");
+    } finally {
+      setConnectMetaLoading(false);
+    }
+  };
+
+  const handleSaveMetaAppCredentials = async (e) => {
+    if (e) e.preventDefault();
+    if (!metaAppId.trim()) {
+      showToast("Please enter Meta App ID.", "warning");
+      return;
+    }
+    try {
+      setConnectMetaLoading(true);
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/meta/configure-credentials/`, {
+        app_id: metaAppId.trim(),
+        app_secret: metaAppSecret.trim(),
+      });
+      if (res.data?.success) {
+        showToast("Meta App ID & Secret saved to backend/.env!", "success");
+        setConnectTab("oauth");
+      } else {
+        showToast("Failed to save credentials.", "error");
+      }
+    } catch (err) {
+      showToast(err?.response?.data?.error || `Error saving credentials: ${err.message}`, "error");
+    } finally {
+      setConnectMetaLoading(false);
+    }
+  };
+
+  const handleActivateRealAccount = async () => {
+    try {
+      setConnectMetaLoading(true);
+      const targetClientId = selectedClientId === "all" ? (clients[0]?.id || null) : selectedClientId;
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/activate-real-meta/`, {
+        client_id: targetClientId,
+      });
+      if (res.data?.success) {
+        showToast(res.data.message || "Switched to real Meta account act_830629501946359!", "success");
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem(`${META_CACHE_PREFIX}123456789`);
+            sessionStorage.removeItem(`${META_CACHE_PREFIX}act_123456789`);
+            sessionStorage.removeItem(`${META_CACHE_PREFIX}act_SANDBOX_123`);
+            sessionStorage.removeItem(`${META_CACHE_PREFIX}SANDBOX_123`);
+          } catch (e) {}
+        }
+        setSelectedMetaAdAccountId(res.data.account_id);
+        setConnectedAccount({
+          id: res.data.account_id,
+          name: res.data.name,
+          display_id: res.data.display_id,
+          status: "connected",
+          currency: "INR",
+          is_real: true,
+          is_sandbox: false,
+        });
+        setConnectMetaModalOpen(false);
+        setAdAccountPickerOpen(false);
+        await fetchMetaAccountData(true);
+      }
+    } catch (err) {
+      showToast(`Failed to activate real account: ${err?.response?.data?.error || err.message}`, "error");
+    } finally {
+      setConnectMetaLoading(false);
+    }
+  };
+
+  const handleDisconnectAccount = async (accId, connId) => {
+    try {
+      const targetClientId = selectedClientId === "all" ? (clients[0]?.id || null) : selectedClientId;
+      const res = await axios.post(`${API_BASE_URL}/social/platform-connections/disconnect/`, {
+        connection_id: connId,
+        account_id: accId,
+        platform: "meta",
+        client_id: targetClientId,
+      });
+      if (res.data?.success) {
+        showToast("Ad account disconnected successfully.", "success");
+        if (typeof window !== "undefined" && accId) {
+          try {
+            sessionStorage.removeItem(`${META_CACHE_PREFIX}${accId}`);
+            sessionStorage.removeItem(`${META_CACHE_PREFIX}${String(accId).replace("act_", "")}`);
+          } catch (e) {}
+        }
+        if (connectedAccount?.id === accId || selectedMetaAdAccountId === accId) {
+          setSelectedMetaAdAccountId(null);
+          setConnectedAccount(null);
+        }
+        await fetchMetaAccountData(true);
+      }
+    } catch (err) {
+      showToast(`Disconnect failed: ${err?.response?.data?.error || err.message}`, "error");
+    }
+  };
+
+  const META_CACHE_PREFIX = "meta_cache_v5_";
 
   const getCachedMetaData = (accId) => {
     if (typeof window === "undefined" || !accId) return null;
@@ -810,19 +972,10 @@ export default function CampaignsTab({
     return null;
   };
 
-  const [metaLoading, setMetaLoading] = useState(() => {
-    const cached = getCachedMetaData("act_830629501946359");
-    return cached ? false : true;
-  });
-  const [metaLive, setMetaLive] = useState(() => {
-    const cached = getCachedMetaData("act_830629501946359");
-    return Boolean(cached?.meta_live);
-  });
+  const [metaLoading, setMetaLoading] = useState(true);
+  const [metaLive, setMetaLive] = useState(false);
   const [metaError, setMetaError] = useState(null);
-  const [metricsSummary, setMetricsSummary] = useState(() => {
-    const cached = getCachedMetaData("act_830629501946359");
-    return cached?.metrics_summary || null;
-  });
+  const [metricsSummary, setMetricsSummary] = useState(null);
 
   // Meta Date Picker Popover State (Image 1 & Image 2)
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -843,33 +996,15 @@ export default function CampaignsTab({
   const [year1DropdownOpen, setYear1DropdownOpen] = useState(false);
   const [month2DropdownOpen, setMonth2DropdownOpen] = useState(false);
   const [year2DropdownOpen, setYear2DropdownOpen] = useState(false);
-  const isPublishedOnly = (item) =>
-    Boolean(item) &&
-    !item.is_draft &&
-    item.delivery !== "In draft" &&
-    !String(item.id || "").startsWith("c-local-") &&
-    !String(item.id || "").startsWith("as-local-") &&
-    !String(item.id || "").startsWith("ad-local-");
+  const isPublishedOnly = (item) => Boolean(item && item.id);
 
   // Datasets (hydrated live from Meta API or instant session cache)
-  const [adsList, setAdsList] = useState(() => {
-    const cached = getCachedMetaData("act_830629501946359");
-    return Array.isArray(cached?.ads) ? cached.ads.filter(isPublishedOnly) : [];
-  });
-  const [adsetsList, setAdsetsList] = useState(() => {
-    const cached = getCachedMetaData("act_830629501946359");
-    return Array.isArray(cached?.adsets) ? cached.adsets.filter(isPublishedOnly) : [];
-  });
-  const [campaignsList, setCampaignsList] = useState(() => {
-    const cached = getCachedMetaData("act_830629501946359");
-    return Array.isArray(cached?.campaigns) ? cached.campaigns.filter(isPublishedOnly) : [];
-  });
+  const [adsList, setAdsList] = useState([]);
+  const [adsetsList, setAdsetsList] = useState([]);
+  const [campaignsList, setCampaignsList] = useState([]);
 
   // Meta live refresh timestamp label state (Image toolbar "Updated just now")
-  const [lastUpdatedText, setLastUpdatedText] = useState(() => {
-    const cached = getCachedMetaData("act_830629501946359");
-    return cached ? "Updated just now" : "Updating...";
-  });
+  const [lastUpdatedText, setLastUpdatedText] = useState("Updating...");
 
   // Selected Ad IDs (empty by default until campaign, adset, or ad is selected)
   const [selectedAdIds, setSelectedAdIds] = useState([]);
@@ -920,55 +1055,14 @@ export default function CampaignsTab({
   const [pinnedRowIds, setPinnedRowIds] = useState(new Set());
   const [inlineEditing, setInlineEditing] = useState(null); // { id, name, type }
   const [activeChartItem, setActiveChartItem] = useState(null);
-  const [rulesTargetItem, setRulesTargetItem] = useState(null);
-  const [rulesActiveTab, setRulesActiveTab] = useState("active");
-  const [campaignRulesList, setCampaignRulesList] = useState([
-    {
-      id: "rule-camp-1",
-      name: "Auto-pause if CPA exceeds threshold",
-      enabled: true,
-      condition: "Cost per result > ₹50.00",
-      action: "Turn off campaign",
-      schedule: "Continuously (Every 30 mins)",
-      lastTriggered: "Today at 08:30 AM",
-    },
-    {
-      id: "rule-camp-2",
-      name: "Scale daily budget on high performance",
-      enabled: true,
-      condition: "ROAS > 3.0 and Results > 10",
-      action: "Increase daily budget by 15%",
-      schedule: "Daily at 12:00 AM",
-      lastTriggered: "Yesterday at 11:59 PM",
-    },
-    {
-      id: "rule-camp-3",
-      name: "Alert admin if daily spend exceeds budget cap",
-      enabled: false,
-      condition: "Amount spent > ₹2,500.00 / day",
-      action: "Send email & notification",
-      schedule: "Hourly",
-      lastTriggered: "Never",
-    },
-  ]);
-  const [newRuleForm, setNewRuleForm] = useState({
-    name: "",
-    action: "turn_off",
-    metric: "cpa",
-    threshold: "50.00",
-    frequency: "continuous",
-  });
-
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [opportunityScoreOpen, setOpportunityScoreOpen] = useState(false);
-  const opportunityScoreRef = useRef(null);
 
   const [publishingModalOpen, setPublishingModalOpen] = useState(false);
   const [publishingTotal, setPublishingTotal] = useState(1);
   const [publishingProgress, setPublishingProgress] = useState(0);
   const [publishingItemName, setPublishingItemName] = useState("");
 
-  // Meta Ads Manager Toolbar Controls State (Matching Image 2 exact meta fields)
+  // Meta Ads Manager Toolbar Controls State
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
   const columnsRef = useRef(null);
   const [selectedColumnPreset, setSelectedColumnPreset] = useState("Copy of Performance");
@@ -978,355 +1072,10 @@ export default function CampaignsTab({
   const breakdownRef = useRef(null);
   const [selectedBreakdown, setSelectedBreakdown] = useState(null);
 
-  const [rulesMenuOpen, setRulesMenuOpen] = useState(false);
-  const rulesRef = useRef(null);
-  const [rulesModalOpen, setRulesModalOpen] = useState(false);
-
   const [moreToolbarMenuOpen, setMoreToolbarMenuOpen] = useState(false);
   const moreToolbarRef = useRef(null);
-  const [exportSubmenuOpen, setExportSubmenuOpen] = useState(false);
-  const bulkImportInputRef = useRef(null);
-
-  // Meta Import Ads Modal states (Images 2, 3, 4, 5)
-  const [importAdsModalOpen, setImportAdsModalOpen] = useState(false);
-  const [importTab, setImportTab] = useState("file"); // "file" | "images" | "videos"
-  const [importFileSubMode, setImportFileSubMode] = useState("file"); // "file" | "paste"
-  const [importSelectedFile, setImportSelectedFile] = useState(null);
-  const [importPastedText, setImportPastedText] = useState("");
-  const [importSelectedImages, setImportSelectedImages] = useState([]);
-  const [importSelectedVideos, setImportSelectedVideos] = useState([]);
-  const importFileInputRef = useRef(null);
-  const importImageInputRef = useRef(null);
-  const importVideoInputRef = useRef(null);
-
-  // Meta Automated Rules & Automatic Adjustments Modals (Images 1, 2, 3, 4, 5)
-  const [createRuleModalOpen, setCreateRuleModalOpen] = useState(false);
-  const [manageAdjustmentsModalOpen, setManageAdjustmentsModalOpen] = useState(false);
-  const [autoAdjustmentsEnabled, setAutoAdjustmentsEnabled] = useState(false);
-  const [expandedAdjustmentCategories, setExpandedAdjustmentCategories] = useState({
-    structure: true,
-    audience: true,
-    creative: true,
-    delivery: true,
-    spend: false,
-  });
-  const [selectedAdjustmentItems, setSelectedAdjustmentItems] = useState({});
-  const [editingAdjustmentItem, setEditingAdjustmentItem] = useState(null);
-  const [adjustmentItemsConfig, setAdjustmentItemsConfig] = useState({});
-
-  const ADJUSTMENT_CATEGORIES = useMemo(
-    () => [
-      {
-        id: "structure",
-        name: "Campaign structure",
-        desc: "Ad sets may be combined or ads that are underperforming could be turned off. This may redistribute your budget.",
-        icon: <MetaCategoryStructureIcon size={38} />,
-        items: [
-          {
-            id: "auction_overlap",
-            name: "Reduce auction overlap \u2013 auto-apply",
-            action: "Turn off ad sets",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "audience_fragmentation",
-            name: "Reduce audience fragmentation \u2013 auto-apply",
-            action: "Combine ad sets, audiences and budgets automatically",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-        ],
-      },
-      {
-        id: "audience",
-        name: "Audience",
-        desc: "Targeting settings may be adjusted to reach more people who might be interested in your ads.",
-        icon: <MetaCategoryAudienceIcon size={38} />,
-        items: [
-          {
-            id: "advantage_audience",
-            name: "Advantage+ audience",
-            action: "Ads are shown beyond some settings when it may improve performance. Any location and age limits will still be applied",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-        ],
-      },
-      {
-        id: "creative",
-        name: "Creative and format",
-        desc: "Ad creative may be enhanced. This applies to media, text, ad format and other visual elements.",
-        icon: <MetaCategoryCreativeIcon size={38} />,
-        items: [
-          {
-            id: "optimise_creative",
-            name: "Optimise ad creative",
-            badge: "Updated",
-            action: "Turn on visual touch-ups, text improvements, flexible media and add overlays",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "expand_image",
-            name: "Expand image",
-            action: "Fit your ad in more placements by automatically adjusting image size",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "turn_on_music",
-            name: "Turn on music",
-            action: "Automatically add music to eligible ad",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "include_other_products",
-            name: "Include other relevant products",
-            action: "Show more products from your catalogue when promoting a product set",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-        ],
-      },
-      {
-        id: "delivery",
-        name: "Delivery and engagement",
-        desc: "Placements may be added or removed. Settings for outcomes may be adjusted.",
-        icon: <MetaCategoryDeliveryIcon size={38} />,
-        items: [
-          {
-            id: "advantage_placements",
-            name: "Advantage+ placements",
-            action: "Reach more people while maximising your budget",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "reels_placements",
-            name: "Create Reels placements",
-            action: "Add Facebook and Instagram Reels placements alongside existing selections",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "max_landing_page_views",
-            name: "Maximise landing page views",
-            action: "Update campaign optimisation goal to landing page view",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "shop_ad_destination",
-            name: "Shop ad destination",
-            action: "Help increase conversions by sending traffic to your shop on Facebook or Instagram",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-        ],
-      },
-      {
-        id: "spend",
-        name: "Spend and schedule",
-        desc: "Your budget will never be changed. Other bid and schedule settings may be adjusted.",
-        icon: <MetaCategorySpendIcon size={38} />,
-        items: [
-          {
-            id: "budget_pacing",
-            name: "Pace budget during high-demand periods",
-            action: "Adjust daily spend to capture more opportunities",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-          {
-            id: "bid_cap_safety",
-            name: "Bid cap safety adjustment",
-            action: "Temporarily adjust bid cap if ad set is under-delivering",
-            schedule: "Daily",
-            notification: "Facebook",
-          },
-        ],
-      },
-    ],
-    []
-  );
-
-  const handleToggleCategory = (catId) => {
-    const cat = ADJUSTMENT_CATEGORIES.find((c) => c.id === catId);
-    if (!cat) return;
-    const allSelected = cat.items.every((item) => selectedAdjustmentItems[item.id]);
-    setSelectedAdjustmentItems((prev) => {
-      const next = { ...prev };
-      cat.items.forEach((item) => {
-        next[item.id] = !allSelected;
-      });
-      return next;
-    });
-  };
-
-  const handleToggleItem = (itemId) => {
-    setSelectedAdjustmentItems((prev) => ({
-      ...prev,
-      [itemId]: !prev[itemId],
-    }));
-  };
-
-  const handleToggleCategoryExpand = (catId) => {
-    const cat = ADJUSTMENT_CATEGORIES.find((c) => c.id === catId);
-    if (cat && cat.items.length === 0) {
-      setEmptyCategoryTooltip((prev) => (prev === catId ? null : catId));
-      return;
-    }
-    setExpandedAdjustmentCategories((prev) => ({
-      ...prev,
-      [catId]: !prev[catId],
-    }));
-  };
-
-  // Meta Create Custom Rule Form States (Image 3)
-  const [customRuleName, setCustomRuleName] = useState("");
-  const [customRuleApplyTo, setCustomRuleApplyTo] = useState("all_active_campaigns");
-  const [customRuleAction, setCustomRuleAction] = useState(""); // "" means "Select an option"
-  const [customRuleBudgetAdjustType, setCustomRuleBudgetAdjustType] = useState("increase");
-  const [customRuleBudgetAdjustUnit, setCustomRuleBudgetAdjustUnit] = useState("percentage");
-  const [customRuleBudgetAdjustValue, setCustomRuleBudgetAdjustValue] = useState("10");
-  const [customRuleMaxDailyCap, setCustomRuleMaxDailyCap] = useState("");
-  const [customRuleActionFrequency, setCustomRuleActionFrequency] = useState("once_daily");
-
-  const [customRuleConditions, setCustomRuleConditions] = useState([
-    {
-      id: "cond-1",
-      metric: "cost_per_result",
-      operator: "greater_than",
-      value: "",
-      value_max: "",
-      currency: "₹",
-    },
-  ]);
-  const [activeMetricPickerIndex, setActiveMetricPickerIndex] = useState(null);
-  const [metricSearchQuery, setMetricSearchQuery] = useState("");
-
-  const [customRuleTimeRange, setCustomRuleTimeRange] = useState("maximum");
-  const [customRuleSchedule, setCustomRuleSchedule] = useState("continuously");
-  const [customRuleNotificationFb, setCustomRuleNotificationFb] = useState(true);
-  const [customRuleNotificationEmail, setCustomRuleNotificationEmail] = useState(false);
-  const [customRuleSubscribers, setCustomRuleSubscribers] = useState([
-    "Athira S (athira@adstradigital.com)",
-  ]);
-  const [customRuleIsSubmitting, setCustomRuleIsSubmitting] = useState(false);
-
-  const METRIC_CATALOG = useMemo(
-    () => [
-      {
-        group: "Most Common",
-        items: [
-          { id: "cost_per_result", label: "Cost per result", type: "currency", symbol: "₹" },
-          { id: "results", label: "Results", type: "number", symbol: "" },
-          { id: "amount_spent", label: "Amount spent", type: "currency", symbol: "₹" },
-          { id: "impressions", label: "Impressions", type: "number", symbol: "" },
-          { id: "reach", label: "Reach", type: "number", symbol: "" },
-          { id: "frequency", label: "Frequency", type: "number", symbol: "" },
-          { id: "cpc", label: "CPC (Cost per link click)", type: "currency", symbol: "₹" },
-          { id: "cpm", label: "CPM (Cost per 1,000 impressions)", type: "currency", symbol: "₹" },
-          { id: "ctr", label: "CTR (Link click-through rate)", type: "percentage", symbol: "%" },
-        ],
-      },
-      {
-        group: "Conversions & Purchases",
-        items: [
-          { id: "purchases", label: "Purchases", type: "number", symbol: "" },
-          { id: "cost_per_purchase", label: "Cost per purchase", type: "currency", symbol: "₹" },
-          { id: "roas", label: "Purchase ROAS (Return on ad spend)", type: "number", symbol: "" },
-          { id: "adds_to_cart", label: "Adds to cart", type: "number", symbol: "" },
-          { id: "cost_per_add_to_cart", label: "Cost per add to cart", type: "currency", symbol: "₹" },
-          { id: "leads", label: "Leads", type: "number", symbol: "" },
-          { id: "cost_per_lead", label: "Cost per lead", type: "currency", symbol: "₹" },
-        ],
-      },
-      {
-        group: "Settings & Time",
-        items: [
-          { id: "lifetime_impressions", label: "Lifetime impressions", type: "number", symbol: "" },
-          { id: "current_time", label: "Current time (hour 0-23)", type: "number", symbol: "" },
-          { id: "hours_since_creation", label: "Hours since creation", type: "number", symbol: "hrs" },
-          { id: "days_since_creation", label: "Days since creation", type: "number", symbol: "days" },
-        ],
-      },
-    ],
-    []
-  );
-
-  const getMetricDef = (metricId) => {
-    for (const cat of METRIC_CATALOG) {
-      const found = cat.items.find((m) => m.id === metricId);
-      if (found) return found;
-    }
-    return { id: metricId, label: metricId, type: "number", symbol: "" };
-  };
-
-  const handleCreateCustomRule = async () => {
-    if (!customRuleName.trim()) {
-      showToast("Please enter a rule name.", "warning");
-      return;
-    }
-    if (!customRuleAction || customRuleAction === "select_option") {
-      showToast("Please select an action for the rule.", "warning");
-      return;
-    }
-
-    setCustomRuleIsSubmitting(true);
-    const payload = {
-      account_id: selectedMetaAdAccount?.id ? String(selectedMetaAdAccount.id).replace("act_", "") : "830629501946359",
-      rule_name: customRuleName.trim(),
-      apply_to: customRuleApplyTo,
-      action: customRuleAction,
-      action_details: {
-        adjustment_type: customRuleBudgetAdjustType,
-        unit: customRuleBudgetAdjustUnit,
-        value: Number(customRuleBudgetAdjustValue) || 10,
-        max_daily_cap: customRuleMaxDailyCap ? Number(customRuleMaxDailyCap) : null,
-        frequency: customRuleActionFrequency,
-      },
-      conditions: customRuleConditions.map((c) => ({
-        metric: c.metric,
-        operator: c.operator,
-        value: Number(c.value) || 0,
-        value_max: c.value_max ? Number(c.value_max) : undefined,
-        currency: c.currency || "INR",
-      })),
-      time_range: customRuleTimeRange,
-      schedule: customRuleSchedule,
-      notification_fb: customRuleNotificationFb,
-      notification_email: customRuleNotificationEmail,
-      subscribers: customRuleSubscribers,
-    };
-
-    try {
-      const res = await axios.post(`${API_BASE_URL}/api/v1/social/ad/automated-rules/`, payload);
-      try {
-        await axios.post(`${API_BASE_URL}/api/v1/social/ad/execute-automated-rule/`, {
-          rule_id: res.data?.rule?.id,
-        });
-      } catch (execErr) {
-        // silent fail on exec
-      }
-      showToast(`Automated rule "${customRuleName}" created and active!`, "success");
-      setRulesModalOpen(false);
-      setCustomRuleName("");
-      setCustomRuleAction("");
-    } catch (err) {
-      console.warn("Backend save fallback:", err);
-      showToast(`Automated rule "${customRuleName}" created and active!`, "success");
-      setRulesModalOpen(false);
-    } finally {
-      setCustomRuleIsSubmitting(false);
-    }
-  };
 
   const [chartsDrawerOpen, setChartsDrawerOpen] = useState(false);
-  const [analyseModalOpen, setAnalyseModalOpen] = useState(false);
-  const [abTestModalOpen, setAbTestModalOpen] = useState(false);
 
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewItem, setPreviewItem] = useState(null);
@@ -1343,10 +1092,13 @@ export default function CampaignsTab({
 
   // Review & Publish to Meta State
   const [reviewPublishModalOpen, setReviewPublishModalOpen] = useState(false);
-  const selectedMetaAdAccount = useMemo(() => ({
-    id: connectedAccount?.id || selectedMetaAdAccountId || "act_830629501946359",
-    name: connectedAccount?.name || "Adstra Digital Main",
-  }), [connectedAccount, selectedMetaAdAccountId]);
+  const selectedMetaAdAccount = useMemo(() => {
+    if (!connectedAccount && !selectedMetaAdAccountId) return null;
+    return {
+      id: connectedAccount?.id || selectedMetaAdAccountId,
+      name: connectedAccount?.name || `Meta Ad Account (${connectedAccount?.display_id || selectedMetaAdAccountId})`,
+    };
+  }, [connectedAccount, selectedMetaAdAccountId]);
 
   const totalDraftsCount = useMemo(() => {
     if (draftsDiscarded) return 0;
@@ -1372,14 +1124,18 @@ export default function CampaignsTab({
 
   const fetchMetaAccountData = async (forceSpinner = false) => {
     try {
-      const accId = selectedMetaAdAccountId || "act_830629501946359";
-      const cached = getCachedMetaData(accId);
+      const accId = selectedMetaAdAccountId || "";
+      const cached = accId ? getCachedMetaData(accId) : null;
       if (forceSpinner || (!cached && campaignsList.length === 0)) {
         setMetaLoading(true);
         setLastUpdatedText("Updating...");
       }
       const preset = selectedDatePreset === "last_30" ? "last_30d" : (selectedDatePreset || "last_30d");
-      let url = `${API_BASE_URL}/social/ad/meta-account-data/?account_id=${accId}&date_preset=${preset}&client_id=${selectedClientId}`;
+      const includeDraftsParam = draftsDiscarded ? "false" : "true";
+      let url = `${API_BASE_URL}/social/ad/meta-account-data/?date_preset=${preset}&client_id=${selectedClientId}&include_drafts=${includeDraftsParam}`;
+      if (accId) {
+        url += `&account_id=${accId}`;
+      }
 
       const sinceStr = formatToISODate(appliedStartDate);
       const untilStr = formatToISODate(appliedEndDate);
@@ -1406,19 +1162,29 @@ export default function CampaignsTab({
         setCampaignsList(cleanCampaigns);
         setAdsetsList(cleanAdsets);
         setAdsList(cleanAds);
+
         if (res.data.connected_account) {
           setConnectedAccount(res.data.connected_account);
+          if (!selectedMetaAdAccountId) {
+            setSelectedMetaAdAccountId(res.data.connected_account.id);
+          }
+        } else {
+          setConnectedAccount(null);
+          setSelectedMetaAdAccountId(null);
         }
+
         if (res.data.available_accounts && res.data.available_accounts.length > 0) {
           const seen = new Set();
           const cleanAccounts = res.data.available_accounts.filter((acc) => {
-            if (acc.status && acc.status !== "connected") return false;
+            if (acc.status && acc.status !== "connected" && acc.status !== "active") return false;
             const norm = String(acc.display_id || acc.id || "").replace("act_", "").trim();
             if (!norm || seen.has(norm)) return false;
             seen.add(norm);
             return true;
           });
           setAvailableAccounts(cleanAccounts);
+        } else {
+          setAvailableAccounts([]);
         }
         setMetaLive(Boolean(res.data.meta_live));
         setMetaError(res.data.meta_error || null);
@@ -1426,11 +1192,11 @@ export default function CampaignsTab({
           setMetricsSummary(res.data.metrics_summary);
         }
 
-        // Save to session cache for zero-latency instant navigation
-        if (typeof window !== "undefined") {
+        // Save to session cache for zero-latency instant navigation if account connected
+        if (typeof window !== "undefined" && res.data.connected_account?.id) {
           try {
             sessionStorage.setItem(
-              `${META_CACHE_PREFIX}${accId}`,
+              `${META_CACHE_PREFIX}${res.data.connected_account.id}`,
               JSON.stringify({
                 ...res.data,
                 campaigns: cleanCampaigns,
@@ -1445,7 +1211,6 @@ export default function CampaignsTab({
       console.warn("Failed to fetch live Meta account data:", err);
       const errMsg = err?.response?.data?.error || err?.response?.data?.meta_error || err?.message || "Failed to fetch live Meta account data";
       setMetaError(errMsg);
-      showToast(`Meta API: ${errMsg}`, "error");
     } finally {
       setMetaLoading(false);
       setLastUpdatedText("Updated just now");
@@ -1453,36 +1218,38 @@ export default function CampaignsTab({
   };
 
   useEffect(() => {
-    const accId = selectedMetaAdAccountId || "act_830629501946359";
-    const cached = getCachedMetaData(accId);
-    if (cached) {
-      const dedupe = (items) => {
-        if (!Array.isArray(items)) return [];
-        const seen = new Set();
-        return items.filter((item) => {
-          const key = String(item.id || item.name || "");
-          if (!key || seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-      };
-      if (Array.isArray(cached.campaigns)) setCampaignsList(dedupe(cached.campaigns));
-      if (Array.isArray(cached.adsets)) setAdsetsList(dedupe(cached.adsets));
-      if (Array.isArray(cached.ads)) setAdsList(dedupe(cached.ads));
-      if (cached.connected_account) setConnectedAccount(cached.connected_account);
-      if (cached.available_accounts?.length) {
-        const seen = new Set();
-        const cleanAccounts = cached.available_accounts.filter((acc) => {
-          if (acc.status && acc.status !== "connected") return false;
-          const norm = String(acc.display_id || acc.id || "").replace("act_", "").trim();
-          if (!norm || seen.has(norm)) return false;
-          seen.add(norm);
-          return true;
-        });
-        setAvailableAccounts(cleanAccounts);
+    const accId = selectedMetaAdAccountId;
+    if (accId) {
+      const cached = getCachedMetaData(accId);
+      if (cached) {
+        const dedupe = (items) => {
+          if (!Array.isArray(items)) return [];
+          const seen = new Set();
+          return items.filter((item) => {
+            const key = String(item.id || item.name || "");
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        };
+        if (Array.isArray(cached.campaigns)) setCampaignsList(dedupe(cached.campaigns));
+        if (Array.isArray(cached.adsets)) setAdsetsList(dedupe(cached.adsets));
+        if (Array.isArray(cached.ads)) setAdsList(dedupe(cached.ads));
+        if (cached.connected_account) setConnectedAccount(cached.connected_account);
+        if (cached.available_accounts?.length) {
+          const seen = new Set();
+          const cleanAccounts = cached.available_accounts.filter((acc) => {
+            if (acc.status && acc.status !== "connected") return false;
+            const norm = String(acc.display_id || acc.id || "").replace("act_", "").trim();
+            if (!norm || seen.has(norm)) return false;
+            seen.add(norm);
+            return true;
+          });
+          setAvailableAccounts(cleanAccounts);
+        }
+        if (cached.metrics_summary) setMetricsSummary(cached.metrics_summary);
+        setMetaLive(Boolean(cached.meta_live));
       }
-      if (cached.metrics_summary) setMetricsSummary(cached.metrics_summary);
-      setMetaLive(Boolean(cached.meta_live));
     }
     fetchMetaAccountData();
   }, [selectedMetaAdAccountId, selectedDatePreset, appliedStartDate, appliedEndDate, selectedClientId]);
@@ -1490,8 +1257,8 @@ export default function CampaignsTab({
   const handleReviewPublishSuccess = async (publishedIds, apiResponse) => {
     try {
       showToast("Campaign published directly to Meta Ads Manager! Syncing live delivery...", "success");
-      const accId = selectedMetaAdAccountId || "act_830629501946359";
-      if (typeof window !== "undefined") {
+      const accId = selectedMetaAdAccountId || connectedAccount?.id;
+      if (accId && typeof window !== "undefined") {
         try {
           sessionStorage.removeItem(`${META_CACHE_PREFIX}${accId}`);
         } catch (e) {}
@@ -2020,7 +1787,7 @@ export default function CampaignsTab({
     try {
       showToast(`Publishing "${newCampaign.name}" directly to Meta Ads Manager...`, "info");
       const res = await axios.post(`${API_BASE_URL}/social/ad/publish-drafts/`, {
-        account_id: selectedMetaAdAccount?.id || selectedMetaAdAccountId || "act_830629501946359",
+        account_id: selectedMetaAdAccount?.id || selectedMetaAdAccountId || "",
         draft_campaigns: [campaignData],
       });
       if (res.data?.success) {
@@ -3170,10 +2937,12 @@ export default function CampaignsTab({
     setLastUpdatedText("Updating...");
     showToast("Syncing latest data from Meta Marketing API...", "info");
     try {
-      const accId = selectedMetaAdAccountId || "act_830629501946359";
-      await axios.post(`${API_BASE_URL}/social/ad/import-campaigns/`, {
-        account_id: accId,
-      });
+      const accId = selectedMetaAdAccountId || connectedAccount?.id;
+      if (accId) {
+        await axios.post(`${API_BASE_URL}/social/ad/import-campaigns/`, {
+          account_id: accId,
+        });
+      }
     } catch (e) {
       console.warn("Sync import error:", e);
     }
@@ -3207,50 +2976,29 @@ export default function CampaignsTab({
 
   const activePortfolioAccounts = useMemo(() => {
     let accs = [];
-    if (selectedPortfolioId === "mediareds") {
-      accs = yourAccount.accounts;
-      if (availableAccounts && availableAccounts.length > 0) {
-        const found = availableAccounts.filter(
-          (a) =>
-            String(a.id).includes("830629501946359") ||
-            a.display_id === "830629501946359"
-        );
-        if (found.length > 0) {
-          accs = found;
-        }
+    if (selectedPortfolioId === "your_account" || !selectedPortfolioId) {
+      accs = yourAccount?.accounts || [];
+      if (accs.length === 0 && availableAccounts?.length > 0) {
+        accs = availableAccounts;
       }
     } else {
-      const p = businessPortfolios.find((b) => b.id === selectedPortfolioId);
+      const p = businessPortfolios.find((b) => String(b.id) === String(selectedPortfolioId));
       accs = p?.accounts || [];
-      if (selectedPortfolioId === "lioraa" && availableAccounts && availableAccounts.length > 0) {
-        const found = availableAccounts.filter(
-          (a) =>
-            String(a.id).includes("1405144991733037") ||
-            a.display_id === "1405144991733037" ||
-            String(a.id).includes("2153795751754423") ||
-            a.display_id === "2153795751754423"
-        );
-        if (found.length > 0) {
-          accs = found;
-        }
-      }
     }
 
     // Filter only connected accounts and deduplicate by account ID
     const seenIds = new Set();
     const dedupedAccs = [];
     for (const a of accs) {
-      if (a.status && a.status !== "connected") continue;
+      if (a.status && a.status !== "connected" && a.status !== "active") continue;
       const key = String(a.display_id || a.id || "").replace("act_", "").trim();
       if (!key || seenIds.has(key)) continue;
       seenIds.add(key);
       dedupedAccs.push(a);
     }
-    accs = dedupedAccs;
-
-    if (!adAccountSearchQuery.trim()) return accs;
+    if (!adAccountSearchQuery.trim()) return dedupedAccs;
     const q = adAccountSearchQuery.toLowerCase().trim();
-    return accs.filter(
+    return dedupedAccs.filter(
       (a) =>
         (a.name && a.name.toLowerCase().includes(q)) ||
         (a.display_id && String(a.display_id).includes(q)) ||
@@ -3570,19 +3318,179 @@ export default function CampaignsTab({
     }
   };
 
-  const handleDeleteSingleItem = (item, type) => {
+  // Update session storage cache when entities are deleted
+  const updateSessionCacheAfterDelete = (newCamps, newAdsets, newAds) => {
+    if (typeof window === "undefined" || !selectedMetaAdAccountId) return;
+    try {
+      const key = `${META_CACHE_PREFIX}${selectedMetaAdAccountId}`;
+      const existing = sessionStorage.getItem(key);
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        sessionStorage.setItem(
+          key,
+          JSON.stringify({
+            ...parsed,
+            campaigns: newCamps,
+            adsets: newAdsets,
+            ads: newAds,
+          })
+        );
+      }
+    } catch (e) {
+      console.warn("Could not update session cache", e);
+    }
+  };
+
+  // Cascade delete campaigns -> child adsets -> child ads
+  const performCascadeDeleteCampaigns = (campaignIds, backendId = null) => {
+    const campIdSet = new Set(campaignIds.map((id) => String(id)));
+    if (backendId) {
+      campIdSet.add(String(backendId));
+      campIdSet.add(`c-local-${backendId}`);
+    }
+    campaignIds.forEach((id) => {
+      const s = String(id);
+      if (s.startsWith("c-local-")) {
+        campIdSet.add(s.replace("c-local-", ""));
+      }
+    });
+
+    campaignsList.forEach((c) => {
+      if (campIdSet.has(String(c.id)) && c.backendId) {
+        campIdSet.add(String(c.backendId));
+        campIdSet.add(`c-local-${c.backendId}`);
+      }
+    });
+
+    // Collect all child adset IDs
+    const adsetIdsToRemove = new Set();
+    adsetsList.forEach((a) => {
+      const aCampId = String(a.campaignId || a.campaign_id || "");
+      const aBackendId = a.backendId ? String(a.backendId) : "";
+      if (
+        campIdSet.has(aCampId) ||
+        (aBackendId && campIdSet.has(aBackendId)) ||
+        (aBackendId && campIdSet.has(`c-local-${aBackendId}`))
+      ) {
+        adsetIdsToRemove.add(String(a.id));
+        if (String(a.id).startsWith("as-local-")) {
+          adsetIdsToRemove.add(String(a.id).replace("as-local-", ""));
+        }
+      }
+    });
+
+    const newCampaigns = campaignsList.filter((c) => !campIdSet.has(String(c.id)));
+    const newAdsets = adsetsList.filter((a) => {
+      const aId = String(a.id);
+      const aCampId = String(a.campaignId || a.campaign_id || "");
+      const aBackendId = a.backendId ? String(a.backendId) : "";
+      return !(
+        adsetIdsToRemove.has(aId) ||
+        campIdSet.has(aCampId) ||
+        (aBackendId && campIdSet.has(aBackendId)) ||
+        (aBackendId && campIdSet.has(`c-local-${aBackendId}`))
+      );
+    });
+    const newAds = adsList.filter((ad) => {
+      const adCampId = String(ad.campaignId || ad.campaign_id || "");
+      const adSetId = String(ad.adsetId || ad.adset_id || "");
+      const adBackendId = ad.backendId ? String(ad.backendId) : "";
+      return !(
+        campIdSet.has(adCampId) ||
+        adsetIdsToRemove.has(adSetId) ||
+        (adBackendId && campIdSet.has(adBackendId)) ||
+        (adBackendId && campIdSet.has(`c-local-${adBackendId}`))
+      );
+    });
+
+    setCampaignsList(newCampaigns);
+    setSelectedCampaignIds((prev) => prev.filter((id) => !campIdSet.has(String(id))));
+
+    setAdsetsList(newAdsets);
+    setSelectedAdsetIds((prev) => prev.filter((id) => !adsetIdsToRemove.has(String(id))));
+
+    setAdsList(newAds);
+    setSelectedAdIds((prev) =>
+      prev.filter((id) => newAds.some((ad) => String(ad.id) === String(id)))
+    );
+
+    updateSessionCacheAfterDelete(newCampaigns, newAdsets, newAds);
+  };
+
+  // Cascade delete adsets -> child ads
+  const performCascadeDeleteAdsets = (adsetIds, backendId = null) => {
+    const adsetIdSet = new Set(adsetIds.map((id) => String(id)));
+    if (backendId) {
+      adsetIdSet.add(String(backendId));
+      adsetIdSet.add(`as-local-${backendId}`);
+    }
+    adsetIds.forEach((id) => {
+      const s = String(id);
+      if (s.startsWith("as-local-")) {
+        adsetIdSet.add(s.replace("as-local-", ""));
+      }
+    });
+
+    adsetsList.forEach((a) => {
+      if (adsetIdSet.has(String(a.id)) && a.backendId) {
+        adsetIdSet.add(String(a.backendId));
+        adsetIdSet.add(`as-local-${a.backendId}`);
+      }
+    });
+
+    const newAdsets = adsetsList.filter((a) => !adsetIdSet.has(String(a.id)));
+    const newAds = adsList.filter((ad) => {
+      const adSetId = String(ad.adsetId || ad.adset_id || "");
+      const adBackendId = ad.backendId ? String(ad.backendId) : "";
+      return !(
+        adsetIdSet.has(adSetId) ||
+        (adBackendId && adsetIdSet.has(adBackendId)) ||
+        (adBackendId && adsetIdSet.has(`as-local-${adBackendId}`))
+      );
+    });
+
+    setAdsetsList(newAdsets);
+    setSelectedAdsetIds((prev) => prev.filter((id) => !adsetIdSet.has(String(id))));
+
+    setAdsList(newAds);
+    setSelectedAdIds((prev) =>
+      prev.filter((id) => newAds.some((ad) => String(ad.id) === String(id)))
+    );
+
+    updateSessionCacheAfterDelete(campaignsList, newAdsets, newAds);
+  };
+
+  // Delete ads
+  const performDeleteAds = (adIds) => {
+    const adIdSet = new Set(adIds.map((id) => String(id)));
+    const newAds = adsList.filter((ad) => !adIdSet.has(String(ad.id)));
+    setAdsList(newAds);
+    setSelectedAdIds((prev) => prev.filter((id) => !adIdSet.has(String(id))));
+    updateSessionCacheAfterDelete(campaignsList, adsetsList, newAds);
+  };
+
+  const handleDeleteSingleItem = async (item, type) => {
+    setOpenRowMenuId(null);
+    if (!item || !item.id) return;
+
     if (type === "campaign") {
-      setCampaignsList((prev) => prev.filter((c) => c.id !== item.id));
-      setSelectedCampaignIds((prev) => prev.filter((id) => id !== item.id));
+      performCascadeDeleteCampaigns([item.id], item.backendId);
     } else if (type === "adset") {
-      setAdsetsList((prev) => prev.filter((a) => a.id !== item.id));
-      setSelectedAdsetIds((prev) => prev.filter((id) => id !== item.id));
+      performCascadeDeleteAdsets([item.id], item.backendId);
     } else if (type === "ad") {
-      setAdsList((prev) => prev.filter((a) => a.id !== item.id));
-      setSelectedAdIds((prev) => prev.filter((id) => id !== item.id));
+      performDeleteAds([item.id]);
     }
     showToast(`Deleted "${item.name}".`, "info");
-    setOpenRowMenuId(null);
+
+    try {
+      await axios.post(`${API_BASE_URL}/social/ad/delete-entity/`, {
+        id: item.id,
+        level: type,
+        account_id: selectedMetaAdAccountId,
+      });
+    } catch (err) {
+      console.warn("Delete API error:", err);
+    }
   };
 
   const handleSaveInlineEdit = () => {
@@ -3853,33 +3761,73 @@ export default function CampaignsTab({
       return;
     }
     const ids = [...activeSel.ids];
-    activeSel.setList((prev) =>
-      prev.map((item) =>
-        ids.includes(item.id)
-          ? {
-            ...item,
-            active: true,
-            delivery: item.delivery === "Off" || item.delivery === "Paused" ? "Active" : item.delivery,
-            lastSignificantEdit: "Just now",
-          }
-          : item
-      )
-    );
     setEditMenuOpen(false);
+
+    let newCamps = campaignsList;
+    let newAdsets = adsetsList;
+    let newAds = adsList;
+
+    if (activeSel.type === "campaign") {
+      const campIdSet = new Set(ids.map(String));
+      newCamps = campaignsList.map((c) =>
+        campIdSet.has(String(c.id))
+          ? {
+              ...c,
+              active: true,
+              delivery: c.delivery === "Off" || c.delivery === "Paused" ? "Active" : c.delivery,
+              lastSignificantEdit: "Just now",
+            }
+          : c
+      );
+      setCampaignsList(newCamps);
+    } else if (activeSel.type === "adset") {
+      const adsetIdSet = new Set(ids.map(String));
+      newAdsets = adsetsList.map((a) =>
+        adsetIdSet.has(String(a.id))
+          ? {
+              ...a,
+              active: true,
+              delivery: a.delivery === "Off" || a.delivery === "Paused" ? "Active" : a.delivery,
+              lastSignificantEdit: "Just now",
+            }
+          : a
+      );
+      setAdsetsList(newAdsets);
+    } else {
+      const adIdSet = new Set(ids.map(String));
+      newAds = adsList.map((ad) =>
+        adIdSet.has(String(ad.id))
+          ? {
+              ...ad,
+              active: true,
+              delivery: ad.delivery === "Off" || ad.delivery === "Paused" ? "Active" : ad.delivery,
+              lastSignificantEdit: "Just now",
+            }
+          : ad
+      );
+      setAdsList(newAds);
+    }
+
+    updateSessionCacheAfterDelete(newCamps, newAdsets, newAds);
     showToast(`Turned on ${ids.length} ${activeSel.pluralLabel}.`, "success");
 
     for (const id of ids) {
       try {
+        const item = activeSel.list.find((x) => x.id === id);
         await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
           id,
           level: activeSel.type,
           status: "ACTIVE",
           account_id: selectedMetaAdAccountId,
+          campaign_id: item?.campaignId || item?.campaign_id,
+          adset_id: item?.adsetId || item?.adset_id,
+          backendId: item?.backendId,
         });
       } catch (e) {
         console.warn("Batch turn on error:", e);
       }
     }
+    fetchMetaAccountData(false);
   };
 
   const handleBatchTurnOff = async () => {
@@ -3889,28 +3837,73 @@ export default function CampaignsTab({
       return;
     }
     const ids = [...activeSel.ids];
-    activeSel.setList((prev) =>
-      prev.map((item) =>
-        ids.includes(item.id)
-          ? { ...item, active: false, delivery: "Off", lastSignificantEdit: "Just now" }
-          : item
-      )
-    );
     setEditMenuOpen(false);
+
+    let newCamps = campaignsList;
+    let newAdsets = adsetsList;
+    let newAds = adsList;
+
+    if (activeSel.type === "campaign") {
+      const campIdSet = new Set(ids.map(String));
+      newCamps = campaignsList.map((c) =>
+        campIdSet.has(String(c.id))
+          ? {
+              ...c,
+              active: false,
+              delivery: "Off",
+              lastSignificantEdit: "Just now",
+            }
+          : c
+      );
+      setCampaignsList(newCamps);
+    } else if (activeSel.type === "adset") {
+      const adsetIdSet = new Set(ids.map(String));
+      newAdsets = adsetsList.map((a) =>
+        adsetIdSet.has(String(a.id))
+          ? {
+              ...a,
+              active: false,
+              delivery: "Off",
+              lastSignificantEdit: "Just now",
+            }
+          : a
+      );
+      setAdsetsList(newAdsets);
+    } else {
+      const adIdSet = new Set(ids.map(String));
+      newAds = adsList.map((ad) =>
+        adIdSet.has(String(ad.id))
+          ? {
+              ...ad,
+              active: false,
+              delivery: "Off",
+              lastSignificantEdit: "Just now",
+            }
+          : ad
+      );
+      setAdsList(newAds);
+    }
+
+    updateSessionCacheAfterDelete(newCamps, newAdsets, newAds);
     showToast(`Turned off ${ids.length} ${activeSel.pluralLabel}.`, "success");
 
     for (const id of ids) {
       try {
+        const item = activeSel.list.find((x) => x.id === id);
         await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
           id,
           level: activeSel.type,
           status: "PAUSED",
           account_id: selectedMetaAdAccountId,
+          campaign_id: item?.campaignId || item?.campaign_id,
+          adset_id: item?.adsetId || item?.adset_id,
+          backendId: item?.backendId,
         });
       } catch (e) {
         console.warn("Batch turn off error:", e);
       }
     }
+    fetchMetaAccountData(false);
   };
 
   // 4. Delete Action
@@ -3927,9 +3920,16 @@ export default function CampaignsTab({
     const activeSel = getActiveSelection();
     const count = activeSel.ids.length;
     const idsToDelete = [...activeSel.ids];
-    activeSel.setList((prev) => prev.filter((item) => !activeSel.ids.includes(item.id)));
-    activeSel.setSelection([]);
     setDeleteModalOpen(false);
+
+    if (activeSel.type === "campaign") {
+      performCascadeDeleteCampaigns(idsToDelete);
+    } else if (activeSel.type === "adset") {
+      performCascadeDeleteAdsets(idsToDelete);
+    } else {
+      performDeleteAds(idsToDelete);
+    }
+    activeSel.setSelection([]);
 
     try {
       for (const id of idsToDelete) {
@@ -3972,15 +3972,9 @@ export default function CampaignsTab({
       if (breakdownRef.current && !breakdownRef.current.contains(event.target)) {
         setBreakdownMenuOpen(false);
       }
-      if (rulesRef.current && !rulesRef.current.contains(event.target)) {
-        setRulesMenuOpen(false);
-      }
       if (moreToolbarRef.current && !moreToolbarRef.current.contains(event.target)) {
         setMoreToolbarMenuOpen(false);
         setExportSubmenuOpen(false);
-      }
-      if (opportunityScoreRef.current && !opportunityScoreRef.current.contains(event.target)) {
-        setOpportunityScoreOpen(false);
       }
       if (quickViewsMenuRef.current && !quickViewsMenuRef.current.contains(event.target)) {
         setQuickViewsMenuOpen(false);
@@ -4115,7 +4109,6 @@ export default function CampaignsTab({
       editMenuOpen ||
       columnsMenuOpen ||
       breakdownMenuOpen ||
-      rulesMenuOpen ||
       moreToolbarMenuOpen ||
       openRowMenuId
     ) {
@@ -4136,7 +4129,6 @@ export default function CampaignsTab({
     editMenuOpen,
     columnsMenuOpen,
     breakdownMenuOpen,
-    rulesMenuOpen,
     moreToolbarMenuOpen,
     openRowMenuId,
     selectedAdIds,
@@ -4214,179 +4206,6 @@ export default function CampaignsTab({
     setDownloadMenuOpen(false);
   };
 
-  const handleBulkImportFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    showToast(`Imported "${file.name}" into campaign draft configurations.`, "success");
-    e.target.value = "";
-    setMoreToolbarMenuOpen(false);
-    setExportSubmenuOpen(false);
-  };
-
-  const handleImportFileChosen = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImportSelectedFile(file);
-    e.target.value = "";
-  };
-
-  const handleImportImagesChosen = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    const newImgs = files.map((f) => ({
-      name: f.name,
-      size: f.size,
-      preview: URL.createObjectURL(f),
-    }));
-    setImportSelectedImages((prev) => [...prev, ...newImgs]);
-    e.target.value = "";
-  };
-
-  const handleImportVideosChosen = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    const validVideos = files.slice(0, 10).map((f) => ({
-      name: f.name,
-      size: f.size,
-    }));
-    setImportSelectedVideos((prev) => [...prev, ...validVideos].slice(0, 10));
-    e.target.value = "";
-  };
-
-  const handleExecuteImport = () => {
-    if (importTab === "file") {
-      if (importFileSubMode === "file" && importSelectedFile) {
-        const fileName = importSelectedFile.name;
-        const newId = `imported_${Date.now()}`;
-        const newCampaign = {
-          id: newId,
-          name: `Imported - ${fileName.replace(/\.[^/.]+$/, "")}`,
-          status: "PAUSED",
-          delivery: "In draft",
-          budget: "₹500.00",
-          budgetSub: "Daily",
-          bidStrategy: "Highest volume",
-          bidStrategySub: "",
-          attribution: "7-day click or 1-day view",
-          results: 0,
-          reach: 0,
-          impressions: 0,
-          costPerResult: "—",
-          amountSpent: "—",
-          active: false,
-        };
-        setCampaignsList((prev) => [newCampaign, ...prev]);
-        showToast(`Successfully imported ad configuration from "${fileName}".`, "success");
-        setImportAdsModalOpen(false);
-        setImportSelectedFile(null);
-      } else if (importFileSubMode === "paste" && importPastedText.trim()) {
-        const lines = importPastedText.split("\n").filter((l) => l.trim().length > 0);
-        lines.slice(0, 10).forEach((line, idx) => {
-          const parts = line.split("\t");
-          const name = parts[0]?.trim() || `Pasted Ad Config ${idx + 1}`;
-          const newId = `pasted_${Date.now()}_${idx}`;
-          setCampaignsList((prev) => [
-            {
-              id: newId,
-              name: name,
-              status: "PAUSED",
-              delivery: "In draft",
-              budget: "₹500.00",
-              budgetSub: "Daily",
-              bidStrategy: "Highest volume",
-              bidStrategySub: "",
-              attribution: "7-day click or 1-day view",
-              results: 0,
-              reach: 0,
-              impressions: 0,
-              costPerResult: "—",
-              amountSpent: "—",
-              active: false,
-            },
-            ...prev,
-          ]);
-        });
-        showToast(`Successfully imported ${lines.length} ad configurations from clipboard.`, "success");
-        setImportAdsModalOpen(false);
-        setImportPastedText("");
-      }
-    } else if (importTab === "images" && importSelectedImages.length > 0) {
-      showToast(`Successfully imported ${importSelectedImages.length} creative image asset(s) to Ads Library.`, "success");
-      setImportAdsModalOpen(false);
-      setImportSelectedImages([]);
-    } else if (importTab === "videos" && importSelectedVideos.length > 0) {
-      showToast(`Successfully imported ${importSelectedVideos.length} video asset(s) to Ads Library.`, "success");
-      setImportAdsModalOpen(false);
-      setImportSelectedVideos([]);
-    }
-  };
-
-  const handleDownloadExcelTemplate = () => {
-    const templateHeaders = [
-      "Campaign ID",
-      "Campaign Name",
-      "Campaign Objective",
-      "Campaign Status",
-      "Buying Type",
-      "Campaign Daily Budget",
-      "Ad Set ID",
-      "Ad Set Name",
-      "Ad Set Daily Budget",
-      "Optimization Goal",
-      "Billing Event",
-      "Bid Amount",
-      "Targeting Countries",
-      "Targeting Age Min",
-      "Targeting Age Max",
-      "Targeting Genders",
-      "Ad ID",
-      "Ad Name",
-      "Ad Status",
-      "Creative Title",
-      "Creative Body",
-      "Link URL",
-      "Call to Action",
-    ];
-    const sampleRow = [
-      "",
-      "Sample Awareness Campaign",
-      "OUTCOME_AWARENESS",
-      "PAUSED",
-      "AUCTION",
-      "500",
-      "",
-      "Broad Audience Ad Set",
-      "500",
-      "REACH",
-      "IMPRESSIONS",
-      "",
-      "IN",
-      "18",
-      "65",
-      "All",
-      "",
-      "Main Brand Video Ad",
-      "PAUSED",
-      "Scale Your Business Today",
-      "Adstra Digital provides performance marketing at scale. Click to learn more.",
-      "https://adstradigital.com",
-      "LEARN_MORE",
-    ];
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      encodeURIComponent([templateHeaders.join(","), sampleRow.join(",")].join("\n"));
-    const link = document.createElement("a");
-    link.href = csvContent;
-    link.download = "Meta_Ads_Configuration_Template.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("Downloaded Meta Ads configuration Excel template.", "success");
-    setMoreToolbarMenuOpen(false);
-    setExportSubmenuOpen(false);
-  };
-
-
   const toggleAdActive = async (id) => {
     const item = adsList.find((x) => x.id === id);
     if (!item) return;
@@ -4394,21 +4213,35 @@ export default function CampaignsTab({
     const newStatus = newActive ? "ACTIVE" : "PAUSED";
     const newDelivery = newActive ? "Active" : "Off";
 
-    setAdsList((prev) =>
-      prev.map((ad) => (ad.id === id ? { ...ad, active: newActive, delivery: newDelivery } : ad))
+    const updatedAds = adsList.map((ad) =>
+      ad.id === id ? { ...ad, active: newActive, delivery: newDelivery, lastSignificantEdit: "Just now" } : ad
     );
+    setAdsList(updatedAds);
+    updateSessionCacheAfterDelete(campaignsList, adsetsList, updatedAds);
 
     try {
-      await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
+      const res = await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
         id,
         level: "ad",
         status: newStatus,
         account_id: selectedMetaAdAccountId,
+        adset_id: item.adsetId || item.adset_id,
+        campaign_id: item.campaignId || item.campaign_id,
+        backendId: item.backendId,
       });
+      const realDelivery = res.data?.delivery || (newActive ? "Active" : "Off");
+      setAdsList((prev) =>
+        prev.map((ad) => (ad.id === id ? { ...ad, active: newActive, delivery: realDelivery, lastSignificantEdit: "Just now" } : ad))
+      );
       showToast(`Ad "${item.name}" ${newActive ? "activated" : "paused"}.`, "success");
+      fetchMetaAccountData(false);
     } catch (err) {
       console.warn("Toggle ad error:", err);
-      showToast(`Status updated locally. (${err?.response?.data?.error || err.message})`, "info");
+      setAdsList((prev) =>
+        prev.map((ad) => (ad.id === id ? { ...ad, active: !newActive, delivery: item.delivery } : ad))
+      );
+      updateSessionCacheAfterDelete(campaignsList, adsetsList, adsList);
+      showToast(`Meta rejected: ${err?.response?.data?.error || err.message}`, "error");
     }
   };
 
@@ -4417,23 +4250,38 @@ export default function CampaignsTab({
     if (!item) return;
     const newActive = !item.active;
     const newStatus = newActive ? "ACTIVE" : "PAUSED";
-    const newDelivery = newActive ? "Active" : "Off";
+    const initialDelivery = newActive ? (item.delivery === "Off" ? "Active" : item.delivery) : "Off";
 
-    setAdsetsList((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, active: newActive, delivery: newDelivery } : a))
+    // Update only this Ad set
+    const updatedAdsets = adsetsList.map((a) =>
+      a.id === id ? { ...a, active: newActive, delivery: initialDelivery, lastSignificantEdit: "Just now" } : a
     );
+    setAdsetsList(updatedAdsets);
+    updateSessionCacheAfterDelete(campaignsList, updatedAdsets, adsList);
 
     try {
-      await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
+      const res = await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
         id,
         level: "adset",
         status: newStatus,
         account_id: selectedMetaAdAccountId,
+        campaign_id: item.campaignId || item.campaign_id,
+        backendId: item.backendId,
       });
-      showToast(`Ad set "${item.name}" ${newActive ? "activated" : "paused"}.`, "success");
+      const realDelivery = res.data?.delivery || initialDelivery;
+      setAdsetsList((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, active: newActive, delivery: realDelivery, lastSignificantEdit: "Just now" } : a))
+      );
+      showToast(
+        `Ad set "${item.name}" ${newActive ? "activated" : "paused"}.`,
+        "success"
+      );
+      fetchMetaAccountData(false);
     } catch (err) {
       console.warn("Toggle adset error:", err);
-      showToast(`Status updated locally. (${err?.response?.data?.error || err.message})`, "info");
+      setAdsetsList(adsetsList);
+      updateSessionCacheAfterDelete(campaignsList, adsetsList, adsList);
+      showToast(`Meta rejected: ${err?.response?.data?.error || err.message}`, "error");
     }
   };
 
@@ -4442,23 +4290,37 @@ export default function CampaignsTab({
     if (!item) return;
     const newActive = !item.active;
     const newStatus = newActive ? "ACTIVE" : "PAUSED";
-    const newDelivery = newActive ? "Active" : "Off";
+    const initialDelivery = newActive ? (item.delivery === "Off" ? "Active" : item.delivery) : "Off";
 
-    setCampaignsList((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, active: newActive, delivery: newDelivery } : c))
+    // Update only this Campaign
+    const updatedCamps = campaignsList.map((c) =>
+      c.id === id ? { ...c, active: newActive, delivery: initialDelivery, lastSignificantEdit: "Just now" } : c
     );
+    setCampaignsList(updatedCamps);
+    updateSessionCacheAfterDelete(updatedCamps, adsetsList, adsList);
 
     try {
-      await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
+      const res = await axios.post(`${API_BASE_URL}/social/ad/toggle-status/`, {
         id,
         level: "campaign",
         status: newStatus,
         account_id: selectedMetaAdAccountId,
+        backendId: item.backendId,
       });
-      showToast(`Campaign "${item.name}" ${newActive ? "activated" : "paused"}.`, "success");
+      const realDelivery = res.data?.delivery || initialDelivery;
+      setCampaignsList((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, active: newActive, delivery: realDelivery, lastSignificantEdit: "Just now" } : c))
+      );
+      showToast(
+        `Campaign "${item.name}" ${newActive ? "activated" : "paused"}.`,
+        "success"
+      );
+      fetchMetaAccountData(false);
     } catch (err) {
       console.warn("Toggle campaign error:", err);
-      showToast(`Status updated locally. (${err?.response?.data?.error || err.message})`, "info");
+      setCampaignsList(campaignsList);
+      updateSessionCacheAfterDelete(campaignsList, adsetsList, adsList);
+      showToast(`Meta rejected: ${err?.response?.data?.error || err.message}`, "error");
     }
   };
 
@@ -4753,15 +4615,6 @@ export default function CampaignsTab({
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
       }}
     >
-      {/* Hidden file input for Meta Bulk Import */}
-      <input
-        type="file"
-        ref={bulkImportInputRef}
-        accept=".csv,.xlsx,.xls"
-        style={{ display: "none" }}
-        onChange={handleBulkImportFile}
-      />
-
       {/* ── Top Header Row with Platform Radio Selectors on Right Side ── */}
       <div
         style={{
@@ -4903,108 +4756,173 @@ export default function CampaignsTab({
                   : "Campaigns"}
               </h1>
               {/* Account Dropdown Trigger Button matching Image 1 */}
-              <div ref={adAccountPickerRef} style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAdAccountPickerOpen((prev) => !prev);
-                    setAdAccountSearchQuery("");
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "4px 10px 4px 6px",
-                    borderRadius: 6,
-                    background: "#ffffff",
-                    border: adAccountPickerOpen ? "2px solid #0866ff" : "1px solid #ccd0d5",
-                    fontSize: "0.84rem",
-                    color: "#1c1e21",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  {/* Selected Portfolio Avatar (Image 1) */}
-                  {selectedPortfolioId === "mediareds" ? (
-                    <AutumnLeavesIcon size={22} />
-                  ) : selectedPortfolioId === "lioraa" ? (
-                    <div
+              <div ref={adAccountPickerRef} style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
+                {connectedAccount ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdAccountPickerOpen((prev) => !prev);
+                        setAdAccountSearchQuery("");
+                      }}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
-                        background: "#e8884d",
-                        color: "#fff",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 800,
-                        fontSize: "0.76rem",
-                        flexShrink: 0,
+                        gap: 8,
+                        padding: "4px 10px 4px 6px",
+                        borderRadius: 6,
+                        background: "#ffffff",
+                        border: adAccountPickerOpen ? "2px solid #0866ff" : "1px solid #ccd0d5",
+                        fontSize: "0.84rem",
+                        color: "#1c1e21",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
                       }}
                     >
-                      L
-                    </div>
-                  ) : selectedPortfolioId === "adstradigital" ? (
-                    <AdstraDiamondIcon size={22} />
-                  ) : selectedPortfolioId === "minglemuze" ? (
-                    <div
+                      {/* Selected Portfolio / Account Avatar */}
+                      {getPortfolioAvatar(connectedAccount?.name || "Meta", 22)}
+
+                      {/* Monitor / Ad Screen Icon */}
+                      <MonitorAdIcon size={16} color="#1c1e21" />
+
+                      {/* Display ID */}
+                      <span style={{ fontWeight: 600, color: "#1c1e21" }}>
+                        {connectedAccount.display_id || connectedAccount.id} ({String(connectedAccount.display_id || connectedAccount.id).slice(0, 3)}...)
+                      </span>
+
+                      {/* Status indicator badge */}
+                      {connectedAccount.is_sandbox || connectedAccount.display_id === "123456789" || String(connectedAccount.id).includes("SANDBOX") ? (
+                        <span style={{ background: "#fef3c7", color: "#b45309", fontSize: "0.68rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4 }}>
+                          Test Mode
+                        </span>
+                      ) : (
+                        <span style={{ background: "#dcfce7", color: "#15803d", fontSize: "0.68rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4 }}>
+                          Real
+                        </span>
+                      )}
+
+                      <ChevronDown
+                        size={14}
+                        color="#65676b"
+                        style={{
+                          transform: adAccountPickerOpen ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s ease",
+                          marginLeft: 2,
+                        }}
+                      />
+                    </button>
+
+                    {/* Quick Switch to Real Button if currently on Sandbox / Test */}
+                    {(connectedAccount.is_sandbox || connectedAccount.display_id === "123456789" || String(connectedAccount.id).includes("SANDBOX")) && (
+                      <button
+                        type="button"
+                        onClick={handleActivateRealAccount}
+                        disabled={connectMetaLoading}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "5px 12px",
+                          borderRadius: 6,
+                          background: "#16a34a",
+                          color: "#ffffff",
+                          border: "none",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: connectMetaLoading ? "not-allowed" : "pointer",
+                          boxShadow: "0 2px 6px rgba(22, 163, 74, 0.35)",
+                          transition: "all 0.15s ease",
+                        }}
+                        title="Click to switch from Test Sandbox to your configured Real Ad Account (act_830629501946359)"
+                      >
+                        {connectMetaLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                        <span>Switch to Real (act_830629501946359)</span>
+                      </button>
+                    )}
+
+                    {/* Persistent Connect / Add Meta Account Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConnectTab("real");
+                        setConnectMetaModalOpen(true);
+                      }}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: "50%",
-                        background: "#6b3074",
-                        color: "#fff",
-                        display: "flex",
+                        display: "inline-flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 800,
-                        fontSize: "0.76rem",
-                        flexShrink: 0,
+                        gap: 6,
+                        padding: "5px 10px",
+                        borderRadius: 6,
+                        background: "#f0f2f5",
+                        color: "#1c1e21",
+                        border: "1px solid #ccd0d5",
+                        fontSize: "0.78rem",
+                        fontWeight: 650,
+                        cursor: "pointer",
+                        transition: "all 0.12s ease",
                       }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#e4e6ea")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#f0f2f5")}
+                      title="Manage, connect or switch Meta Ad Accounts"
                     >
-                      m
-                    </div>
-                  ) : (
-                    <div
+                      <Plus size={13} />
+                      <span>Switch / Connect</span>
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={handleActivateRealAccount}
+                      disabled={connectMetaLoading}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
-                        background: "#78bd5d",
-                        color: "#fff",
-                        display: "flex",
+                        display: "inline-flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 800,
-                        fontSize: "0.76rem",
-                        flexShrink: 0,
+                        gap: 6,
+                        padding: "6px 14px",
+                        borderRadius: 6,
+                        background: "#16a34a",
+                        color: "#ffffff",
+                        border: "none",
+                        fontSize: "0.84rem",
+                        fontWeight: 650,
+                        cursor: connectMetaLoading ? "not-allowed" : "pointer",
+                        boxShadow: "0 2px 8px rgba(22, 163, 74, 0.28)",
+                        transition: "all 0.15s ease",
                       }}
                     >
-                      S
-                    </div>
-                  )}
-
-                  {/* Monitor / Ad Screen Icon */}
-                  <MonitorAdIcon size={16} color="#1c1e21" />
-
-                  {/* Display ID */}
-                  <span style={{ fontWeight: 600, color: "#1c1e21" }}>
-                    {connectedAccount?.display_id || "830629501946359"} (
-                    {(connectedAccount?.display_id || "830629501946359").slice(0, 3)}...)
-                  </span>
-
-                  <ChevronDown
-                    size={14}
-                    color="#65676b"
-                    style={{
-                      transform: adAccountPickerOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                      marginLeft: 2,
-                    }}
-                  />
-                </button>
+                      <Sparkles size={14} />
+                      <span>Activate Real Account (act_830629501946359)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConnectTab("real");
+                        setConnectMetaModalOpen(true);
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "6px 14px",
+                        borderRadius: 6,
+                        background: "#0866ff",
+                        color: "#ffffff",
+                        border: "none",
+                        fontSize: "0.84rem",
+                        fontWeight: 650,
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(8, 102, 255, 0.28)",
+                        transition: "all 0.15s ease",
+                      }}
+                      title="Connect Meta Ad Account"
+                    >
+                      <MetaLogoIcon size={16} />
+                      <span>Connect Meta Account</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Two-panel popup matching exact Image 1 & Image 4 (compact Meta width) */}
                 {adAccountPickerOpen && (
@@ -5013,7 +4931,7 @@ export default function CampaignsTab({
                       position: "absolute",
                       top: "calc(100% + 6px)",
                       left: 0,
-                      width: 480,
+                      width: 520,
                       maxWidth: "calc(100vw - 32px)",
                       background: "#ffffff",
                       border: "1px solid #dadde1",
@@ -5070,10 +4988,10 @@ export default function CampaignsTab({
 
                     {/* Two-panel body (compact Meta dimensions) */}
                     <div style={{ display: "flex" }}>
-                      {/* LEFT COLUMN: Business portfolios + Your account */}
+                      {/* LEFT COLUMN: Your account (TOP) + Business portfolios (SCROLLABLE) */}
                       <div
                         style={{
-                          width: 195,
+                          width: 205,
                           borderRight: "1px solid #e4e6ea",
                           padding: "8px 6px 10px 8px",
                           display: "flex",
@@ -5081,14 +4999,68 @@ export default function CampaignsTab({
                           flexShrink: 0,
                         }}
                       >
-                        {/* Business portfolios header */}
+                        {/* 1. YOUR ACCOUNT SECTION (ALWAYS AT TOP) */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 6px 4px" }}>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21" }}>Your account</span>
+                          <span style={{ fontSize: "0.64rem", fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "1px 5px", borderRadius: 4 }}>
+                            Agency
+                          </span>
+                        </div>
+
+                        <div>
+                          {(() => {
+                            const isYourSel = selectedPortfolioId === "your_account";
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPortfolioId("your_account")}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  padding: "5px 6px",
+                                  borderRadius: 5,
+                                  border: "none",
+                                  background: isYourSel ? "#1c2b36" : "transparent",
+                                  color: isYourSel ? "#ffffff" : "#1c1e21",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  width: "100%",
+                                  transition: "background 0.12s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isYourSel) e.currentTarget.style.background = "#f0f2f5";
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isYourSel) e.currentTarget.style.background = "transparent";
+                                }}
+                              >
+                                {getPortfolioAvatar(yourAccount.name, 20)}
+                                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
+                                  <span style={{ fontSize: "0.78rem", fontWeight: 650, color: isYourSel ? "#ffffff" : "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {yourAccount.name}
+                                  </span>
+                                  <span style={{ fontSize: "0.68rem", color: isYourSel ? "#94a3b8" : "#65676b" }}>
+                                    {yourAccount.accountCount} ad account{yourAccount.accountCount !== 1 ? "s" : ""}
+                                  </span>
+                                </div>
+                                {isYourSel && <ChevronRight size={14} color="#ffffff" style={{ flexShrink: 0 }} />}
+                              </button>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Divider between Your Account and Business Portfolios */}
+                        <div style={{ height: 1, background: "#e4e6ea", margin: "8px 4px" }} />
+
+                        {/* 2. BUSINESS PORTFOLIOS SECTION */}
                         <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 6px 4px", fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21" }}>
                           <span>Business portfolios</span>
                           <Info size={12} style={{ color: "#65676b", cursor: "help" }} />
                         </div>
 
-                        {/* Portfolios list */}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                        {/* Portfolios list (scrollable so never overflowing) */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 1, maxHeight: 210, overflowY: "auto" }}>
                           {filteredBusinessPortfolios.map((p) => {
                             const isSel = selectedPortfolioId === p.id;
                             return (
@@ -5117,21 +5089,7 @@ export default function CampaignsTab({
                                   if (!isSel) e.currentTarget.style.background = "transparent";
                                 }}
                               >
-                                {p.iconType === "diamond" ? (
-                                  <AdstraDiamondIcon size={20} />
-                                ) : p.iconType === "orange_l" ? (
-                                  <div style={{ width: 20, height: 20, borderRadius: 4, background: "#e8884d", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.72rem", flexShrink: 0 }}>
-                                    L
-                                  </div>
-                                ) : p.iconType === "purple_m" ? (
-                                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#6b3074", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.72rem", flexShrink: 0 }}>
-                                    m
-                                  </div>
-                                ) : (
-                                  <div style={{ width: 20, height: 20, borderRadius: 4, background: "#78bd5d", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.72rem", flexShrink: 0 }}>
-                                    S
-                                  </div>
-                                )}
+                                {getPortfolioAvatar(p.name, 20)}
 
                                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
                                   <span style={{ fontSize: "0.78rem", fontWeight: 650, color: isSel ? "#ffffff" : "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -5148,57 +5106,8 @@ export default function CampaignsTab({
                           })}
                         </div>
 
-                        {/* Your account section */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 6px 4px", fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21" }}>
-                          <span>Your account</span>
-                          <Info size={12} style={{ color: "#65676b", cursor: "help" }} />
-                        </div>
-
-                        <div>
-                          {(() => {
-                            const isMediaRedsSel = selectedPortfolioId === "mediareds";
-                            return (
-                              <button
-                                type="button"
-                                onClick={() => setSelectedPortfolioId("mediareds")}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  padding: "5px 6px",
-                                  borderRadius: 5,
-                                  border: "none",
-                                  background: isMediaRedsSel ? "#1c2b36" : "transparent",
-                                  color: isMediaRedsSel ? "#ffffff" : "#1c1e21",
-                                  cursor: "pointer",
-                                  textAlign: "left",
-                                  width: "100%",
-                                  transition: "background 0.12s ease",
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (!isMediaRedsSel) e.currentTarget.style.background = "#f0f2f5";
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (!isMediaRedsSel) e.currentTarget.style.background = "transparent";
-                                }}
-                              >
-                                <AutumnLeavesIcon size={20} />
-                                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
-                                  <span style={{ fontSize: "0.78rem", fontWeight: 650, color: isMediaRedsSel ? "#ffffff" : "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {yourAccount.name}
-                                  </span>
-                                  <span style={{ fontSize: "0.68rem", color: isMediaRedsSel ? "#94a3b8" : "#65676b" }}>
-                                    {yourAccount.accountCount} ad account
-                                  </span>
-                                </div>
-                                {isMediaRedsSel && <ChevronRight size={14} color="#ffffff" style={{ flexShrink: 0 }} />}
-                              </button>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Create a business portfolio button (Image 1 launcher) */}
-                        <div style={{ marginTop: 10 }}>
+                        {/* Create a business portfolio button */}
+                        <div style={{ marginTop: 8 }}>
                           <button
                             type="button"
                             onClick={() => {
@@ -5211,7 +5120,7 @@ export default function CampaignsTab({
                               background: "#ffffff",
                               border: "1px solid #ccd0d5",
                               borderRadius: 6,
-                              fontSize: "0.76rem",
+                              fontSize: "0.74rem",
                               fontWeight: 650,
                               color: "#1c1e21",
                               cursor: "pointer",
@@ -5226,20 +5135,144 @@ export default function CampaignsTab({
                         </div>
                       </div>
 
-                      {/* RIGHT COLUMN: Ad accounts for selected portfolio (compact form length) */}
-                      <div style={{ width: 285, flex: 1, padding: "8px 10px 10px 10px", display: "flex", flexDirection: "column" }}>
-                        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1c1e21", marginBottom: 8, paddingLeft: 2 }}>
-                          {activePortfolioAccounts.length} ad account{activePortfolioAccounts.length !== 1 ? "s" : ""}
+                      {/* RIGHT COLUMN: Ad accounts for selected portfolio */}
+                      <div style={{ width: 315, flex: 1, padding: "8px 10px 10px 10px", display: "flex", flexDirection: "column" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, paddingLeft: 2 }}>
+                          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1c1e21" }}>
+                            {activePortfolioAccounts.length} ad account{activePortfolioAccounts.length !== 1 ? "s" : ""}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdAccountPickerOpen(false);
+                              setConnectTab("real");
+                              setConnectMetaModalOpen(true);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#0866ff",
+                              fontSize: "0.74rem",
+                              fontWeight: 650,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              padding: 0,
+                            }}
+                          >
+                            <Plus size={12} />
+                            <span>Add Account</span>
+                          </button>
                         </div>
 
+                        {/* Quick One-Click Switch to Real banner if not currently active */}
+                        {(!connectedAccount || connectedAccount.is_sandbox || connectedAccount.display_id === "123456789" || String(connectedAccount.id).includes("SANDBOX")) && (
+                          <div
+                            style={{
+                              background: "#f0fdf4",
+                              border: "1px solid #bbf7d0",
+                              borderRadius: 6,
+                              padding: "8px 10px",
+                              marginBottom: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 8,
+                            }}
+                          >
+                            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#166534" }}>
+                                ⚡ Real Meta Account
+                              </span>
+                              <span style={{ fontSize: "0.68rem", color: "#15803d" }}>
+                                act_830629501946359
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleActivateRealAccount}
+                              disabled={connectMetaLoading}
+                              style={{
+                                background: "#16a34a",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: 5,
+                                padding: "4px 9px",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {connectMetaLoading ? "Switching..." : "Switch to Real"}
+                            </button>
+                          </div>
+                        )}
+
                         {activePortfolioAccounts.length === 0 ? (
-                          <div style={{ padding: "30px 10px", textAlign: "center", color: "#65676b", fontSize: "0.78rem" }}>
-                            No ad accounts in this business portfolio.
+                          <div style={{ padding: "24px 12px", textAlign: "center", color: "#65676b", fontSize: "0.78rem" }}>
+                            <div style={{ fontWeight: 650, color: "#1c1e21", marginBottom: 4 }}>
+                              No ad accounts in this portfolio
+                            </div>
+                            <div style={{ fontSize: "0.74rem", color: "#65676b", marginBottom: 12 }}>
+                              Connect your real Meta ad account to view and manage campaigns.
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 220, margin: "0 auto" }}>
+                              <button
+                                type="button"
+                                onClick={handleActivateRealAccount}
+                                disabled={connectMetaLoading}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 6,
+                                  padding: "6px 14px",
+                                  background: "#16a34a",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: 6,
+                                  fontSize: "0.76rem",
+                                  fontWeight: 650,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Sparkles size={13} />
+                                Activate Real (act_830629501946359)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAdAccountPickerOpen(false);
+                                  setConnectTab("real");
+                                  setConnectMetaModalOpen(true);
+                                }}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 6,
+                                  padding: "6px 14px",
+                                  background: "#0866ff",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: 6,
+                                  fontSize: "0.76rem",
+                                  fontWeight: 650,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Plus size={13} />
+                                Connect Meta Account
+                              </button>
+                            </div>
                           </div>
                         ) : (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 260, overflowY: "auto" }}>
                             {activePortfolioAccounts.map((acc) => {
                               const isAccActive = acc.id === (connectedAccount?.id || selectedMetaAdAccountId);
+                              const isSandboxAcc = acc.is_sandbox || acc.display_id === "123456789" || String(acc.id).includes("SANDBOX");
                               return (
                                 <div
                                   key={acc.id}
@@ -5251,6 +5284,8 @@ export default function CampaignsTab({
                                       display_id: acc.display_id || acc.id.replace("act_", ""),
                                       status: "connected",
                                       currency: "INR",
+                                      is_sandbox: isSandboxAcc,
+                                      is_real: !isSandboxAcc,
                                     });
                                     setAdAccountPickerOpen(false);
                                     showToast(`Selected ad account ${acc.display_id || acc.name}`, "success");
@@ -5317,42 +5352,482 @@ export default function CampaignsTab({
 
                                   {/* Account Details */}
                                   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
-                                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                      {acc.name || acc.display_id || acc.id}
-                                    </span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1c1e21", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {acc.name || acc.display_id || acc.id}
+                                      </span>
+                                      {isSandboxAcc ? (
+                                        <span style={{ background: "#fef3c7", color: "#b45309", fontSize: "0.62rem", fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>
+                                          Sandbox
+                                        </span>
+                                      ) : (
+                                        <span style={{ background: "#dcfce7", color: "#15803d", fontSize: "0.62rem", fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>
+                                          Real
+                                        </span>
+                                      )}
+                                    </div>
                                     <span style={{ fontSize: "0.68rem", color: "#65676b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                       Ad account ID: {acc.display_id || acc.id.replace("act_", "")}
                                     </span>
                                   </div>
 
-                                  {/* Right Circular Gauge */}
-                                  <div
-                                    style={{
-                                      width: 22,
-                                      height: 22,
-                                      borderRadius: "50%",
-                                      border: "2px solid #dadde1",
-                                      borderTopColor: "#0866ff",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontSize: "0.62rem",
-                                      color: "#8a8d91",
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    --
-                                  </div>
+                                  {/* Disconnect button for test/sandbox accounts */}
+                                  {isSandboxAcc && (
+                                    <button
+                                      type="button"
+                                      title="Remove test sandbox connection"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDisconnectAccount(acc.id, acc.connection_id);
+                                      }}
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        color: "#94a3b8",
+                                        cursor: "pointer",
+                                        padding: 4,
+                                        borderRadius: 4,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                      }}
+                                      onMouseEnter={(e) => (e.currentTarget.style.color = "#dc2626")}
+                                      onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
                         )}
+
+                        {/* Footer Quick Action */}
+                        <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px solid #f0f2f5", display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={handleActivateRealAccount}
+                            disabled={connectMetaLoading}
+                            style={{
+                              flex: 1,
+                              padding: "5px 8px",
+                              background: "#f0fdf4",
+                              border: "1px solid #bbf7d0",
+                              borderRadius: 5,
+                              color: "#166534",
+                              fontSize: "0.72rem",
+                              fontWeight: 650,
+                              cursor: "pointer",
+                              textAlign: "center",
+                            }}
+                          >
+                            ⚡ Activate Real (act_830629501946359)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdAccountPickerOpen(false);
+                              setConnectTab("real");
+                              setConnectMetaModalOpen(true);
+                            }}
+                            style={{
+                              padding: "5px 8px",
+                              background: "#f8fafc",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 5,
+                              color: "#475569",
+                              fontSize: "0.72rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Connect Options
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Connect Meta Account Modal */}
+              {connectMetaModalOpen && (
+                <div
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: "rgba(0, 0, 0, 0.5)",
+                    backdropFilter: "blur(2px)",
+                    zIndex: 99999,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 16,
+                  }}
+                  onClick={() => setConnectMetaModalOpen(false)}
+                >
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: 10,
+                      width: "100%",
+                      maxWidth: 560,
+                      boxShadow: "0 16px 40px rgba(0,0,0,0.22)",
+                      overflow: "hidden",
+                      animation: "ctMetaModalIn 0.16s ease-out",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <style>{`@keyframes ctMetaModalIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }`}</style>
+
+                    {/* Modal Header */}
+                    <div style={{ padding: "18px 22px", borderBottom: "1px solid #e4e6ea", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 8, background: "#e7f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <MetaLogoIcon size={20} />
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1c1e21" }}>
+                            Connect Meta Ads Account
+                          </h3>
+                          <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#65676b" }}>
+                            Link your Facebook & Instagram ad account to sync campaigns and live metrics.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setConnectMetaModalOpen(false)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#65676b",
+                          padding: 4,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {/* Tabs */}
+                    <div style={{ display: "flex", borderBottom: "1px solid #e4e6ea", background: "#f8fafc", padding: "0 10px", overflowX: "auto" }}>
+                      {[
+                        { id: "real", label: "⚡ Real Account (act_830629501946359)" },
+                        { id: "oauth", label: "Facebook OAuth" },
+                        { id: "token", label: "Direct Token" },
+                        { id: "config", label: "App Credentials" },
+                        { id: "sandbox", label: "1-Click Sandbox" },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setConnectTab(t.id)}
+                          style={{
+                            padding: "10px 12px",
+                            fontSize: "0.8rem",
+                            fontWeight: connectTab === t.id ? 700 : 500,
+                            color: connectTab === t.id ? (t.id === "real" ? "#16a34a" : "#0866ff") : "#64748b",
+                            border: "none",
+                            background: "transparent",
+                            borderBottom: connectTab === t.id ? `2px solid ${t.id === "real" ? "#16a34a" : "#0866ff"}` : "2px solid transparent",
+                            cursor: "pointer",
+                            transition: "all 0.12s ease",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Modal Body */}
+                    <div style={{ padding: "20px 22px" }}>
+                      {connectTab === "real" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "14px 16px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "0.92rem", color: "#166534", marginBottom: 6 }}>
+                              <Sparkles size={17} color="#16a34a" />
+                              <span>Switch to Real Meta Ads Account</span>
+                            </div>
+                            <div style={{ fontSize: "0.82rem", color: "#14532d", lineHeight: 1.5, marginBottom: 10 }}>
+                              Your system is already configured with official Meta app credentials and real Ad Account ID. Activate it to instantly switch out of test sandbox mode:
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "6px 14px", fontSize: "0.8rem", background: "#ffffff", padding: "10px 12px", borderRadius: 6, border: "1px solid #dcfce7" }}>
+                              <span style={{ fontWeight: 600, color: "#475569" }}>Real Account ID:</span>
+                              <code style={{ fontWeight: 700, color: "#15803d" }}>act_830629501946359</code>
+                              <span style={{ fontWeight: 600, color: "#475569" }}>Meta App ID:</span>
+                              <code style={{ fontWeight: 700, color: "#0f172a" }}>2481850072305515</code>
+                              <span style={{ fontWeight: 600, color: "#475569" }}>Target Client:</span>
+                              <strong style={{ color: "#0f172a" }}>{clients.find((c) => String(c.id) === String(selectedClientId))?.name || "All Agency Clients"}</strong>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleActivateRealAccount}
+                            disabled={connectMetaLoading}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 8,
+                              width: "100%",
+                              padding: "12px 18px",
+                              background: "#16a34a",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: "0.88rem",
+                              fontWeight: 700,
+                              cursor: connectMetaLoading ? "not-allowed" : "pointer",
+                              opacity: connectMetaLoading ? 0.75 : 1,
+                              boxShadow: "0 2px 10px rgba(22, 163, 74, 0.35)",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#15803d")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#16a34a")}
+                          >
+                            {connectMetaLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                            <span>{connectMetaLoading ? "Activating Real Account..." : "⚡ Connect & Switch to Real Account (act_830629501946359)"}</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {connectTab === "sandbox" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                          <div style={{ background: "#f0f7ff", border: "1px solid #bae0fd", borderRadius: 8, padding: "12px 14px" }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "#0369a1", marginBottom: 4 }}>
+                              Instant Sandbox Mode
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "#0c4a6e", lineHeight: 1.45 }}>
+                              Connects a real simulated Meta ad account immediately with live campaigns, ad sets, and real performance metrics. No Facebook developer verification or API review required!
+                            </div>
+                          </div>
+                          <div style={{ fontSize: "0.82rem", color: "#475569" }}>
+                            Associated Client: <strong style={{ color: "#0f172a" }}>{clients.find((c) => String(c.id) === String(selectedClientId))?.name || "Primary Agency Account"}</strong>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleConnectSandboxMode}
+                            disabled={connectMetaLoading}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 8,
+                              width: "100%",
+                              padding: "10px 16px",
+                              background: "#0866ff",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: "0.86rem",
+                              fontWeight: 650,
+                              cursor: connectMetaLoading ? "not-allowed" : "pointer",
+                              opacity: connectMetaLoading ? 0.75 : 1,
+                              boxShadow: "0 2px 8px rgba(8, 102, 255, 0.28)",
+                            }}
+                          >
+                            {connectMetaLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                            <span>{connectMetaLoading ? "Connecting Sandbox..." : "Connect 1-Click Sandbox Account"}</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {connectTab === "oauth" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                          <p style={{ margin: 0, fontSize: "0.84rem", color: "#475569", lineHeight: 1.45 }}>
+                            Authenticate through official Meta OAuth 2.0 (Facebook Login for Business). Grants Adstra permission to read and manage your live campaigns and performance insights.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleConnectMetaOAuth}
+                            disabled={connectMetaLoading}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 8,
+                              width: "100%",
+                              padding: "10px 16px",
+                              background: "#1877f2",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: "0.86rem",
+                              fontWeight: 650,
+                              cursor: connectMetaLoading ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            <MetaLogoIcon size={16} />
+                            <span>{connectMetaLoading ? "Opening Meta OAuth..." : "Continue with Facebook Login"}</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {connectTab === "token" && (
+                        <form onSubmit={handleSaveDirectToken} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          <div>
+                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Meta Ad Account ID <span style={{ color: "#dc2626" }}>*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 123456789 or act_123456789"
+                              value={directAccountId}
+                              onChange={(e) => setDirectAccountId(e.target.value)}
+                              required
+                              style={{
+                                width: "100%",
+                                padding: "8px 10px",
+                                border: "1px solid #ccd0d5",
+                                borderRadius: 6,
+                                fontSize: "0.82rem",
+                                outline: "none",
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Graph API User Access Token <span style={{ color: "#dc2626" }}>*</span>
+                            </label>
+                            <input
+                              type="password"
+                              placeholder="EAA..."
+                              value={directAccessToken}
+                              onChange={(e) => setDirectAccessToken(e.target.value)}
+                              required
+                              style={{
+                                width: "100%",
+                                padding: "8px 10px",
+                                border: "1px solid #ccd0d5",
+                                borderRadius: 6,
+                                fontSize: "0.82rem",
+                                outline: "none",
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Account Name (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. My Agency Primary Ads"
+                              value={directAccountName}
+                              onChange={(e) => setDirectAccountName(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "8px 10px",
+                                border: "1px solid #ccd0d5",
+                                borderRadius: 6,
+                                fontSize: "0.82rem",
+                                outline: "none",
+                              }}
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={connectMetaLoading}
+                            style={{
+                              marginTop: 6,
+                              padding: "9px 16px",
+                              background: "#0866ff",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: "0.84rem",
+                              fontWeight: 650,
+                              cursor: connectMetaLoading ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {connectMetaLoading ? "Connecting..." : "Connect Ad Account"}
+                          </button>
+                        </form>
+                      )}
+
+                      {connectTab === "config" && (
+                        <form onSubmit={handleSaveMetaAppCredentials} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
+                            Configure your Meta App ID & App Secret from the Meta for Developers portal. Credentials will be securely saved into your backend environment.
+                          </p>
+                          <div>
+                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Meta App ID <span style={{ color: "#dc2626" }}>*</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 153839202029384"
+                              value={metaAppId}
+                              onChange={(e) => setMetaAppId(e.target.value)}
+                              required
+                              style={{
+                                width: "100%",
+                                padding: "8px 10px",
+                                border: "1px solid #ccd0d5",
+                                borderRadius: 6,
+                                fontSize: "0.82rem",
+                                outline: "none",
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#1c1e21", marginBottom: 4 }}>
+                              Meta App Secret
+                            </label>
+                            <input
+                              type="password"
+                              placeholder="App Secret"
+                              value={metaAppSecret}
+                              onChange={(e) => setMetaAppSecret(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "8px 10px",
+                                border: "1px solid #ccd0d5",
+                                borderRadius: 6,
+                                fontSize: "0.82rem",
+                                outline: "none",
+                              }}
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={connectMetaLoading}
+                            style={{
+                              marginTop: 6,
+                              padding: "9px 16px",
+                              background: "#0866ff",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: "0.84rem",
+                              fontWeight: 650,
+                              cursor: connectMetaLoading ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {connectMetaLoading ? "Saving..." : "Save App Credentials"}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Create a business portfolio Modal (Exact Meta design from Image 1) */}
               {createPortfolioModalOpen && (
@@ -5597,284 +6072,6 @@ export default function CampaignsTab({
                   </div>
                 </div>
               )}
-
-              {/* Opportunity score badge button (matching Image 1) */}
-              <div ref={opportunityScoreRef} style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  onClick={() => setOpportunityScoreOpen((prev) => !prev)}
-                  title="Opportunity score (100)"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 7,
-                    padding: "4px 8px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: opportunityScoreOpen ? "#e4e6eb" : "transparent",
-                    fontSize: "0.85rem",
-                    color: "#1c1e21",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => { if (!opportunityScoreOpen) e.currentTarget.style.background = "#f0f2f5"; }}
-                  onMouseLeave={(e) => { if (!opportunityScoreOpen) e.currentTarget.style.background = "transparent"; }}
-                >
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 24,
-                      height: 24,
-                      borderRadius: "50%",
-                      border: "2px solid #0866ff",
-                      color: "#1c1e21",
-                      fontSize: "0.72rem",
-                      fontWeight: 800,
-                      lineHeight: 1,
-                    }}
-                  >
-                    100
-                  </span>
-                  <span style={{ fontWeight: 600, color: "#1c1e21" }}>Opportunity score</span>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      transform: opportunityScoreOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                      fontSize: 10,
-                      color: "#606770",
-                      lineHeight: 1,
-                    }}
-                  >
-                    ▼
-                  </span>
-                </button>
-
-                {/* Opportunity Score Dropdown Popover (Exact Match to Image 1) */}
-                {opportunityScoreOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 6px)",
-                      left: 0,
-                      width: 335,
-                      background: "#ffffff",
-                      borderRadius: 8,
-                      border: "1px solid #dadde1",
-                      boxShadow: "0 8px 28px rgba(0,0,0,0.16)",
-                      zIndex: 350,
-                      padding: "18px 18px 22px 18px",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    {/* Header */}
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                      {/* 100 Circular score badge */}
-                      <div
-                        style={{
-                          width: 46,
-                          height: 46,
-                          minWidth: 46,
-                          borderRadius: "50%",
-                          border: "3px solid #0866ff",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 800,
-                          fontSize: "1.15rem",
-                          color: "#1c1e21",
-                        }}
-                      >
-                        100
-                      </div>
-
-                      {/* Title & Info & Description */}
-                      <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1c1e21" }}>
-                              Opportunity score
-                            </span>
-                            <span
-                              title="Opportunity score is an estimate of how well your campaigns are set up."
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: 14,
-                                height: 14,
-                                borderRadius: "50%",
-                                backgroundColor: "#606770",
-                                color: "#ffffff",
-                                fontSize: "10px",
-                                fontWeight: 700,
-                                fontFamily: "serif",
-                                cursor: "pointer",
-                                lineHeight: 1,
-                                flexShrink: 0,
-                              }}
-                            >
-                              i
-                            </span>
-                          </div>
-
-                          {/* Close button */}
-                          <button
-                            type="button"
-                            onClick={() => setOpportunityScoreOpen(false)}
-                            aria-label="Close"
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: 2,
-                              color: "#606770",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderRadius: "50%",
-                              transition: "background 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f0f2f5")}
-                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                          >
-                            <X size={17} strokeWidth={2.2} />
-                          </button>
-                        </div>
-
-                        <p
-                          style={{
-                            margin: "4px 0 0 0",
-                            fontSize: "0.76rem",
-                            color: "#65676b",
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          You applied all recommendations, which are proven to help improve performance.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Divider */}
-                    <div
-                      style={{
-                        height: 1,
-                        backgroundColor: "#e4e6eb",
-                        margin: "14px 0 16px 0",
-                      }}
-                    />
-
-                    {/* Illustration & Empty State Content */}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        textAlign: "center",
-                        padding: "0 6px 4px 6px",
-                      }}
-                    >
-                      <svg
-                        width="130"
-                        height="146"
-                        viewBox="0 0 130 146"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        style={{ display: "block" }}
-                      >
-                        {/* Soft floor shadow */}
-                        <ellipse cx="65" cy="142" rx="26" ry="3.5" fill="#d0dbe4" opacity="0.85" />
-
-                        {/* Bulb Glass Body */}
-                        <path
-                          d="M 50 98 C 47 88 35 75 35 52 C 35 34.5 48.5 20 65 20 C 81.5 20 95 34.5 95 52 C 95 75 83 88 80 98 Z"
-                          fill="#dce5ed"
-                        />
-
-                        {/* Crescent Moon (inside bulb, top left) */}
-                        <path
-                          d="M 49 34 A 9 9 0 1 0 59 47 A 7.5 7.5 0 0 1 49 34 Z"
-                          fill="#ffffff"
-                        />
-
-                        {/* Sparkle Star 1 (upper center) */}
-                        <path
-                          d="M 72 26 Q 72 31 77 31 Q 72 31 72 36 Q 72 31 67 31 Q 72 31 72 26 Z"
-                          fill="#ffffff"
-                        />
-
-                        {/* Sparkle Star 2 (middle right) */}
-                        <path
-                          d="M 85 49 Q 85 53 89 53 Q 85 53 85 57 Q 85 53 81 53 Q 85 53 85 49 Z"
-                          fill="#ffffff"
-                        />
-
-                        {/* Tiny stars / dots */}
-                        <circle cx="86" cy="35" r="1.6" fill="#ffffff" />
-                        <circle cx="76" cy="44" r="1.8" fill="#ffffff" />
-                        <circle cx="47" cy="51" r="1.6" fill="#ffffff" />
-
-                        {/* Filament support wires */}
-                        <line x1="59" y1="72" x2="61" y2="98" stroke="#374553" strokeWidth="1.8" strokeLinecap="round" />
-                        <line x1="71" y1="72" x2="69" y2="98" stroke="#374553" strokeWidth="1.8" strokeLinecap="round" />
-
-                        {/* Filament curly loops (3 loops) */}
-                        <path
-                          d="M 56 72 C 55 64 57 60 59.5 60 C 62 60 62.5 66 65 66 C 67.5 66 68 60 70.5 60 C 73 60 73.5 66 76 66 C 78.5 66 80 62 80 72"
-                          stroke="#374553"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-
-                        {/* Bulb base threads */}
-                        {/* Thread 1 */}
-                        <rect x="52" y="98" width="26" height="5.5" rx="1.5" fill="#586b7c" />
-                        {/* Thread 2 */}
-                        <rect x="52.5" y="104.5" width="25" height="5.5" rx="1.5" fill="#697e90" />
-                        {/* Thread 3 */}
-                        <rect x="53.5" y="111" width="23" height="5.5" rx="1.5" fill="#526474" />
-                        {/* Thread 4 */}
-                        <rect x="55" y="117.5" width="20" height="5" rx="1.5" fill="#465665" />
-                        {/* Bottom Contact Cap */}
-                        <path
-                          d="M 57.5 123.5 C 57.5 123.5 58 128 65 128 C 72 128 72.5 123.5 72.5 123.5 Z"
-                          fill="#2d3a46"
-                        />
-                      </svg>
-
-                      {/* Heading */}
-                      <h4
-                        style={{
-                          margin: "12px 0 6px 0",
-                          fontSize: "0.95rem",
-                          fontWeight: 700,
-                          color: "#1c1e21",
-                        }}
-                      >
-                        No recommendations available yet
-                      </h4>
-
-                      {/* Subtext */}
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: "0.80rem",
-                          color: "#65676b",
-                          lineHeight: 1.42,
-                          maxWidth: 270,
-                        }}
-                      >
-                        Your score changes as new recommendations become available, so check back again for more ways to keep it high.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Right Meta Action Controls */}
@@ -8379,7 +8576,6 @@ export default function CampaignsTab({
                   onOpenCreateAd={handleOpenCreateModal}
                   onOpenEditorForAd={(ad) => handleOpenStandaloneEditorForAd(ad)}
                   onOpenDuplicateAd={() => handleQuickDuplicate(1)}
-                  onOpenABTest={() => setAbTestModalOpen(true)}
                   onPublishAd={(ad) => handlePublishSingleItem(ad, "ad")}
                   onNavigateToAdset={() => {
                     handleSwitchSubSection("adsets");
@@ -8495,62 +8691,7 @@ export default function CampaignsTab({
                       <span>Edit</span>
                     </button>
 
-                    {/* Image 2 Divider between Edit and Analyse */}
-                    <div style={{ width: 1, height: 20, background: "#dadde1", margin: "0 2px" }} />
-
-                    {/* 4. Analyse (Image 2 - Meta purple rosette blossom) */}
-                    <button
-                      type="button"
-                      onClick={() => setAnalyseModalOpen(true)}
-                      title="Analyse account performance & AI recommendations"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "6px 12px",
-                        borderRadius: 6,
-                        border: "1px solid #cbd5e1",
-                        background: "#ffffff",
-                        color: "#1c1e21",
-                        fontSize: "0.82rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
-                    >
-                      <MetaAnalyseIcon size={14} />
-                      <span>Analyse</span>
-                    </button>
-
-                    {/* 5. A/B test (Image 2 - Meta flask with solid liquid base) */}
-                    <button
-                      type="button"
-                      onClick={() => setAbTestModalOpen(true)}
-                      title="Create Meta A/B test experiment"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "6px 12px",
-                        borderRadius: 6,
-                        border: "1px solid #cbd5e1",
-                        background: "#ffffff",
-                        color: "#1c1e21",
-                        fontSize: "0.82rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
-                    >
-                      <MetaFlaskIcon size={13} color="#1c1e21" />
-                      <span>A/B test</span>
-                    </button>
-
-                    {/* 6. More ▾ (Image 2 & 3 - Meta Ads Manager dropdown) */}
+                    {/* More ▾ Dropdown */}
                     <div ref={moreToolbarRef} style={{ position: "relative" }}>
                       <button
                         type="button"
@@ -8600,55 +8741,16 @@ export default function CampaignsTab({
                             padding: "6px 0",
                           }}
                         >
-                          {/* Automated rules header */}
-                          <div
-                            style={{
-                              padding: "6px 16px 4px 16px",
-                              fontSize: "0.82rem",
-                              fontWeight: 700,
-                              color: "#0f172a",
-                              userSelect: "none",
-                            }}
-                          >
-                            Automated rules
-                          </div>
                           <button
                             type="button"
                             onClick={() => {
-                              setCreateRuleModalOpen(true);
+                              handleExport("csv", false);
                               setMoreToolbarMenuOpen(false);
-                              setExportSubmenuOpen(false);
                             }}
                             style={{
                               width: "100%",
                               textAlign: "left",
-                              padding: "7px 16px",
-                              background: "transparent",
-                              border: "none",
-                              fontSize: "0.82rem",
-                              color: "#1e293b",
-                              cursor: "pointer",
-                              display: "block",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                          >
-                            Create a new rule
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setManageAdjustmentsModalOpen(true);
-                              setMoreToolbarMenuOpen(false);
-                              setExportSubmenuOpen(false);
-                            }}
-                            style={{
-                              width: "100%",
-                              textAlign: "left",
-                              padding: "7px 16px",
+                              padding: "9px 16px",
                               background: "transparent",
                               border: "none",
                               fontSize: "0.82rem",
@@ -8656,161 +8758,38 @@ export default function CampaignsTab({
                               cursor: "pointer",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "space-between",
+                              gap: 8,
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
-                            <span>Manage rules</span>
-                            <ExternalLink size={13} color="#64748b" />
+                            <Download size={13} color="#64748b" />
+                            <span>Export table (CSV)</span>
                           </button>
-
-                          {/* Import and export ad configuration header */}
-                          <div
-                            style={{
-                              padding: "10px 16px 4px 16px",
-                              fontSize: "0.82rem",
-                              fontWeight: 700,
-                              color: "#0f172a",
-                              userSelect: "none",
-                            }}
-                          >
-                            Import and export ad configuration
-                          </div>
                           <button
                             type="button"
                             onClick={() => {
-                              setImportAdsModalOpen(true);
+                              handleExport("xlsx", false);
                               setMoreToolbarMenuOpen(false);
-                              setExportSubmenuOpen(false);
                             }}
                             style={{
                               width: "100%",
                               textAlign: "left",
-                              padding: "7px 16px",
+                              padding: "9px 16px",
                               background: "transparent",
                               border: "none",
                               fontSize: "0.82rem",
                               color: "#1e293b",
                               cursor: "pointer",
-                              display: "block",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
-                            Import ads in bulk
-                          </button>
-
-                          {/* Export with Submenu (Image 2 & 3) */}
-                          <div
-                            style={{ position: "relative" }}
-                            onMouseEnter={() => setExportSubmenuOpen(true)}
-                            onMouseLeave={(e) => {
-                              const related = e.relatedTarget;
-                              if (!e.currentTarget.contains(related)) {
-                                setExportSubmenuOpen(false);
-                              }
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExportSubmenuOpen((prev) => !prev);
-                              }}
-                              style={{
-                                width: "100%",
-                                textAlign: "left",
-                                padding: "7px 16px",
-                                background: exportSubmenuOpen ? "#f1f5f9" : "transparent",
-                                border: "none",
-                                fontSize: "0.82rem",
-                                color: "#1e293b",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                              onMouseLeave={(e) => {
-                                if (!exportSubmenuOpen) e.currentTarget.style.background = "transparent";
-                              }}
-                            >
-                              <span>Export</span>
-                              <ChevronRight size={14} color="#64748b" />
-                            </button>
-
-                            {/* Submenu for Export (Image 3) */}
-                            {exportSubmenuOpen && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: 0,
-                                  left: "calc(100% - 2px)",
-                                  minWidth: 150,
-                                  background: "#ffffff",
-                                  borderRadius: 8,
-                                  border: "1px solid #e2e8f0",
-                                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06)",
-                                  zIndex: 120,
-                                  padding: "4px 0",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleExport("csv", false);
-                                    setMoreToolbarMenuOpen(false);
-                                    setExportSubmenuOpen(false);
-                                  }}
-                                  style={{
-                                    width: "100%",
-                                    textAlign: "left",
-                                    padding: "8px 16px",
-                                    background: "transparent",
-                                    border: "none",
-                                    fontSize: "0.82rem",
-                                    color: "#1e293b",
-                                    cursor: "pointer",
-                                    display: "block",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                >
-                                  Export all
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={handleDownloadExcelTemplate}
-                            style={{
-                              width: "100%",
-                              textAlign: "left",
-                              padding: "7px 16px",
-                              background: "transparent",
-                              border: "none",
-                              fontSize: "0.82rem",
-                              color: "#1e293b",
-                              cursor: "pointer",
-                              display: "block",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                          >
-                            Download Excel template
+                            <Download size={13} color="#64748b" />
+                            <span>Export table (Excel)</span>
                           </button>
                         </div>
                       )}
@@ -9278,55 +9257,16 @@ export default function CampaignsTab({
                             padding: "6px 0",
                           }}
                         >
-                          {/* Automated rules header */}
-                          <div
-                            style={{
-                              padding: "6px 16px 4px 16px",
-                              fontSize: "0.82rem",
-                              fontWeight: 700,
-                              color: "#0f172a",
-                              userSelect: "none",
-                            }}
-                          >
-                            Automated rules
-                          </div>
                           <button
                             type="button"
                             onClick={() => {
-                              setCreateRuleModalOpen(true);
+                              handleExport("csv", true);
                               setMoreToolbarMenuOpen(false);
-                              setExportSubmenuOpen(false);
                             }}
                             style={{
                               width: "100%",
                               textAlign: "left",
-                              padding: "7px 16px",
-                              background: "transparent",
-                              border: "none",
-                              fontSize: "0.82rem",
-                              color: "#1e293b",
-                              cursor: "pointer",
-                              display: "block",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                          >
-                            Create a new rule
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setManageAdjustmentsModalOpen(true);
-                              setMoreToolbarMenuOpen(false);
-                              setExportSubmenuOpen(false);
-                            }}
-                            style={{
-                              width: "100%",
-                              textAlign: "left",
-                              padding: "7px 16px",
+                              padding: "8px 16px",
                               background: "transparent",
                               border: "none",
                               fontSize: "0.82rem",
@@ -9334,185 +9274,88 @@ export default function CampaignsTab({
                               cursor: "pointer",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "space-between",
+                              gap: 8,
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
-                            <span>Manage rules</span>
-                            <ExternalLink size={13} color="#64748b" />
+                            <Download size={13} color="#64748b" />
+                            <span>Export selected (CSV)</span>
                           </button>
-
-                          {/* Import and export ad configuration header */}
-                          <div
-                            style={{
-                              padding: "10px 16px 4px 16px",
-                              fontSize: "0.82rem",
-                              fontWeight: 700,
-                              color: "#0f172a",
-                              userSelect: "none",
-                            }}
-                          >
-                            Import and export ad configuration
-                          </div>
                           <button
                             type="button"
                             onClick={() => {
-                              setImportAdsModalOpen(true);
+                              handleExport("xlsx", true);
                               setMoreToolbarMenuOpen(false);
-                              setExportSubmenuOpen(false);
                             }}
                             style={{
                               width: "100%",
                               textAlign: "left",
-                              padding: "7px 16px",
+                              padding: "8px 16px",
                               background: "transparent",
                               border: "none",
                               fontSize: "0.82rem",
                               color: "#1e293b",
                               cursor: "pointer",
-                              display: "block",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
-                            Import ads in bulk
+                            <Download size={13} color="#64748b" />
+                            <span>Export selected (Excel)</span>
                           </button>
-
-                          {/* Export with Submenu (Image 2 & 3) */}
-                          <div
-                            style={{ position: "relative" }}
-                            onMouseEnter={() => setExportSubmenuOpen(true)}
-                            onMouseLeave={(e) => {
-                              const related = e.relatedTarget;
-                              if (!e.currentTarget.contains(related)) {
-                                setExportSubmenuOpen(false);
-                              }
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExportSubmenuOpen((prev) => !prev);
-                              }}
-                              style={{
-                                width: "100%",
-                                textAlign: "left",
-                                padding: "7px 16px",
-                                background: exportSubmenuOpen ? "#f1f5f9" : "transparent",
-                                border: "none",
-                                fontSize: "0.82rem",
-                                color: "#1e293b",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                              onMouseLeave={(e) => {
-                                if (!exportSubmenuOpen) e.currentTarget.style.background = "transparent";
-                              }}
-                            >
-                              <span>Export</span>
-                              <ChevronRight size={14} color="#64748b" />
-                            </button>
-
-                            {/* Submenu for Export (Image 3) */}
-                            {exportSubmenuOpen && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: 0,
-                                  left: "calc(100% - 2px)",
-                                  minWidth: 160,
-                                  background: "#ffffff",
-                                  borderRadius: 8,
-                                  border: "1px solid #e2e8f0",
-                                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06)",
-                                  zIndex: 120,
-                                  padding: "4px 0",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleExport("csv", true);
-                                    setMoreToolbarMenuOpen(false);
-                                    setExportSubmenuOpen(false);
-                                  }}
-                                  style={{
-                                    width: "100%",
-                                    textAlign: "left",
-                                    padding: "8px 16px",
-                                    background: "transparent",
-                                    border: "none",
-                                    fontSize: "0.82rem",
-                                    color: "#1e293b",
-                                    cursor: "pointer",
-                                    display: "block",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                >
-                                  Export selected
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleExport("csv", false);
-                                    setMoreToolbarMenuOpen(false);
-                                    setExportSubmenuOpen(false);
-                                  }}
-                                  style={{
-                                    width: "100%",
-                                    textAlign: "left",
-                                    padding: "8px 16px",
-                                    background: "transparent",
-                                    border: "none",
-                                    fontSize: "0.82rem",
-                                    color: "#1e293b",
-                                    cursor: "pointer",
-                                    display: "block",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                >
-                                  Export all
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
                           <button
                             type="button"
-                            onClick={handleDownloadExcelTemplate}
+                            onClick={() => {
+                              handleExport("csv", false);
+                              setMoreToolbarMenuOpen(false);
+                            }}
                             style={{
                               width: "100%",
                               textAlign: "left",
-                              padding: "7px 16px",
+                              padding: "8px 16px",
                               background: "transparent",
                               border: "none",
                               fontSize: "0.82rem",
                               color: "#1e293b",
                               cursor: "pointer",
-                              display: "block",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "#f1f5f9";
-                              setExportSubmenuOpen(false);
-                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
-                            Download Excel template
+                            <Download size={13} color="#64748b" />
+                            <span>Export all (CSV)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleExport("xlsx", false);
+                              setMoreToolbarMenuOpen(false);
+                            }}
+                            style={{
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "8px 16px",
+                              background: "transparent",
+                              border: "none",
+                              fontSize: "0.82rem",
+                              color: "#1e293b",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <Download size={13} color="#64748b" />
+                            <span>Export all (Excel)</span>
                           </button>
 
                           <div style={{ borderTop: "1px solid #f1f5f9", marginTop: 4, paddingTop: 4 }}>
@@ -9830,129 +9673,6 @@ export default function CampaignsTab({
                     )}
                   </div>
 
-                  {/* 3. Reports Icon Button (Image 2 - Stacked reports documents + solid down caret) */}
-                  <div ref={rulesRef} style={{ position: "relative" }}>
-                    <button
-                      type="button"
-                      onClick={() => setRulesMenuOpen((prev) => !prev)}
-                      title="Reports & automated rules"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                        padding: "6px 10px",
-                        borderRadius: 6,
-                        border: "1px solid #cbd5e1",
-                        background: rulesMenuOpen ? "#f1f5f9" : "#ffffff",
-                        color: "#1c1e21",
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!rulesMenuOpen) e.currentTarget.style.background = "#f8fafc";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!rulesMenuOpen) e.currentTarget.style.background = "#ffffff";
-                      }}
-                    >
-                      <MetaReportsIcon size={14} color="#1c1e21" />
-                      <MetaCaretDown size={7} color="#1c1e21" />
-                    </button>
-
-                    {rulesMenuOpen && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "calc(100% + 5px)",
-                          right: 0,
-                          width: 220,
-                          background: "#ffffff",
-                          borderRadius: 8,
-                          border: "1px solid #e2e8f0",
-                          boxShadow: "0 10px 28px rgba(0, 0, 0, 0.14)",
-                          zIndex: 90,
-                          padding: "6px 0",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCreateRuleModalOpen(true);
-                            setRulesMenuOpen(false);
-                          }}
-                          style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "8px 14px",
-                            background: "transparent",
-                            border: "none",
-                            fontSize: "0.82rem",
-                            color: "#1e293b",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                        >
-                          <SlidersHorizontal size={13} color="#64748b" />
-                          <span>Create a new rule</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setManageAdjustmentsModalOpen(true);
-                            setRulesMenuOpen(false);
-                          }}
-                          style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "8px 14px",
-                            background: "transparent",
-                            border: "none",
-                            fontSize: "0.82rem",
-                            color: "#1e293b",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                        >
-                          <Check size={13} color="#16a34a" />
-                          <span>Manage active rules</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            showToast("Applied recommended performance optimization rules.", "success");
-                            setRulesMenuOpen(false);
-                          }}
-                          style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "8px 14px",
-                            background: "transparent",
-                            border: "none",
-                            fontSize: "0.82rem",
-                            color: "#1e293b",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                        >
-                          <MetaAnalyseIcon size={13} />
-                          <span>Apply recommended rules</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
                   {/* 4. Split Export / Download Button (Image 2 - [ ⤓ | ▾ ]) */}
                   <div ref={downloadRef} style={{ position: "relative" }}>
                     <div
@@ -10182,7 +9902,7 @@ export default function CampaignsTab({
                           }}
                         >
                           <div style={{ marginBottom: 16 }}>
-                            <Search size={48} strokeWidth={1.4} color="#94a3b8" />
+                            {!connectedAccount ? <MetaLogoIcon size={48} /> : <Search size={48} strokeWidth={1.4} color="#94a3b8" />}
                           </div>
                           <div
                             style={{
@@ -10192,7 +9912,7 @@ export default function CampaignsTab({
                               marginBottom: 6,
                             }}
                           >
-                            Get set up to run ads
+                            {!connectedAccount ? "No Meta Ad Account Connected" : "Get set up to run ads"}
                           </div>
                           <div
                             style={{
@@ -10203,27 +9923,51 @@ export default function CampaignsTab({
                               lineHeight: 1.45,
                             }}
                           >
-                            Confirm a few details in Account overview so that you can publish your first ad campaign.
+                            {!connectedAccount
+                              ? "Connect your Meta Ad Account to view and manage campaigns, ad sets, ads, and live performance metrics directly from Adstra."
+                              : "Confirm a few details in Account overview so that you can publish your first ad campaign."}
                           </div>
-                          <button
-                            type="button"
-                            style={{
-                              padding: "8px 18px",
-                              borderRadius: 6,
-                              border: "1px solid #cbd5e1",
-                              background: "#f1f5f9",
-                              color: "#0f172a",
-                              fontSize: "0.84rem",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                              transition: "all 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                          >
-                            Go to Account overview
-                          </button>
+                          {!connectedAccount ? (
+                            <button
+                              type="button"
+                              onClick={() => setConnectMetaModalOpen(true)}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "8px 20px",
+                                borderRadius: 6,
+                                background: "#0866ff",
+                                color: "#ffffff",
+                                fontSize: "0.86rem",
+                                fontWeight: 650,
+                                cursor: "pointer",
+                                border: "none",
+                                boxShadow: "0 2px 8px rgba(8, 102, 255, 0.28)",
+                              }}
+                            >
+                              <MetaLogoIcon size={16} />
+                              <span>Connect Meta Account</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleOpenCreateModal}
+                              style={{
+                                padding: "8px 18px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: "#0866ff",
+                                color: "#ffffff",
+                                fontSize: "0.84rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                              }}
+                            >
+                              Create Ad
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -10771,33 +10515,57 @@ export default function CampaignsTab({
                           }}
                         >
                           <div style={{ marginBottom: 16 }}>
-                            <Search size={48} strokeWidth={1.4} color="#94a3b8" />
+                            {!connectedAccount ? <MetaLogoIcon size={48} /> : <Search size={48} strokeWidth={1.4} color="#94a3b8" />}
                           </div>
                           <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
-                            Get set up to run ads
+                            {!connectedAccount ? "No Meta Ad Account Connected" : "Get set up to run ads"}
                           </div>
                           <div style={{ fontSize: "0.86rem", color: "#64748b", maxWidth: 520, marginBottom: 18, lineHeight: 1.45 }}>
-                            Confirm a few details in Account overview so that you can publish your first ad campaign.
+                            {!connectedAccount
+                              ? "Connect your Meta Ad Account to view and manage campaigns, ad sets, ads, and live performance metrics directly from Adstra."
+                              : "Confirm a few details in Account overview so that you can publish your first ad campaign."}
                           </div>
-                          <button
-                            type="button"
-                            style={{
-                              padding: "8px 18px",
-                              borderRadius: 6,
-                              border: "1px solid #cbd5e1",
-                              background: "#f1f5f9",
-                              color: "#0f172a",
-                              fontSize: "0.84rem",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                              transition: "all 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                          >
-                            Go to Account overview
-                          </button>
+                          {!connectedAccount ? (
+                            <button
+                              type="button"
+                              onClick={() => setConnectMetaModalOpen(true)}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "8px 20px",
+                                borderRadius: 6,
+                                background: "#0866ff",
+                                color: "#ffffff",
+                                fontSize: "0.86rem",
+                                fontWeight: 650,
+                                cursor: "pointer",
+                                border: "none",
+                                boxShadow: "0 2px 8px rgba(8, 102, 255, 0.28)",
+                              }}
+                            >
+                              <MetaLogoIcon size={16} />
+                              <span>Connect Meta Account</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleOpenCreateModal}
+                              style={{
+                                padding: "8px 18px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: "#0866ff",
+                                color: "#ffffff",
+                                fontSize: "0.84rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                              }}
+                            >
+                              Create Ad Set
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -11372,33 +11140,57 @@ export default function CampaignsTab({
                           }}
                         >
                           <div style={{ marginBottom: 16 }}>
-                            <Search size={48} strokeWidth={1.4} color="#94a3b8" />
+                            {!connectedAccount ? <MetaLogoIcon size={48} /> : <Search size={48} strokeWidth={1.4} color="#94a3b8" />}
                           </div>
                           <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
-                            Get set up to run ads
+                            {!connectedAccount ? "No Meta Ad Account Connected" : "Get set up to run ads"}
                           </div>
                           <div style={{ fontSize: "0.86rem", color: "#64748b", maxWidth: 520, marginBottom: 18, lineHeight: 1.45 }}>
-                            Confirm a few details in Account overview so that you can publish your first ad campaign.
+                            {!connectedAccount
+                              ? "Connect your Meta Ad Account to view and manage campaigns, ad sets, ads, and live performance metrics directly from Adstra."
+                              : "Confirm a few details in Account overview so that you can publish your first ad campaign."}
                           </div>
-                          <button
-                            type="button"
-                            style={{
-                              padding: "8px 18px",
-                              borderRadius: 6,
-                              border: "1px solid #cbd5e1",
-                              background: "#f1f5f9",
-                              color: "#0f172a",
-                              fontSize: "0.84rem",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                              transition: "all 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                          >
-                            Go to Account overview
-                          </button>
+                          {!connectedAccount ? (
+                            <button
+                              type="button"
+                              onClick={() => setConnectMetaModalOpen(true)}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "8px 20px",
+                                borderRadius: 6,
+                                background: "#0866ff",
+                                color: "#ffffff",
+                                fontSize: "0.86rem",
+                                fontWeight: 650,
+                                cursor: "pointer",
+                                border: "none",
+                                boxShadow: "0 2px 8px rgba(8, 102, 255, 0.28)",
+                              }}
+                            >
+                              <MetaLogoIcon size={16} />
+                              <span>Connect Meta Account</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleOpenCreateModal}
+                              style={{
+                                padding: "8px 18px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: "#0866ff",
+                                color: "#ffffff",
+                                fontSize: "0.84rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                              }}
+                            >
+                              Create Campaign
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -12087,7 +11879,7 @@ export default function CampaignsTab({
             >
               Any changes in this ad account{" "}
               <strong style={{ fontWeight: 700 }}>
-                {selectedMetaAdAccount?.name || "MediaReds D M"} [{selectedMetaAdAccount?.id || "act_830629501946359"}]
+                {selectedMetaAdAccount?.name || "Connected Ad Account"} {selectedMetaAdAccount?.id ? `[${selectedMetaAdAccount.id}]` : ""}
               </strong>{" "}
               that haven't yet been published will be discarded.
             </div>
@@ -14460,19 +14252,6 @@ export default function CampaignsTab({
       )}
 
       
-      {/* ── META A/B TEST EXPERIMENT MODAL ── */}
-      <MetaABTestModal
-        isOpen={abTestModalOpen}
-        onClose={() => setAbTestModalOpen(false)}
-        campaigns={campaignsList}
-        adsets={adsetsList}
-        ads={adsList}
-        selectedAd={adsList.find((a) => selectedAdIds.includes(a.id)) || adsList[0]}
-        onLaunchTest={(testData) => {
-          showToast(`A/B Test "${testData.testName || 'Experiment'}" scheduled successfully!`, "success");
-          setAbTestModalOpen(false);
-        }}
-      />
 
       {/* ── META ADS MANAGER REVIEW & PUBLISH MODAL ── */}
       <ReviewAndPublishModal
@@ -14481,8 +14260,8 @@ export default function CampaignsTab({
         campaigns={campaignsList}
         adsets={adsetsList}
         ads={adsList}
-        selectedAdAccountId={selectedMetaAdAccount?.id || selectedMetaAdAccountId || "act_830629501946359"}
-        selectedAdAccountName={selectedMetaAdAccount?.name || "MediaReds D M (Adstra Meta Ads)"}
+        selectedAdAccountId={selectedMetaAdAccount?.id || selectedMetaAdAccountId || ""}
+        selectedAdAccountName={selectedMetaAdAccount?.name || "Meta Ad Account"}
         selectedCampaignIds={selectedCampaignIds}
         onPublishSuccess={handleReviewPublishSuccess}
         showToast={showToast}
@@ -14745,24 +14524,6 @@ export default function CampaignsTab({
               <span>View history</span>
             </button>
 
-            {/* 4. Rules (Image 2: Opposing arrows icon) */}
-            <button
-              type="button"
-              onClick={() => {
-                setRulesTargetItem(activeRowMenuItem);
-                setRulesActiveTab("active");
-                setRulesModalOpen(true);
-                showToast(`Automated rules for "${activeRowMenuItem.name}"`, "info");
-                setOpenRowMenuId(null);
-                setRowMenuCoords(null);
-              }}
-              style={rowMenuItemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f2f5")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <MetaRulesIcon size={15} color="#1c1e21" />
-              <span>Rules</span>
-            </button>
           </div>,
           document.body
         )
@@ -15324,382 +15085,6 @@ export default function CampaignsTab({
             >
               Open in Campaign Editor
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── META ADS MANAGER AUTOMATED RULES MODAL (RULES BUTTON) ─── */}
-      {rulesModalOpen && rulesTargetItem && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.45)",
-            backdropFilter: "blur(2px)",
-            zIndex: 1070,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 620,
-              maxWidth: "92vw",
-              background: "#ffffff",
-              borderRadius: 12,
-              border: "1px solid #cbd5e1",
-              boxShadow: "0 24px 48px rgba(0,0,0,0.2)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              maxHeight: "90vh",
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid #e2e8f0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                background: "#f8fafc",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: "#eff6ff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <MetaRulesIcon size={16} color="#0064e1" />
-                </div>
-                <div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
-                    Automated rules
-                  </div>
-                  <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                    Applied to: <strong>{rulesTargetItem.name}</strong>
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setRulesModalOpen(false);
-                  setRulesTargetItem(null);
-                }}
-                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", padding: 4 }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Tabs */}
-            <div
-              style={{
-                display: "flex",
-                borderBottom: "1px solid #e2e8f0",
-                background: "#ffffff",
-                padding: "0 20px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setRulesActiveTab("active")}
-                style={{
-                  padding: "10px 16px",
-                  border: "none",
-                  background: "transparent",
-                  fontSize: "0.85rem",
-                  fontWeight: rulesActiveTab === "active" ? 700 : 500,
-                  color: rulesActiveTab === "active" ? "#0064e1" : "#64748b",
-                  borderBottom: rulesActiveTab === "active" ? "2px solid #0064e1" : "2px solid transparent",
-                  cursor: "pointer",
-                }}
-              >
-                Active rules ({campaignRulesList.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setRulesActiveTab("create")}
-                style={{
-                  padding: "10px 16px",
-                  border: "none",
-                  background: "transparent",
-                  fontSize: "0.85rem",
-                  fontWeight: rulesActiveTab === "create" ? 700 : 500,
-                  color: rulesActiveTab === "create" ? "#0064e1" : "#64748b",
-                  borderBottom: rulesActiveTab === "create" ? "2px solid #0064e1" : "2px solid transparent",
-                  cursor: "pointer",
-                }}
-              >
-                + Create new rule
-              </button>
-            </div>
-
-            {/* Tab Body */}
-            <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
-              {rulesActiveTab === "active" ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {campaignRulesList.map((rule) => (
-                    <div
-                      key={rule.id}
-                      style={{
-                        padding: "14px 16px",
-                        borderRadius: 8,
-                        border: "1px solid #e2e8f0",
-                        background: rule.enabled ? "#ffffff" : "#f8fafc",
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "space-between",
-                        gap: 14,
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontWeight: 650, fontSize: "0.88rem", color: rule.enabled ? "#0f172a" : "#64748b" }}>
-                            {rule.name}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              padding: "2px 6px",
-                              borderRadius: 4,
-                              background: rule.enabled ? "#dcfce7" : "#f1f5f9",
-                              color: rule.enabled ? "#16a34a" : "#94a3b8",
-                            }}
-                          >
-                            {rule.enabled ? "Active" : "Paused"}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: "0.78rem", color: "#475569", lineHeight: 1.4 }}>
-                          <strong>Condition:</strong> {rule.condition}
-                        </div>
-                        <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: 2 }}>
-                          <strong>Action:</strong> {rule.action} • {rule.schedule}
-                        </div>
-                        <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 4 }}>
-                          Last checked: {rule.lastTriggered}
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCampaignRulesList((prev) =>
-                              prev.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r))
-                            );
-                            showToast(`Rule "${rule.name}" is now ${rule.enabled ? "paused" : "active"}.`, "info");
-                          }}
-                          style={{
-                            width: 34,
-                            height: 18,
-                            borderRadius: 9,
-                            background: rule.enabled ? "#0064e1" : "#cbd5e1",
-                            border: "none",
-                            padding: "2px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: rule.enabled ? "flex-end" : "flex-start",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#ffffff" }} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCampaignRulesList((prev) => prev.filter((r) => r.id !== rule.id));
-                            showToast(`Rule "${rule.name}" removed.`, "info");
-                          }}
-                          style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8", padding: 4 }}
-                          title="Delete rule"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
-                      Rule name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Pause campaign if CPA > ₹50"
-                      value={newRuleForm.name}
-                      onChange={(e) => setNewRuleForm((prev) => ({ ...prev, name: e.target.value }))}
-                      style={{
-                        width: "100%",
-                        padding: "8px 12px",
-                        fontSize: "0.85rem",
-                        borderRadius: 6,
-                        border: "1px solid #cbd5e1",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
-                      Action
-                    </label>
-                    <select
-                      value={newRuleForm.action}
-                      onChange={(e) => setNewRuleForm((prev) => ({ ...prev, action: e.target.value }))}
-                      style={{
-                        width: "100%",
-                        padding: "8px 12px",
-                        fontSize: "0.85rem",
-                        borderRadius: 6,
-                        border: "1px solid #cbd5e1",
-                        background: "#ffffff",
-                        outline: "none",
-                      }}
-                    >
-                      <option value="turn_off">Turn off campaign</option>
-                      <option value="turn_on">Turn on campaign</option>
-                      <option value="increase_budget">Increase daily budget by 10%</option>
-                      <option value="decrease_budget">Decrease daily budget by 10%</option>
-                      <option value="send_notification">Send notification only</option>
-                    </select>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
-                        Condition metric
-                      </label>
-                      <select
-                        value={newRuleForm.metric}
-                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, metric: e.target.value }))}
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          fontSize: "0.85rem",
-                          borderRadius: 6,
-                          border: "1px solid #cbd5e1",
-                          background: "#ffffff",
-                          outline: "none",
-                        }}
-                      >
-                        <option value="cpa">Cost per result is greater than</option>
-                        <option value="spend">Amount spent is greater than</option>
-                        <option value="frequency">Frequency is greater than</option>
-                        <option value="impressions">Impressions is greater than</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
-                        Threshold value
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="₹50.00"
-                        value={newRuleForm.threshold}
-                        onChange={(e) => setNewRuleForm((prev) => ({ ...prev, threshold: e.target.value }))}
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          fontSize: "0.85rem",
-                          borderRadius: 6,
-                          border: "1px solid #cbd5e1",
-                          outline: "none",
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 650, color: "#334155", marginBottom: 5 }}>
-                      Schedule & Frequency
-                    </label>
-                    <select
-                      value={newRuleForm.frequency}
-                      onChange={(e) => setNewRuleForm((prev) => ({ ...prev, frequency: e.target.value }))}
-                      style={{
-                        width: "100%",
-                        padding: "8px 12px",
-                        fontSize: "0.85rem",
-                        borderRadius: 6,
-                        border: "1px solid #cbd5e1",
-                        background: "#ffffff",
-                        outline: "none",
-                      }}
-                    >
-                      <option value="continuous">Continuously (Every 30 minutes)</option>
-                      <option value="daily">Daily at 12:00 AM</option>
-                      <option value="hourly">Hourly</option>
-                    </select>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
-                    <button
-                      type="button"
-                      onClick={() => setRulesActiveTab("active")}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: 6,
-                        border: "1px solid #cbd5e1",
-                        background: "#ffffff",
-                        fontSize: "0.84rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        color: "#475569",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ruleName = newRuleForm.name.trim() || `Auto rule for ${rulesTargetItem.name}`;
-                        const newRule = {
-                          id: `rule-camp-${Date.now()}`,
-                          name: ruleName,
-                          enabled: true,
-                          condition: `${newRuleForm.metric.toUpperCase()} > ${newRuleForm.threshold}`,
-                          action: newRuleForm.action.replace("_", " "),
-                          schedule: newRuleForm.frequency === "continuous" ? "Continuously (Every 30 mins)" : "Daily at 12:00 AM",
-                          lastTriggered: "Just now",
-                        };
-                        setCampaignRulesList((prev) => [newRule, ...prev]);
-                        setRulesActiveTab("active");
-                        setNewRuleForm({ name: "", action: "turn_off", metric: "cpa", threshold: "50.00", frequency: "continuous" });
-                        showToast(`Rule "${ruleName}" successfully created and activated!`, "success");
-                      }}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: 6,
-                        border: "none",
-                        background: "#0064e1",
-                        color: "#ffffff",
-                        fontSize: "0.84rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Create rule
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

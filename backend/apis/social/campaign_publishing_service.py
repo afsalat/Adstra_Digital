@@ -266,10 +266,14 @@ def _publish_to_platform(campaign, platform: str, account_id: str = None, desire
 def _friendly_error(exc: Exception, platform: str) -> str:
     """Convert technical exceptions to user-friendly messages."""
     msg = str(exc)
-    if 'permission' in msg.lower() or '190' in msg or 'OAuthException' in msg:
+    if '1885183' in msg or 'Development Mode' in msg:
+        return "Meta App is in Development Mode. Live ad creatives require Live Mode in Meta Developer portal."
+    if '190' in msg or ('token' in msg.lower() and 'expired' in msg.lower()):
+        return "Meta access token has expired or is invalid. Please re-authenticate your Meta account in Social Settings."
+    if 'permission' in msg.lower() and ('denied' in msg.lower() or 'not have permission' in msg.lower() or 'code 200' in msg or 'code 298' in msg):
         return "Permission denied. The connected account may not have ad management access."
     if '100' in msg or 'Invalid parameter' in msg.lower():
-        return "Invalid campaign parameters. Please review your campaign configuration."
+        return f"Invalid campaign parameters: {msg[:180]}"
     if 'timeout' in msg.lower():
         return f"{platform.title()} API timed out. Please retry."
     if 'rate' in msg.lower():

@@ -68,8 +68,8 @@ const isTyping = (el) =>
 // ▲/▼ to hop between clients that have work in progress, extra controls (mentions bell)
 // below, and a searchable picker when the logo is clicked.
 export default function ClientQuickRail({ clients = [], value, onChange, children }) {
-  const [collapsed, setCollapsed] = useState(() => readLS(COLLAPSED_KEY, false));
-  const [recent, setRecent] = useState(() => readLS(RECENT_KEY, []));
+  const [collapsed, setCollapsed] = useState(false);
+  const [recent, setRecent] = useState([]);
   const [tip, setTip] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -79,8 +79,20 @@ export default function ClientQuickRail({ clients = [], value, onChange, childre
   const pickerRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const hasMounted = useRef(false);
 
-  useEffect(() => writeLS(COLLAPSED_KEY, collapsed), [collapsed]);
+  useEffect(() => {
+    setCollapsed(readLS(COLLAPSED_KEY, false));
+    setRecent(readLS(RECENT_KEY, []));
+  }, []);
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    writeLS(COLLAPSED_KEY, collapsed);
+  }, [collapsed]);
 
   const selected = clients.find((c) => String(c.id) === String(value)) || ALL_ITEM;
   const totalPending = clients.reduce((n, c) => n + (c.pending_approvals_count || 0), 0);

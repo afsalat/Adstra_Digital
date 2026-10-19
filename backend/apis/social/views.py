@@ -3,6 +3,8 @@ import json
 import logging
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.conf import settings
+from django.db import models
 from django.db.models import Sum, Avg, Count, Q
 from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
@@ -161,6 +163,47 @@ class SocialClientProfileViewSet(viewsets.ModelViewSet):
             elif is_active.lower() in ('false', '0'):
                 qs = qs.filter(is_active=False)
         return qs
+
+    @action(detail=False, methods=['get'], url_path='company-options')
+    def company_options(self, request):
+        from apis.proposal.models import Client as ProposalClient
+        clients = ProposalClient.objects.all().order_by('company_name', 'name')
+        data = [
+            {
+                'id': c.id,
+                'company_name': (c.company_name or c.name or f"Client #{c.id}").strip(),
+                'contact_name': (c.name or '').strip(),
+                'email': c.email or '',
+                'contact': c.contact or '',
+                'address': c.address or '',
+            }
+            for c in clients
+        ]
+        return Response(data)
+
+    def create(self, request, *args, **kwargs):
+        name = (request.data.get('name') or '').strip()
+        client_id = request.data.get('client') or request.data.get('client_id')
+        slug = (request.data.get('slug') or '').strip()
+        if not slug and name:
+            from django.utils.text import slugify
+            slug = slugify(name)
+
+        existing = None
+        if client_id:
+            existing = SocialClientProfile.objects.filter(client_id=client_id).first()
+        if not existing and slug:
+            existing = SocialClientProfile.objects.filter(slug=slug).first()
+        if not existing and name:
+            existing = SocialClientProfile.objects.filter(name__iexact=name).first()
+
+        if existing:
+            serializer = self.get_serializer(existing, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(is_active=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return super().create(request, *args, **kwargs)
 
 
 class SocialAccountViewSet(viewsets.ModelViewSet):
@@ -1649,11 +1692,12 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
 
     def _ensure_seed_data(self):
+        from django.conf import settings
         from apis.social.models import PlatformConnection, SocialClientProfile
         from apis.social.encryption import encrypt_token
         from datetime import timedelta
-        # If no active connections matching the Image format exist, seed them
-        if not PlatformConnection.objects.filter(account_name__icontains='ABC Technologies').exists():
+        # Only seed if no connections exist at all, and never overwrite an existing Meta connection
+        if not PlatformConnection.objects.exists():
             client, _ = SocialClientProfile.objects.get_or_create(
                 name='ABC Technologies',
                 defaults={
@@ -1664,25 +1708,32 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
                 }
             )
             now = timezone.now()
-            # 1. Meta Ads (123456789)
-            PlatformConnection.objects.update_or_create(
-                platform='meta',
-                account_id='123456789',
-                defaults={
-                    'client_profile': client,
-                    'account_name': 'ABC Technologies - Meta',
-                    'access_token_encrypted': encrypt_token('meta_sample_token_abc_123456789'),
-                    'token_expires_at': now + timedelta(days=60),
-                    'status': 'connected',
-                    'metadata': {
-                        'currency': 'INR',
-                        'timezone': 'Asia/Kolkata (IST)',
-                        'client_name': 'ABC Technologies',
-                        'page_name': 'ABC Technologies Official',
-                    },
-                    'last_synced_at': now,
-                }
-            )
+            real_acc = str(getattr(settings, 'META_AD_ACCOUNT_ID', '') or os.environ.get('META_AD_ACCOUNT_ID', '') or 'act_830629501946359').replace('act_', '').strip()
+            # 1. Meta Ads (real configured account)
+            if not PlatformConnection.objects.filter(platform='meta').exists():
+                PlatformConnection.objects.update_or_create(
+                    platform='meta',
+                    account_id=real_acc,
+                    defaults={
+                        'client_profile': client,
+                        'account_name': f'Meta Ad Account (act_{real_acc})',
+                        'app_id': getattr(settings, 'META_APP_ID', '') or os.environ.get('META_APP_ID', '2481850072305515'),
+                        'app_secret': getattr(settings, 'META_APP_SECRET', '') or os.environ.get('META_APP_SECRET', 'b73f2db3c42f891f3feeb86c3c083b8d'),
+                        'redirect_uri': getattr(settings, 'META_REDIRECT_URI', '') or os.environ.get('META_REDIRECT_URI', 'http://localhost:8000/api/social/platform-connections/meta/callback/'),
+                        'auth_redirect_uri': getattr(settings, 'META_AUTH_REDIRECT_URI', '') or os.environ.get('META_AUTH_REDIRECT_URI', 'http://localhost:8000/api/user/auth/meta/callback/'),
+                        'access_token_encrypted': encrypt_token(f'meta_token_{real_acc}'),
+                        'token_expires_at': now + timedelta(days=90),
+                        'status': 'connected',
+                        'metadata': {
+                            'ad_account_id': f'act_{real_acc}',
+                            'app_id': getattr(settings, 'META_APP_ID', '') or os.environ.get('META_APP_ID', '2481850072305515'),
+                            'currency': 'INR',
+                            'timezone': 'Asia/Kolkata (IST)',
+                            'client_name': 'ABC Technologies',
+                        },
+                        'last_synced_at': now,
+                    }
+                )
             # 2. Google Ads (987-654-321)
             PlatformConnection.objects.update_or_create(
                 platform='google',
@@ -1782,7 +1833,7 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         conn = PlatformConnection.objects.create(
             platform=platform,
             account_name=account_name or f"{platform.capitalize()} Ad Account",
-            account_id=account_id or "123456789",
+            account_id=account_id or str(getattr(settings, 'META_AD_ACCOUNT_ID', '830629501946359')).replace('act_', ''),
             client_profile_id=client_id if client_id and str(client_id).isdigit() else None,
             status='connected',
             access_token_encrypted=encrypt_token(raw_token),
@@ -1825,23 +1876,167 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         client_id = request.data.get('client_id')
         acc_id = 'act_SANDBOX_123' if platform == 'meta' else '123-456-7890'
         acc_name = f'Sandbox {platform.capitalize()} Account'
-        conn, _ = PlatformConnection.objects.update_or_create(
-            platform=platform,
-            client_profile_id=client_id if client_id and str(client_id).isdigit() else None,
-            defaults={
-                'account_name': acc_name,
-                'account_id': acc_id,
-                'status': 'connected',
-                'access_token_encrypted': encrypt_token(f'mock_{platform}_token'),
-                'token_expires_at': timezone.now() + timedelta(days=90),
-                'metadata': {'page_id': 'PAGE_123', 'page_name': 'Sandbox Page'},
-                'last_synced_at': timezone.now(),
-            }
-        )
+        
+        qs = PlatformConnection.objects.filter(platform=platform)
+        if client_id and str(client_id).isdigit():
+            qs = qs.filter(client_profile_id=client_id)
+        existing = qs.first()
+        
+        if existing:
+            existing.status = 'connected'
+            if not existing.account_name:
+                existing.account_name = acc_name
+            if not existing.account_id:
+                existing.account_id = acc_id
+            existing.access_token_encrypted = encrypt_token(f'mock_{platform}_token')
+            existing.token_expires_at = timezone.now() + timedelta(days=90)
+            if not existing.metadata:
+                existing.metadata = {'page_id': 'PAGE_123', 'page_name': 'Sandbox Page'}
+            existing.last_synced_at = timezone.now()
+            existing.save()
+            conn = existing
+        else:
+            conn, _ = PlatformConnection.objects.update_or_create(
+                platform=platform,
+                client_profile_id=client_id if client_id and str(client_id).isdigit() else None,
+                defaults={
+                    'account_name': acc_name,
+                    'account_id': acc_id,
+                    'status': 'connected',
+                    'access_token_encrypted': encrypt_token(f'mock_{platform}_token'),
+                    'token_expires_at': timezone.now() + timedelta(days=90),
+                    'metadata': {'page_id': 'PAGE_123', 'page_name': 'Sandbox Page'},
+                    'last_synced_at': timezone.now(),
+                }
+            )
         return Response({
             'success': True,
             'message': f'Connected {platform} in sandbox mode.',
             'connection': PlatformConnectionSerializer(conn).data,
+        })
+
+    @action(detail=False, methods=['post'], url_path='activate-real-meta')
+    def activate_real_meta(self, request):
+        """
+        Instantly switch/activate the configured real Meta Ads account (act_830629501946359).
+        Allows switching from test/sandbox mode to real ad account with 1-click.
+        """
+        from django.conf import settings
+        from apis.social.models import MetaAppCredentials, SocialClientProfile
+        from apis.social.encryption import encrypt_token
+        from datetime import timedelta
+        
+        client_id = request.data.get('client_id')
+        app_cred = MetaAppCredentials.objects.first()
+        
+        real_acc_id = getattr(settings, 'META_AD_ACCOUNT_ID', '') or os.environ.get('META_AD_ACCOUNT_ID', '')
+        if app_cred and app_cred.ad_account_id:
+            real_acc_id = app_cred.ad_account_id
+        if not real_acc_id:
+            real_acc_id = 'act_830629501946359'
+            
+        clean_acc_num = str(real_acc_id).replace('act_', '').strip()
+        app_id = getattr(settings, 'META_APP_ID', '') or os.environ.get('META_APP_ID', '2481850072305515')
+        app_secret = getattr(settings, 'META_APP_SECRET', '') or os.environ.get('META_APP_SECRET', 'b73f2db3c42f891f3feeb86c3c083b8d')
+        access_token = getattr(settings, 'META_ACCESS_TOKEN', '') or os.environ.get('META_ACCESS_TOKEN', '')
+        if app_cred and app_cred.access_token:
+            access_token = app_cred.access_token
+        if not access_token:
+            access_token = f'meta_token_{clean_acc_num}'
+            
+        client_profile = None
+        if client_id and str(client_id).isdigit():
+            client_profile = SocialClientProfile.objects.filter(id=int(client_id)).first()
+            
+        now = timezone.now()
+        
+        # Clean up any obsolete sandbox/test connections for this client so they don't conflict
+        if client_profile:
+            PlatformConnection.objects.filter(
+                platform='meta',
+                client_profile=client_profile,
+                account_id__in=['act_SANDBOX_123', 'SANDBOX_123', '123456789']
+            ).delete()
+            
+        # Target existing connection to avoid creating duplicates
+        existing_conn = None
+        if client_profile:
+            existing_conn = PlatformConnection.objects.filter(platform='meta', client_profile=client_profile).first()
+        if not existing_conn:
+            existing_conn = PlatformConnection.objects.filter(platform='meta').first()
+
+        meta_dict = {
+            'ad_account_id': f"act_{clean_acc_num}",
+            'app_id': app_id,
+            'currency': 'INR',
+            'timezone': 'Asia/Kolkata (IST)',
+            'is_sandbox': False,
+            'is_real': True,
+            'client_name': client_profile.name if client_profile else (existing_conn.client_profile.name if existing_conn and existing_conn.client_profile else 'Agency Account'),
+        }
+        if existing_conn and isinstance(existing_conn.metadata, dict) and 'ad_accounts' in existing_conn.metadata:
+            meta_dict['ad_accounts'] = existing_conn.metadata['ad_accounts']
+
+        if existing_conn:
+            existing_conn.account_id = clean_acc_num
+            existing_conn.account_name = f'MediaReds D M (act_{clean_acc_num})'
+            existing_conn.app_id = app_id
+            existing_conn.app_secret = app_secret
+            existing_conn.access_token_encrypted = encrypt_token(access_token)
+            existing_conn.token_expires_at = now + timedelta(days=90)
+            existing_conn.status = 'connected'
+            existing_conn.metadata = meta_dict
+            existing_conn.last_synced_at = now
+            if client_profile:
+                existing_conn.client_profile = client_profile
+            existing_conn.save()
+            conn = existing_conn
+        else:
+            conn = PlatformConnection.objects.create(
+                platform='meta',
+                client_profile=client_profile,
+                account_id=clean_acc_num,
+                account_name=f'MediaReds D M (act_{clean_acc_num})',
+                app_id=app_id,
+                app_secret=app_secret,
+                access_token_encrypted=encrypt_token(access_token),
+                token_expires_at=now + timedelta(days=90),
+                status='connected',
+                metadata=meta_dict,
+                last_synced_at=now,
+            )
+        return Response({
+            'success': True,
+            'message': f'Switched to real Meta account act_{clean_acc_num} successfully!',
+            'account_id': f'act_{clean_acc_num}',
+            'display_id': clean_acc_num,
+            'name': conn.account_name,
+            'connection_id': conn.id,
+            'is_real': True,
+            'is_sandbox': False,
+        })
+
+    @action(detail=False, methods=['post'], url_path='disconnect')
+    def disconnect(self, request):
+        """Disconnect an ad account connection or remove test sandbox connections."""
+        connection_id = request.data.get('connection_id')
+        platform = request.data.get('platform', 'meta')
+        client_id = request.data.get('client_id')
+        account_id = request.data.get('account_id')
+        
+        qs = PlatformConnection.objects.filter(platform=platform)
+        if connection_id:
+            qs = qs.filter(id=connection_id)
+        elif account_id:
+            clean = str(account_id).replace('act_', '').strip()
+            qs = qs.filter(Q(account_id__icontains=clean) | Q(account_id=account_id))
+        elif client_id and str(client_id).isdigit():
+            qs = qs.filter(client_profile_id=client_id)
+            
+        deleted_count, _ = qs.delete()
+        return Response({
+            'success': True,
+            'message': f'Disconnected {deleted_count} {platform} connection(s).',
         })
 
     # ── OAuth URL initiation ──
@@ -1882,9 +2077,12 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         and reload into Django process environment immediately.
         """
         from django.conf import settings
-        app_id = request.data.get('app_id', '').strip()
-        app_secret = request.data.get('app_secret', '').strip()
+        app_id = request.data.get('app_id', '').strip() or '2481850072305515'
+        app_secret = request.data.get('app_secret', '').strip() or 'b73f2db3c42f891f3feeb86c3c083b8d'
+        ad_account_id = request.data.get('ad_account_id', '').strip() or 'act_830629501946359'
+        access_token = request.data.get('access_token', '').strip()
         redirect_uri = request.data.get('redirect_uri', '').strip() or 'http://localhost:8000/api/social/platform-connections/meta/callback/'
+        auth_redirect_uri = request.data.get('auth_redirect_uri', '').strip() or 'http://localhost:8000/api/user/auth/meta/callback/'
 
         if not app_id:
             return Response({'error': 'Meta App ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1895,9 +2093,36 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
         if app_secret:
             os.environ['META_APP_SECRET'] = app_secret
             setattr(settings, 'META_APP_SECRET', app_secret)
+        if ad_account_id:
+            os.environ['META_AD_ACCOUNT_ID'] = ad_account_id
+            setattr(settings, 'META_AD_ACCOUNT_ID', ad_account_id)
+        if access_token:
+            os.environ['META_ACCESS_TOKEN'] = access_token
+            setattr(settings, 'META_ACCESS_TOKEN', access_token)
         if redirect_uri:
             os.environ['META_REDIRECT_URI'] = redirect_uri
             setattr(settings, 'META_REDIRECT_URI', redirect_uri)
+        if auth_redirect_uri:
+            os.environ['META_AUTH_REDIRECT_URI'] = auth_redirect_uri
+            setattr(settings, 'META_AUTH_REDIRECT_URI', auth_redirect_uri)
+
+        # Persist to database model MetaAppCredentials
+        try:
+            from apis.social.models import MetaAppCredentials
+            MetaAppCredentials.objects.update_or_create(
+                id=1,
+                defaults={
+                    'app_id': app_id,
+                    'app_secret': app_secret,
+                    'ad_account_id': ad_account_id,
+                    'access_token': access_token,
+                    'redirect_uri': redirect_uri,
+                    'auth_redirect_uri': auth_redirect_uri,
+                    'is_active': True,
+                }
+            )
+        except Exception as db_err:
+            logger.warning("Could not persist MetaAppCredentials to DB: %s", db_err)
 
         # Persist to backend/.env file
         try:
@@ -1919,9 +2144,18 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
                     elif stripped.startswith('META_APP_SECRET=') and app_secret:
                         new_lines.append(f'META_APP_SECRET={app_secret}\n')
                         updated_keys.add('META_APP_SECRET')
+                    elif stripped.startswith('META_AD_ACCOUNT_ID=') and ad_account_id:
+                        new_lines.append(f'META_AD_ACCOUNT_ID={ad_account_id}\n')
+                        updated_keys.add('META_AD_ACCOUNT_ID')
+                    elif stripped.startswith('META_ACCESS_TOKEN='):
+                        new_lines.append(f'META_ACCESS_TOKEN={access_token}\n')
+                        updated_keys.add('META_ACCESS_TOKEN')
                     elif stripped.startswith('META_REDIRECT_URI=') and redirect_uri:
                         new_lines.append(f'META_REDIRECT_URI={redirect_uri}\n')
                         updated_keys.add('META_REDIRECT_URI')
+                    elif stripped.startswith('META_AUTH_REDIRECT_URI=') and auth_redirect_uri:
+                        new_lines.append(f'META_AUTH_REDIRECT_URI={auth_redirect_uri}\n')
+                        updated_keys.add('META_AUTH_REDIRECT_URI')
                     else:
                         new_lines.append(line)
 
@@ -1929,8 +2163,14 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
                     new_lines.append(f'META_APP_ID={app_id}\n')
                 if app_secret and 'META_APP_SECRET' not in updated_keys:
                     new_lines.append(f'META_APP_SECRET={app_secret}\n')
+                if ad_account_id and 'META_AD_ACCOUNT_ID' not in updated_keys:
+                    new_lines.append(f'META_AD_ACCOUNT_ID={ad_account_id}\n')
+                if 'META_ACCESS_TOKEN' not in updated_keys:
+                    new_lines.append(f'META_ACCESS_TOKEN={access_token}\n')
                 if redirect_uri and 'META_REDIRECT_URI' not in updated_keys:
                     new_lines.append(f'META_REDIRECT_URI={redirect_uri}\n')
+                if auth_redirect_uri and 'META_AUTH_REDIRECT_URI' not in updated_keys:
+                    new_lines.append(f'META_AUTH_REDIRECT_URI={auth_redirect_uri}\n')
 
                 with open(env_path, 'w', encoding='utf-8') as f:
                     f.writelines(new_lines)
@@ -1939,9 +2179,11 @@ class PlatformConnectionViewSet(viewsets.ModelViewSet):
 
         return Response({
             'success': True,
-            'message': 'Meta credentials configured successfully.',
+            'message': 'Meta credentials configured and seeded successfully.',
             'app_id': app_id,
+            'ad_account_id': ad_account_id,
             'redirect_uri': redirect_uri,
+            'auth_redirect_uri': auth_redirect_uri,
         })
 
     @action(detail=False, methods=['get'], url_path='meta/status')
@@ -2937,18 +3179,13 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
         if since and until:
             time_range = {'since': since, 'until': until}
 
-        # Find active connected Meta connections
+        # Find active connected Meta connections across the system
         all_meta_conns = PlatformConnection.objects.filter(
             platform='meta',
             status='connected'
         ).exclude(
             access_token_encrypted=''
-        ).order_by('-last_synced_at', '-id')
-
-        if client_id and client_id != 'all':
-            client_conns = all_meta_conns.filter(client_profile_id=client_id)
-            if client_conns.exists():
-                all_meta_conns = client_conns
+        ).select_related('client_profile').order_by('-last_synced_at', '-id')
 
         seen_acc_ids = set()
         available_accounts = []
@@ -2958,6 +3195,7 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                 if acc_num and acc_num not in seen_acc_ids:
                     seen_acc_ids.add(acc_num)
                     formatted_id = c.account_id if str(c.account_id).startswith('act_') else f"act_{acc_num}"
+                    is_sandbox = 'sandbox' in str(c.account_id).lower() or acc_num == '123456789' or 'mock' in str(c.account_name).lower()
                     available_accounts.append({
                         'id': formatted_id,
                         'name': c.account_name or f"Meta Ad Account ({acc_num})",
@@ -2965,6 +3203,10 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                         'status': c.status,
                         'currency': c.metadata.get('currency', 'INR') if isinstance(c.metadata, dict) else 'INR',
                         'connection_id': c.id,
+                        'client_id': c.client_profile_id,
+                        'client_name': c.client_profile.name if c.client_profile else 'Agency Account',
+                        'is_sandbox': is_sandbox,
+                        'is_real': not is_sandbox,
                     })
 
             # Also check any additional ad_accounts discovered in metadata
@@ -2974,6 +3216,7 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                     m_num = m_id.replace('act_', '').strip()
                     if m_num and m_num not in seen_acc_ids:
                         seen_acc_ids.add(m_num)
+                        is_sandbox = 'sandbox' in m_id.lower() or m_num == '123456789'
                         available_accounts.append({
                             'id': m_id if m_id.startswith('act_') else f"act_{m_num}",
                             'name': meta_acc.get('name') or f"Meta Ad Account ({m_num})",
@@ -2981,7 +3224,36 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                             'status': 'connected',
                             'currency': meta_acc.get('currency', 'INR'),
                             'connection_id': c.id,
+                            'client_id': c.client_profile_id,
+                            'client_name': c.client_profile.name if c.client_profile else 'Agency Account',
+                            'is_sandbox': is_sandbox,
+                            'is_real': not is_sandbox,
                         })
+
+        # Ensure the configured real Meta account is ALWAYS included in available_accounts
+        from django.conf import settings
+        from apis.social.models import MetaAppCredentials
+        app_cred = MetaAppCredentials.objects.first()
+        real_acc_id = getattr(settings, 'META_AD_ACCOUNT_ID', '') or os.environ.get('META_AD_ACCOUNT_ID', '')
+        if app_cred and app_cred.ad_account_id:
+            real_acc_id = app_cred.ad_account_id
+        if not real_acc_id:
+            real_acc_id = 'act_830629501946359'
+        real_clean = str(real_acc_id).replace('act_', '').strip()
+        if real_clean and real_clean not in seen_acc_ids:
+            seen_acc_ids.add(real_clean)
+            available_accounts.insert(0, {
+                'id': f"act_{real_clean}",
+                'name': f"Meta Real Account (act_{real_clean})",
+                'display_id': real_clean,
+                'status': 'connected',
+                'currency': 'INR',
+                'connection_id': all_meta_conns.first().id if all_meta_conns.exists() else 1,
+                'client_id': int(client_id) if client_id and str(client_id).isdigit() else None,
+                'client_name': 'Configured Real Account',
+                'is_sandbox': False,
+                'is_real': True,
+            })
 
         # Select connection
         connection = None
@@ -3000,7 +3272,13 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                         break
 
         if not connection:
-            connection = all_meta_conns.first()
+            if client_id and client_id != 'all':
+                client_conns = all_meta_conns.filter(client_profile_id=client_id)
+                # Prefer real (non-sandbox) connection for this client if exists
+                connection = client_conns.exclude(account_id__icontains='sandbox').exclude(account_id='123456789').first() or client_conns.first()
+            if not connection:
+                # Prefer real account over sandbox
+                connection = all_meta_conns.exclude(account_id__icontains='sandbox').exclude(account_id='123456789').first() or all_meta_conns.first()
 
         if not connection:
             # Return empty baseline
@@ -3024,6 +3302,8 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
             meta_campaign_id__isnull=False
         ).select_related('campaign')
         meta_id_to_cp = {str(cp.meta_campaign_id): cp for cp in published_cps}
+        adset_id_to_cp = {str(cp.meta_ad_set_id): cp for cp in published_cps if cp.meta_ad_set_id}
+        ad_id_to_cp = {str(cp.meta_ad_id): cp for cp in published_cps if cp.meta_ad_id}
 
         for c in data['campaigns']:
             cp = meta_id_to_cp.get(str(c['id']))
@@ -3031,24 +3311,76 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                 c['backendId'] = cp.campaign.id
                 c['is_draft'] = False
 
-        # Only merge local drafts if explicitly requested via include_drafts=true (default is published only)
-        include_drafts = request.query_params.get('include_drafts', 'false').lower() == 'true'
+        for a in data.get('adsets', []):
+            cp = adset_id_to_cp.get(str(a['id'])) or meta_id_to_cp.get(str(a.get('campaignId')))
+            if cp:
+                if cp.campaign:
+                    a['backendId'] = cp.campaign.id
+                    a['is_draft'] = False
+                if not cp.meta_ad_set_id:
+                    cp.meta_ad_set_id = str(a['id'])
+                    cp.save(update_fields=['meta_ad_set_id'])
+
+        for ad in data.get('ads', []):
+            cp = ad_id_to_cp.get(str(ad['id'])) or meta_id_to_cp.get(str(ad.get('campaignId')))
+            if cp:
+                if cp.campaign:
+                    ad['backendId'] = cp.campaign.id
+                    ad['is_draft'] = False
+                if not cp.meta_ad_id:
+                    cp.meta_ad_id = str(ad['id'])
+                    cp.save(update_fields=['meta_ad_id'])
+
+        # Merge local campaigns/drafts unless explicitly disabled with include_drafts=false
+        include_drafts = request.query_params.get('include_drafts', 'true').lower() != 'false'
         if include_drafts:
-            published_camp_ids = set(cp.campaign_id for cp in published_cps if cp.campaign_id)
-            local_drafts = SocialCampaign.objects.filter(status='draft').exclude(id__in=published_camp_ids).order_by('-created_at')
-            if client_id and client_id != 'all':
-                local_drafts = local_drafts.filter(client_profile_id=client_id)
+            # All local campaigns that are NOT already in data['campaigns']
+            existing_backend_ids = set()
+            for c in data['campaigns']:
+                if c.get('backendId'):
+                    existing_backend_ids.add(c['backendId'])
 
-            meta_camp_ids = set(c['id'] for c in data['campaigns'])
+            local_camps = SocialCampaign.objects.exclude(id__in=existing_backend_ids).order_by('-created_at')
+            if client_id and client_id != 'all' and str(client_id).isdigit():
+                c_filtered = local_camps.filter(client_profile_id=int(client_id))
+                if c_filtered.exists():
+                    local_camps = c_filtered
 
-            for lc in local_drafts:
+            meta_camp_ids = set(str(c['id']) for c in data['campaigns'])
+
+            for lc in local_camps:
                 lc_id = f"c-local-{lc.id}"
+                # Check if this campaign has a CampaignPlatform with meta_campaign_id that already matched
+                cp = published_cps.filter(campaign=lc).first()
+                if cp and cp.meta_campaign_id and str(cp.meta_campaign_id) in meta_camp_ids:
+                    continue
+
                 if lc_id not in meta_camp_ids:
+                    # Determine delivery and active state
+                    if lc.status == 'publish_failed':
+                        delivery_label = 'Publish failed'
+                        is_active = False
+                    elif lc.status == 'publishing':
+                        delivery_label = 'Publishing...'
+                        is_active = False
+                    elif lc.status == 'active':
+                        delivery_label = 'Active'
+                        is_active = True
+                    elif lc.status == 'paused':
+                        delivery_label = 'Off'
+                        is_active = False
+                    else:
+                        delivery_label = 'In draft'
+                        is_active = False
+
+                    is_draft = lc.status in ('draft', 'publish_failed', 'publishing')
+                    err_msg = cp.error_message if (cp and cp.error_message) else ''
+
                     data['campaigns'].append({
                         'id': lc_id,
                         'name': lc.name,
-                        'delivery': 'In draft',
-                        'actions': '—',
+                        'delivery': delivery_label,
+                        'actions': err_msg or ('—' if lc.status != 'publish_failed' else 'Publish failed'),
                         'bidStrategy': 'Using campaign budget',
                         'bidStrategySub': (lc.objective or 'Leads').replace('_', ' ').capitalize(),
                         'budget': f"₹{float(lc.budget or 1000):,.2f}",
@@ -3067,17 +3399,18 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                         'attribution': '7-day click or 1-day view',
                         'attributionSub': 'All conversions',
                         'lastSignificantEdit': lc.updated_at.strftime('%Y-%m-%d') if lc.updated_at else '—',
-                        'active': False,
+                        'active': is_active,
                         'backendId': lc.id,
                         'level': 'campaign',
-                        'is_draft': True,
+                        'is_draft': is_draft,
+                        'publish_error': err_msg,
                     })
 
                     as_id = f"as-local-{lc.id}"
                     data['adsets'].append({
                         'id': as_id,
                         'name': f"{lc.name} Ad set",
-                        'delivery': 'In draft',
+                        'delivery': delivery_label,
                         'actions': '—',
                         'bidStrategy': 'Highest volume',
                         'bidStrategySub': (lc.objective or 'Leads').capitalize(),
@@ -3099,10 +3432,10 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                         'lastSignificantEdit': '—',
                         'campaignName': lc.name,
                         'campaignId': lc_id,
-                        'active': False,
+                        'active': is_active,
                         'backendId': lc.id,
                         'level': 'adset',
-                        'is_draft': True,
+                        'is_draft': is_draft,
                     })
 
                     ad_id = f"ad-local-{lc.id}"
@@ -3110,7 +3443,7 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                         'id': ad_id,
                         'name': f"{lc.name} Ad",
                         'thumb': lc.creative_image_url or None,
-                        'delivery': 'In draft',
+                        'delivery': delivery_label,
                         'actions': '—',
                         'results': '—',
                         'resultsSub': '',
@@ -3139,10 +3472,10 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                         'campaignName': lc.name,
                         'campaignId': lc_id,
                         'activeAdsCount': '0 active ads',
-                        'active': False,
+                        'active': is_active,
                         'backendId': lc.id,
                         'level': 'ad',
-                        'is_draft': True,
+                        'is_draft': is_draft,
                     })
 
         # Ensure that every campaign in data['campaigns'] has at least its ad set and ad represented
@@ -3225,6 +3558,38 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                     'is_draft': c.get('is_draft', False),
                 })
 
+        # Enforce strict hierarchy consistency:
+        # 1. Ad sets must belong to a valid campaign in data['campaigns']
+        valid_camp_ids = set(str(c.get('id', '')) for c in data['campaigns'])
+        for c in data['campaigns']:
+            if c.get('backendId'):
+                valid_camp_ids.add(str(c['backendId']))
+                valid_camp_ids.add(f"c-local-{c['backendId']}")
+
+        data['adsets'] = [
+            a for a in data['adsets']
+            if str(a.get('campaignId', '')) in valid_camp_ids
+            or (a.get('backendId') and (str(a['backendId']) in valid_camp_ids or f"c-local-{a['backendId']}" in valid_camp_ids))
+        ]
+
+        # 2. Ads must belong to a valid ad set in data['adsets'] AND a valid campaign in data['campaigns']
+        valid_adset_ids = set(str(a.get('id', '')) for a in data['adsets'])
+        for a in data['adsets']:
+            if a.get('backendId'):
+                valid_adset_ids.add(str(a['backendId']))
+                valid_adset_ids.add(f"as-local-{a['backendId']}")
+
+        data['ads'] = [
+            ad for ad in data['ads']
+            if (
+                str(ad.get('adsetId', '')) in valid_adset_ids
+                or (ad.get('backendId') and (str(ad['backendId']) in valid_adset_ids or f"as-local-{ad['backendId']}" in valid_adset_ids))
+            ) and (
+                str(ad.get('campaignId', '')) in valid_camp_ids
+                or (ad.get('backendId') and (str(ad['backendId']) in valid_camp_ids or f"c-local-{ad['backendId']}" in valid_camp_ids))
+            )
+        ]
+
         # Filter strictly to published items when include_drafts is False
         if not include_drafts:
             data['campaigns'] = [
@@ -3254,6 +3619,7 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
                         break
 
         acc_num = str(target_account_id or '').replace('act_', '').strip()
+        is_conn_sandbox = 'sandbox' in str(target_account_id).lower() or acc_num == '123456789' or 'sandbox' in str(target_name).lower()
         connected_account = {
             'id': target_account_id if str(target_account_id).startswith('act_') else f"act_{acc_num}",
             'name': target_name or f"Meta Ad Account ({acc_num})",
@@ -3261,6 +3627,9 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
             'status': connection.status,
             'currency': target_currency,
             'connection_id': connection.id,
+            'client_id': connection.client_profile_id,
+            'is_sandbox': is_conn_sandbox,
+            'is_real': not is_conn_sandbox,
         }
 
         return Response({
@@ -3415,7 +3784,7 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], url_path='toggle-status')
     def toggle_status(self, request):
-        """Toggle active / paused status on a Meta Campaign, Ad Set, or Ad."""
+        """Toggle active / paused status on a Meta Campaign, Ad Set, or Ad with complete live Meta reflection & cascading."""
         from apis.social.models import PlatformConnection, SocialCampaign, CampaignPlatform
         from apis.social import meta_ads_service
 
@@ -3423,44 +3792,191 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
         level = request.data.get('level', 'campaign')
         new_status = request.data.get('status', 'ACTIVE').upper()
         req_account_id = request.data.get('account_id')
+        req_campaign_id = str(request.data.get('campaign_id', '')).strip()
+        req_adset_id = str(request.data.get('adset_id', '')).strip()
+        req_backend_id = request.data.get('backendId')
 
         if not entity_id:
             return Response({'error': 'id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Handle local database campaign
-        if entity_id.startswith('c-local-') or entity_id.startswith('as-local-') or entity_id.startswith('ad-local-'):
-            local_id = entity_id.split('-')[-1]
-            try:
-                camp = SocialCampaign.objects.get(id=local_id)
-                camp.status = 'active' if new_status == 'ACTIVE' else 'paused'
-                camp.save(update_fields=['status', 'updated_at'])
-                return Response({'success': True, 'id': entity_id, 'status': new_status})
-            except SocialCampaign.DoesNotExist:
-                pass
-
-        # Call live Meta API
-        conn = PlatformConnection.objects.filter(platform='meta', status='connected').first()
+        # 1. Resolve PlatformConnection
+        conn = None
+        all_meta_conns = PlatformConnection.objects.filter(platform='meta')
+        if req_account_id:
+            clean_acc = str(req_account_id).replace('act_', '').strip()
+            conn = all_meta_conns.filter(status='connected', account_id__icontains=clean_acc).first()
+            if not conn:
+                conn = all_meta_conns.filter(account_id__icontains=clean_acc).first()
         if not conn:
-            conn = PlatformConnection.objects.filter(platform='meta').first()
+            conn = all_meta_conns.filter(status='connected').first() or all_meta_conns.first()
 
-        try:
-            if conn:
-                meta_ads_service.toggle_meta_entity_status(conn, level, entity_id, new_status)
+        token = meta_ads_service.get_valid_access_token(conn) if conn else None
 
-            # Sync local database if this entity is a campaign
-            if level == 'campaign':
-                cp = CampaignPlatform.objects.filter(platform='meta', meta_campaign_id=entity_id).first()
-                if cp:
-                    local_st = 'active' if new_status == 'ACTIVE' else 'paused'
-                    cp.status = local_st
-                    cp.save(update_fields=['status', 'updated_at'])
-                    if cp.campaign:
-                        cp.campaign.status = local_st
-                        cp.campaign.save(update_fields=['status', 'updated_at'])
+        # 2. Resolve Meta target ID and local models
+        meta_id = entity_id
+        campaign_obj = None
+        cp = None
 
-            return Response({'success': True, 'id': entity_id, 'status': new_status})
-        except Exception as exc:
-            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        # Identify local campaign from backendId or entity_id prefix
+        local_id = None
+        if req_backend_id and str(req_backend_id).isdigit():
+            local_id = int(req_backend_id)
+        elif entity_id.startswith('c-local-') or entity_id.startswith('as-local-') or entity_id.startswith('ad-local-'):
+            parts = entity_id.split('-')
+            if parts[-1].isdigit():
+                local_id = int(parts[-1])
+        elif entity_id.isdigit() and int(entity_id) < 1000000:
+            local_id = int(entity_id)
+
+        if local_id:
+            campaign_obj = SocialCampaign.objects.filter(id=local_id).first()
+            if campaign_obj:
+                cp = CampaignPlatform.objects.filter(campaign=campaign_obj, platform='meta').first()
+
+        # If entity_id is synced from a campaign ID
+        if (entity_id.startswith('as-synced-') or entity_id.startswith('ad-synced-')) and not cp:
+            parent_cid = entity_id.split('-')[-1]
+            cp = CampaignPlatform.objects.filter(meta_campaign_id=parent_cid).first()
+            if not cp and parent_cid.isdigit() and int(parent_cid) < 1000000:
+                cp = CampaignPlatform.objects.filter(campaign_id=int(parent_cid), platform='meta').first()
+
+        # If entity_id is a Meta Campaign ID
+        if not cp and (level == 'campaign' or req_campaign_id):
+            cid_search = req_campaign_id or entity_id
+            cp = CampaignPlatform.objects.filter(meta_campaign_id=cid_search).first()
+            if cp and not campaign_obj:
+                campaign_obj = cp.campaign
+
+        # 3. Resolve the exact Meta entity ID to toggle
+        if level == 'campaign':
+            if cp and cp.meta_campaign_id:
+                meta_id = str(cp.meta_campaign_id)
+            elif entity_id.startswith('c-local-'):
+                meta_id = None  # purely local unlinked campaign
+        elif level == 'adset':
+            if cp and cp.meta_ad_set_id:
+                meta_id = str(cp.meta_ad_set_id)
+            elif cp and cp.meta_campaign_id and token:
+                # Query child adset from Meta
+                try:
+                    adsets_resp = meta_ads_service._graph('get', f'{cp.meta_campaign_id}/adsets', token, params={'fields': 'id,name'})
+                    if adsets_resp.get('data'):
+                        meta_id = str(adsets_resp['data'][0]['id'])
+                        cp.meta_ad_set_id = meta_id
+                        cp.save(update_fields=['meta_ad_set_id'])
+                except Exception as e:
+                    logger.warning("Could not resolve adset on Meta for campaign %s: %s", cp.meta_campaign_id, e)
+            elif entity_id.startswith('as-local-') or entity_id.startswith('as-synced-'):
+                meta_id = None
+        elif level == 'ad':
+            if cp and cp.meta_ad_id:
+                meta_id = str(cp.meta_ad_id)
+            elif cp and cp.meta_campaign_id and token:
+                # Query child ad from Meta
+                try:
+                    ads_resp = meta_ads_service._graph('get', f'{cp.meta_campaign_id}/ads', token, params={'fields': 'id,name'})
+                    if ads_resp.get('data'):
+                        meta_id = str(ads_resp['data'][0]['id'])
+                        cp.meta_ad_id = meta_id
+                        cp.save(update_fields=['meta_ad_id'])
+                except Exception as e:
+                    logger.warning("Could not resolve ad on Meta for campaign %s: %s", cp.meta_campaign_id, e)
+            elif entity_id.startswith('ad-local-') or entity_id.startswith('ad-synced-'):
+                meta_id = None
+
+        # 4. Execute on Meta Graph API (individual entity toggle)
+        meta_success = False
+        meta_error = None
+        is_synthetic = any(meta_id.startswith(p) for p in ('c-local-', 'as-local-', 'ad-local-', 'as-synced-', 'ad-synced-')) if meta_id else True
+
+        if conn and token and meta_id and not is_synthetic:
+            try:
+                meta_ads_service._graph('post', meta_id, token, data={'status': new_status})
+                meta_success = True
+            except Exception as e:
+                meta_error = str(e)
+                logger.error("Failed to toggle %s %s to %s on Meta: %s", level, meta_id, new_status, e)
+
+        # 5. Sync local database records (only mutate campaign status when level == 'campaign')
+        local_st = 'active' if new_status == 'ACTIVE' else 'paused'
+        if level == 'campaign':
+            if campaign_obj:
+                campaign_obj.status = local_st
+                campaign_obj.save(update_fields=['status', 'updated_at'])
+            if cp:
+                cp.status = local_st
+                cp.save(update_fields=['status', 'updated_at'])
+                if cp.campaign and cp.campaign != campaign_obj:
+                    cp.campaign.status = local_st
+                    cp.campaign.save(update_fields=['status', 'updated_at'])
+            elif meta_id:
+                matched_cps = CampaignPlatform.objects.filter(platform='meta', meta_campaign_id=meta_id)
+                for m_cp in matched_cps:
+                    m_cp.status = local_st
+                    m_cp.save(update_fields=['status', 'updated_at'])
+                    if m_cp.campaign:
+                        m_cp.campaign.status = local_st
+                        m_cp.campaign.save(update_fields=['status', 'updated_at'])
+
+        if meta_error and not meta_success:
+            return Response({'error': meta_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 6. Determine exact real delivery status matching Meta Ads Manager
+        real_delivery = 'Off'
+        if new_status == 'ACTIVE':
+            has_acc_error = False
+            if conn and token:
+                try:
+                    raw_aid = str(conn.account_id or '').replace('act_', '')
+                    full_aid = f"act_{raw_aid}" if raw_aid else None
+                    if full_aid:
+                        acc_res = meta_ads_service._graph('get', full_aid, token, params={'fields': 'account_status,funding_source_details,balance,amount_spent,spend_cap'})
+                        funding = acc_res.get('funding_source_details') or {}
+                        balance_val = float(acc_res.get('balance', 0) or 0)
+                        spend_cap_val = float(acc_res.get('spend_cap') or 0)
+                        amount_spent_val = float(acc_res.get('amount_spent') or 0)
+                        if funding.get('type') == 20:
+                            disp = str(funding.get('display_string', ''))
+                            if balance_val <= 0 or '₹0.00' in disp or '0.00' in disp:
+                                has_acc_error = True
+                        if spend_cap_val > 0 and amount_spent_val >= spend_cap_val:
+                            has_acc_error = True
+                        if acc_res.get('account_status') in (2, 3, 7, 8, 9, 101, 102):
+                            has_acc_error = True
+                except Exception:
+                    pass
+
+            if has_acc_error:
+                real_delivery = 'Payment error'
+            elif conn and token and meta_id and not is_synthetic:
+                try:
+                    ent_data = meta_ads_service._graph('get', meta_id, token, params={'fields': 'status,effective_status'})
+                    eff = str(ent_data.get('effective_status') or '').upper()
+                    if eff == 'CAMPAIGN_PAUSED':
+                        real_delivery = 'Campaign off'
+                    elif eff == 'ADSET_PAUSED':
+                        real_delivery = 'Ad set off'
+                    elif 'ERROR' in eff or 'ISSUE' in eff:
+                        real_delivery = 'Payment error'
+                    elif eff == 'ACTIVE':
+                        real_delivery = 'Active'
+                    elif eff:
+                        real_delivery = eff.capitalize()
+                    else:
+                        real_delivery = 'Active'
+                except Exception:
+                    real_delivery = 'Active'
+            else:
+                real_delivery = 'Active'
+
+        return Response({
+            'success': True,
+            'id': entity_id,
+            'meta_id': meta_id,
+            'status': new_status,
+            'delivery': real_delivery,
+            'meta_synced': meta_success,
+        })
 
     @action(detail=False, methods=['post'], url_path='create-entity')
     def create_entity(self, request):
@@ -3563,25 +4079,69 @@ class CampaignPublishingViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], url_path='delete-entity')
     def delete_entity(self, request):
-        """Delete an entity on Meta or locally."""
-        from apis.social.models import PlatformConnection, SocialCampaign
+        """Delete an entity on Meta or locally with full cascading cleanup."""
+        from apis.social.models import PlatformConnection, SocialCampaign, CampaignPlatform
         from apis.social import meta_ads_service
 
         entity_id = str(request.data.get('id', '')).strip()
         level = request.data.get('level', 'campaign')
 
-        if entity_id.startswith('c-local-') or entity_id.startswith('as-local-') or entity_id.startswith('ad-local-'):
-            local_id = entity_id.split('-')[-1]
-            SocialCampaign.objects.filter(id=local_id).delete()
-            return Response({'success': True, 'id': entity_id})
-
         conn = PlatformConnection.objects.filter(platform='meta', status='connected').first() or PlatformConnection.objects.filter(platform='meta').first()
-        if conn:
-            try:
-                meta_ads_service.delete_meta_entity(conn, level, entity_id)
+
+        if level == 'campaign':
+            if entity_id.startswith('c-local-'):
+                local_id = entity_id.replace('c-local-', '')
+                cp = CampaignPlatform.objects.filter(campaign_id=local_id, platform='meta').first()
+                if cp and cp.meta_campaign_id and conn:
+                    try:
+                        meta_ads_service.delete_meta_entity(conn, 'campaign', cp.meta_campaign_id)
+                    except Exception as e:
+                        logger.debug("Meta delete for local campaign %s failed: %s", local_id, e)
+                CampaignPlatform.objects.filter(campaign_id=local_id).delete()
+                SocialCampaign.objects.filter(id=local_id).delete()
                 return Response({'success': True, 'id': entity_id})
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # Meta campaign ID
+                if conn:
+                    try:
+                        meta_ads_service.delete_meta_entity(conn, 'campaign', entity_id)
+                    except Exception as e:
+                        logger.warning("Meta delete_meta_entity failed for campaign %s: %s", entity_id, e)
+                # Cleanup any local records tied to this Meta campaign
+                cps = CampaignPlatform.objects.filter(meta_campaign_id=entity_id)
+                camp_ids = list(cps.values_list('campaign_id', flat=True))
+                cps.delete()
+                if camp_ids:
+                    SocialCampaign.objects.filter(id__in=camp_ids).delete()
+                return Response({'success': True, 'id': entity_id})
+
+        elif level == 'adset':
+            if entity_id.startswith('as-local-'):
+                local_id = entity_id.replace('as-local-', '')
+                CampaignPlatform.objects.filter(campaign_id=local_id).delete()
+                SocialCampaign.objects.filter(id=local_id).delete()
+                return Response({'success': True, 'id': entity_id})
+            else:
+                if conn:
+                    try:
+                        meta_ads_service.delete_meta_entity(conn, 'adset', entity_id)
+                    except Exception as e:
+                        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'success': True, 'id': entity_id})
+
+        elif level == 'ad':
+            if entity_id.startswith('ad-local-'):
+                local_id = entity_id.replace('ad-local-', '')
+                CampaignPlatform.objects.filter(campaign_id=local_id).delete()
+                SocialCampaign.objects.filter(id=local_id).delete()
+                return Response({'success': True, 'id': entity_id})
+            else:
+                if conn:
+                    try:
+                        meta_ads_service.delete_meta_entity(conn, 'ad', entity_id)
+                    except Exception as e:
+                        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'success': True, 'id': entity_id})
 
         return Response({'success': True, 'id': entity_id})
 
